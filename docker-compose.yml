@@ -1,0 +1,158 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: mobility-os-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mobility_os
+    volumes:
+      - mobility_os_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: mobility-os-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+
+  api-core:
+    build:
+      context: .
+      dockerfile: apps/api-core/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mobility_os
+      DATABASE_CONNECTION_LIMIT: 10
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-long-tenant-jwt-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-replace-with-a-long-refresh-token-secret}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      TENANT_WEB_URL: ${TENANT_WEB_URL:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      CONTROL_PLANE_API_URL: ${CONTROL_PLANE_API_URL:-http://api-control-plane:3100/api}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-replace-with-a-shared-internal-service-token}
+      INTELLIGENCE_API_URL: ${INTELLIGENCE_API_URL:-http://api-intelligence:3002/api/v1}
+      INTELLIGENCE_API_KEY: ${INTELLIGENCE_API_KEY:-replace-with-intelligence-api-key}
+      ZEPTOMAIL_API_URL: ${ZEPTOMAIL_API_URL:-https://api.zeptomail.com/v1.1/email}
+      ZEPTOMAIL_API_KEY: ${ZEPTOMAIL_API_KEY:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@example.com}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Mobiris}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@example.com}
+      SUPPORT_PHONE_PRIMARY: ${SUPPORT_PHONE_PRIMARY:-+2340000000000}
+      SUPPORT_PHONE_SECONDARY: ${SUPPORT_PHONE_SECONDARY:-+2340000000001}
+      WEBSITE_URL: ${WEBSITE_URL:-https://example.com}
+      SOCIAL_HANDLE: ${SOCIAL_HANDLE:-@mobiris}
+
+  api-control-plane:
+    build:
+      context: .
+      dockerfile: apps/api-control-plane/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '3100:3100'
+    environment:
+      PORT: 3100
+      NODE_ENV: production
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mobility_os
+      DATABASE_CONNECTION_LIMIT: 10
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-replace-with-a-long-control-plane-jwt-secret}
+      PLATFORM_JWT_EXPIRES_IN: ${PLATFORM_JWT_EXPIRES_IN:-8h}
+      PLATFORM_BOOTSTRAP_ADMIN_EMAIL: ${PLATFORM_BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
+      PLATFORM_BOOTSTRAP_ADMIN_PASSWORD: ${PLATFORM_BOOTSTRAP_ADMIN_PASSWORD:-ChangeMe123!}
+      CONTROL_PLANE_WEB_URL: ${CONTROL_PLANE_WEB_URL:-http://localhost:3200}
+      CORS_ALLOWED_ORIGINS: ${CP_CORS_ALLOWED_ORIGINS:-http://localhost:3200}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-replace-with-a-shared-internal-service-token}
+      API_CORE_BASE_URL: ${API_CORE_BASE_URL:-http://api-core:3001/api/v1}
+      FLUTTERWAVE_BASE_URL: ${FLUTTERWAVE_BASE_URL:-https://api.flutterwave.com/v3}
+      FLUTTERWAVE_SECRET_KEY: ${FLUTTERWAVE_SECRET_KEY:-}
+      FLUTTERWAVE_WEBHOOK_SECRET_HASH: ${FLUTTERWAVE_WEBHOOK_SECRET_HASH:-}
+      PAYSTACK_BASE_URL: ${PAYSTACK_BASE_URL:-https://api.paystack.co}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      BILLING_PAYMENT_RETURN_URL: ${BILLING_PAYMENT_RETURN_URL:-http://localhost:3000/wallet/payment-return}
+      BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS: ${BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS:-false}
+
+  api-intelligence:
+    build:
+      context: .
+      dockerfile: apps/api-intelligence/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '3002:3002'
+    environment:
+      PORT: 3002
+      NODE_ENV: production
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mobility_os
+      DATABASE_CONNECTION_LIMIT: 10
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-replace-with-a-long-platform-jwt-secret}
+      INTELLIGENCE_API_KEY: ${INTELLIGENCE_API_KEY:-replace-with-intelligence-api-key}
+      CONTROL_PLANE_BASE_URL: ${CONTROL_PLANE_BASE_URL:-http://api-control-plane:3100/api}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-replace-with-a-shared-internal-service-token}
+      VERIFICATION_FEE_AMOUNT_MINOR_UNITS: ${VERIFICATION_FEE_AMOUNT_MINOR_UNITS:-0}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REKOGNITION_LIVENESS_MIN_CONFIDENCE: ${AWS_REKOGNITION_LIVENESS_MIN_CONFIDENCE:-90}
+      AWS_REKOGNITION_MOCK_LIVENESS_RESPONSE: ${AWS_REKOGNITION_MOCK_LIVENESS_RESPONSE:-}
+      YOUVERIFY_API_KEY: ${YOUVERIFY_API_KEY:-}
+      YOUVERIFY_BASE_URL: ${YOUVERIFY_BASE_URL:-https://api.youverify.co}
+      YOUVERIFY_MOCK_RESPONSE: ${YOUVERIFY_MOCK_RESPONSE:-}
+      YOUVERIFY_LIVENESS_MOCK_RESPONSE: ${YOUVERIFY_LIVENESS_MOCK_RESPONSE:-}
+      SMILE_IDENTITY_API_KEY: ${SMILE_IDENTITY_API_KEY:-}
+      SMILE_IDENTITY_BASE_URL: ${SMILE_IDENTITY_BASE_URL:-https://api.smileidentity.com}
+      SMILE_IDENTITY_MOCK_RESPONSE: ${SMILE_IDENTITY_MOCK_RESPONSE:-}
+      SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE: ${SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE:-}
+      AZURE_FACE_ENDPOINT: ${AZURE_FACE_ENDPOINT:-https://your-resource-name.cognitiveservices.azure.com}
+      AZURE_FACE_API_KEY: ${AZURE_FACE_API_KEY:-}
+      AZURE_FACE_LIVENESS_MIN_CONFIDENCE: ${AZURE_FACE_LIVENESS_MIN_CONFIDENCE:-0.7}
+      AZURE_FACE_LIVENESS_MOCK_RESPONSE: ${AZURE_FACE_LIVENESS_MOCK_RESPONSE:-}
+      BIOMETRIC_ENCRYPTION_KEY: ${BIOMETRIC_ENCRYPTION_KEY:-replace-with-base64-32-byte-key}
+      BIOMETRIC_AUTO_LINK_THRESHOLD: ${BIOMETRIC_AUTO_LINK_THRESHOLD:-0.95}
+      BIOMETRIC_MIN_QUALITY_SCORE: ${BIOMETRIC_MIN_QUALITY_SCORE:-0.7}
+
+  tenant-web:
+    build:
+      context: .
+      dockerfile: apps/tenant-web/Dockerfile
+    depends_on:
+      - api-core
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+
+  control-plane-web:
+    build:
+      context: .
+      dockerfile: apps/control-plane-web/Dockerfile
+    depends_on:
+      - api-control-plane
+    ports:
+      - '3200:3200'
+    environment:
+      PORT: 3200
+      NODE_ENV: production
+      NEXT_PUBLIC_CONTROL_PLANE_API_URL: ${NEXT_PUBLIC_CONTROL_PLANE_API_URL:-http://localhost:3100/api}
+
+volumes:
+  mobility_os_postgres_data:

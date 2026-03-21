@@ -1,0 +1,70 @@
+'use server';
+
+import { redirect } from 'next/navigation';
+import {
+  initializeTenantInvoiceCheckout,
+  initializeTenantWalletTopUpCheckout,
+} from '../../lib/api-core';
+
+export interface WalletCheckoutActionState {
+  error?: string;
+}
+
+function getTrimmedValue(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+export async function initializeVerificationWalletTopUpAction(
+  _prevState: WalletCheckoutActionState,
+  formData: FormData,
+): Promise<WalletCheckoutActionState> {
+  const provider = getTrimmedValue(formData, 'provider');
+  const amountRaw = getTrimmedValue(formData, 'amountMinorUnits');
+
+  if (!provider || !amountRaw) {
+    return { error: 'Payment provider and amount are required.' };
+  }
+
+  const amountMinorUnits = Number.parseInt(amountRaw, 10);
+  if (Number.isNaN(amountMinorUnits) || amountMinorUnits <= 0) {
+    return { error: 'Enter a valid amount to fund the verification wallet.' };
+  }
+
+  try {
+    const checkout = await initializeTenantWalletTopUpCheckout({
+      provider,
+      amountMinorUnits,
+    });
+    redirect(checkout.checkoutUrl as never);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Unable to initialize wallet funding checkout.',
+    };
+  }
+}
+
+export async function initializeOutstandingInvoiceCheckoutAction(
+  _prevState: WalletCheckoutActionState,
+  formData: FormData,
+): Promise<WalletCheckoutActionState> {
+  const provider = getTrimmedValue(formData, 'provider');
+  const invoiceId = getTrimmedValue(formData, 'invoiceId');
+
+  if (!provider || !invoiceId) {
+    return { error: 'Payment provider and invoice are required.' };
+  }
+
+  try {
+    const checkout = await initializeTenantInvoiceCheckout({
+      provider,
+      invoiceId,
+    });
+    redirect(checkout.checkoutUrl as never);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
+    };
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(find /Users/seyiadelaju/mobility-os/apps/api-control-plane/src -type f -name *registration* -o -name *onboarding* -o -name *tenant-creation*)",
+      "Bash(grep -r \"otp\\\\|OTP\\\\|verification.*code\\\\|verification.*token\" /Users/seyiadelaju/mobility-os/apps/api-core/src --include=*.ts)",
+      "Bash(find /Users/seyiadelaju/mobility-os/apps -name *mail* -o -name *email* -o -name *notification*)",
+      "Bash(grep -r \"mailer\\\\|zeptomail\\\\|sendgrid\\\\|resend\" /Users/seyiadelaju/mobility-os/apps/*/package.json)",
+      "Bash(grep -r \"AuthOtp\\\\|authOtp\" /Users/seyiadelaju/mobility-os/apps/api-control-plane/src --include=*.ts)",
+      "Bash(grep -r \"sendEmail\\\\|sendAccountVerification\\\\|sendOnboarding\" /Users/seyiadelaju/mobility-os/apps/api-core/src --include=*.ts)",
+      "Bash(email)",
+      "Bash(notification)",
+      "Bash(otp)"
+    ]
+  }
+}

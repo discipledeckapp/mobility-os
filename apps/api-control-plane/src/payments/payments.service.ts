@@ -1,0 +1,323 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ConfigService } from '@nestjs/config';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { BillingService } from '../billing/billing.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { PrismaService } from '../database/prisma.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
+import type { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
+import type { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
+import type { PaymentApplicationResponseDto } from './dto/payment-application-response.dto';
+import type { PaymentCheckoutResponseDto } from './dto/payment-checkout-response.dto';
+import type { VerifyAndApplyPaymentDto } from './dto/verify-and-apply-payment.dto';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { PaymentProvidersService } from './payment-providers.service';
+
+@Injectable()
+export class PaymentsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billingService: BillingService,
+    private readonly platformWalletsService: PlatformWalletsService,
+    private readonly paymentProvidersService: PaymentProvidersService,
+    private readonly configService: ConfigService,
+    private readonly tenantLifecycleService: TenantLifecycleService,
+  ) {}
+
+  async initializeInvoicePayment(
+    dto: InitializeInvoicePaymentDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    const invoice = await this.billingService.getInvoice(dto.invoiceId);
+    if (invoice.status === 'paid' || invoice.status === 'void') {
+      throw new BadRequestException(
+        `Invoice '${dto.invoiceId}' in status '${invoice.status}' cannot start a new payment`,
+      );
+    }
+
+    const reference = this.buildReference('invoice_settlement', dto.invoiceId, dto.provider);
+    const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
+    const initialized = await this.paymentProvidersService.initializePayment({
+      provider: dto.provider,
+      reference,
+      amountMinorUnits: invoice.amountDueMinorUnits - invoice.amountPaidMinorUnits,
+      currency: invoice.currency,
+      redirectUrl,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      description: `Mobility OS invoice payment for ${dto.invoiceId}`,
+      metadata: {
+        purpose: 'invoice_settlement',
+        invoiceId: dto.invoiceId,
+        tenantId: invoice.tenantId,
+      },
+    });
+
+    await this.prisma.cpPaymentAttempt.create({
+      data: {
+        provider: dto.provider,
+        reference,
+        purpose: 'invoice_settlement',
+        tenantId: invoice.tenantId,
+        invoiceId: dto.invoiceId,
+        status: 'checkout_initialized',
+        amountMinorUnits: invoice.amountDueMinorUnits - invoice.amountPaidMinorUnits,
+        currency: invoice.currency,
+        customerEmail: dto.customerEmail,
+        customerName: dto.customerName ?? null,
+        checkoutUrl: initialized.checkoutUrl,
+        accessCode: initialized.accessCode ?? null,
+      },
+    });
+
+    return {
+      provider: initialized.provider,
+      reference,
+      checkoutUrl: initialized.checkoutUrl,
+      ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
+      purpose: 'invoice_settlement',
+    };
+  }
+
+  async initializeWalletTopUp(dto: InitializeWalletTopUpDto): Promise<PaymentCheckoutResponseDto> {
+    const reference = this.buildReference('platform_wallet_topup', dto.tenantId, dto.provider);
+    const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
+    const initialized = await this.paymentProvidersService.initializePayment({
+      provider: dto.provider,
+      reference,
+      amountMinorUnits: dto.amountMinorUnits,
+      currency: dto.currency,
+      redirectUrl,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      description: `Mobility OS platform wallet top-up for tenant ${dto.tenantId}`,
+      metadata: {
+        purpose: 'platform_wallet_topup',
+        tenantId: dto.tenantId,
+      },
+    });
+
+    await this.prisma.cpPaymentAttempt.create({
+      data: {
+        provider: dto.provider,
+        reference,
+        purpose: 'platform_wallet_topup',
+        tenantId: dto.tenantId,
+        status: 'checkout_initialized',
+        amountMinorUnits: dto.amountMinorUnits,
+        currency: dto.currency,
+        customerEmail: dto.customerEmail,
+        customerName: dto.customerName ?? null,
+        checkoutUrl: initialized.checkoutUrl,
+        accessCode: initialized.accessCode ?? null,
+      },
+    });
+
+    return {
+      provider: initialized.provider,
+      reference,
+      checkoutUrl: initialized.checkoutUrl,
+      ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
+      purpose: 'platform_wallet_topup',
+    };
+  }
+
+  async verifyAndApplyPayment(
+    dto: VerifyAndApplyPaymentDto,
+  ): Promise<PaymentApplicationResponseDto> {
+    const attempt = await this.prisma.cpPaymentAttempt.findUnique({
+      where: { reference: dto.reference },
+    });
+    const verified = await this.paymentProvidersService.verifyPayment(dto.provider, dto.reference);
+
+    await this.prisma.cpPaymentAttempt.updateMany({
+      where: { reference: dto.reference },
+      data: {
+        status:
+          verified.status === 'successful'
+            ? 'provider_verified'
+            : verified.status === 'pending'
+              ? 'provider_pending'
+              : 'provider_failed',
+        providerPayload: verified.providerPayload as never,
+        failureReason:
+          verified.status === 'failed' ? 'provider verification returned failed' : null,
+        paidAt: verified.paidAt ? new Date(verified.paidAt) : null,
+      },
+    });
+
+    if (verified.status !== 'successful') {
+      throw new BadRequestException(
+        `Payment reference '${dto.reference}' is '${verified.status}', not successful`,
+      );
+    }
+
+    const purpose = attempt?.purpose ?? dto.purpose;
+    const invoiceId = attempt?.invoiceId ?? dto.invoiceId;
+    const tenantId = attempt?.tenantId ?? dto.tenantId;
+
+    if (purpose === 'invoice_settlement') {
+      if (!invoiceId) {
+        throw new BadRequestException(
+          'invoiceId is required for invoice_settlement payment application',
+        );
+      }
+
+      const invoice = await this.billingService.getInvoice(invoiceId);
+      if (invoice.currency !== verified.currency) {
+        throw new BadRequestException(
+          `Verified payment currency '${verified.currency}' does not match invoice currency '${invoice.currency}'`,
+        );
+      }
+
+      await this.billingService.markPaid(invoiceId, verified.paidAt);
+      await this.tenantLifecycleService.markPaymentRecovered({
+        tenantId: invoice.tenantId,
+        invoiceId,
+        provider: dto.provider,
+        referenceId: dto.reference,
+      });
+      await this.prisma.cpPaymentAttempt.updateMany({
+        where: { reference: dto.reference },
+        data: {
+          status: 'applied',
+          appliedAt: new Date(),
+        },
+      });
+
+      return {
+        provider: dto.provider,
+        reference: dto.reference,
+        purpose,
+        status: 'applied',
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        invoiceId,
+      };
+    }
+
+    if (!tenantId) {
+      throw new BadRequestException(
+        'tenantId is required for platform_wallet_topup payment application',
+      );
+    }
+
+    const alreadyApplied = await this.platformWalletsService.hasEntryForReference(
+      tenantId,
+      dto.reference,
+      'payment',
+    );
+    if (!alreadyApplied) {
+      await this.platformWalletsService.createEntry(tenantId, {
+        type: 'credit',
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        referenceId: dto.reference,
+        referenceType: 'payment',
+        description: `${dto.provider} platform wallet top-up`,
+      });
+    }
+
+    await this.prisma.cpPaymentAttempt.updateMany({
+      where: { reference: dto.reference },
+      data: {
+        status: alreadyApplied ? 'applied' : 'applied',
+        appliedAt: new Date(),
+      },
+    });
+
+    return {
+      provider: dto.provider,
+      reference: dto.reference,
+      purpose,
+      status: alreadyApplied ? 'already_applied' : 'applied',
+      amountMinorUnits: verified.amountMinorUnits,
+      currency: verified.currency,
+      tenantId,
+    };
+  }
+
+  async handleWebhook(
+    provider: 'flutterwave' | 'paystack',
+    headers: Record<string, string | string[] | undefined>,
+    payload: unknown,
+  ): Promise<PaymentApplicationResponseDto> {
+    this.paymentProvidersService.assertWebhookAuthentic(provider, headers, payload);
+    const reference = this.paymentProvidersService.extractWebhookReference(provider, payload);
+    const attempt = await this.prisma.cpPaymentAttempt.findUnique({
+      where: { reference },
+    });
+
+    if (!attempt) {
+      throw new NotFoundException(`Payment attempt for reference '${reference}' was not found`);
+    }
+
+    await this.prisma.cpPaymentAttempt.update({
+      where: { reference },
+      data: {
+        status: 'webhook_received',
+        providerPayload: payload as never,
+      },
+    });
+
+    return this.verifyAndApplyPayment({
+      provider,
+      reference,
+      purpose: attempt.purpose as 'invoice_settlement' | 'platform_wallet_topup',
+      ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
+      ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
+    });
+  }
+
+  async settleInvoiceFromPlatformWallet(invoiceId: string): Promise<PaymentApplicationResponseDto> {
+    const invoice = await this.billingService.getInvoice(invoiceId);
+    const settled = await this.platformWalletsService.createEntry(invoice.tenantId, {
+      type: 'debit',
+      amountMinorUnits: invoice.amountDueMinorUnits - invoice.amountPaidMinorUnits,
+      currency: invoice.currency,
+      referenceId: invoice.id,
+      referenceType: 'invoice',
+      description: `Settlement of invoice '${invoice.id}' from platform wallet`,
+    });
+
+    await this.billingService.markPaid(invoiceId);
+    await this.tenantLifecycleService.markPaymentRecovered({
+      tenantId: invoice.tenantId,
+      invoiceId,
+      provider: 'platform_wallet',
+      referenceId: settled.referenceId ?? invoice.id,
+    });
+
+    return {
+      provider: 'platform_wallet',
+      reference: settled.referenceId ?? invoice.id,
+      purpose: 'invoice_settlement',
+      status: 'applied',
+      amountMinorUnits: settled.amountMinorUnits,
+      currency: settled.currency,
+      invoiceId,
+      tenantId: invoice.tenantId,
+    };
+  }
+
+  private buildReference(
+    purpose: 'invoice_settlement' | 'platform_wallet_topup',
+    targetId: string,
+    provider: string,
+  ): string {
+    return `mos_${provider}_${purpose}_${targetId}_${Date.now()}`;
+  }
+
+  private resolveRedirectUrl(override?: string): string {
+    const redirectUrl = override ?? this.configService.get<string>('BILLING_PAYMENT_RETURN_URL');
+    if (!redirectUrl) {
+      throw new BadRequestException(
+        'redirectUrl is required when BILLING_PAYMENT_RETURN_URL is not configured',
+      );
+    }
+    return redirectUrl;
+  }
+}

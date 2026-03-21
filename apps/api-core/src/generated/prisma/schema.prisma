@@ -1,0 +1,416 @@
+// =============================================================================
+// Tenant Operations Plane — Prisma Schema (api-core)
+//
+// Table naming: no prefix — this is the default operational plane.
+// Status fields use String, not Prisma enums, so status transitions
+// never require a schema migration. Valid values are enforced by the
+// service layer using @mobility-os/domain-config status registries.
+//
+// Cross-plane references (e.g. to intel_persons in api-intelligence) are
+// plain String fields. Prisma cannot model cross-schema relations; integrity
+// is maintained at the application level.
+//
+// Generated client output: src/generated/prisma
+// (relative to this file: ../../generated/prisma)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Tenants ───────────────────────────────────────────────────────────────────
+// The root of the billing and access-control hierarchy.
+// One tenant = one SaaS subscription.
+
+model Tenant {
+  id       String @id @default(cuid())
+  // URL-safe identifier used in subdomains and API paths.
+  slug     String @unique
+  name     String
+  // ISO 3166-1 alpha-2 — references domain-config country registry.
+  country  String
+  // TenantStatus values from @mobility-os/tenancy-domain.
+  status   String @default("prospect")
+  // Arbitrary platform metadata (e.g. CRM notes, onboarding flags).
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessEntities BusinessEntity[]
+  users            User[]
+
+  @@map("tenants")
+}
+
+// ── Business Entities ─────────────────────────────────────────────────────────
+// A legal or commercial entity operated under a tenant account.
+// Enterprise tenants may have many (e.g. one per city or legal entity).
+
+model BusinessEntity {
+  id            String @id @default(cuid())
+  tenantId      String
+  name          String
+  // May differ from tenant.country for multi-country enterprise operators.
+  country       String
+  // References domain-config BUSINESS_MODELS slug (hire-purchase, lease, etc.).
+  businessModel String
+  status        String @default("active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  operatingUnits OperatingUnit[]
+
+  @@index([tenantId])
+  @@map("business_entities")
+}
+
+// ── Operating Units ───────────────────────────────────────────────────────────
+// A branch, depot, or operational location within a business entity.
+
+model OperatingUnit {
+  id               String @id @default(cuid())
+  // Denormalized for efficient row-level filtering without joins.
+  tenantId         String
+  businessEntityId String
+  name             String
+  status           String @default("active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessEntity BusinessEntity @relation(fields: [businessEntityId], references: [id], onDelete: Restrict)
+  fleets         Fleet[]
+
+  @@index([tenantId])
+  @@index([businessEntityId])
+  @@map("operating_units")
+}
+
+// ── Fleets ────────────────────────────────────────────────────────────────────
+// A managed group of vehicles within an operating unit.
+
+model Fleet {
+  id              String @id @default(cuid())
+  tenantId        String
+  operatingUnitId String
+  name            String
+  // References domain-config BUSINESS_MODELS slug — may differ from the
+  // parent business entity's default model (e.g. mixed hire-purchase + lease fleets).
+  businessModel   String
+  status          String @default("active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  operatingUnit OperatingUnit @relation(fields: [operatingUnitId], references: [id], onDelete: Restrict)
+  drivers       Driver[]
+  vehicles      Vehicle[]
+
+  @@index([tenantId])
+  @@index([operatingUnitId])
+  @@map("fleets")
+}
+
+// ── Drivers ───────────────────────────────────────────────────────────────────
+// An individual who operates a vehicle under a tenant fleet.
+// Distinct from User — drivers are operational subjects, not platform users.
+//
+// personId: cross-schema reference to intel_persons.id in api-intelligence.
+// Set after identity resolution completes. Null until then.
+// See docs/intelligence/person-graph.md.
+
+model Driver {
+  id       String @id @default(cuid())
+  tenantId String
+  fleetId  String
+  // DriverStatus from domain-config DRIVER_STATUS_CODES:
+  // active | inactive | suspended | terminated
+  status   String @default("inactive")
+
+  // Personal details
+  firstName   String
+  lastName    String
+  // E.164 format
+  phone       String
+  // Nullable — driver may not yet have a linked email
+  email       String?
+  // ISO 8601 date string (YYYY-MM-DD). Not DateTime — avoids tz ambiguity.
+  dateOfBirth String?
+  // ISO 3166-1 alpha-2
+  nationality String?
+
+  // Cross-schema reference to intel_persons.id in api-intelligence.
+  // Null until identity resolution has produced a canonical person record.
+  // Never expose this to tenant API callers — surface intelligence results
+  // through the IntelligenceQueryResult shape instead.
+  personId String?
+
+  // Denormalized for fast lookups without joining fleet → operating unit → business entity.
+  businessEntityId String
+  operatingUnitId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fleet Fleet @relation(fields: [fleetId], references: [id], onDelete: Restrict)
+
+  // Phone unique per tenant — same driver cannot enroll twice under one tenant.
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([fleetId])
+  @@index([personId])
+  @@map("drivers")
+}
+
+// ── Vehicles ──────────────────────────────────────────────────────────────────
+// A vehicle managed within a fleet.
+//
+// vehicleType: slug from domain-config VEHICLE_TYPES (e.g. 'motorcycle', 'minibus').
+// plate: unique per tenant — a vehicle cannot appear in two fleets of the same tenant.
+
+model Vehicle {
+  id       String @id @default(cuid())
+  tenantId String
+  fleetId  String
+  // VehicleStatus from domain-config VEHICLE_STATUS_CODES:
+  // available | assigned | maintenance | retired
+  status   String @default("available")
+
+  // Vehicle details
+  // References domain-config VEHICLE_TYPES slug.
+  vehicleType String
+  make        String
+  model       String
+  year        Int
+  // Normalised registration plate.
+  plate       String
+  color       String?
+  // VIN / chassis number — optional at enrollment, required before assignment.
+  vin         String?
+
+  // Denormalized for fast lookups.
+  operatingUnitId  String
+  businessEntityId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fleet Fleet @relation(fields: [fleetId], references: [id], onDelete: Restrict)
+
+  // Plate unique per tenant — prevents the same vehicle appearing in two fleets.
+  @@unique([tenantId, plate])
+  @@index([tenantId])
+  @@index([fleetId])
+  @@map("vehicles")
+}
+
+// ── Assignments ───────────────────────────────────────────────────────────────
+// A driver–vehicle pairing within a fleet for an operational period.
+// Only one active assignment per driver and per vehicle at any time (enforced
+// at the service layer; no DB unique because completed assignments are retained).
+//
+// AssignmentStatus from domain-config ASSIGNMENT_STATUS_CODES:
+//   created | assigned | active | completed (terminal) | cancelled (terminal)
+
+model Assignment {
+  id        String @id @default(cuid())
+  tenantId  String
+  fleetId   String
+  driverId  String
+  vehicleId String
+  // AssignmentStatus from domain-config ASSIGNMENT_STATUS_CODES.
+  status    String @default("assigned")
+
+  startedAt DateTime  @default(now())
+  // Null while the assignment is active.
+  endedAt   DateTime?
+  // Free-text reason for suspension or cancellation.
+  notes     String?
+
+  // Denormalized for filtering without joins.
+  operatingUnitId  String
+  businessEntityId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([fleetId, status])
+  @@map("assignments")
+}
+
+// ── Remittance ────────────────────────────────────────────────────────────────
+// A periodic payment from a driver to the operator.
+// Immutable after confirmation — disputes create a new row, not an update.
+//
+// RemittanceStatus from domain-config REMITTANCE_STATUS_CODES:
+//   pending | confirmed (terminal) | disputed (terminal) | waived (terminal)
+//
+// amount is stored in minor currency units (e.g. kobo).
+// currency is ISO 4217 — must match the tenant's operational wallet currency.
+
+model Remittance {
+  id           String @id @default(cuid())
+  tenantId     String
+  assignmentId String
+  driverId     String
+  vehicleId    String
+  // RemittanceStatus from domain-config REMITTANCE_STATUS_CODES.
+  status       String @default("pending")
+
+  // Amount in minor currency units (always positive).
+  amountMinorUnits Int
+  // ISO 4217. Must match the tenant operational wallet currency.
+  currency         String
+  // Expected payment date (ISO 8601 date, not DateTime — avoids tz ambiguity).
+  dueDate          String
+  // Actual payment date. Null until confirmed.
+  paidDate         String?
+  notes            String?
+
+  // Denormalized for fast lookups.
+  fleetId          String
+  operatingUnitId  String
+  businessEntityId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([assignmentId])
+  @@index([driverId])
+  @@index([tenantId, status])
+  @@map("remittances")
+}
+
+// ── Operational Wallets ───────────────────────────────────────────────────────
+// Tenant-side cash / float wallet. Distinct from cp_platform_wallets (SaaS billing).
+// See docs/decisions/ADR-009-wallet-separation.md.
+//
+// One operational wallet per business entity. Balance is derived from ledger entries.
+// Table prefix ow_* (operational wallet) to distinguish from cp_* (control-plane).
+
+model OperationalWallet {
+  id               String @id @default(cuid())
+  tenantId         String
+  businessEntityId String @unique
+  // ISO 4217. Must match the tenant's plan currency.
+  currency         String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries OperationalWalletEntry[]
+
+  @@index([tenantId])
+  @@map("ow_wallets")
+}
+
+// Operational wallet ledger (double-entry, append-only).
+// Balance = SUM(amount WHERE type = 'credit') - SUM(amount WHERE type = 'debit')
+// Corrections are new reversal rows — existing rows are never mutated.
+
+model OperationalWalletEntry {
+  id               String  @id @default(cuid())
+  walletId         String
+  // WalletEntryType: credit | debit | reversal
+  type             String
+  // Amount in minor currency units. Always positive — type encodes direction.
+  amountMinorUnits Int
+  currency         String
+  // ID of the originating event (remittance, adjustment, etc.).
+  referenceId      String?
+  // 'remittance' | 'adjustment' | 'reversal' | 'payout'
+  referenceType    String?
+  description      String?
+
+  createdAt DateTime @default(now())
+  // No updatedAt — entries are immutable after creation.
+
+  wallet OperationalWallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([walletId])
+  @@map("ow_wallet_entries")
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+// Tenant platform users (operators, managers, field staff).
+// Not to be confused with drivers — drivers are a separate operational entity.
+
+model User {
+  id              String  @id @default(cuid())
+  tenantId        String
+  email           String
+  phone           String?
+  name            String
+  // TenantRole from @mobility-os/authz-model.
+  role            String
+  isActive        Boolean @default(true)
+  isEmailVerified Boolean @default(false)
+
+  // Access scope — absent means tenant-wide access (e.g. TENANT_OWNER).
+  // Present when the user is scoped to a specific business entity or unit.
+  businessEntityId String?
+  operatingUnitId  String?
+
+  // Hashed password for local auth. Null if using SSO only.
+  passwordHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  authOtps            AuthOtp[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model AuthOtp {
+  id         String    @id @default(cuid())
+  userId     String
+  identifier String
+  purpose    String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([identifier, purpose])
+  @@index([expiresAt])
+  @@map("auth_otps")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}

@@ -1,0 +1,13 @@
+packages:
+  # Applications
+  - 'apps/api-core'
+  - 'apps/api-control-plane'
+  - 'apps/api-intelligence'
+  - 'apps/tenant-web'
+  - 'apps/control-plane-web'
+  - 'apps/mobile-ops'
+  # Shared packages (canonical location)
+  - 'packages/*'
+  # Note: apps/packages/* contains a legacy copy of several packages.
+  # Canonical source of truth is packages/*. apps/packages/* should be
+  # removed once all consumers are migrated.

@@ -1,0 +1,21513 @@
+
+/**
+ * Client
+**/
+
+import * as runtime from './runtime/library.js';
+import $Types = runtime.Types // general types
+import $Public = runtime.Types.Public
+import $Utils = runtime.Types.Utils
+import $Extensions = runtime.Types.Extensions
+import $Result = runtime.Types.Result
+
+export type PrismaPromise<T> = $Public.PrismaPromise<T>
+
+
+/**
+ * Model CpPlatformUser
+ * 
+ */
+export type CpPlatformUser = $Result.DefaultSelection<Prisma.$CpPlatformUserPayload>
+/**
+ * Model CpPlan
+ * 
+ */
+export type CpPlan = $Result.DefaultSelection<Prisma.$CpPlanPayload>
+/**
+ * Model CpSubscription
+ * 
+ */
+export type CpSubscription = $Result.DefaultSelection<Prisma.$CpSubscriptionPayload>
+/**
+ * Model CpInvoice
+ * 
+ */
+export type CpInvoice = $Result.DefaultSelection<Prisma.$CpInvoicePayload>
+/**
+ * Model CpCollectionAttempt
+ * 
+ */
+export type CpCollectionAttempt = $Result.DefaultSelection<Prisma.$CpCollectionAttemptPayload>
+/**
+ * Model CpInvoiceLineItem
+ * 
+ */
+export type CpInvoiceLineItem = $Result.DefaultSelection<Prisma.$CpInvoiceLineItemPayload>
+/**
+ * Model CpPlatformWallet
+ * 
+ */
+export type CpPlatformWallet = $Result.DefaultSelection<Prisma.$CpPlatformWalletPayload>
+/**
+ * Model CpWalletEntry
+ * 
+ */
+export type CpWalletEntry = $Result.DefaultSelection<Prisma.$CpWalletEntryPayload>
+/**
+ * Model CpPaymentAttempt
+ * 
+ */
+export type CpPaymentAttempt = $Result.DefaultSelection<Prisma.$CpPaymentAttemptPayload>
+/**
+ * Model CpFeatureFlag
+ * 
+ */
+export type CpFeatureFlag = $Result.DefaultSelection<Prisma.$CpFeatureFlagPayload>
+/**
+ * Model CpFeatureFlagOverride
+ * 
+ */
+export type CpFeatureFlagOverride = $Result.DefaultSelection<Prisma.$CpFeatureFlagOverridePayload>
+/**
+ * Model CpPlatformSetting
+ * 
+ */
+export type CpPlatformSetting = $Result.DefaultSelection<Prisma.$CpPlatformSettingPayload>
+/**
+ * Model CpUsageEvent
+ * 
+ */
+export type CpUsageEvent = $Result.DefaultSelection<Prisma.$CpUsageEventPayload>
+/**
+ * Model CpTenantLifecycleEvent
+ * 
+ */
+export type CpTenantLifecycleEvent = $Result.DefaultSelection<Prisma.$CpTenantLifecycleEventPayload>
+
+/**
+ * ##  Prisma Client ʲˢ
+ * 
+ * Type-safe database client for TypeScript & Node.js
+ * @example
+ * ```
+ * const prisma = new PrismaClient()
+ * // Fetch zero or more CpPlatformUsers
+ * const cpPlatformUsers = await prisma.cpPlatformUser.findMany()
+ * ```
+ *
+ * 
+ * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
+ */
+export class PrismaClient<
+  ClientOptions extends Prisma.PrismaClientOptions = Prisma.PrismaClientOptions,
+  U = 'log' extends keyof ClientOptions ? ClientOptions['log'] extends Array<Prisma.LogLevel | Prisma.LogDefinition> ? Prisma.GetEvents<ClientOptions['log']> : never : never,
+  ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs
+> {
+  [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['other'] }
+
+    /**
+   * ##  Prisma Client ʲˢ
+   * 
+   * Type-safe database client for TypeScript & Node.js
+   * @example
+   * ```
+   * const prisma = new PrismaClient()
+   * // Fetch zero or more CpPlatformUsers
+   * const cpPlatformUsers = await prisma.cpPlatformUser.findMany()
+   * ```
+   *
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
+   */
+
+  constructor(optionsArg ?: Prisma.Subset<ClientOptions, Prisma.PrismaClientOptions>);
+  $on<V extends U>(eventType: V, callback: (event: V extends 'query' ? Prisma.QueryEvent : Prisma.LogEvent) => void): void;
+
+  /**
+   * Connect with the database
+   */
+  $connect(): $Utils.JsPromise<void>;
+
+  /**
+   * Disconnect from the database
+   */
+  $disconnect(): $Utils.JsPromise<void>;
+
+  /**
+   * Add a middleware
+   * @deprecated since 4.16.0. For new code, prefer client extensions instead.
+   * @see https://pris.ly/d/extensions
+   */
+  $use(cb: Prisma.Middleware): void
+
+/**
+   * Executes a prepared raw query and returns the number of affected rows.
+   * @example
+   * ```
+   * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
+   * ```
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
+   */
+  $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
+
+  /**
+   * Executes a raw query and returns the number of affected rows.
+   * Susceptible to SQL injections, see documentation.
+   * @example
+   * ```
+   * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
+   * ```
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
+   */
+  $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
+
+  /**
+   * Performs a prepared raw query and returns the `SELECT` data.
+   * @example
+   * ```
+   * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
+   * ```
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
+   */
+  $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
+
+  /**
+   * Performs a raw query and returns the `SELECT` data.
+   * Susceptible to SQL injections, see documentation.
+   * @example
+   * ```
+   * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
+   * ```
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
+   */
+  $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
+
+
+  /**
+   * Allows the running of a sequence of read/write operations that are guaranteed to either succeed or fail as a whole.
+   * @example
+   * ```
+   * const [george, bob, alice] = await prisma.$transaction([
+   *   prisma.user.create({ data: { name: 'George' } }),
+   *   prisma.user.create({ data: { name: 'Bob' } }),
+   *   prisma.user.create({ data: { name: 'Alice' } }),
+   * ])
+   * ```
+   * 
+   * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
+   */
+  $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
+
+  $transaction<R>(fn: (prisma: Omit<PrismaClient, runtime.ITXClientDenyList>) => $Utils.JsPromise<R>, options?: { maxWait?: number, timeout?: number, isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<R>
+
+
+  $extends: $Extensions.ExtendsHook<"extends", Prisma.TypeMapCb, ExtArgs>
+
+      /**
+   * `prisma.cpPlatformUser`: Exposes CRUD operations for the **CpPlatformUser** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpPlatformUsers
+    * const cpPlatformUsers = await prisma.cpPlatformUser.findMany()
+    * ```
+    */
+  get cpPlatformUser(): Prisma.CpPlatformUserDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpPlan`: Exposes CRUD operations for the **CpPlan** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpPlans
+    * const cpPlans = await prisma.cpPlan.findMany()
+    * ```
+    */
+  get cpPlan(): Prisma.CpPlanDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpSubscription`: Exposes CRUD operations for the **CpSubscription** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpSubscriptions
+    * const cpSubscriptions = await prisma.cpSubscription.findMany()
+    * ```
+    */
+  get cpSubscription(): Prisma.CpSubscriptionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpInvoice`: Exposes CRUD operations for the **CpInvoice** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpInvoices
+    * const cpInvoices = await prisma.cpInvoice.findMany()
+    * ```
+    */
+  get cpInvoice(): Prisma.CpInvoiceDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpCollectionAttempt`: Exposes CRUD operations for the **CpCollectionAttempt** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpCollectionAttempts
+    * const cpCollectionAttempts = await prisma.cpCollectionAttempt.findMany()
+    * ```
+    */
+  get cpCollectionAttempt(): Prisma.CpCollectionAttemptDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpInvoiceLineItem`: Exposes CRUD operations for the **CpInvoiceLineItem** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpInvoiceLineItems
+    * const cpInvoiceLineItems = await prisma.cpInvoiceLineItem.findMany()
+    * ```
+    */
+  get cpInvoiceLineItem(): Prisma.CpInvoiceLineItemDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpPlatformWallet`: Exposes CRUD operations for the **CpPlatformWallet** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpPlatformWallets
+    * const cpPlatformWallets = await prisma.cpPlatformWallet.findMany()
+    * ```
+    */
+  get cpPlatformWallet(): Prisma.CpPlatformWalletDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpWalletEntry`: Exposes CRUD operations for the **CpWalletEntry** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpWalletEntries
+    * const cpWalletEntries = await prisma.cpWalletEntry.findMany()
+    * ```
+    */
+  get cpWalletEntry(): Prisma.CpWalletEntryDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpPaymentAttempt`: Exposes CRUD operations for the **CpPaymentAttempt** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpPaymentAttempts
+    * const cpPaymentAttempts = await prisma.cpPaymentAttempt.findMany()
+    * ```
+    */
+  get cpPaymentAttempt(): Prisma.CpPaymentAttemptDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpFeatureFlag`: Exposes CRUD operations for the **CpFeatureFlag** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpFeatureFlags
+    * const cpFeatureFlags = await prisma.cpFeatureFlag.findMany()
+    * ```
+    */
+  get cpFeatureFlag(): Prisma.CpFeatureFlagDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpFeatureFlagOverride`: Exposes CRUD operations for the **CpFeatureFlagOverride** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpFeatureFlagOverrides
+    * const cpFeatureFlagOverrides = await prisma.cpFeatureFlagOverride.findMany()
+    * ```
+    */
+  get cpFeatureFlagOverride(): Prisma.CpFeatureFlagOverrideDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpPlatformSetting`: Exposes CRUD operations for the **CpPlatformSetting** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpPlatformSettings
+    * const cpPlatformSettings = await prisma.cpPlatformSetting.findMany()
+    * ```
+    */
+  get cpPlatformSetting(): Prisma.CpPlatformSettingDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpUsageEvent`: Exposes CRUD operations for the **CpUsageEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpUsageEvents
+    * const cpUsageEvents = await prisma.cpUsageEvent.findMany()
+    * ```
+    */
+  get cpUsageEvent(): Prisma.CpUsageEventDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpTenantLifecycleEvent`: Exposes CRUD operations for the **CpTenantLifecycleEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpTenantLifecycleEvents
+    * const cpTenantLifecycleEvents = await prisma.cpTenantLifecycleEvent.findMany()
+    * ```
+    */
+  get cpTenantLifecycleEvent(): Prisma.CpTenantLifecycleEventDelegate<ExtArgs>;
+}
+
+export namespace Prisma {
+  export import DMMF = runtime.DMMF
+
+  export type PrismaPromise<T> = $Public.PrismaPromise<T>
+
+  /**
+   * Validator
+   */
+  export import validator = runtime.Public.validator
+
+  /**
+   * Prisma Errors
+   */
+  export import PrismaClientKnownRequestError = runtime.PrismaClientKnownRequestError
+  export import PrismaClientUnknownRequestError = runtime.PrismaClientUnknownRequestError
+  export import PrismaClientRustPanicError = runtime.PrismaClientRustPanicError
+  export import PrismaClientInitializationError = runtime.PrismaClientInitializationError
+  export import PrismaClientValidationError = runtime.PrismaClientValidationError
+  export import NotFoundError = runtime.NotFoundError
+
+  /**
+   * Re-export of sql-template-tag
+   */
+  export import sql = runtime.sqltag
+  export import empty = runtime.empty
+  export import join = runtime.join
+  export import raw = runtime.raw
+  export import Sql = runtime.Sql
+
+
+
+  /**
+   * Decimal.js
+   */
+  export import Decimal = runtime.Decimal
+
+  export type DecimalJsLike = runtime.DecimalJsLike
+
+  /**
+   * Metrics 
+   */
+  export type Metrics = runtime.Metrics
+  export type Metric<T> = runtime.Metric<T>
+  export type MetricHistogram = runtime.MetricHistogram
+  export type MetricHistogramBucket = runtime.MetricHistogramBucket
+
+  /**
+  * Extensions
+  */
+  export import Extension = $Extensions.UserArgs
+  export import getExtensionContext = runtime.Extensions.getExtensionContext
+  export import Args = $Public.Args
+  export import Payload = $Public.Payload
+  export import Result = $Public.Result
+  export import Exact = $Public.Exact
+
+  /**
+   * Prisma Client JS version: 5.22.0
+   * Query Engine version: 605197351a3c8bdd595af2d2a9bc3025bca48ea2
+   */
+  export type PrismaVersion = {
+    client: string
+  }
+
+  export const prismaVersion: PrismaVersion 
+
+  /**
+   * Utility Types
+   */
+
+
+  export import JsonObject = runtime.JsonObject
+  export import JsonArray = runtime.JsonArray
+  export import JsonValue = runtime.JsonValue
+  export import InputJsonObject = runtime.InputJsonObject
+  export import InputJsonArray = runtime.InputJsonArray
+  export import InputJsonValue = runtime.InputJsonValue
+
+  /**
+   * Types of the values used to represent different kinds of `null` values when working with JSON fields.
+   * 
+   * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+   */
+  namespace NullTypes {
+    /**
+    * Type of `Prisma.DbNull`.
+    * 
+    * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
+    * 
+    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+    */
+    class DbNull {
+      private DbNull: never
+      private constructor()
+    }
+
+    /**
+    * Type of `Prisma.JsonNull`.
+    * 
+    * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
+    * 
+    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+    */
+    class JsonNull {
+      private JsonNull: never
+      private constructor()
+    }
+
+    /**
+    * Type of `Prisma.AnyNull`.
+    * 
+    * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
+    * 
+    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+    */
+    class AnyNull {
+      private AnyNull: never
+      private constructor()
+    }
+  }
+
+  /**
+   * Helper for filtering JSON entries that have `null` on the database (empty on the db)
+   * 
+   * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+   */
+  export const DbNull: NullTypes.DbNull
+
+  /**
+   * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
+   * 
+   * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+   */
+  export const JsonNull: NullTypes.JsonNull
+
+  /**
+   * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
+   * 
+   * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
+   */
+  export const AnyNull: NullTypes.AnyNull
+
+  type SelectAndInclude = {
+    select: any
+    include: any
+  }
+
+  type SelectAndOmit = {
+    select: any
+    omit: any
+  }
+
+  /**
+   * Get the type of the value, that the Promise holds.
+   */
+  export type PromiseType<T extends PromiseLike<any>> = T extends PromiseLike<infer U> ? U : T;
+
+  /**
+   * Get the return type of a function which returns a Promise.
+   */
+  export type PromiseReturnType<T extends (...args: any) => $Utils.JsPromise<any>> = PromiseType<ReturnType<T>>
+
+  /**
+   * From T, pick a set of properties whose keys are in the union K
+   */
+  type Prisma__Pick<T, K extends keyof T> = {
+      [P in K]: T[P];
+  };
+
+
+  export type Enumerable<T> = T | Array<T>;
+
+  export type RequiredKeys<T> = {
+    [K in keyof T]-?: {} extends Prisma__Pick<T, K> ? never : K
+  }[keyof T]
+
+  export type TruthyKeys<T> = keyof {
+    [K in keyof T as T[K] extends false | undefined | null ? never : K]: K
+  }
+
+  export type TrueKeys<T> = TruthyKeys<Prisma__Pick<T, RequiredKeys<T>>>
+
+  /**
+   * Subset
+   * @desc From `T` pick properties that exist in `U`. Simple version of Intersection
+   */
+  export type Subset<T, U> = {
+    [key in keyof T]: key extends keyof U ? T[key] : never;
+  };
+
+  /**
+   * SelectSubset
+   * @desc From `T` pick properties that exist in `U`. Simple version of Intersection.
+   * Additionally, it validates, if both select and include are present. If the case, it errors.
+   */
+  export type SelectSubset<T, U> = {
+    [key in keyof T]: key extends keyof U ? T[key] : never
+  } &
+    (T extends SelectAndInclude
+      ? 'Please either choose `select` or `include`.'
+      : T extends SelectAndOmit
+        ? 'Please either choose `select` or `omit`.'
+        : {})
+
+  /**
+   * Subset + Intersection
+   * @desc From `T` pick properties that exist in `U` and intersect `K`
+   */
+  export type SubsetIntersection<T, U, K> = {
+    [key in keyof T]: key extends keyof U ? T[key] : never
+  } &
+    K
+
+  type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
+
+  /**
+   * XOR is needed to have a real mutually exclusive union type
+   * https://stackoverflow.com/questions/42123407/does-typescript-support-mutually-exclusive-types
+   */
+  type XOR<T, U> =
+    T extends object ?
+    U extends object ?
+      (Without<T, U> & U) | (Without<U, T> & T)
+    : U : T
+
+
+  /**
+   * Is T a Record?
+   */
+  type IsObject<T extends any> = T extends Array<any>
+  ? False
+  : T extends Date
+  ? False
+  : T extends Uint8Array
+  ? False
+  : T extends BigInt
+  ? False
+  : T extends object
+  ? True
+  : False
+
+
+  /**
+   * If it's T[], return T
+   */
+  export type UnEnumerate<T extends unknown> = T extends Array<infer U> ? U : T
+
+  /**
+   * From ts-toolbelt
+   */
+
+  type __Either<O extends object, K extends Key> = Omit<O, K> &
+    {
+      // Merge all but K
+      [P in K]: Prisma__Pick<O, P & keyof O> // With K possibilities
+    }[K]
+
+  type EitherStrict<O extends object, K extends Key> = Strict<__Either<O, K>>
+
+  type EitherLoose<O extends object, K extends Key> = ComputeRaw<__Either<O, K>>
+
+  type _Either<
+    O extends object,
+    K extends Key,
+    strict extends Boolean
+  > = {
+    1: EitherStrict<O, K>
+    0: EitherLoose<O, K>
+  }[strict]
+
+  type Either<
+    O extends object,
+    K extends Key,
+    strict extends Boolean = 1
+  > = O extends unknown ? _Either<O, K, strict> : never
+
+  export type Union = any
+
+  type PatchUndefined<O extends object, O1 extends object> = {
+    [K in keyof O]: O[K] extends undefined ? At<O1, K> : O[K]
+  } & {}
+
+  /** Helper Types for "Merge" **/
+  export type IntersectOf<U extends Union> = (
+    U extends unknown ? (k: U) => void : never
+  ) extends (k: infer I) => void
+    ? I
+    : never
+
+  export type Overwrite<O extends object, O1 extends object> = {
+      [K in keyof O]: K extends keyof O1 ? O1[K] : O[K];
+  } & {};
+
+  type _Merge<U extends object> = IntersectOf<Overwrite<U, {
+      [K in keyof U]-?: At<U, K>;
+  }>>;
+
+  type Key = string | number | symbol;
+  type AtBasic<O extends object, K extends Key> = K extends keyof O ? O[K] : never;
+  type AtStrict<O extends object, K extends Key> = O[K & keyof O];
+  type AtLoose<O extends object, K extends Key> = O extends unknown ? AtStrict<O, K> : never;
+  export type At<O extends object, K extends Key, strict extends Boolean = 1> = {
+      1: AtStrict<O, K>;
+      0: AtLoose<O, K>;
+  }[strict];
+
+  export type ComputeRaw<A extends any> = A extends Function ? A : {
+    [K in keyof A]: A[K];
+  } & {};
+
+  export type OptionalFlat<O> = {
+    [K in keyof O]?: O[K];
+  } & {};
+
+  type _Record<K extends keyof any, T> = {
+    [P in K]: T;
+  };
+
+  // cause typescript not to expand types and preserve names
+  type NoExpand<T> = T extends unknown ? T : never;
+
+  // this type assumes the passed object is entirely optional
+  type AtLeast<O extends object, K extends string> = NoExpand<
+    O extends unknown
+    ? | (K extends keyof O ? { [P in K]: O[P] } & O : O)
+      | {[P in keyof O as P extends K ? K : never]-?: O[P]} & O
+    : never>;
+
+  type _Strict<U, _U = U> = U extends unknown ? U & OptionalFlat<_Record<Exclude<Keys<_U>, keyof U>, never>> : never;
+
+  export type Strict<U extends object> = ComputeRaw<_Strict<U>>;
+  /** End Helper Types for "Merge" **/
+
+  export type Merge<U extends object> = ComputeRaw<_Merge<Strict<U>>>;
+
+  /**
+  A [[Boolean]]
+  */
+  export type Boolean = True | False
+
+  // /**
+  // 1
+  // */
+  export type True = 1
+
+  /**
+  0
+  */
+  export type False = 0
+
+  export type Not<B extends Boolean> = {
+    0: 1
+    1: 0
+  }[B]
+
+  export type Extends<A1 extends any, A2 extends any> = [A1] extends [never]
+    ? 0 // anything `never` is false
+    : A1 extends A2
+    ? 1
+    : 0
+
+  export type Has<U extends Union, U1 extends Union> = Not<
+    Extends<Exclude<U1, U>, U1>
+  >
+
+  export type Or<B1 extends Boolean, B2 extends Boolean> = {
+    0: {
+      0: 0
+      1: 1
+    }
+    1: {
+      0: 1
+      1: 1
+    }
+  }[B1][B2]
+
+  export type Keys<U extends Union> = U extends unknown ? keyof U : never
+
+  type Cast<A, B> = A extends B ? A : B;
+
+  export const type: unique symbol;
+
+
+
+  /**
+   * Used by group by
+   */
+
+  export type GetScalarType<T, O> = O extends object ? {
+    [P in keyof T]: P extends keyof O
+      ? O[P]
+      : never
+  } : never
+
+  type FieldPaths<
+    T,
+    U = Omit<T, '_avg' | '_sum' | '_count' | '_min' | '_max'>
+  > = IsObject<T> extends True ? U : T
+
+  type GetHavingFields<T> = {
+    [K in keyof T]: Or<
+      Or<Extends<'OR', K>, Extends<'AND', K>>,
+      Extends<'NOT', K>
+    > extends True
+      ? // infer is only needed to not hit TS limit
+        // based on the brilliant idea of Pierre-Antoine Mills
+        // https://github.com/microsoft/TypeScript/issues/30188#issuecomment-478938437
+        T[K] extends infer TK
+        ? GetHavingFields<UnEnumerate<TK> extends object ? Merge<UnEnumerate<TK>> : never>
+        : never
+      : {} extends FieldPaths<T[K]>
+      ? never
+      : K
+  }[keyof T]
+
+  /**
+   * Convert tuple to union
+   */
+  type _TupleToUnion<T> = T extends (infer E)[] ? E : never
+  type TupleToUnion<K extends readonly any[]> = _TupleToUnion<K>
+  type MaybeTupleToUnion<T> = T extends any[] ? TupleToUnion<T> : T
+
+  /**
+   * Like `Pick`, but additionally can also accept an array of keys
+   */
+  type PickEnumerable<T, K extends Enumerable<keyof T> | keyof T> = Prisma__Pick<T, MaybeTupleToUnion<K>>
+
+  /**
+   * Exclude all keys with underscores
+   */
+  type ExcludeUnderscoreKeys<T extends string> = T extends `_${string}` ? never : T
+
+
+  export type FieldRef<Model, FieldType> = runtime.FieldRef<Model, FieldType>
+
+  type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRef<Model, FieldType>
+
+
+  export const ModelName: {
+    CpPlatformUser: 'CpPlatformUser',
+    CpPlan: 'CpPlan',
+    CpSubscription: 'CpSubscription',
+    CpInvoice: 'CpInvoice',
+    CpCollectionAttempt: 'CpCollectionAttempt',
+    CpInvoiceLineItem: 'CpInvoiceLineItem',
+    CpPlatformWallet: 'CpPlatformWallet',
+    CpWalletEntry: 'CpWalletEntry',
+    CpPaymentAttempt: 'CpPaymentAttempt',
+    CpFeatureFlag: 'CpFeatureFlag',
+    CpFeatureFlagOverride: 'CpFeatureFlagOverride',
+    CpPlatformSetting: 'CpPlatformSetting',
+    CpUsageEvent: 'CpUsageEvent',
+    CpTenantLifecycleEvent: 'CpTenantLifecycleEvent'
+  };
+
+  export type ModelName = (typeof ModelName)[keyof typeof ModelName]
+
+
+  export type Datasources = {
+    db?: Datasource
+  }
+
+  interface TypeMapCb extends $Utils.Fn<{extArgs: $Extensions.InternalArgs, clientOptions: PrismaClientOptions }, $Utils.Record<string, any>> {
+    returns: Prisma.TypeMap<this['params']['extArgs'], this['params']['clientOptions']>
+  }
+
+  export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
+    meta: {
+      modelProps: "cpPlatformUser" | "cpPlan" | "cpSubscription" | "cpInvoice" | "cpCollectionAttempt" | "cpInvoiceLineItem" | "cpPlatformWallet" | "cpWalletEntry" | "cpPaymentAttempt" | "cpFeatureFlag" | "cpFeatureFlagOverride" | "cpPlatformSetting" | "cpUsageEvent" | "cpTenantLifecycleEvent"
+      txIsolationLevel: Prisma.TransactionIsolationLevel
+    }
+    model: {
+      CpPlatformUser: {
+        payload: Prisma.$CpPlatformUserPayload<ExtArgs>
+        fields: Prisma.CpPlatformUserFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpPlatformUserFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpPlatformUserFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          findFirst: {
+            args: Prisma.CpPlatformUserFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpPlatformUserFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          findMany: {
+            args: Prisma.CpPlatformUserFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>[]
+          }
+          create: {
+            args: Prisma.CpPlatformUserCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          createMany: {
+            args: Prisma.CpPlatformUserCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpPlatformUserCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>[]
+          }
+          delete: {
+            args: Prisma.CpPlatformUserDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          update: {
+            args: Prisma.CpPlatformUserUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpPlatformUserDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpPlatformUserUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpPlatformUserUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformUserPayload>
+          }
+          aggregate: {
+            args: Prisma.CpPlatformUserAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpPlatformUser>
+          }
+          groupBy: {
+            args: Prisma.CpPlatformUserGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformUserGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpPlatformUserCountArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformUserCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpPlan: {
+        payload: Prisma.$CpPlanPayload<ExtArgs>
+        fields: Prisma.CpPlanFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpPlanFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpPlanFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          findFirst: {
+            args: Prisma.CpPlanFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpPlanFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          findMany: {
+            args: Prisma.CpPlanFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>[]
+          }
+          create: {
+            args: Prisma.CpPlanCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          createMany: {
+            args: Prisma.CpPlanCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpPlanCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>[]
+          }
+          delete: {
+            args: Prisma.CpPlanDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          update: {
+            args: Prisma.CpPlanUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpPlanDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpPlanUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpPlanUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlanPayload>
+          }
+          aggregate: {
+            args: Prisma.CpPlanAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpPlan>
+          }
+          groupBy: {
+            args: Prisma.CpPlanGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpPlanGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpPlanCountArgs<ExtArgs>
+            result: $Utils.Optional<CpPlanCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpSubscription: {
+        payload: Prisma.$CpSubscriptionPayload<ExtArgs>
+        fields: Prisma.CpSubscriptionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpSubscriptionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpSubscriptionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          findFirst: {
+            args: Prisma.CpSubscriptionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpSubscriptionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          findMany: {
+            args: Prisma.CpSubscriptionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>[]
+          }
+          create: {
+            args: Prisma.CpSubscriptionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          createMany: {
+            args: Prisma.CpSubscriptionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpSubscriptionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>[]
+          }
+          delete: {
+            args: Prisma.CpSubscriptionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          update: {
+            args: Prisma.CpSubscriptionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpSubscriptionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpSubscriptionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpSubscriptionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpSubscriptionPayload>
+          }
+          aggregate: {
+            args: Prisma.CpSubscriptionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpSubscription>
+          }
+          groupBy: {
+            args: Prisma.CpSubscriptionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpSubscriptionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpSubscriptionCountArgs<ExtArgs>
+            result: $Utils.Optional<CpSubscriptionCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpInvoice: {
+        payload: Prisma.$CpInvoicePayload<ExtArgs>
+        fields: Prisma.CpInvoiceFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpInvoiceFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpInvoiceFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          findFirst: {
+            args: Prisma.CpInvoiceFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpInvoiceFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          findMany: {
+            args: Prisma.CpInvoiceFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>[]
+          }
+          create: {
+            args: Prisma.CpInvoiceCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          createMany: {
+            args: Prisma.CpInvoiceCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpInvoiceCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>[]
+          }
+          delete: {
+            args: Prisma.CpInvoiceDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          update: {
+            args: Prisma.CpInvoiceUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          deleteMany: {
+            args: Prisma.CpInvoiceDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpInvoiceUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpInvoiceUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoicePayload>
+          }
+          aggregate: {
+            args: Prisma.CpInvoiceAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpInvoice>
+          }
+          groupBy: {
+            args: Prisma.CpInvoiceGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpInvoiceGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpInvoiceCountArgs<ExtArgs>
+            result: $Utils.Optional<CpInvoiceCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpCollectionAttempt: {
+        payload: Prisma.$CpCollectionAttemptPayload<ExtArgs>
+        fields: Prisma.CpCollectionAttemptFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpCollectionAttemptFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpCollectionAttemptFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          findFirst: {
+            args: Prisma.CpCollectionAttemptFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpCollectionAttemptFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          findMany: {
+            args: Prisma.CpCollectionAttemptFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>[]
+          }
+          create: {
+            args: Prisma.CpCollectionAttemptCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          createMany: {
+            args: Prisma.CpCollectionAttemptCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpCollectionAttemptCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>[]
+          }
+          delete: {
+            args: Prisma.CpCollectionAttemptDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          update: {
+            args: Prisma.CpCollectionAttemptUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpCollectionAttemptDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpCollectionAttemptUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpCollectionAttemptUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpCollectionAttemptPayload>
+          }
+          aggregate: {
+            args: Prisma.CpCollectionAttemptAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpCollectionAttempt>
+          }
+          groupBy: {
+            args: Prisma.CpCollectionAttemptGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpCollectionAttemptGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpCollectionAttemptCountArgs<ExtArgs>
+            result: $Utils.Optional<CpCollectionAttemptCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpInvoiceLineItem: {
+        payload: Prisma.$CpInvoiceLineItemPayload<ExtArgs>
+        fields: Prisma.CpInvoiceLineItemFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpInvoiceLineItemFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpInvoiceLineItemFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          findFirst: {
+            args: Prisma.CpInvoiceLineItemFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpInvoiceLineItemFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          findMany: {
+            args: Prisma.CpInvoiceLineItemFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>[]
+          }
+          create: {
+            args: Prisma.CpInvoiceLineItemCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          createMany: {
+            args: Prisma.CpInvoiceLineItemCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpInvoiceLineItemCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>[]
+          }
+          delete: {
+            args: Prisma.CpInvoiceLineItemDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          update: {
+            args: Prisma.CpInvoiceLineItemUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpInvoiceLineItemDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpInvoiceLineItemUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpInvoiceLineItemUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpInvoiceLineItemPayload>
+          }
+          aggregate: {
+            args: Prisma.CpInvoiceLineItemAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpInvoiceLineItem>
+          }
+          groupBy: {
+            args: Prisma.CpInvoiceLineItemGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpInvoiceLineItemGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpInvoiceLineItemCountArgs<ExtArgs>
+            result: $Utils.Optional<CpInvoiceLineItemCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpPlatformWallet: {
+        payload: Prisma.$CpPlatformWalletPayload<ExtArgs>
+        fields: Prisma.CpPlatformWalletFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpPlatformWalletFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpPlatformWalletFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          findFirst: {
+            args: Prisma.CpPlatformWalletFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpPlatformWalletFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          findMany: {
+            args: Prisma.CpPlatformWalletFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>[]
+          }
+          create: {
+            args: Prisma.CpPlatformWalletCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          createMany: {
+            args: Prisma.CpPlatformWalletCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpPlatformWalletCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>[]
+          }
+          delete: {
+            args: Prisma.CpPlatformWalletDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          update: {
+            args: Prisma.CpPlatformWalletUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpPlatformWalletDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpPlatformWalletUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpPlatformWalletUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformWalletPayload>
+          }
+          aggregate: {
+            args: Prisma.CpPlatformWalletAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpPlatformWallet>
+          }
+          groupBy: {
+            args: Prisma.CpPlatformWalletGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformWalletGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpPlatformWalletCountArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformWalletCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpWalletEntry: {
+        payload: Prisma.$CpWalletEntryPayload<ExtArgs>
+        fields: Prisma.CpWalletEntryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpWalletEntryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpWalletEntryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          findFirst: {
+            args: Prisma.CpWalletEntryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpWalletEntryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          findMany: {
+            args: Prisma.CpWalletEntryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>[]
+          }
+          create: {
+            args: Prisma.CpWalletEntryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          createMany: {
+            args: Prisma.CpWalletEntryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpWalletEntryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>[]
+          }
+          delete: {
+            args: Prisma.CpWalletEntryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          update: {
+            args: Prisma.CpWalletEntryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpWalletEntryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpWalletEntryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpWalletEntryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpWalletEntryPayload>
+          }
+          aggregate: {
+            args: Prisma.CpWalletEntryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpWalletEntry>
+          }
+          groupBy: {
+            args: Prisma.CpWalletEntryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpWalletEntryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpWalletEntryCountArgs<ExtArgs>
+            result: $Utils.Optional<CpWalletEntryCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpPaymentAttempt: {
+        payload: Prisma.$CpPaymentAttemptPayload<ExtArgs>
+        fields: Prisma.CpPaymentAttemptFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpPaymentAttemptFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpPaymentAttemptFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          findFirst: {
+            args: Prisma.CpPaymentAttemptFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpPaymentAttemptFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          findMany: {
+            args: Prisma.CpPaymentAttemptFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>[]
+          }
+          create: {
+            args: Prisma.CpPaymentAttemptCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          createMany: {
+            args: Prisma.CpPaymentAttemptCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpPaymentAttemptCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>[]
+          }
+          delete: {
+            args: Prisma.CpPaymentAttemptDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          update: {
+            args: Prisma.CpPaymentAttemptUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpPaymentAttemptDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpPaymentAttemptUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpPaymentAttemptUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPaymentAttemptPayload>
+          }
+          aggregate: {
+            args: Prisma.CpPaymentAttemptAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpPaymentAttempt>
+          }
+          groupBy: {
+            args: Prisma.CpPaymentAttemptGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpPaymentAttemptGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpPaymentAttemptCountArgs<ExtArgs>
+            result: $Utils.Optional<CpPaymentAttemptCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpFeatureFlag: {
+        payload: Prisma.$CpFeatureFlagPayload<ExtArgs>
+        fields: Prisma.CpFeatureFlagFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpFeatureFlagFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpFeatureFlagFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          findFirst: {
+            args: Prisma.CpFeatureFlagFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpFeatureFlagFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          findMany: {
+            args: Prisma.CpFeatureFlagFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>[]
+          }
+          create: {
+            args: Prisma.CpFeatureFlagCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          createMany: {
+            args: Prisma.CpFeatureFlagCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpFeatureFlagCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>[]
+          }
+          delete: {
+            args: Prisma.CpFeatureFlagDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          update: {
+            args: Prisma.CpFeatureFlagUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpFeatureFlagDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpFeatureFlagUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpFeatureFlagUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagPayload>
+          }
+          aggregate: {
+            args: Prisma.CpFeatureFlagAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpFeatureFlag>
+          }
+          groupBy: {
+            args: Prisma.CpFeatureFlagGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpFeatureFlagGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpFeatureFlagCountArgs<ExtArgs>
+            result: $Utils.Optional<CpFeatureFlagCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpFeatureFlagOverride: {
+        payload: Prisma.$CpFeatureFlagOverridePayload<ExtArgs>
+        fields: Prisma.CpFeatureFlagOverrideFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpFeatureFlagOverrideFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpFeatureFlagOverrideFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          findFirst: {
+            args: Prisma.CpFeatureFlagOverrideFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpFeatureFlagOverrideFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          findMany: {
+            args: Prisma.CpFeatureFlagOverrideFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>[]
+          }
+          create: {
+            args: Prisma.CpFeatureFlagOverrideCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          createMany: {
+            args: Prisma.CpFeatureFlagOverrideCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpFeatureFlagOverrideCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>[]
+          }
+          delete: {
+            args: Prisma.CpFeatureFlagOverrideDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          update: {
+            args: Prisma.CpFeatureFlagOverrideUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          deleteMany: {
+            args: Prisma.CpFeatureFlagOverrideDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpFeatureFlagOverrideUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpFeatureFlagOverrideUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpFeatureFlagOverridePayload>
+          }
+          aggregate: {
+            args: Prisma.CpFeatureFlagOverrideAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpFeatureFlagOverride>
+          }
+          groupBy: {
+            args: Prisma.CpFeatureFlagOverrideGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpFeatureFlagOverrideGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpFeatureFlagOverrideCountArgs<ExtArgs>
+            result: $Utils.Optional<CpFeatureFlagOverrideCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpPlatformSetting: {
+        payload: Prisma.$CpPlatformSettingPayload<ExtArgs>
+        fields: Prisma.CpPlatformSettingFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpPlatformSettingFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpPlatformSettingFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          findFirst: {
+            args: Prisma.CpPlatformSettingFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpPlatformSettingFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          findMany: {
+            args: Prisma.CpPlatformSettingFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>[]
+          }
+          create: {
+            args: Prisma.CpPlatformSettingCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          createMany: {
+            args: Prisma.CpPlatformSettingCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpPlatformSettingCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>[]
+          }
+          delete: {
+            args: Prisma.CpPlatformSettingDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          update: {
+            args: Prisma.CpPlatformSettingUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpPlatformSettingDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpPlatformSettingUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpPlatformSettingUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpPlatformSettingPayload>
+          }
+          aggregate: {
+            args: Prisma.CpPlatformSettingAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpPlatformSetting>
+          }
+          groupBy: {
+            args: Prisma.CpPlatformSettingGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformSettingGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpPlatformSettingCountArgs<ExtArgs>
+            result: $Utils.Optional<CpPlatformSettingCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpUsageEvent: {
+        payload: Prisma.$CpUsageEventPayload<ExtArgs>
+        fields: Prisma.CpUsageEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpUsageEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpUsageEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          findFirst: {
+            args: Prisma.CpUsageEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpUsageEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          findMany: {
+            args: Prisma.CpUsageEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>[]
+          }
+          create: {
+            args: Prisma.CpUsageEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          createMany: {
+            args: Prisma.CpUsageEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpUsageEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>[]
+          }
+          delete: {
+            args: Prisma.CpUsageEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          update: {
+            args: Prisma.CpUsageEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpUsageEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpUsageEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpUsageEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpUsageEventPayload>
+          }
+          aggregate: {
+            args: Prisma.CpUsageEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpUsageEvent>
+          }
+          groupBy: {
+            args: Prisma.CpUsageEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpUsageEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpUsageEventCountArgs<ExtArgs>
+            result: $Utils.Optional<CpUsageEventCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpTenantLifecycleEvent: {
+        payload: Prisma.$CpTenantLifecycleEventPayload<ExtArgs>
+        fields: Prisma.CpTenantLifecycleEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpTenantLifecycleEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpTenantLifecycleEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          findFirst: {
+            args: Prisma.CpTenantLifecycleEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpTenantLifecycleEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          findMany: {
+            args: Prisma.CpTenantLifecycleEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>[]
+          }
+          create: {
+            args: Prisma.CpTenantLifecycleEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          createMany: {
+            args: Prisma.CpTenantLifecycleEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpTenantLifecycleEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>[]
+          }
+          delete: {
+            args: Prisma.CpTenantLifecycleEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          update: {
+            args: Prisma.CpTenantLifecycleEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpTenantLifecycleEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpTenantLifecycleEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpTenantLifecycleEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpTenantLifecycleEventPayload>
+          }
+          aggregate: {
+            args: Prisma.CpTenantLifecycleEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpTenantLifecycleEvent>
+          }
+          groupBy: {
+            args: Prisma.CpTenantLifecycleEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpTenantLifecycleEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpTenantLifecycleEventCountArgs<ExtArgs>
+            result: $Utils.Optional<CpTenantLifecycleEventCountAggregateOutputType> | number
+          }
+        }
+      }
+    }
+  } & {
+    other: {
+      payload: any
+      operations: {
+        $executeRaw: {
+          args: [query: TemplateStringsArray | Prisma.Sql, ...values: any[]],
+          result: any
+        }
+        $executeRawUnsafe: {
+          args: [query: string, ...values: any[]],
+          result: any
+        }
+        $queryRaw: {
+          args: [query: TemplateStringsArray | Prisma.Sql, ...values: any[]],
+          result: any
+        }
+        $queryRawUnsafe: {
+          args: [query: string, ...values: any[]],
+          result: any
+        }
+      }
+    }
+  }
+  export const defineExtension: $Extensions.ExtendsHook<"define", Prisma.TypeMapCb, $Extensions.DefaultArgs>
+  export type DefaultPrismaClient = PrismaClient
+  export type ErrorFormat = 'pretty' | 'colorless' | 'minimal'
+  export interface PrismaClientOptions {
+    /**
+     * Overwrites the datasource url from your schema.prisma file
+     */
+    datasources?: Datasources
+    /**
+     * Overwrites the datasource url from your schema.prisma file
+     */
+    datasourceUrl?: string
+    /**
+     * @default "colorless"
+     */
+    errorFormat?: ErrorFormat
+    /**
+     * @example
+     * ```
+     * // Defaults to stdout
+     * log: ['query', 'info', 'warn', 'error']
+     * 
+     * // Emit as events
+     * log: [
+     *   { emit: 'stdout', level: 'query' },
+     *   { emit: 'stdout', level: 'info' },
+     *   { emit: 'stdout', level: 'warn' }
+     *   { emit: 'stdout', level: 'error' }
+     * ]
+     * ```
+     * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/logging#the-log-option).
+     */
+    log?: (LogLevel | LogDefinition)[]
+    /**
+     * The default values for transactionOptions
+     * maxWait ?= 2000
+     * timeout ?= 5000
+     */
+    transactionOptions?: {
+      maxWait?: number
+      timeout?: number
+      isolationLevel?: Prisma.TransactionIsolationLevel
+    }
+  }
+
+
+  /* Types for Logging */
+  export type LogLevel = 'info' | 'query' | 'warn' | 'error'
+  export type LogDefinition = {
+    level: LogLevel
+    emit: 'stdout' | 'event'
+  }
+
+  export type GetLogType<T extends LogLevel | LogDefinition> = T extends LogDefinition ? T['emit'] extends 'event' ? T['level'] : never : never
+  export type GetEvents<T extends any> = T extends Array<LogLevel | LogDefinition> ?
+    GetLogType<T[0]> | GetLogType<T[1]> | GetLogType<T[2]> | GetLogType<T[3]>
+    : never
+
+  export type QueryEvent = {
+    timestamp: Date
+    query: string
+    params: string
+    duration: number
+    target: string
+  }
+
+  export type LogEvent = {
+    timestamp: Date
+    message: string
+    target: string
+  }
+  /* End Types for Logging */
+
+
+  export type PrismaAction =
+    | 'findUnique'
+    | 'findUniqueOrThrow'
+    | 'findMany'
+    | 'findFirst'
+    | 'findFirstOrThrow'
+    | 'create'
+    | 'createMany'
+    | 'createManyAndReturn'
+    | 'update'
+    | 'updateMany'
+    | 'upsert'
+    | 'delete'
+    | 'deleteMany'
+    | 'executeRaw'
+    | 'queryRaw'
+    | 'aggregate'
+    | 'count'
+    | 'runCommandRaw'
+    | 'findRaw'
+    | 'groupBy'
+
+  /**
+   * These options are being passed into the middleware as "params"
+   */
+  export type MiddlewareParams = {
+    model?: ModelName
+    action: PrismaAction
+    args: any
+    dataPath: string[]
+    runInTransaction: boolean
+  }
+
+  /**
+   * The `T` type makes sure, that the `return proceed` is not forgotten in the middleware implementation
+   */
+  export type Middleware<T = any> = (
+    params: MiddlewareParams,
+    next: (params: MiddlewareParams) => $Utils.JsPromise<T>,
+  ) => $Utils.JsPromise<T>
+
+  // tested in getLogLevel.test.ts
+  export function getLogLevel(log: Array<LogLevel | LogDefinition>): LogLevel | undefined;
+
+  /**
+   * `PrismaClient` proxy available in interactive transactions.
+   */
+  export type TransactionClient = Omit<Prisma.DefaultPrismaClient, runtime.ITXClientDenyList>
+
+  export type Datasource = {
+    url?: string
+  }
+
+  /**
+   * Count Types
+   */
+
+
+  /**
+   * Count Type CpPlanCountOutputType
+   */
+
+  export type CpPlanCountOutputType = {
+    subscriptions: number
+  }
+
+  export type CpPlanCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    subscriptions?: boolean | CpPlanCountOutputTypeCountSubscriptionsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpPlanCountOutputType without action
+   */
+  export type CpPlanCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlanCountOutputType
+     */
+    select?: CpPlanCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpPlanCountOutputType without action
+   */
+  export type CpPlanCountOutputTypeCountSubscriptionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpSubscriptionWhereInput
+  }
+
+
+  /**
+   * Count Type CpSubscriptionCountOutputType
+   */
+
+  export type CpSubscriptionCountOutputType = {
+    invoices: number
+  }
+
+  export type CpSubscriptionCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    invoices?: boolean | CpSubscriptionCountOutputTypeCountInvoicesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpSubscriptionCountOutputType without action
+   */
+  export type CpSubscriptionCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscriptionCountOutputType
+     */
+    select?: CpSubscriptionCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpSubscriptionCountOutputType without action
+   */
+  export type CpSubscriptionCountOutputTypeCountInvoicesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpInvoiceWhereInput
+  }
+
+
+  /**
+   * Count Type CpInvoiceCountOutputType
+   */
+
+  export type CpInvoiceCountOutputType = {
+    lineItems: number
+    collectionAttempts: number
+  }
+
+  export type CpInvoiceCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    lineItems?: boolean | CpInvoiceCountOutputTypeCountLineItemsArgs
+    collectionAttempts?: boolean | CpInvoiceCountOutputTypeCountCollectionAttemptsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpInvoiceCountOutputType without action
+   */
+  export type CpInvoiceCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceCountOutputType
+     */
+    select?: CpInvoiceCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpInvoiceCountOutputType without action
+   */
+  export type CpInvoiceCountOutputTypeCountLineItemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpInvoiceLineItemWhereInput
+  }
+
+  /**
+   * CpInvoiceCountOutputType without action
+   */
+  export type CpInvoiceCountOutputTypeCountCollectionAttemptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpCollectionAttemptWhereInput
+  }
+
+
+  /**
+   * Count Type CpPlatformWalletCountOutputType
+   */
+
+  export type CpPlatformWalletCountOutputType = {
+    entries: number
+  }
+
+  export type CpPlatformWalletCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    entries?: boolean | CpPlatformWalletCountOutputTypeCountEntriesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpPlatformWalletCountOutputType without action
+   */
+  export type CpPlatformWalletCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWalletCountOutputType
+     */
+    select?: CpPlatformWalletCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpPlatformWalletCountOutputType without action
+   */
+  export type CpPlatformWalletCountOutputTypeCountEntriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpWalletEntryWhereInput
+  }
+
+
+  /**
+   * Count Type CpFeatureFlagCountOutputType
+   */
+
+  export type CpFeatureFlagCountOutputType = {
+    overrides: number
+  }
+
+  export type CpFeatureFlagCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    overrides?: boolean | CpFeatureFlagCountOutputTypeCountOverridesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpFeatureFlagCountOutputType without action
+   */
+  export type CpFeatureFlagCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagCountOutputType
+     */
+    select?: CpFeatureFlagCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpFeatureFlagCountOutputType without action
+   */
+  export type CpFeatureFlagCountOutputTypeCountOverridesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpFeatureFlagOverrideWhereInput
+  }
+
+
+  /**
+   * Models
+   */
+
+  /**
+   * Model CpPlatformUser
+   */
+
+  export type AggregateCpPlatformUser = {
+    _count: CpPlatformUserCountAggregateOutputType | null
+    _min: CpPlatformUserMinAggregateOutputType | null
+    _max: CpPlatformUserMaxAggregateOutputType | null
+  }
+
+  export type CpPlatformUserMinAggregateOutputType = {
+    id: string | null
+    email: string | null
+    name: string | null
+    role: string | null
+    passwordHash: string | null
+    isActive: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformUserMaxAggregateOutputType = {
+    id: string | null
+    email: string | null
+    name: string | null
+    role: string | null
+    passwordHash: string | null
+    isActive: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformUserCountAggregateOutputType = {
+    id: number
+    email: number
+    name: number
+    role: number
+    passwordHash: number
+    isActive: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpPlatformUserMinAggregateInputType = {
+    id?: true
+    email?: true
+    name?: true
+    role?: true
+    passwordHash?: true
+    isActive?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformUserMaxAggregateInputType = {
+    id?: true
+    email?: true
+    name?: true
+    role?: true
+    passwordHash?: true
+    isActive?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformUserCountAggregateInputType = {
+    id?: true
+    email?: true
+    name?: true
+    role?: true
+    passwordHash?: true
+    isActive?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpPlatformUserAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformUser to aggregate.
+     */
+    where?: CpPlatformUserWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformUsers to fetch.
+     */
+    orderBy?: CpPlatformUserOrderByWithRelationInput | CpPlatformUserOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpPlatformUserWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformUsers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformUsers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpPlatformUsers
+    **/
+    _count?: true | CpPlatformUserCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpPlatformUserMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpPlatformUserMaxAggregateInputType
+  }
+
+  export type GetCpPlatformUserAggregateType<T extends CpPlatformUserAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpPlatformUser]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpPlatformUser[P]>
+      : GetScalarType<T[P], AggregateCpPlatformUser[P]>
+  }
+
+
+
+
+  export type CpPlatformUserGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpPlatformUserWhereInput
+    orderBy?: CpPlatformUserOrderByWithAggregationInput | CpPlatformUserOrderByWithAggregationInput[]
+    by: CpPlatformUserScalarFieldEnum[] | CpPlatformUserScalarFieldEnum
+    having?: CpPlatformUserScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpPlatformUserCountAggregateInputType | true
+    _min?: CpPlatformUserMinAggregateInputType
+    _max?: CpPlatformUserMaxAggregateInputType
+  }
+
+  export type CpPlatformUserGroupByOutputType = {
+    id: string
+    email: string
+    name: string
+    role: string
+    passwordHash: string
+    isActive: boolean
+    createdAt: Date
+    updatedAt: Date
+    _count: CpPlatformUserCountAggregateOutputType | null
+    _min: CpPlatformUserMinAggregateOutputType | null
+    _max: CpPlatformUserMaxAggregateOutputType | null
+  }
+
+  type GetCpPlatformUserGroupByPayload<T extends CpPlatformUserGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpPlatformUserGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpPlatformUserGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpPlatformUserGroupByOutputType[P]>
+            : GetScalarType<T[P], CpPlatformUserGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpPlatformUserSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    email?: boolean
+    name?: boolean
+    role?: boolean
+    passwordHash?: boolean
+    isActive?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlatformUser"]>
+
+  export type CpPlatformUserSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    email?: boolean
+    name?: boolean
+    role?: boolean
+    passwordHash?: boolean
+    isActive?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlatformUser"]>
+
+  export type CpPlatformUserSelectScalar = {
+    id?: boolean
+    email?: boolean
+    name?: boolean
+    role?: boolean
+    passwordHash?: boolean
+    isActive?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CpPlatformUserPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpPlatformUser"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      email: string
+      name: string
+      role: string
+      passwordHash: string
+      isActive: boolean
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpPlatformUser"]>
+    composites: {}
+  }
+
+  type CpPlatformUserGetPayload<S extends boolean | null | undefined | CpPlatformUserDefaultArgs> = $Result.GetResult<Prisma.$CpPlatformUserPayload, S>
+
+  type CpPlatformUserCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpPlatformUserFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpPlatformUserCountAggregateInputType | true
+    }
+
+  export interface CpPlatformUserDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpPlatformUser'], meta: { name: 'CpPlatformUser' } }
+    /**
+     * Find zero or one CpPlatformUser that matches the filter.
+     * @param {CpPlatformUserFindUniqueArgs} args - Arguments to find a CpPlatformUser
+     * @example
+     * // Get one CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpPlatformUserFindUniqueArgs>(args: SelectSubset<T, CpPlatformUserFindUniqueArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpPlatformUser that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpPlatformUserFindUniqueOrThrowArgs} args - Arguments to find a CpPlatformUser
+     * @example
+     * // Get one CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpPlatformUserFindUniqueOrThrowArgs>(args: SelectSubset<T, CpPlatformUserFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpPlatformUser that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserFindFirstArgs} args - Arguments to find a CpPlatformUser
+     * @example
+     * // Get one CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpPlatformUserFindFirstArgs>(args?: SelectSubset<T, CpPlatformUserFindFirstArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpPlatformUser that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserFindFirstOrThrowArgs} args - Arguments to find a CpPlatformUser
+     * @example
+     * // Get one CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpPlatformUserFindFirstOrThrowArgs>(args?: SelectSubset<T, CpPlatformUserFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpPlatformUsers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpPlatformUsers
+     * const cpPlatformUsers = await prisma.cpPlatformUser.findMany()
+     * 
+     * // Get first 10 CpPlatformUsers
+     * const cpPlatformUsers = await prisma.cpPlatformUser.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpPlatformUserWithIdOnly = await prisma.cpPlatformUser.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpPlatformUserFindManyArgs>(args?: SelectSubset<T, CpPlatformUserFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpPlatformUser.
+     * @param {CpPlatformUserCreateArgs} args - Arguments to create a CpPlatformUser.
+     * @example
+     * // Create one CpPlatformUser
+     * const CpPlatformUser = await prisma.cpPlatformUser.create({
+     *   data: {
+     *     // ... data to create a CpPlatformUser
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpPlatformUserCreateArgs>(args: SelectSubset<T, CpPlatformUserCreateArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpPlatformUsers.
+     * @param {CpPlatformUserCreateManyArgs} args - Arguments to create many CpPlatformUsers.
+     * @example
+     * // Create many CpPlatformUsers
+     * const cpPlatformUser = await prisma.cpPlatformUser.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpPlatformUserCreateManyArgs>(args?: SelectSubset<T, CpPlatformUserCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpPlatformUsers and returns the data saved in the database.
+     * @param {CpPlatformUserCreateManyAndReturnArgs} args - Arguments to create many CpPlatformUsers.
+     * @example
+     * // Create many CpPlatformUsers
+     * const cpPlatformUser = await prisma.cpPlatformUser.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpPlatformUsers and only return the `id`
+     * const cpPlatformUserWithIdOnly = await prisma.cpPlatformUser.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpPlatformUserCreateManyAndReturnArgs>(args?: SelectSubset<T, CpPlatformUserCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpPlatformUser.
+     * @param {CpPlatformUserDeleteArgs} args - Arguments to delete one CpPlatformUser.
+     * @example
+     * // Delete one CpPlatformUser
+     * const CpPlatformUser = await prisma.cpPlatformUser.delete({
+     *   where: {
+     *     // ... filter to delete one CpPlatformUser
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpPlatformUserDeleteArgs>(args: SelectSubset<T, CpPlatformUserDeleteArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpPlatformUser.
+     * @param {CpPlatformUserUpdateArgs} args - Arguments to update one CpPlatformUser.
+     * @example
+     * // Update one CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpPlatformUserUpdateArgs>(args: SelectSubset<T, CpPlatformUserUpdateArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpPlatformUsers.
+     * @param {CpPlatformUserDeleteManyArgs} args - Arguments to filter CpPlatformUsers to delete.
+     * @example
+     * // Delete a few CpPlatformUsers
+     * const { count } = await prisma.cpPlatformUser.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpPlatformUserDeleteManyArgs>(args?: SelectSubset<T, CpPlatformUserDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpPlatformUsers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpPlatformUsers
+     * const cpPlatformUser = await prisma.cpPlatformUser.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpPlatformUserUpdateManyArgs>(args: SelectSubset<T, CpPlatformUserUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpPlatformUser.
+     * @param {CpPlatformUserUpsertArgs} args - Arguments to update or create a CpPlatformUser.
+     * @example
+     * // Update or create a CpPlatformUser
+     * const cpPlatformUser = await prisma.cpPlatformUser.upsert({
+     *   create: {
+     *     // ... data to create a CpPlatformUser
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpPlatformUser we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpPlatformUserUpsertArgs>(args: SelectSubset<T, CpPlatformUserUpsertArgs<ExtArgs>>): Prisma__CpPlatformUserClient<$Result.GetResult<Prisma.$CpPlatformUserPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpPlatformUsers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserCountArgs} args - Arguments to filter CpPlatformUsers to count.
+     * @example
+     * // Count the number of CpPlatformUsers
+     * const count = await prisma.cpPlatformUser.count({
+     *   where: {
+     *     // ... the filter for the CpPlatformUsers we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpPlatformUserCountArgs>(
+      args?: Subset<T, CpPlatformUserCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpPlatformUserCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpPlatformUser.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpPlatformUserAggregateArgs>(args: Subset<T, CpPlatformUserAggregateArgs>): Prisma.PrismaPromise<GetCpPlatformUserAggregateType<T>>
+
+    /**
+     * Group by CpPlatformUser.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformUserGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpPlatformUserGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpPlatformUserGroupByArgs['orderBy'] }
+        : { orderBy?: CpPlatformUserGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpPlatformUserGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpPlatformUserGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpPlatformUser model
+   */
+  readonly fields: CpPlatformUserFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpPlatformUser.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpPlatformUserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpPlatformUser model
+   */ 
+  interface CpPlatformUserFieldRefs {
+    readonly id: FieldRef<"CpPlatformUser", 'String'>
+    readonly email: FieldRef<"CpPlatformUser", 'String'>
+    readonly name: FieldRef<"CpPlatformUser", 'String'>
+    readonly role: FieldRef<"CpPlatformUser", 'String'>
+    readonly passwordHash: FieldRef<"CpPlatformUser", 'String'>
+    readonly isActive: FieldRef<"CpPlatformUser", 'Boolean'>
+    readonly createdAt: FieldRef<"CpPlatformUser", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpPlatformUser", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpPlatformUser findUnique
+   */
+  export type CpPlatformUserFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformUser to fetch.
+     */
+    where: CpPlatformUserWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformUser findUniqueOrThrow
+   */
+  export type CpPlatformUserFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformUser to fetch.
+     */
+    where: CpPlatformUserWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformUser findFirst
+   */
+  export type CpPlatformUserFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformUser to fetch.
+     */
+    where?: CpPlatformUserWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformUsers to fetch.
+     */
+    orderBy?: CpPlatformUserOrderByWithRelationInput | CpPlatformUserOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformUsers.
+     */
+    cursor?: CpPlatformUserWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformUsers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformUsers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformUsers.
+     */
+    distinct?: CpPlatformUserScalarFieldEnum | CpPlatformUserScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformUser findFirstOrThrow
+   */
+  export type CpPlatformUserFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformUser to fetch.
+     */
+    where?: CpPlatformUserWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformUsers to fetch.
+     */
+    orderBy?: CpPlatformUserOrderByWithRelationInput | CpPlatformUserOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformUsers.
+     */
+    cursor?: CpPlatformUserWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformUsers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformUsers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformUsers.
+     */
+    distinct?: CpPlatformUserScalarFieldEnum | CpPlatformUserScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformUser findMany
+   */
+  export type CpPlatformUserFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformUsers to fetch.
+     */
+    where?: CpPlatformUserWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformUsers to fetch.
+     */
+    orderBy?: CpPlatformUserOrderByWithRelationInput | CpPlatformUserOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpPlatformUsers.
+     */
+    cursor?: CpPlatformUserWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformUsers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformUsers.
+     */
+    skip?: number
+    distinct?: CpPlatformUserScalarFieldEnum | CpPlatformUserScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformUser create
+   */
+  export type CpPlatformUserCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpPlatformUser.
+     */
+    data: XOR<CpPlatformUserCreateInput, CpPlatformUserUncheckedCreateInput>
+  }
+
+  /**
+   * CpPlatformUser createMany
+   */
+  export type CpPlatformUserCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpPlatformUsers.
+     */
+    data: CpPlatformUserCreateManyInput | CpPlatformUserCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformUser createManyAndReturn
+   */
+  export type CpPlatformUserCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpPlatformUsers.
+     */
+    data: CpPlatformUserCreateManyInput | CpPlatformUserCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformUser update
+   */
+  export type CpPlatformUserUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpPlatformUser.
+     */
+    data: XOR<CpPlatformUserUpdateInput, CpPlatformUserUncheckedUpdateInput>
+    /**
+     * Choose, which CpPlatformUser to update.
+     */
+    where: CpPlatformUserWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformUser updateMany
+   */
+  export type CpPlatformUserUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpPlatformUsers.
+     */
+    data: XOR<CpPlatformUserUpdateManyMutationInput, CpPlatformUserUncheckedUpdateManyInput>
+    /**
+     * Filter which CpPlatformUsers to update
+     */
+    where?: CpPlatformUserWhereInput
+  }
+
+  /**
+   * CpPlatformUser upsert
+   */
+  export type CpPlatformUserUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpPlatformUser to update in case it exists.
+     */
+    where: CpPlatformUserWhereUniqueInput
+    /**
+     * In case the CpPlatformUser found by the `where` argument doesn't exist, create a new CpPlatformUser with this data.
+     */
+    create: XOR<CpPlatformUserCreateInput, CpPlatformUserUncheckedCreateInput>
+    /**
+     * In case the CpPlatformUser was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpPlatformUserUpdateInput, CpPlatformUserUncheckedUpdateInput>
+  }
+
+  /**
+   * CpPlatformUser delete
+   */
+  export type CpPlatformUserDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+    /**
+     * Filter which CpPlatformUser to delete.
+     */
+    where: CpPlatformUserWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformUser deleteMany
+   */
+  export type CpPlatformUserDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformUsers to delete
+     */
+    where?: CpPlatformUserWhereInput
+  }
+
+  /**
+   * CpPlatformUser without action
+   */
+  export type CpPlatformUserDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformUser
+     */
+    select?: CpPlatformUserSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpPlan
+   */
+
+  export type AggregateCpPlan = {
+    _count: CpPlanCountAggregateOutputType | null
+    _avg: CpPlanAvgAggregateOutputType | null
+    _sum: CpPlanSumAggregateOutputType | null
+    _min: CpPlanMinAggregateOutputType | null
+    _max: CpPlanMaxAggregateOutputType | null
+  }
+
+  export type CpPlanAvgAggregateOutputType = {
+    basePriceMinorUnits: number | null
+  }
+
+  export type CpPlanSumAggregateOutputType = {
+    basePriceMinorUnits: number | null
+  }
+
+  export type CpPlanMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    tier: string | null
+    billingInterval: string | null
+    basePriceMinorUnits: number | null
+    currency: string | null
+    isActive: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlanMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    tier: string | null
+    billingInterval: string | null
+    basePriceMinorUnits: number | null
+    currency: string | null
+    isActive: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlanCountAggregateOutputType = {
+    id: number
+    name: number
+    tier: number
+    billingInterval: number
+    basePriceMinorUnits: number
+    currency: number
+    isActive: number
+    features: number
+    customTerms: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpPlanAvgAggregateInputType = {
+    basePriceMinorUnits?: true
+  }
+
+  export type CpPlanSumAggregateInputType = {
+    basePriceMinorUnits?: true
+  }
+
+  export type CpPlanMinAggregateInputType = {
+    id?: true
+    name?: true
+    tier?: true
+    billingInterval?: true
+    basePriceMinorUnits?: true
+    currency?: true
+    isActive?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlanMaxAggregateInputType = {
+    id?: true
+    name?: true
+    tier?: true
+    billingInterval?: true
+    basePriceMinorUnits?: true
+    currency?: true
+    isActive?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlanCountAggregateInputType = {
+    id?: true
+    name?: true
+    tier?: true
+    billingInterval?: true
+    basePriceMinorUnits?: true
+    currency?: true
+    isActive?: true
+    features?: true
+    customTerms?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpPlanAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlan to aggregate.
+     */
+    where?: CpPlanWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlans to fetch.
+     */
+    orderBy?: CpPlanOrderByWithRelationInput | CpPlanOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpPlanWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlans from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlans.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpPlans
+    **/
+    _count?: true | CpPlanCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpPlanAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpPlanSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpPlanMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpPlanMaxAggregateInputType
+  }
+
+  export type GetCpPlanAggregateType<T extends CpPlanAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpPlan]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpPlan[P]>
+      : GetScalarType<T[P], AggregateCpPlan[P]>
+  }
+
+
+
+
+  export type CpPlanGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpPlanWhereInput
+    orderBy?: CpPlanOrderByWithAggregationInput | CpPlanOrderByWithAggregationInput[]
+    by: CpPlanScalarFieldEnum[] | CpPlanScalarFieldEnum
+    having?: CpPlanScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpPlanCountAggregateInputType | true
+    _avg?: CpPlanAvgAggregateInputType
+    _sum?: CpPlanSumAggregateInputType
+    _min?: CpPlanMinAggregateInputType
+    _max?: CpPlanMaxAggregateInputType
+  }
+
+  export type CpPlanGroupByOutputType = {
+    id: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive: boolean
+    features: JsonValue
+    customTerms: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpPlanCountAggregateOutputType | null
+    _avg: CpPlanAvgAggregateOutputType | null
+    _sum: CpPlanSumAggregateOutputType | null
+    _min: CpPlanMinAggregateOutputType | null
+    _max: CpPlanMaxAggregateOutputType | null
+  }
+
+  type GetCpPlanGroupByPayload<T extends CpPlanGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpPlanGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpPlanGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpPlanGroupByOutputType[P]>
+            : GetScalarType<T[P], CpPlanGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpPlanSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    tier?: boolean
+    billingInterval?: boolean
+    basePriceMinorUnits?: boolean
+    currency?: boolean
+    isActive?: boolean
+    features?: boolean
+    customTerms?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    subscriptions?: boolean | CpPlan$subscriptionsArgs<ExtArgs>
+    _count?: boolean | CpPlanCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpPlan"]>
+
+  export type CpPlanSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    tier?: boolean
+    billingInterval?: boolean
+    basePriceMinorUnits?: boolean
+    currency?: boolean
+    isActive?: boolean
+    features?: boolean
+    customTerms?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlan"]>
+
+  export type CpPlanSelectScalar = {
+    id?: boolean
+    name?: boolean
+    tier?: boolean
+    billingInterval?: boolean
+    basePriceMinorUnits?: boolean
+    currency?: boolean
+    isActive?: boolean
+    features?: boolean
+    customTerms?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpPlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    subscriptions?: boolean | CpPlan$subscriptionsArgs<ExtArgs>
+    _count?: boolean | CpPlanCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpPlanIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $CpPlanPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpPlan"
+    objects: {
+      subscriptions: Prisma.$CpSubscriptionPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      tier: string
+      billingInterval: string
+      basePriceMinorUnits: number
+      currency: string
+      isActive: boolean
+      features: Prisma.JsonValue
+      customTerms: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpPlan"]>
+    composites: {}
+  }
+
+  type CpPlanGetPayload<S extends boolean | null | undefined | CpPlanDefaultArgs> = $Result.GetResult<Prisma.$CpPlanPayload, S>
+
+  type CpPlanCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpPlanFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpPlanCountAggregateInputType | true
+    }
+
+  export interface CpPlanDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpPlan'], meta: { name: 'CpPlan' } }
+    /**
+     * Find zero or one CpPlan that matches the filter.
+     * @param {CpPlanFindUniqueArgs} args - Arguments to find a CpPlan
+     * @example
+     * // Get one CpPlan
+     * const cpPlan = await prisma.cpPlan.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpPlanFindUniqueArgs>(args: SelectSubset<T, CpPlanFindUniqueArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpPlan that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpPlanFindUniqueOrThrowArgs} args - Arguments to find a CpPlan
+     * @example
+     * // Get one CpPlan
+     * const cpPlan = await prisma.cpPlan.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpPlanFindUniqueOrThrowArgs>(args: SelectSubset<T, CpPlanFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpPlan that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanFindFirstArgs} args - Arguments to find a CpPlan
+     * @example
+     * // Get one CpPlan
+     * const cpPlan = await prisma.cpPlan.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpPlanFindFirstArgs>(args?: SelectSubset<T, CpPlanFindFirstArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpPlan that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanFindFirstOrThrowArgs} args - Arguments to find a CpPlan
+     * @example
+     * // Get one CpPlan
+     * const cpPlan = await prisma.cpPlan.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpPlanFindFirstOrThrowArgs>(args?: SelectSubset<T, CpPlanFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpPlans that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpPlans
+     * const cpPlans = await prisma.cpPlan.findMany()
+     * 
+     * // Get first 10 CpPlans
+     * const cpPlans = await prisma.cpPlan.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpPlanWithIdOnly = await prisma.cpPlan.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpPlanFindManyArgs>(args?: SelectSubset<T, CpPlanFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpPlan.
+     * @param {CpPlanCreateArgs} args - Arguments to create a CpPlan.
+     * @example
+     * // Create one CpPlan
+     * const CpPlan = await prisma.cpPlan.create({
+     *   data: {
+     *     // ... data to create a CpPlan
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpPlanCreateArgs>(args: SelectSubset<T, CpPlanCreateArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpPlans.
+     * @param {CpPlanCreateManyArgs} args - Arguments to create many CpPlans.
+     * @example
+     * // Create many CpPlans
+     * const cpPlan = await prisma.cpPlan.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpPlanCreateManyArgs>(args?: SelectSubset<T, CpPlanCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpPlans and returns the data saved in the database.
+     * @param {CpPlanCreateManyAndReturnArgs} args - Arguments to create many CpPlans.
+     * @example
+     * // Create many CpPlans
+     * const cpPlan = await prisma.cpPlan.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpPlans and only return the `id`
+     * const cpPlanWithIdOnly = await prisma.cpPlan.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpPlanCreateManyAndReturnArgs>(args?: SelectSubset<T, CpPlanCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpPlan.
+     * @param {CpPlanDeleteArgs} args - Arguments to delete one CpPlan.
+     * @example
+     * // Delete one CpPlan
+     * const CpPlan = await prisma.cpPlan.delete({
+     *   where: {
+     *     // ... filter to delete one CpPlan
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpPlanDeleteArgs>(args: SelectSubset<T, CpPlanDeleteArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpPlan.
+     * @param {CpPlanUpdateArgs} args - Arguments to update one CpPlan.
+     * @example
+     * // Update one CpPlan
+     * const cpPlan = await prisma.cpPlan.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpPlanUpdateArgs>(args: SelectSubset<T, CpPlanUpdateArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpPlans.
+     * @param {CpPlanDeleteManyArgs} args - Arguments to filter CpPlans to delete.
+     * @example
+     * // Delete a few CpPlans
+     * const { count } = await prisma.cpPlan.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpPlanDeleteManyArgs>(args?: SelectSubset<T, CpPlanDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpPlans.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpPlans
+     * const cpPlan = await prisma.cpPlan.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpPlanUpdateManyArgs>(args: SelectSubset<T, CpPlanUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpPlan.
+     * @param {CpPlanUpsertArgs} args - Arguments to update or create a CpPlan.
+     * @example
+     * // Update or create a CpPlan
+     * const cpPlan = await prisma.cpPlan.upsert({
+     *   create: {
+     *     // ... data to create a CpPlan
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpPlan we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpPlanUpsertArgs>(args: SelectSubset<T, CpPlanUpsertArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpPlans.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanCountArgs} args - Arguments to filter CpPlans to count.
+     * @example
+     * // Count the number of CpPlans
+     * const count = await prisma.cpPlan.count({
+     *   where: {
+     *     // ... the filter for the CpPlans we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpPlanCountArgs>(
+      args?: Subset<T, CpPlanCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpPlanCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpPlan.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpPlanAggregateArgs>(args: Subset<T, CpPlanAggregateArgs>): Prisma.PrismaPromise<GetCpPlanAggregateType<T>>
+
+    /**
+     * Group by CpPlan.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlanGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpPlanGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpPlanGroupByArgs['orderBy'] }
+        : { orderBy?: CpPlanGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpPlanGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpPlanGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpPlan model
+   */
+  readonly fields: CpPlanFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpPlan.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpPlanClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    subscriptions<T extends CpPlan$subscriptionsArgs<ExtArgs> = {}>(args?: Subset<T, CpPlan$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpPlan model
+   */ 
+  interface CpPlanFieldRefs {
+    readonly id: FieldRef<"CpPlan", 'String'>
+    readonly name: FieldRef<"CpPlan", 'String'>
+    readonly tier: FieldRef<"CpPlan", 'String'>
+    readonly billingInterval: FieldRef<"CpPlan", 'String'>
+    readonly basePriceMinorUnits: FieldRef<"CpPlan", 'Int'>
+    readonly currency: FieldRef<"CpPlan", 'String'>
+    readonly isActive: FieldRef<"CpPlan", 'Boolean'>
+    readonly features: FieldRef<"CpPlan", 'Json'>
+    readonly customTerms: FieldRef<"CpPlan", 'Json'>
+    readonly createdAt: FieldRef<"CpPlan", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpPlan", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpPlan findUnique
+   */
+  export type CpPlanFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlan to fetch.
+     */
+    where: CpPlanWhereUniqueInput
+  }
+
+  /**
+   * CpPlan findUniqueOrThrow
+   */
+  export type CpPlanFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlan to fetch.
+     */
+    where: CpPlanWhereUniqueInput
+  }
+
+  /**
+   * CpPlan findFirst
+   */
+  export type CpPlanFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlan to fetch.
+     */
+    where?: CpPlanWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlans to fetch.
+     */
+    orderBy?: CpPlanOrderByWithRelationInput | CpPlanOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlans.
+     */
+    cursor?: CpPlanWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlans from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlans.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlans.
+     */
+    distinct?: CpPlanScalarFieldEnum | CpPlanScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlan findFirstOrThrow
+   */
+  export type CpPlanFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlan to fetch.
+     */
+    where?: CpPlanWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlans to fetch.
+     */
+    orderBy?: CpPlanOrderByWithRelationInput | CpPlanOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlans.
+     */
+    cursor?: CpPlanWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlans from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlans.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlans.
+     */
+    distinct?: CpPlanScalarFieldEnum | CpPlanScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlan findMany
+   */
+  export type CpPlanFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlans to fetch.
+     */
+    where?: CpPlanWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlans to fetch.
+     */
+    orderBy?: CpPlanOrderByWithRelationInput | CpPlanOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpPlans.
+     */
+    cursor?: CpPlanWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlans from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlans.
+     */
+    skip?: number
+    distinct?: CpPlanScalarFieldEnum | CpPlanScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlan create
+   */
+  export type CpPlanCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpPlan.
+     */
+    data: XOR<CpPlanCreateInput, CpPlanUncheckedCreateInput>
+  }
+
+  /**
+   * CpPlan createMany
+   */
+  export type CpPlanCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpPlans.
+     */
+    data: CpPlanCreateManyInput | CpPlanCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlan createManyAndReturn
+   */
+  export type CpPlanCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpPlans.
+     */
+    data: CpPlanCreateManyInput | CpPlanCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlan update
+   */
+  export type CpPlanUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpPlan.
+     */
+    data: XOR<CpPlanUpdateInput, CpPlanUncheckedUpdateInput>
+    /**
+     * Choose, which CpPlan to update.
+     */
+    where: CpPlanWhereUniqueInput
+  }
+
+  /**
+   * CpPlan updateMany
+   */
+  export type CpPlanUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpPlans.
+     */
+    data: XOR<CpPlanUpdateManyMutationInput, CpPlanUncheckedUpdateManyInput>
+    /**
+     * Filter which CpPlans to update
+     */
+    where?: CpPlanWhereInput
+  }
+
+  /**
+   * CpPlan upsert
+   */
+  export type CpPlanUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpPlan to update in case it exists.
+     */
+    where: CpPlanWhereUniqueInput
+    /**
+     * In case the CpPlan found by the `where` argument doesn't exist, create a new CpPlan with this data.
+     */
+    create: XOR<CpPlanCreateInput, CpPlanUncheckedCreateInput>
+    /**
+     * In case the CpPlan was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpPlanUpdateInput, CpPlanUncheckedUpdateInput>
+  }
+
+  /**
+   * CpPlan delete
+   */
+  export type CpPlanDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+    /**
+     * Filter which CpPlan to delete.
+     */
+    where: CpPlanWhereUniqueInput
+  }
+
+  /**
+   * CpPlan deleteMany
+   */
+  export type CpPlanDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlans to delete
+     */
+    where?: CpPlanWhereInput
+  }
+
+  /**
+   * CpPlan.subscriptions
+   */
+  export type CpPlan$subscriptionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    where?: CpSubscriptionWhereInput
+    orderBy?: CpSubscriptionOrderByWithRelationInput | CpSubscriptionOrderByWithRelationInput[]
+    cursor?: CpSubscriptionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpSubscriptionScalarFieldEnum | CpSubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlan without action
+   */
+  export type CpPlanDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlan
+     */
+    select?: CpPlanSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlanInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpSubscription
+   */
+
+  export type AggregateCpSubscription = {
+    _count: CpSubscriptionCountAggregateOutputType | null
+    _min: CpSubscriptionMinAggregateOutputType | null
+    _max: CpSubscriptionMaxAggregateOutputType | null
+  }
+
+  export type CpSubscriptionMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    planId: string | null
+    status: string | null
+    currentPeriodStart: Date | null
+    currentPeriodEnd: Date | null
+    cancelAtPeriodEnd: boolean | null
+    trialEndsAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpSubscriptionMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    planId: string | null
+    status: string | null
+    currentPeriodStart: Date | null
+    currentPeriodEnd: Date | null
+    cancelAtPeriodEnd: boolean | null
+    trialEndsAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpSubscriptionCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    planId: number
+    status: number
+    currentPeriodStart: number
+    currentPeriodEnd: number
+    cancelAtPeriodEnd: number
+    trialEndsAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpSubscriptionMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    planId?: true
+    status?: true
+    currentPeriodStart?: true
+    currentPeriodEnd?: true
+    cancelAtPeriodEnd?: true
+    trialEndsAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpSubscriptionMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    planId?: true
+    status?: true
+    currentPeriodStart?: true
+    currentPeriodEnd?: true
+    cancelAtPeriodEnd?: true
+    trialEndsAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpSubscriptionCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    planId?: true
+    status?: true
+    currentPeriodStart?: true
+    currentPeriodEnd?: true
+    cancelAtPeriodEnd?: true
+    trialEndsAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpSubscriptionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpSubscription to aggregate.
+     */
+    where?: CpSubscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpSubscriptions to fetch.
+     */
+    orderBy?: CpSubscriptionOrderByWithRelationInput | CpSubscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpSubscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpSubscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpSubscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpSubscriptions
+    **/
+    _count?: true | CpSubscriptionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpSubscriptionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpSubscriptionMaxAggregateInputType
+  }
+
+  export type GetCpSubscriptionAggregateType<T extends CpSubscriptionAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpSubscription]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpSubscription[P]>
+      : GetScalarType<T[P], AggregateCpSubscription[P]>
+  }
+
+
+
+
+  export type CpSubscriptionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpSubscriptionWhereInput
+    orderBy?: CpSubscriptionOrderByWithAggregationInput | CpSubscriptionOrderByWithAggregationInput[]
+    by: CpSubscriptionScalarFieldEnum[] | CpSubscriptionScalarFieldEnum
+    having?: CpSubscriptionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpSubscriptionCountAggregateInputType | true
+    _min?: CpSubscriptionMinAggregateInputType
+    _max?: CpSubscriptionMaxAggregateInputType
+  }
+
+  export type CpSubscriptionGroupByOutputType = {
+    id: string
+    tenantId: string
+    planId: string
+    status: string
+    currentPeriodStart: Date
+    currentPeriodEnd: Date
+    cancelAtPeriodEnd: boolean
+    trialEndsAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpSubscriptionCountAggregateOutputType | null
+    _min: CpSubscriptionMinAggregateOutputType | null
+    _max: CpSubscriptionMaxAggregateOutputType | null
+  }
+
+  type GetCpSubscriptionGroupByPayload<T extends CpSubscriptionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpSubscriptionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpSubscriptionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpSubscriptionGroupByOutputType[P]>
+            : GetScalarType<T[P], CpSubscriptionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpSubscriptionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    planId?: boolean
+    status?: boolean
+    currentPeriodStart?: boolean
+    currentPeriodEnd?: boolean
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    plan?: boolean | CpPlanDefaultArgs<ExtArgs>
+    invoices?: boolean | CpSubscription$invoicesArgs<ExtArgs>
+    _count?: boolean | CpSubscriptionCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpSubscription"]>
+
+  export type CpSubscriptionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    planId?: boolean
+    status?: boolean
+    currentPeriodStart?: boolean
+    currentPeriodEnd?: boolean
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    plan?: boolean | CpPlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpSubscription"]>
+
+  export type CpSubscriptionSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    planId?: boolean
+    status?: boolean
+    currentPeriodStart?: boolean
+    currentPeriodEnd?: boolean
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpSubscriptionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    plan?: boolean | CpPlanDefaultArgs<ExtArgs>
+    invoices?: boolean | CpSubscription$invoicesArgs<ExtArgs>
+    _count?: boolean | CpSubscriptionCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpSubscriptionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    plan?: boolean | CpPlanDefaultArgs<ExtArgs>
+  }
+
+  export type $CpSubscriptionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpSubscription"
+    objects: {
+      plan: Prisma.$CpPlanPayload<ExtArgs>
+      invoices: Prisma.$CpInvoicePayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      planId: string
+      status: string
+      currentPeriodStart: Date
+      currentPeriodEnd: Date
+      cancelAtPeriodEnd: boolean
+      trialEndsAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpSubscription"]>
+    composites: {}
+  }
+
+  type CpSubscriptionGetPayload<S extends boolean | null | undefined | CpSubscriptionDefaultArgs> = $Result.GetResult<Prisma.$CpSubscriptionPayload, S>
+
+  type CpSubscriptionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpSubscriptionFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpSubscriptionCountAggregateInputType | true
+    }
+
+  export interface CpSubscriptionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpSubscription'], meta: { name: 'CpSubscription' } }
+    /**
+     * Find zero or one CpSubscription that matches the filter.
+     * @param {CpSubscriptionFindUniqueArgs} args - Arguments to find a CpSubscription
+     * @example
+     * // Get one CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpSubscriptionFindUniqueArgs>(args: SelectSubset<T, CpSubscriptionFindUniqueArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpSubscription that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpSubscriptionFindUniqueOrThrowArgs} args - Arguments to find a CpSubscription
+     * @example
+     * // Get one CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpSubscriptionFindUniqueOrThrowArgs>(args: SelectSubset<T, CpSubscriptionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpSubscription that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionFindFirstArgs} args - Arguments to find a CpSubscription
+     * @example
+     * // Get one CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpSubscriptionFindFirstArgs>(args?: SelectSubset<T, CpSubscriptionFindFirstArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpSubscription that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionFindFirstOrThrowArgs} args - Arguments to find a CpSubscription
+     * @example
+     * // Get one CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpSubscriptionFindFirstOrThrowArgs>(args?: SelectSubset<T, CpSubscriptionFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpSubscriptions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpSubscriptions
+     * const cpSubscriptions = await prisma.cpSubscription.findMany()
+     * 
+     * // Get first 10 CpSubscriptions
+     * const cpSubscriptions = await prisma.cpSubscription.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpSubscriptionWithIdOnly = await prisma.cpSubscription.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpSubscriptionFindManyArgs>(args?: SelectSubset<T, CpSubscriptionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpSubscription.
+     * @param {CpSubscriptionCreateArgs} args - Arguments to create a CpSubscription.
+     * @example
+     * // Create one CpSubscription
+     * const CpSubscription = await prisma.cpSubscription.create({
+     *   data: {
+     *     // ... data to create a CpSubscription
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpSubscriptionCreateArgs>(args: SelectSubset<T, CpSubscriptionCreateArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpSubscriptions.
+     * @param {CpSubscriptionCreateManyArgs} args - Arguments to create many CpSubscriptions.
+     * @example
+     * // Create many CpSubscriptions
+     * const cpSubscription = await prisma.cpSubscription.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpSubscriptionCreateManyArgs>(args?: SelectSubset<T, CpSubscriptionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpSubscriptions and returns the data saved in the database.
+     * @param {CpSubscriptionCreateManyAndReturnArgs} args - Arguments to create many CpSubscriptions.
+     * @example
+     * // Create many CpSubscriptions
+     * const cpSubscription = await prisma.cpSubscription.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpSubscriptions and only return the `id`
+     * const cpSubscriptionWithIdOnly = await prisma.cpSubscription.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpSubscriptionCreateManyAndReturnArgs>(args?: SelectSubset<T, CpSubscriptionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpSubscription.
+     * @param {CpSubscriptionDeleteArgs} args - Arguments to delete one CpSubscription.
+     * @example
+     * // Delete one CpSubscription
+     * const CpSubscription = await prisma.cpSubscription.delete({
+     *   where: {
+     *     // ... filter to delete one CpSubscription
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpSubscriptionDeleteArgs>(args: SelectSubset<T, CpSubscriptionDeleteArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpSubscription.
+     * @param {CpSubscriptionUpdateArgs} args - Arguments to update one CpSubscription.
+     * @example
+     * // Update one CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpSubscriptionUpdateArgs>(args: SelectSubset<T, CpSubscriptionUpdateArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpSubscriptions.
+     * @param {CpSubscriptionDeleteManyArgs} args - Arguments to filter CpSubscriptions to delete.
+     * @example
+     * // Delete a few CpSubscriptions
+     * const { count } = await prisma.cpSubscription.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpSubscriptionDeleteManyArgs>(args?: SelectSubset<T, CpSubscriptionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpSubscriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpSubscriptions
+     * const cpSubscription = await prisma.cpSubscription.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpSubscriptionUpdateManyArgs>(args: SelectSubset<T, CpSubscriptionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpSubscription.
+     * @param {CpSubscriptionUpsertArgs} args - Arguments to update or create a CpSubscription.
+     * @example
+     * // Update or create a CpSubscription
+     * const cpSubscription = await prisma.cpSubscription.upsert({
+     *   create: {
+     *     // ... data to create a CpSubscription
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpSubscription we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpSubscriptionUpsertArgs>(args: SelectSubset<T, CpSubscriptionUpsertArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpSubscriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionCountArgs} args - Arguments to filter CpSubscriptions to count.
+     * @example
+     * // Count the number of CpSubscriptions
+     * const count = await prisma.cpSubscription.count({
+     *   where: {
+     *     // ... the filter for the CpSubscriptions we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpSubscriptionCountArgs>(
+      args?: Subset<T, CpSubscriptionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpSubscriptionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpSubscription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpSubscriptionAggregateArgs>(args: Subset<T, CpSubscriptionAggregateArgs>): Prisma.PrismaPromise<GetCpSubscriptionAggregateType<T>>
+
+    /**
+     * Group by CpSubscription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpSubscriptionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpSubscriptionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpSubscriptionGroupByArgs['orderBy'] }
+        : { orderBy?: CpSubscriptionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpSubscriptionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpSubscriptionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpSubscription model
+   */
+  readonly fields: CpSubscriptionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpSubscription.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpSubscriptionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    plan<T extends CpPlanDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpPlanDefaultArgs<ExtArgs>>): Prisma__CpPlanClient<$Result.GetResult<Prisma.$CpPlanPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    invoices<T extends CpSubscription$invoicesArgs<ExtArgs> = {}>(args?: Subset<T, CpSubscription$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpSubscription model
+   */ 
+  interface CpSubscriptionFieldRefs {
+    readonly id: FieldRef<"CpSubscription", 'String'>
+    readonly tenantId: FieldRef<"CpSubscription", 'String'>
+    readonly planId: FieldRef<"CpSubscription", 'String'>
+    readonly status: FieldRef<"CpSubscription", 'String'>
+    readonly currentPeriodStart: FieldRef<"CpSubscription", 'DateTime'>
+    readonly currentPeriodEnd: FieldRef<"CpSubscription", 'DateTime'>
+    readonly cancelAtPeriodEnd: FieldRef<"CpSubscription", 'Boolean'>
+    readonly trialEndsAt: FieldRef<"CpSubscription", 'DateTime'>
+    readonly createdAt: FieldRef<"CpSubscription", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpSubscription", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpSubscription findUnique
+   */
+  export type CpSubscriptionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which CpSubscription to fetch.
+     */
+    where: CpSubscriptionWhereUniqueInput
+  }
+
+  /**
+   * CpSubscription findUniqueOrThrow
+   */
+  export type CpSubscriptionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which CpSubscription to fetch.
+     */
+    where: CpSubscriptionWhereUniqueInput
+  }
+
+  /**
+   * CpSubscription findFirst
+   */
+  export type CpSubscriptionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which CpSubscription to fetch.
+     */
+    where?: CpSubscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpSubscriptions to fetch.
+     */
+    orderBy?: CpSubscriptionOrderByWithRelationInput | CpSubscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpSubscriptions.
+     */
+    cursor?: CpSubscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpSubscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpSubscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpSubscriptions.
+     */
+    distinct?: CpSubscriptionScalarFieldEnum | CpSubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * CpSubscription findFirstOrThrow
+   */
+  export type CpSubscriptionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which CpSubscription to fetch.
+     */
+    where?: CpSubscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpSubscriptions to fetch.
+     */
+    orderBy?: CpSubscriptionOrderByWithRelationInput | CpSubscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpSubscriptions.
+     */
+    cursor?: CpSubscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpSubscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpSubscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpSubscriptions.
+     */
+    distinct?: CpSubscriptionScalarFieldEnum | CpSubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * CpSubscription findMany
+   */
+  export type CpSubscriptionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which CpSubscriptions to fetch.
+     */
+    where?: CpSubscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpSubscriptions to fetch.
+     */
+    orderBy?: CpSubscriptionOrderByWithRelationInput | CpSubscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpSubscriptions.
+     */
+    cursor?: CpSubscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpSubscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpSubscriptions.
+     */
+    skip?: number
+    distinct?: CpSubscriptionScalarFieldEnum | CpSubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * CpSubscription create
+   */
+  export type CpSubscriptionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpSubscription.
+     */
+    data: XOR<CpSubscriptionCreateInput, CpSubscriptionUncheckedCreateInput>
+  }
+
+  /**
+   * CpSubscription createMany
+   */
+  export type CpSubscriptionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpSubscriptions.
+     */
+    data: CpSubscriptionCreateManyInput | CpSubscriptionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpSubscription createManyAndReturn
+   */
+  export type CpSubscriptionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpSubscriptions.
+     */
+    data: CpSubscriptionCreateManyInput | CpSubscriptionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpSubscription update
+   */
+  export type CpSubscriptionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpSubscription.
+     */
+    data: XOR<CpSubscriptionUpdateInput, CpSubscriptionUncheckedUpdateInput>
+    /**
+     * Choose, which CpSubscription to update.
+     */
+    where: CpSubscriptionWhereUniqueInput
+  }
+
+  /**
+   * CpSubscription updateMany
+   */
+  export type CpSubscriptionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpSubscriptions.
+     */
+    data: XOR<CpSubscriptionUpdateManyMutationInput, CpSubscriptionUncheckedUpdateManyInput>
+    /**
+     * Filter which CpSubscriptions to update
+     */
+    where?: CpSubscriptionWhereInput
+  }
+
+  /**
+   * CpSubscription upsert
+   */
+  export type CpSubscriptionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpSubscription to update in case it exists.
+     */
+    where: CpSubscriptionWhereUniqueInput
+    /**
+     * In case the CpSubscription found by the `where` argument doesn't exist, create a new CpSubscription with this data.
+     */
+    create: XOR<CpSubscriptionCreateInput, CpSubscriptionUncheckedCreateInput>
+    /**
+     * In case the CpSubscription was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpSubscriptionUpdateInput, CpSubscriptionUncheckedUpdateInput>
+  }
+
+  /**
+   * CpSubscription delete
+   */
+  export type CpSubscriptionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+    /**
+     * Filter which CpSubscription to delete.
+     */
+    where: CpSubscriptionWhereUniqueInput
+  }
+
+  /**
+   * CpSubscription deleteMany
+   */
+  export type CpSubscriptionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpSubscriptions to delete
+     */
+    where?: CpSubscriptionWhereInput
+  }
+
+  /**
+   * CpSubscription.invoices
+   */
+  export type CpSubscription$invoicesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    where?: CpInvoiceWhereInput
+    orderBy?: CpInvoiceOrderByWithRelationInput | CpInvoiceOrderByWithRelationInput[]
+    cursor?: CpInvoiceWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpInvoiceScalarFieldEnum | CpInvoiceScalarFieldEnum[]
+  }
+
+  /**
+   * CpSubscription without action
+   */
+  export type CpSubscriptionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpSubscription
+     */
+    select?: CpSubscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpSubscriptionInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpInvoice
+   */
+
+  export type AggregateCpInvoice = {
+    _count: CpInvoiceCountAggregateOutputType | null
+    _avg: CpInvoiceAvgAggregateOutputType | null
+    _sum: CpInvoiceSumAggregateOutputType | null
+    _min: CpInvoiceMinAggregateOutputType | null
+    _max: CpInvoiceMaxAggregateOutputType | null
+  }
+
+  export type CpInvoiceAvgAggregateOutputType = {
+    amountDueMinorUnits: number | null
+    amountPaidMinorUnits: number | null
+  }
+
+  export type CpInvoiceSumAggregateOutputType = {
+    amountDueMinorUnits: number | null
+    amountPaidMinorUnits: number | null
+  }
+
+  export type CpInvoiceMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    subscriptionId: string | null
+    status: string | null
+    amountDueMinorUnits: number | null
+    amountPaidMinorUnits: number | null
+    currency: string | null
+    periodStart: Date | null
+    periodEnd: Date | null
+    dueAt: Date | null
+    paidAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpInvoiceMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    subscriptionId: string | null
+    status: string | null
+    amountDueMinorUnits: number | null
+    amountPaidMinorUnits: number | null
+    currency: string | null
+    periodStart: Date | null
+    periodEnd: Date | null
+    dueAt: Date | null
+    paidAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpInvoiceCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    subscriptionId: number
+    status: number
+    amountDueMinorUnits: number
+    amountPaidMinorUnits: number
+    currency: number
+    periodStart: number
+    periodEnd: number
+    dueAt: number
+    paidAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpInvoiceAvgAggregateInputType = {
+    amountDueMinorUnits?: true
+    amountPaidMinorUnits?: true
+  }
+
+  export type CpInvoiceSumAggregateInputType = {
+    amountDueMinorUnits?: true
+    amountPaidMinorUnits?: true
+  }
+
+  export type CpInvoiceMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    subscriptionId?: true
+    status?: true
+    amountDueMinorUnits?: true
+    amountPaidMinorUnits?: true
+    currency?: true
+    periodStart?: true
+    periodEnd?: true
+    dueAt?: true
+    paidAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpInvoiceMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    subscriptionId?: true
+    status?: true
+    amountDueMinorUnits?: true
+    amountPaidMinorUnits?: true
+    currency?: true
+    periodStart?: true
+    periodEnd?: true
+    dueAt?: true
+    paidAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpInvoiceCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    subscriptionId?: true
+    status?: true
+    amountDueMinorUnits?: true
+    amountPaidMinorUnits?: true
+    currency?: true
+    periodStart?: true
+    periodEnd?: true
+    dueAt?: true
+    paidAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpInvoiceAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpInvoice to aggregate.
+     */
+    where?: CpInvoiceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoices to fetch.
+     */
+    orderBy?: CpInvoiceOrderByWithRelationInput | CpInvoiceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpInvoiceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoices from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoices.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpInvoices
+    **/
+    _count?: true | CpInvoiceCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpInvoiceAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpInvoiceSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpInvoiceMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpInvoiceMaxAggregateInputType
+  }
+
+  export type GetCpInvoiceAggregateType<T extends CpInvoiceAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpInvoice]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpInvoice[P]>
+      : GetScalarType<T[P], AggregateCpInvoice[P]>
+  }
+
+
+
+
+  export type CpInvoiceGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpInvoiceWhereInput
+    orderBy?: CpInvoiceOrderByWithAggregationInput | CpInvoiceOrderByWithAggregationInput[]
+    by: CpInvoiceScalarFieldEnum[] | CpInvoiceScalarFieldEnum
+    having?: CpInvoiceScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpInvoiceCountAggregateInputType | true
+    _avg?: CpInvoiceAvgAggregateInputType
+    _sum?: CpInvoiceSumAggregateInputType
+    _min?: CpInvoiceMinAggregateInputType
+    _max?: CpInvoiceMaxAggregateInputType
+  }
+
+  export type CpInvoiceGroupByOutputType = {
+    id: string
+    tenantId: string
+    subscriptionId: string
+    status: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits: number
+    currency: string
+    periodStart: Date
+    periodEnd: Date
+    dueAt: Date | null
+    paidAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpInvoiceCountAggregateOutputType | null
+    _avg: CpInvoiceAvgAggregateOutputType | null
+    _sum: CpInvoiceSumAggregateOutputType | null
+    _min: CpInvoiceMinAggregateOutputType | null
+    _max: CpInvoiceMaxAggregateOutputType | null
+  }
+
+  type GetCpInvoiceGroupByPayload<T extends CpInvoiceGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpInvoiceGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpInvoiceGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpInvoiceGroupByOutputType[P]>
+            : GetScalarType<T[P], CpInvoiceGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpInvoiceSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    status?: boolean
+    amountDueMinorUnits?: boolean
+    amountPaidMinorUnits?: boolean
+    currency?: boolean
+    periodStart?: boolean
+    periodEnd?: boolean
+    dueAt?: boolean
+    paidAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    subscription?: boolean | CpSubscriptionDefaultArgs<ExtArgs>
+    lineItems?: boolean | CpInvoice$lineItemsArgs<ExtArgs>
+    collectionAttempts?: boolean | CpInvoice$collectionAttemptsArgs<ExtArgs>
+    _count?: boolean | CpInvoiceCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpInvoice"]>
+
+  export type CpInvoiceSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    status?: boolean
+    amountDueMinorUnits?: boolean
+    amountPaidMinorUnits?: boolean
+    currency?: boolean
+    periodStart?: boolean
+    periodEnd?: boolean
+    dueAt?: boolean
+    paidAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    subscription?: boolean | CpSubscriptionDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpInvoice"]>
+
+  export type CpInvoiceSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    status?: boolean
+    amountDueMinorUnits?: boolean
+    amountPaidMinorUnits?: boolean
+    currency?: boolean
+    periodStart?: boolean
+    periodEnd?: boolean
+    dueAt?: boolean
+    paidAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpInvoiceInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    subscription?: boolean | CpSubscriptionDefaultArgs<ExtArgs>
+    lineItems?: boolean | CpInvoice$lineItemsArgs<ExtArgs>
+    collectionAttempts?: boolean | CpInvoice$collectionAttemptsArgs<ExtArgs>
+    _count?: boolean | CpInvoiceCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpInvoiceIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    subscription?: boolean | CpSubscriptionDefaultArgs<ExtArgs>
+  }
+
+  export type $CpInvoicePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpInvoice"
+    objects: {
+      subscription: Prisma.$CpSubscriptionPayload<ExtArgs>
+      lineItems: Prisma.$CpInvoiceLineItemPayload<ExtArgs>[]
+      collectionAttempts: Prisma.$CpCollectionAttemptPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      subscriptionId: string
+      status: string
+      amountDueMinorUnits: number
+      amountPaidMinorUnits: number
+      currency: string
+      periodStart: Date
+      periodEnd: Date
+      dueAt: Date | null
+      paidAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpInvoice"]>
+    composites: {}
+  }
+
+  type CpInvoiceGetPayload<S extends boolean | null | undefined | CpInvoiceDefaultArgs> = $Result.GetResult<Prisma.$CpInvoicePayload, S>
+
+  type CpInvoiceCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpInvoiceFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpInvoiceCountAggregateInputType | true
+    }
+
+  export interface CpInvoiceDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpInvoice'], meta: { name: 'CpInvoice' } }
+    /**
+     * Find zero or one CpInvoice that matches the filter.
+     * @param {CpInvoiceFindUniqueArgs} args - Arguments to find a CpInvoice
+     * @example
+     * // Get one CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpInvoiceFindUniqueArgs>(args: SelectSubset<T, CpInvoiceFindUniqueArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpInvoice that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpInvoiceFindUniqueOrThrowArgs} args - Arguments to find a CpInvoice
+     * @example
+     * // Get one CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpInvoiceFindUniqueOrThrowArgs>(args: SelectSubset<T, CpInvoiceFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpInvoice that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceFindFirstArgs} args - Arguments to find a CpInvoice
+     * @example
+     * // Get one CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpInvoiceFindFirstArgs>(args?: SelectSubset<T, CpInvoiceFindFirstArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpInvoice that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceFindFirstOrThrowArgs} args - Arguments to find a CpInvoice
+     * @example
+     * // Get one CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpInvoiceFindFirstOrThrowArgs>(args?: SelectSubset<T, CpInvoiceFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpInvoices that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpInvoices
+     * const cpInvoices = await prisma.cpInvoice.findMany()
+     * 
+     * // Get first 10 CpInvoices
+     * const cpInvoices = await prisma.cpInvoice.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpInvoiceWithIdOnly = await prisma.cpInvoice.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpInvoiceFindManyArgs>(args?: SelectSubset<T, CpInvoiceFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpInvoice.
+     * @param {CpInvoiceCreateArgs} args - Arguments to create a CpInvoice.
+     * @example
+     * // Create one CpInvoice
+     * const CpInvoice = await prisma.cpInvoice.create({
+     *   data: {
+     *     // ... data to create a CpInvoice
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpInvoiceCreateArgs>(args: SelectSubset<T, CpInvoiceCreateArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpInvoices.
+     * @param {CpInvoiceCreateManyArgs} args - Arguments to create many CpInvoices.
+     * @example
+     * // Create many CpInvoices
+     * const cpInvoice = await prisma.cpInvoice.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpInvoiceCreateManyArgs>(args?: SelectSubset<T, CpInvoiceCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpInvoices and returns the data saved in the database.
+     * @param {CpInvoiceCreateManyAndReturnArgs} args - Arguments to create many CpInvoices.
+     * @example
+     * // Create many CpInvoices
+     * const cpInvoice = await prisma.cpInvoice.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpInvoices and only return the `id`
+     * const cpInvoiceWithIdOnly = await prisma.cpInvoice.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpInvoiceCreateManyAndReturnArgs>(args?: SelectSubset<T, CpInvoiceCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpInvoice.
+     * @param {CpInvoiceDeleteArgs} args - Arguments to delete one CpInvoice.
+     * @example
+     * // Delete one CpInvoice
+     * const CpInvoice = await prisma.cpInvoice.delete({
+     *   where: {
+     *     // ... filter to delete one CpInvoice
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpInvoiceDeleteArgs>(args: SelectSubset<T, CpInvoiceDeleteArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpInvoice.
+     * @param {CpInvoiceUpdateArgs} args - Arguments to update one CpInvoice.
+     * @example
+     * // Update one CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpInvoiceUpdateArgs>(args: SelectSubset<T, CpInvoiceUpdateArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpInvoices.
+     * @param {CpInvoiceDeleteManyArgs} args - Arguments to filter CpInvoices to delete.
+     * @example
+     * // Delete a few CpInvoices
+     * const { count } = await prisma.cpInvoice.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpInvoiceDeleteManyArgs>(args?: SelectSubset<T, CpInvoiceDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpInvoices.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpInvoices
+     * const cpInvoice = await prisma.cpInvoice.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpInvoiceUpdateManyArgs>(args: SelectSubset<T, CpInvoiceUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpInvoice.
+     * @param {CpInvoiceUpsertArgs} args - Arguments to update or create a CpInvoice.
+     * @example
+     * // Update or create a CpInvoice
+     * const cpInvoice = await prisma.cpInvoice.upsert({
+     *   create: {
+     *     // ... data to create a CpInvoice
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpInvoice we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpInvoiceUpsertArgs>(args: SelectSubset<T, CpInvoiceUpsertArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpInvoices.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceCountArgs} args - Arguments to filter CpInvoices to count.
+     * @example
+     * // Count the number of CpInvoices
+     * const count = await prisma.cpInvoice.count({
+     *   where: {
+     *     // ... the filter for the CpInvoices we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpInvoiceCountArgs>(
+      args?: Subset<T, CpInvoiceCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpInvoiceCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpInvoice.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpInvoiceAggregateArgs>(args: Subset<T, CpInvoiceAggregateArgs>): Prisma.PrismaPromise<GetCpInvoiceAggregateType<T>>
+
+    /**
+     * Group by CpInvoice.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpInvoiceGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpInvoiceGroupByArgs['orderBy'] }
+        : { orderBy?: CpInvoiceGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpInvoiceGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpInvoiceGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpInvoice model
+   */
+  readonly fields: CpInvoiceFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpInvoice.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpInvoiceClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    subscription<T extends CpSubscriptionDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpSubscriptionDefaultArgs<ExtArgs>>): Prisma__CpSubscriptionClient<$Result.GetResult<Prisma.$CpSubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    lineItems<T extends CpInvoice$lineItemsArgs<ExtArgs> = {}>(args?: Subset<T, CpInvoice$lineItemsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findMany"> | Null>
+    collectionAttempts<T extends CpInvoice$collectionAttemptsArgs<ExtArgs> = {}>(args?: Subset<T, CpInvoice$collectionAttemptsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpInvoice model
+   */ 
+  interface CpInvoiceFieldRefs {
+    readonly id: FieldRef<"CpInvoice", 'String'>
+    readonly tenantId: FieldRef<"CpInvoice", 'String'>
+    readonly subscriptionId: FieldRef<"CpInvoice", 'String'>
+    readonly status: FieldRef<"CpInvoice", 'String'>
+    readonly amountDueMinorUnits: FieldRef<"CpInvoice", 'Int'>
+    readonly amountPaidMinorUnits: FieldRef<"CpInvoice", 'Int'>
+    readonly currency: FieldRef<"CpInvoice", 'String'>
+    readonly periodStart: FieldRef<"CpInvoice", 'DateTime'>
+    readonly periodEnd: FieldRef<"CpInvoice", 'DateTime'>
+    readonly dueAt: FieldRef<"CpInvoice", 'DateTime'>
+    readonly paidAt: FieldRef<"CpInvoice", 'DateTime'>
+    readonly createdAt: FieldRef<"CpInvoice", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpInvoice", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpInvoice findUnique
+   */
+  export type CpInvoiceFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoice to fetch.
+     */
+    where: CpInvoiceWhereUniqueInput
+  }
+
+  /**
+   * CpInvoice findUniqueOrThrow
+   */
+  export type CpInvoiceFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoice to fetch.
+     */
+    where: CpInvoiceWhereUniqueInput
+  }
+
+  /**
+   * CpInvoice findFirst
+   */
+  export type CpInvoiceFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoice to fetch.
+     */
+    where?: CpInvoiceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoices to fetch.
+     */
+    orderBy?: CpInvoiceOrderByWithRelationInput | CpInvoiceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpInvoices.
+     */
+    cursor?: CpInvoiceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoices from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoices.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpInvoices.
+     */
+    distinct?: CpInvoiceScalarFieldEnum | CpInvoiceScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoice findFirstOrThrow
+   */
+  export type CpInvoiceFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoice to fetch.
+     */
+    where?: CpInvoiceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoices to fetch.
+     */
+    orderBy?: CpInvoiceOrderByWithRelationInput | CpInvoiceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpInvoices.
+     */
+    cursor?: CpInvoiceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoices from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoices.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpInvoices.
+     */
+    distinct?: CpInvoiceScalarFieldEnum | CpInvoiceScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoice findMany
+   */
+  export type CpInvoiceFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoices to fetch.
+     */
+    where?: CpInvoiceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoices to fetch.
+     */
+    orderBy?: CpInvoiceOrderByWithRelationInput | CpInvoiceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpInvoices.
+     */
+    cursor?: CpInvoiceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoices from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoices.
+     */
+    skip?: number
+    distinct?: CpInvoiceScalarFieldEnum | CpInvoiceScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoice create
+   */
+  export type CpInvoiceCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpInvoice.
+     */
+    data: XOR<CpInvoiceCreateInput, CpInvoiceUncheckedCreateInput>
+  }
+
+  /**
+   * CpInvoice createMany
+   */
+  export type CpInvoiceCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpInvoices.
+     */
+    data: CpInvoiceCreateManyInput | CpInvoiceCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpInvoice createManyAndReturn
+   */
+  export type CpInvoiceCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpInvoices.
+     */
+    data: CpInvoiceCreateManyInput | CpInvoiceCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpInvoice update
+   */
+  export type CpInvoiceUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpInvoice.
+     */
+    data: XOR<CpInvoiceUpdateInput, CpInvoiceUncheckedUpdateInput>
+    /**
+     * Choose, which CpInvoice to update.
+     */
+    where: CpInvoiceWhereUniqueInput
+  }
+
+  /**
+   * CpInvoice updateMany
+   */
+  export type CpInvoiceUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpInvoices.
+     */
+    data: XOR<CpInvoiceUpdateManyMutationInput, CpInvoiceUncheckedUpdateManyInput>
+    /**
+     * Filter which CpInvoices to update
+     */
+    where?: CpInvoiceWhereInput
+  }
+
+  /**
+   * CpInvoice upsert
+   */
+  export type CpInvoiceUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpInvoice to update in case it exists.
+     */
+    where: CpInvoiceWhereUniqueInput
+    /**
+     * In case the CpInvoice found by the `where` argument doesn't exist, create a new CpInvoice with this data.
+     */
+    create: XOR<CpInvoiceCreateInput, CpInvoiceUncheckedCreateInput>
+    /**
+     * In case the CpInvoice was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpInvoiceUpdateInput, CpInvoiceUncheckedUpdateInput>
+  }
+
+  /**
+   * CpInvoice delete
+   */
+  export type CpInvoiceDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+    /**
+     * Filter which CpInvoice to delete.
+     */
+    where: CpInvoiceWhereUniqueInput
+  }
+
+  /**
+   * CpInvoice deleteMany
+   */
+  export type CpInvoiceDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpInvoices to delete
+     */
+    where?: CpInvoiceWhereInput
+  }
+
+  /**
+   * CpInvoice.lineItems
+   */
+  export type CpInvoice$lineItemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    where?: CpInvoiceLineItemWhereInput
+    orderBy?: CpInvoiceLineItemOrderByWithRelationInput | CpInvoiceLineItemOrderByWithRelationInput[]
+    cursor?: CpInvoiceLineItemWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpInvoiceLineItemScalarFieldEnum | CpInvoiceLineItemScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoice.collectionAttempts
+   */
+  export type CpInvoice$collectionAttemptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    where?: CpCollectionAttemptWhereInput
+    orderBy?: CpCollectionAttemptOrderByWithRelationInput | CpCollectionAttemptOrderByWithRelationInput[]
+    cursor?: CpCollectionAttemptWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpCollectionAttemptScalarFieldEnum | CpCollectionAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoice without action
+   */
+  export type CpInvoiceDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoice
+     */
+    select?: CpInvoiceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpCollectionAttempt
+   */
+
+  export type AggregateCpCollectionAttempt = {
+    _count: CpCollectionAttemptCountAggregateOutputType | null
+    _min: CpCollectionAttemptMinAggregateOutputType | null
+    _max: CpCollectionAttemptMaxAggregateOutputType | null
+  }
+
+  export type CpCollectionAttemptMinAggregateOutputType = {
+    id: string | null
+    invoiceId: string | null
+    tenantId: string | null
+    subscriptionId: string | null
+    kind: string | null
+    status: string | null
+    channel: string | null
+    provider: string | null
+    paymentReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpCollectionAttemptMaxAggregateOutputType = {
+    id: string | null
+    invoiceId: string | null
+    tenantId: string | null
+    subscriptionId: string | null
+    kind: string | null
+    status: string | null
+    channel: string | null
+    provider: string | null
+    paymentReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpCollectionAttemptCountAggregateOutputType = {
+    id: number
+    invoiceId: number
+    tenantId: number
+    subscriptionId: number
+    kind: number
+    status: number
+    channel: number
+    provider: number
+    paymentReference: number
+    metadata: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpCollectionAttemptMinAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    tenantId?: true
+    subscriptionId?: true
+    kind?: true
+    status?: true
+    channel?: true
+    provider?: true
+    paymentReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpCollectionAttemptMaxAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    tenantId?: true
+    subscriptionId?: true
+    kind?: true
+    status?: true
+    channel?: true
+    provider?: true
+    paymentReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpCollectionAttemptCountAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    tenantId?: true
+    subscriptionId?: true
+    kind?: true
+    status?: true
+    channel?: true
+    provider?: true
+    paymentReference?: true
+    metadata?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpCollectionAttemptAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpCollectionAttempt to aggregate.
+     */
+    where?: CpCollectionAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpCollectionAttempts to fetch.
+     */
+    orderBy?: CpCollectionAttemptOrderByWithRelationInput | CpCollectionAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpCollectionAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpCollectionAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpCollectionAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpCollectionAttempts
+    **/
+    _count?: true | CpCollectionAttemptCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpCollectionAttemptMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpCollectionAttemptMaxAggregateInputType
+  }
+
+  export type GetCpCollectionAttemptAggregateType<T extends CpCollectionAttemptAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpCollectionAttempt]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpCollectionAttempt[P]>
+      : GetScalarType<T[P], AggregateCpCollectionAttempt[P]>
+  }
+
+
+
+
+  export type CpCollectionAttemptGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpCollectionAttemptWhereInput
+    orderBy?: CpCollectionAttemptOrderByWithAggregationInput | CpCollectionAttemptOrderByWithAggregationInput[]
+    by: CpCollectionAttemptScalarFieldEnum[] | CpCollectionAttemptScalarFieldEnum
+    having?: CpCollectionAttemptScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpCollectionAttemptCountAggregateInputType | true
+    _min?: CpCollectionAttemptMinAggregateInputType
+    _max?: CpCollectionAttemptMaxAggregateInputType
+  }
+
+  export type CpCollectionAttemptGroupByOutputType = {
+    id: string
+    invoiceId: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider: string | null
+    paymentReference: string | null
+    metadata: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpCollectionAttemptCountAggregateOutputType | null
+    _min: CpCollectionAttemptMinAggregateOutputType | null
+    _max: CpCollectionAttemptMaxAggregateOutputType | null
+  }
+
+  type GetCpCollectionAttemptGroupByPayload<T extends CpCollectionAttemptGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpCollectionAttemptGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpCollectionAttemptGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpCollectionAttemptGroupByOutputType[P]>
+            : GetScalarType<T[P], CpCollectionAttemptGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpCollectionAttemptSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    invoiceId?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    kind?: boolean
+    status?: boolean
+    channel?: boolean
+    provider?: boolean
+    paymentReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpCollectionAttempt"]>
+
+  export type CpCollectionAttemptSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    invoiceId?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    kind?: boolean
+    status?: boolean
+    channel?: boolean
+    provider?: boolean
+    paymentReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpCollectionAttempt"]>
+
+  export type CpCollectionAttemptSelectScalar = {
+    id?: boolean
+    invoiceId?: boolean
+    tenantId?: boolean
+    subscriptionId?: boolean
+    kind?: boolean
+    status?: boolean
+    channel?: boolean
+    provider?: boolean
+    paymentReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpCollectionAttemptInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }
+  export type CpCollectionAttemptIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }
+
+  export type $CpCollectionAttemptPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpCollectionAttempt"
+    objects: {
+      invoice: Prisma.$CpInvoicePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      invoiceId: string
+      tenantId: string
+      subscriptionId: string
+      kind: string
+      status: string
+      channel: string
+      provider: string | null
+      paymentReference: string | null
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpCollectionAttempt"]>
+    composites: {}
+  }
+
+  type CpCollectionAttemptGetPayload<S extends boolean | null | undefined | CpCollectionAttemptDefaultArgs> = $Result.GetResult<Prisma.$CpCollectionAttemptPayload, S>
+
+  type CpCollectionAttemptCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpCollectionAttemptFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpCollectionAttemptCountAggregateInputType | true
+    }
+
+  export interface CpCollectionAttemptDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpCollectionAttempt'], meta: { name: 'CpCollectionAttempt' } }
+    /**
+     * Find zero or one CpCollectionAttempt that matches the filter.
+     * @param {CpCollectionAttemptFindUniqueArgs} args - Arguments to find a CpCollectionAttempt
+     * @example
+     * // Get one CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpCollectionAttemptFindUniqueArgs>(args: SelectSubset<T, CpCollectionAttemptFindUniqueArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpCollectionAttempt that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpCollectionAttemptFindUniqueOrThrowArgs} args - Arguments to find a CpCollectionAttempt
+     * @example
+     * // Get one CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpCollectionAttemptFindUniqueOrThrowArgs>(args: SelectSubset<T, CpCollectionAttemptFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpCollectionAttempt that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptFindFirstArgs} args - Arguments to find a CpCollectionAttempt
+     * @example
+     * // Get one CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpCollectionAttemptFindFirstArgs>(args?: SelectSubset<T, CpCollectionAttemptFindFirstArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpCollectionAttempt that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptFindFirstOrThrowArgs} args - Arguments to find a CpCollectionAttempt
+     * @example
+     * // Get one CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpCollectionAttemptFindFirstOrThrowArgs>(args?: SelectSubset<T, CpCollectionAttemptFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpCollectionAttempts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpCollectionAttempts
+     * const cpCollectionAttempts = await prisma.cpCollectionAttempt.findMany()
+     * 
+     * // Get first 10 CpCollectionAttempts
+     * const cpCollectionAttempts = await prisma.cpCollectionAttempt.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpCollectionAttemptWithIdOnly = await prisma.cpCollectionAttempt.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpCollectionAttemptFindManyArgs>(args?: SelectSubset<T, CpCollectionAttemptFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpCollectionAttempt.
+     * @param {CpCollectionAttemptCreateArgs} args - Arguments to create a CpCollectionAttempt.
+     * @example
+     * // Create one CpCollectionAttempt
+     * const CpCollectionAttempt = await prisma.cpCollectionAttempt.create({
+     *   data: {
+     *     // ... data to create a CpCollectionAttempt
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpCollectionAttemptCreateArgs>(args: SelectSubset<T, CpCollectionAttemptCreateArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpCollectionAttempts.
+     * @param {CpCollectionAttemptCreateManyArgs} args - Arguments to create many CpCollectionAttempts.
+     * @example
+     * // Create many CpCollectionAttempts
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpCollectionAttemptCreateManyArgs>(args?: SelectSubset<T, CpCollectionAttemptCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpCollectionAttempts and returns the data saved in the database.
+     * @param {CpCollectionAttemptCreateManyAndReturnArgs} args - Arguments to create many CpCollectionAttempts.
+     * @example
+     * // Create many CpCollectionAttempts
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpCollectionAttempts and only return the `id`
+     * const cpCollectionAttemptWithIdOnly = await prisma.cpCollectionAttempt.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpCollectionAttemptCreateManyAndReturnArgs>(args?: SelectSubset<T, CpCollectionAttemptCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpCollectionAttempt.
+     * @param {CpCollectionAttemptDeleteArgs} args - Arguments to delete one CpCollectionAttempt.
+     * @example
+     * // Delete one CpCollectionAttempt
+     * const CpCollectionAttempt = await prisma.cpCollectionAttempt.delete({
+     *   where: {
+     *     // ... filter to delete one CpCollectionAttempt
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpCollectionAttemptDeleteArgs>(args: SelectSubset<T, CpCollectionAttemptDeleteArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpCollectionAttempt.
+     * @param {CpCollectionAttemptUpdateArgs} args - Arguments to update one CpCollectionAttempt.
+     * @example
+     * // Update one CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpCollectionAttemptUpdateArgs>(args: SelectSubset<T, CpCollectionAttemptUpdateArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpCollectionAttempts.
+     * @param {CpCollectionAttemptDeleteManyArgs} args - Arguments to filter CpCollectionAttempts to delete.
+     * @example
+     * // Delete a few CpCollectionAttempts
+     * const { count } = await prisma.cpCollectionAttempt.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpCollectionAttemptDeleteManyArgs>(args?: SelectSubset<T, CpCollectionAttemptDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpCollectionAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpCollectionAttempts
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpCollectionAttemptUpdateManyArgs>(args: SelectSubset<T, CpCollectionAttemptUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpCollectionAttempt.
+     * @param {CpCollectionAttemptUpsertArgs} args - Arguments to update or create a CpCollectionAttempt.
+     * @example
+     * // Update or create a CpCollectionAttempt
+     * const cpCollectionAttempt = await prisma.cpCollectionAttempt.upsert({
+     *   create: {
+     *     // ... data to create a CpCollectionAttempt
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpCollectionAttempt we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpCollectionAttemptUpsertArgs>(args: SelectSubset<T, CpCollectionAttemptUpsertArgs<ExtArgs>>): Prisma__CpCollectionAttemptClient<$Result.GetResult<Prisma.$CpCollectionAttemptPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpCollectionAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptCountArgs} args - Arguments to filter CpCollectionAttempts to count.
+     * @example
+     * // Count the number of CpCollectionAttempts
+     * const count = await prisma.cpCollectionAttempt.count({
+     *   where: {
+     *     // ... the filter for the CpCollectionAttempts we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpCollectionAttemptCountArgs>(
+      args?: Subset<T, CpCollectionAttemptCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpCollectionAttemptCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpCollectionAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpCollectionAttemptAggregateArgs>(args: Subset<T, CpCollectionAttemptAggregateArgs>): Prisma.PrismaPromise<GetCpCollectionAttemptAggregateType<T>>
+
+    /**
+     * Group by CpCollectionAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpCollectionAttemptGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpCollectionAttemptGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpCollectionAttemptGroupByArgs['orderBy'] }
+        : { orderBy?: CpCollectionAttemptGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpCollectionAttemptGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpCollectionAttemptGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpCollectionAttempt model
+   */
+  readonly fields: CpCollectionAttemptFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpCollectionAttempt.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpCollectionAttemptClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    invoice<T extends CpInvoiceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpInvoiceDefaultArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpCollectionAttempt model
+   */ 
+  interface CpCollectionAttemptFieldRefs {
+    readonly id: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly invoiceId: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly tenantId: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly subscriptionId: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly kind: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly status: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly channel: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly provider: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly paymentReference: FieldRef<"CpCollectionAttempt", 'String'>
+    readonly metadata: FieldRef<"CpCollectionAttempt", 'Json'>
+    readonly createdAt: FieldRef<"CpCollectionAttempt", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpCollectionAttempt", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpCollectionAttempt findUnique
+   */
+  export type CpCollectionAttemptFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which CpCollectionAttempt to fetch.
+     */
+    where: CpCollectionAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpCollectionAttempt findUniqueOrThrow
+   */
+  export type CpCollectionAttemptFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which CpCollectionAttempt to fetch.
+     */
+    where: CpCollectionAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpCollectionAttempt findFirst
+   */
+  export type CpCollectionAttemptFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which CpCollectionAttempt to fetch.
+     */
+    where?: CpCollectionAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpCollectionAttempts to fetch.
+     */
+    orderBy?: CpCollectionAttemptOrderByWithRelationInput | CpCollectionAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpCollectionAttempts.
+     */
+    cursor?: CpCollectionAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpCollectionAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpCollectionAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpCollectionAttempts.
+     */
+    distinct?: CpCollectionAttemptScalarFieldEnum | CpCollectionAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpCollectionAttempt findFirstOrThrow
+   */
+  export type CpCollectionAttemptFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which CpCollectionAttempt to fetch.
+     */
+    where?: CpCollectionAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpCollectionAttempts to fetch.
+     */
+    orderBy?: CpCollectionAttemptOrderByWithRelationInput | CpCollectionAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpCollectionAttempts.
+     */
+    cursor?: CpCollectionAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpCollectionAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpCollectionAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpCollectionAttempts.
+     */
+    distinct?: CpCollectionAttemptScalarFieldEnum | CpCollectionAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpCollectionAttempt findMany
+   */
+  export type CpCollectionAttemptFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which CpCollectionAttempts to fetch.
+     */
+    where?: CpCollectionAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpCollectionAttempts to fetch.
+     */
+    orderBy?: CpCollectionAttemptOrderByWithRelationInput | CpCollectionAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpCollectionAttempts.
+     */
+    cursor?: CpCollectionAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpCollectionAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpCollectionAttempts.
+     */
+    skip?: number
+    distinct?: CpCollectionAttemptScalarFieldEnum | CpCollectionAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpCollectionAttempt create
+   */
+  export type CpCollectionAttemptCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpCollectionAttempt.
+     */
+    data: XOR<CpCollectionAttemptCreateInput, CpCollectionAttemptUncheckedCreateInput>
+  }
+
+  /**
+   * CpCollectionAttempt createMany
+   */
+  export type CpCollectionAttemptCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpCollectionAttempts.
+     */
+    data: CpCollectionAttemptCreateManyInput | CpCollectionAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpCollectionAttempt createManyAndReturn
+   */
+  export type CpCollectionAttemptCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpCollectionAttempts.
+     */
+    data: CpCollectionAttemptCreateManyInput | CpCollectionAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpCollectionAttempt update
+   */
+  export type CpCollectionAttemptUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpCollectionAttempt.
+     */
+    data: XOR<CpCollectionAttemptUpdateInput, CpCollectionAttemptUncheckedUpdateInput>
+    /**
+     * Choose, which CpCollectionAttempt to update.
+     */
+    where: CpCollectionAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpCollectionAttempt updateMany
+   */
+  export type CpCollectionAttemptUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpCollectionAttempts.
+     */
+    data: XOR<CpCollectionAttemptUpdateManyMutationInput, CpCollectionAttemptUncheckedUpdateManyInput>
+    /**
+     * Filter which CpCollectionAttempts to update
+     */
+    where?: CpCollectionAttemptWhereInput
+  }
+
+  /**
+   * CpCollectionAttempt upsert
+   */
+  export type CpCollectionAttemptUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpCollectionAttempt to update in case it exists.
+     */
+    where: CpCollectionAttemptWhereUniqueInput
+    /**
+     * In case the CpCollectionAttempt found by the `where` argument doesn't exist, create a new CpCollectionAttempt with this data.
+     */
+    create: XOR<CpCollectionAttemptCreateInput, CpCollectionAttemptUncheckedCreateInput>
+    /**
+     * In case the CpCollectionAttempt was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpCollectionAttemptUpdateInput, CpCollectionAttemptUncheckedUpdateInput>
+  }
+
+  /**
+   * CpCollectionAttempt delete
+   */
+  export type CpCollectionAttemptDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+    /**
+     * Filter which CpCollectionAttempt to delete.
+     */
+    where: CpCollectionAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpCollectionAttempt deleteMany
+   */
+  export type CpCollectionAttemptDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpCollectionAttempts to delete
+     */
+    where?: CpCollectionAttemptWhereInput
+  }
+
+  /**
+   * CpCollectionAttempt without action
+   */
+  export type CpCollectionAttemptDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpCollectionAttempt
+     */
+    select?: CpCollectionAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpCollectionAttemptInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpInvoiceLineItem
+   */
+
+  export type AggregateCpInvoiceLineItem = {
+    _count: CpInvoiceLineItemCountAggregateOutputType | null
+    _avg: CpInvoiceLineItemAvgAggregateOutputType | null
+    _sum: CpInvoiceLineItemSumAggregateOutputType | null
+    _min: CpInvoiceLineItemMinAggregateOutputType | null
+    _max: CpInvoiceLineItemMaxAggregateOutputType | null
+  }
+
+  export type CpInvoiceLineItemAvgAggregateOutputType = {
+    quantity: number | null
+    unitAmountMinorUnits: number | null
+    amountMinorUnits: number | null
+  }
+
+  export type CpInvoiceLineItemSumAggregateOutputType = {
+    quantity: number | null
+    unitAmountMinorUnits: number | null
+    amountMinorUnits: number | null
+  }
+
+  export type CpInvoiceLineItemMinAggregateOutputType = {
+    id: string | null
+    invoiceId: string | null
+    kind: string | null
+    description: string | null
+    quantity: number | null
+    unitAmountMinorUnits: number | null
+    amountMinorUnits: number | null
+    createdAt: Date | null
+  }
+
+  export type CpInvoiceLineItemMaxAggregateOutputType = {
+    id: string | null
+    invoiceId: string | null
+    kind: string | null
+    description: string | null
+    quantity: number | null
+    unitAmountMinorUnits: number | null
+    amountMinorUnits: number | null
+    createdAt: Date | null
+  }
+
+  export type CpInvoiceLineItemCountAggregateOutputType = {
+    id: number
+    invoiceId: number
+    kind: number
+    description: number
+    quantity: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CpInvoiceLineItemAvgAggregateInputType = {
+    quantity?: true
+    unitAmountMinorUnits?: true
+    amountMinorUnits?: true
+  }
+
+  export type CpInvoiceLineItemSumAggregateInputType = {
+    quantity?: true
+    unitAmountMinorUnits?: true
+    amountMinorUnits?: true
+  }
+
+  export type CpInvoiceLineItemMinAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    kind?: true
+    description?: true
+    quantity?: true
+    unitAmountMinorUnits?: true
+    amountMinorUnits?: true
+    createdAt?: true
+  }
+
+  export type CpInvoiceLineItemMaxAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    kind?: true
+    description?: true
+    quantity?: true
+    unitAmountMinorUnits?: true
+    amountMinorUnits?: true
+    createdAt?: true
+  }
+
+  export type CpInvoiceLineItemCountAggregateInputType = {
+    id?: true
+    invoiceId?: true
+    kind?: true
+    description?: true
+    quantity?: true
+    unitAmountMinorUnits?: true
+    amountMinorUnits?: true
+    metadata?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CpInvoiceLineItemAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpInvoiceLineItem to aggregate.
+     */
+    where?: CpInvoiceLineItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoiceLineItems to fetch.
+     */
+    orderBy?: CpInvoiceLineItemOrderByWithRelationInput | CpInvoiceLineItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpInvoiceLineItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoiceLineItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoiceLineItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpInvoiceLineItems
+    **/
+    _count?: true | CpInvoiceLineItemCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpInvoiceLineItemAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpInvoiceLineItemSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpInvoiceLineItemMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpInvoiceLineItemMaxAggregateInputType
+  }
+
+  export type GetCpInvoiceLineItemAggregateType<T extends CpInvoiceLineItemAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpInvoiceLineItem]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpInvoiceLineItem[P]>
+      : GetScalarType<T[P], AggregateCpInvoiceLineItem[P]>
+  }
+
+
+
+
+  export type CpInvoiceLineItemGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpInvoiceLineItemWhereInput
+    orderBy?: CpInvoiceLineItemOrderByWithAggregationInput | CpInvoiceLineItemOrderByWithAggregationInput[]
+    by: CpInvoiceLineItemScalarFieldEnum[] | CpInvoiceLineItemScalarFieldEnum
+    having?: CpInvoiceLineItemScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpInvoiceLineItemCountAggregateInputType | true
+    _avg?: CpInvoiceLineItemAvgAggregateInputType
+    _sum?: CpInvoiceLineItemSumAggregateInputType
+    _min?: CpInvoiceLineItemMinAggregateInputType
+    _max?: CpInvoiceLineItemMaxAggregateInputType
+  }
+
+  export type CpInvoiceLineItemGroupByOutputType = {
+    id: string
+    invoiceId: string
+    kind: string
+    description: string
+    quantity: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata: JsonValue | null
+    createdAt: Date
+    _count: CpInvoiceLineItemCountAggregateOutputType | null
+    _avg: CpInvoiceLineItemAvgAggregateOutputType | null
+    _sum: CpInvoiceLineItemSumAggregateOutputType | null
+    _min: CpInvoiceLineItemMinAggregateOutputType | null
+    _max: CpInvoiceLineItemMaxAggregateOutputType | null
+  }
+
+  type GetCpInvoiceLineItemGroupByPayload<T extends CpInvoiceLineItemGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpInvoiceLineItemGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpInvoiceLineItemGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpInvoiceLineItemGroupByOutputType[P]>
+            : GetScalarType<T[P], CpInvoiceLineItemGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpInvoiceLineItemSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    invoiceId?: boolean
+    kind?: boolean
+    description?: boolean
+    quantity?: boolean
+    unitAmountMinorUnits?: boolean
+    amountMinorUnits?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpInvoiceLineItem"]>
+
+  export type CpInvoiceLineItemSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    invoiceId?: boolean
+    kind?: boolean
+    description?: boolean
+    quantity?: boolean
+    unitAmountMinorUnits?: boolean
+    amountMinorUnits?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpInvoiceLineItem"]>
+
+  export type CpInvoiceLineItemSelectScalar = {
+    id?: boolean
+    invoiceId?: boolean
+    kind?: boolean
+    description?: boolean
+    quantity?: boolean
+    unitAmountMinorUnits?: boolean
+    amountMinorUnits?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }
+
+  export type CpInvoiceLineItemInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }
+  export type CpInvoiceLineItemIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    invoice?: boolean | CpInvoiceDefaultArgs<ExtArgs>
+  }
+
+  export type $CpInvoiceLineItemPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpInvoiceLineItem"
+    objects: {
+      invoice: Prisma.$CpInvoicePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      invoiceId: string
+      kind: string
+      description: string
+      quantity: number
+      unitAmountMinorUnits: number
+      amountMinorUnits: number
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["cpInvoiceLineItem"]>
+    composites: {}
+  }
+
+  type CpInvoiceLineItemGetPayload<S extends boolean | null | undefined | CpInvoiceLineItemDefaultArgs> = $Result.GetResult<Prisma.$CpInvoiceLineItemPayload, S>
+
+  type CpInvoiceLineItemCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpInvoiceLineItemFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpInvoiceLineItemCountAggregateInputType | true
+    }
+
+  export interface CpInvoiceLineItemDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpInvoiceLineItem'], meta: { name: 'CpInvoiceLineItem' } }
+    /**
+     * Find zero or one CpInvoiceLineItem that matches the filter.
+     * @param {CpInvoiceLineItemFindUniqueArgs} args - Arguments to find a CpInvoiceLineItem
+     * @example
+     * // Get one CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpInvoiceLineItemFindUniqueArgs>(args: SelectSubset<T, CpInvoiceLineItemFindUniqueArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpInvoiceLineItem that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpInvoiceLineItemFindUniqueOrThrowArgs} args - Arguments to find a CpInvoiceLineItem
+     * @example
+     * // Get one CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpInvoiceLineItemFindUniqueOrThrowArgs>(args: SelectSubset<T, CpInvoiceLineItemFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpInvoiceLineItem that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemFindFirstArgs} args - Arguments to find a CpInvoiceLineItem
+     * @example
+     * // Get one CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpInvoiceLineItemFindFirstArgs>(args?: SelectSubset<T, CpInvoiceLineItemFindFirstArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpInvoiceLineItem that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemFindFirstOrThrowArgs} args - Arguments to find a CpInvoiceLineItem
+     * @example
+     * // Get one CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpInvoiceLineItemFindFirstOrThrowArgs>(args?: SelectSubset<T, CpInvoiceLineItemFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpInvoiceLineItems that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpInvoiceLineItems
+     * const cpInvoiceLineItems = await prisma.cpInvoiceLineItem.findMany()
+     * 
+     * // Get first 10 CpInvoiceLineItems
+     * const cpInvoiceLineItems = await prisma.cpInvoiceLineItem.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpInvoiceLineItemWithIdOnly = await prisma.cpInvoiceLineItem.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpInvoiceLineItemFindManyArgs>(args?: SelectSubset<T, CpInvoiceLineItemFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpInvoiceLineItem.
+     * @param {CpInvoiceLineItemCreateArgs} args - Arguments to create a CpInvoiceLineItem.
+     * @example
+     * // Create one CpInvoiceLineItem
+     * const CpInvoiceLineItem = await prisma.cpInvoiceLineItem.create({
+     *   data: {
+     *     // ... data to create a CpInvoiceLineItem
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpInvoiceLineItemCreateArgs>(args: SelectSubset<T, CpInvoiceLineItemCreateArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpInvoiceLineItems.
+     * @param {CpInvoiceLineItemCreateManyArgs} args - Arguments to create many CpInvoiceLineItems.
+     * @example
+     * // Create many CpInvoiceLineItems
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpInvoiceLineItemCreateManyArgs>(args?: SelectSubset<T, CpInvoiceLineItemCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpInvoiceLineItems and returns the data saved in the database.
+     * @param {CpInvoiceLineItemCreateManyAndReturnArgs} args - Arguments to create many CpInvoiceLineItems.
+     * @example
+     * // Create many CpInvoiceLineItems
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpInvoiceLineItems and only return the `id`
+     * const cpInvoiceLineItemWithIdOnly = await prisma.cpInvoiceLineItem.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpInvoiceLineItemCreateManyAndReturnArgs>(args?: SelectSubset<T, CpInvoiceLineItemCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpInvoiceLineItem.
+     * @param {CpInvoiceLineItemDeleteArgs} args - Arguments to delete one CpInvoiceLineItem.
+     * @example
+     * // Delete one CpInvoiceLineItem
+     * const CpInvoiceLineItem = await prisma.cpInvoiceLineItem.delete({
+     *   where: {
+     *     // ... filter to delete one CpInvoiceLineItem
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpInvoiceLineItemDeleteArgs>(args: SelectSubset<T, CpInvoiceLineItemDeleteArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpInvoiceLineItem.
+     * @param {CpInvoiceLineItemUpdateArgs} args - Arguments to update one CpInvoiceLineItem.
+     * @example
+     * // Update one CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpInvoiceLineItemUpdateArgs>(args: SelectSubset<T, CpInvoiceLineItemUpdateArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpInvoiceLineItems.
+     * @param {CpInvoiceLineItemDeleteManyArgs} args - Arguments to filter CpInvoiceLineItems to delete.
+     * @example
+     * // Delete a few CpInvoiceLineItems
+     * const { count } = await prisma.cpInvoiceLineItem.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpInvoiceLineItemDeleteManyArgs>(args?: SelectSubset<T, CpInvoiceLineItemDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpInvoiceLineItems.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpInvoiceLineItems
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpInvoiceLineItemUpdateManyArgs>(args: SelectSubset<T, CpInvoiceLineItemUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpInvoiceLineItem.
+     * @param {CpInvoiceLineItemUpsertArgs} args - Arguments to update or create a CpInvoiceLineItem.
+     * @example
+     * // Update or create a CpInvoiceLineItem
+     * const cpInvoiceLineItem = await prisma.cpInvoiceLineItem.upsert({
+     *   create: {
+     *     // ... data to create a CpInvoiceLineItem
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpInvoiceLineItem we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpInvoiceLineItemUpsertArgs>(args: SelectSubset<T, CpInvoiceLineItemUpsertArgs<ExtArgs>>): Prisma__CpInvoiceLineItemClient<$Result.GetResult<Prisma.$CpInvoiceLineItemPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpInvoiceLineItems.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemCountArgs} args - Arguments to filter CpInvoiceLineItems to count.
+     * @example
+     * // Count the number of CpInvoiceLineItems
+     * const count = await prisma.cpInvoiceLineItem.count({
+     *   where: {
+     *     // ... the filter for the CpInvoiceLineItems we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpInvoiceLineItemCountArgs>(
+      args?: Subset<T, CpInvoiceLineItemCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpInvoiceLineItemCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpInvoiceLineItem.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpInvoiceLineItemAggregateArgs>(args: Subset<T, CpInvoiceLineItemAggregateArgs>): Prisma.PrismaPromise<GetCpInvoiceLineItemAggregateType<T>>
+
+    /**
+     * Group by CpInvoiceLineItem.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpInvoiceLineItemGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpInvoiceLineItemGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpInvoiceLineItemGroupByArgs['orderBy'] }
+        : { orderBy?: CpInvoiceLineItemGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpInvoiceLineItemGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpInvoiceLineItemGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpInvoiceLineItem model
+   */
+  readonly fields: CpInvoiceLineItemFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpInvoiceLineItem.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpInvoiceLineItemClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    invoice<T extends CpInvoiceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpInvoiceDefaultArgs<ExtArgs>>): Prisma__CpInvoiceClient<$Result.GetResult<Prisma.$CpInvoicePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpInvoiceLineItem model
+   */ 
+  interface CpInvoiceLineItemFieldRefs {
+    readonly id: FieldRef<"CpInvoiceLineItem", 'String'>
+    readonly invoiceId: FieldRef<"CpInvoiceLineItem", 'String'>
+    readonly kind: FieldRef<"CpInvoiceLineItem", 'String'>
+    readonly description: FieldRef<"CpInvoiceLineItem", 'String'>
+    readonly quantity: FieldRef<"CpInvoiceLineItem", 'Int'>
+    readonly unitAmountMinorUnits: FieldRef<"CpInvoiceLineItem", 'Int'>
+    readonly amountMinorUnits: FieldRef<"CpInvoiceLineItem", 'Int'>
+    readonly metadata: FieldRef<"CpInvoiceLineItem", 'Json'>
+    readonly createdAt: FieldRef<"CpInvoiceLineItem", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpInvoiceLineItem findUnique
+   */
+  export type CpInvoiceLineItemFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoiceLineItem to fetch.
+     */
+    where: CpInvoiceLineItemWhereUniqueInput
+  }
+
+  /**
+   * CpInvoiceLineItem findUniqueOrThrow
+   */
+  export type CpInvoiceLineItemFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoiceLineItem to fetch.
+     */
+    where: CpInvoiceLineItemWhereUniqueInput
+  }
+
+  /**
+   * CpInvoiceLineItem findFirst
+   */
+  export type CpInvoiceLineItemFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoiceLineItem to fetch.
+     */
+    where?: CpInvoiceLineItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoiceLineItems to fetch.
+     */
+    orderBy?: CpInvoiceLineItemOrderByWithRelationInput | CpInvoiceLineItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpInvoiceLineItems.
+     */
+    cursor?: CpInvoiceLineItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoiceLineItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoiceLineItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpInvoiceLineItems.
+     */
+    distinct?: CpInvoiceLineItemScalarFieldEnum | CpInvoiceLineItemScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoiceLineItem findFirstOrThrow
+   */
+  export type CpInvoiceLineItemFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoiceLineItem to fetch.
+     */
+    where?: CpInvoiceLineItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoiceLineItems to fetch.
+     */
+    orderBy?: CpInvoiceLineItemOrderByWithRelationInput | CpInvoiceLineItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpInvoiceLineItems.
+     */
+    cursor?: CpInvoiceLineItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoiceLineItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoiceLineItems.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpInvoiceLineItems.
+     */
+    distinct?: CpInvoiceLineItemScalarFieldEnum | CpInvoiceLineItemScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoiceLineItem findMany
+   */
+  export type CpInvoiceLineItemFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter, which CpInvoiceLineItems to fetch.
+     */
+    where?: CpInvoiceLineItemWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpInvoiceLineItems to fetch.
+     */
+    orderBy?: CpInvoiceLineItemOrderByWithRelationInput | CpInvoiceLineItemOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpInvoiceLineItems.
+     */
+    cursor?: CpInvoiceLineItemWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpInvoiceLineItems from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpInvoiceLineItems.
+     */
+    skip?: number
+    distinct?: CpInvoiceLineItemScalarFieldEnum | CpInvoiceLineItemScalarFieldEnum[]
+  }
+
+  /**
+   * CpInvoiceLineItem create
+   */
+  export type CpInvoiceLineItemCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpInvoiceLineItem.
+     */
+    data: XOR<CpInvoiceLineItemCreateInput, CpInvoiceLineItemUncheckedCreateInput>
+  }
+
+  /**
+   * CpInvoiceLineItem createMany
+   */
+  export type CpInvoiceLineItemCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpInvoiceLineItems.
+     */
+    data: CpInvoiceLineItemCreateManyInput | CpInvoiceLineItemCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpInvoiceLineItem createManyAndReturn
+   */
+  export type CpInvoiceLineItemCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpInvoiceLineItems.
+     */
+    data: CpInvoiceLineItemCreateManyInput | CpInvoiceLineItemCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpInvoiceLineItem update
+   */
+  export type CpInvoiceLineItemUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpInvoiceLineItem.
+     */
+    data: XOR<CpInvoiceLineItemUpdateInput, CpInvoiceLineItemUncheckedUpdateInput>
+    /**
+     * Choose, which CpInvoiceLineItem to update.
+     */
+    where: CpInvoiceLineItemWhereUniqueInput
+  }
+
+  /**
+   * CpInvoiceLineItem updateMany
+   */
+  export type CpInvoiceLineItemUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpInvoiceLineItems.
+     */
+    data: XOR<CpInvoiceLineItemUpdateManyMutationInput, CpInvoiceLineItemUncheckedUpdateManyInput>
+    /**
+     * Filter which CpInvoiceLineItems to update
+     */
+    where?: CpInvoiceLineItemWhereInput
+  }
+
+  /**
+   * CpInvoiceLineItem upsert
+   */
+  export type CpInvoiceLineItemUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpInvoiceLineItem to update in case it exists.
+     */
+    where: CpInvoiceLineItemWhereUniqueInput
+    /**
+     * In case the CpInvoiceLineItem found by the `where` argument doesn't exist, create a new CpInvoiceLineItem with this data.
+     */
+    create: XOR<CpInvoiceLineItemCreateInput, CpInvoiceLineItemUncheckedCreateInput>
+    /**
+     * In case the CpInvoiceLineItem was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpInvoiceLineItemUpdateInput, CpInvoiceLineItemUncheckedUpdateInput>
+  }
+
+  /**
+   * CpInvoiceLineItem delete
+   */
+  export type CpInvoiceLineItemDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+    /**
+     * Filter which CpInvoiceLineItem to delete.
+     */
+    where: CpInvoiceLineItemWhereUniqueInput
+  }
+
+  /**
+   * CpInvoiceLineItem deleteMany
+   */
+  export type CpInvoiceLineItemDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpInvoiceLineItems to delete
+     */
+    where?: CpInvoiceLineItemWhereInput
+  }
+
+  /**
+   * CpInvoiceLineItem without action
+   */
+  export type CpInvoiceLineItemDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpInvoiceLineItem
+     */
+    select?: CpInvoiceLineItemSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpInvoiceLineItemInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpPlatformWallet
+   */
+
+  export type AggregateCpPlatformWallet = {
+    _count: CpPlatformWalletCountAggregateOutputType | null
+    _min: CpPlatformWalletMinAggregateOutputType | null
+    _max: CpPlatformWalletMaxAggregateOutputType | null
+  }
+
+  export type CpPlatformWalletMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformWalletMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformWalletCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    currency: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpPlatformWalletMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformWalletMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformWalletCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpPlatformWalletAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformWallet to aggregate.
+     */
+    where?: CpPlatformWalletWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformWallets to fetch.
+     */
+    orderBy?: CpPlatformWalletOrderByWithRelationInput | CpPlatformWalletOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpPlatformWalletWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformWallets from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformWallets.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpPlatformWallets
+    **/
+    _count?: true | CpPlatformWalletCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpPlatformWalletMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpPlatformWalletMaxAggregateInputType
+  }
+
+  export type GetCpPlatformWalletAggregateType<T extends CpPlatformWalletAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpPlatformWallet]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpPlatformWallet[P]>
+      : GetScalarType<T[P], AggregateCpPlatformWallet[P]>
+  }
+
+
+
+
+  export type CpPlatformWalletGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpPlatformWalletWhereInput
+    orderBy?: CpPlatformWalletOrderByWithAggregationInput | CpPlatformWalletOrderByWithAggregationInput[]
+    by: CpPlatformWalletScalarFieldEnum[] | CpPlatformWalletScalarFieldEnum
+    having?: CpPlatformWalletScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpPlatformWalletCountAggregateInputType | true
+    _min?: CpPlatformWalletMinAggregateInputType
+    _max?: CpPlatformWalletMaxAggregateInputType
+  }
+
+  export type CpPlatformWalletGroupByOutputType = {
+    id: string
+    tenantId: string
+    currency: string
+    createdAt: Date
+    updatedAt: Date
+    _count: CpPlatformWalletCountAggregateOutputType | null
+    _min: CpPlatformWalletMinAggregateOutputType | null
+    _max: CpPlatformWalletMaxAggregateOutputType | null
+  }
+
+  type GetCpPlatformWalletGroupByPayload<T extends CpPlatformWalletGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpPlatformWalletGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpPlatformWalletGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpPlatformWalletGroupByOutputType[P]>
+            : GetScalarType<T[P], CpPlatformWalletGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpPlatformWalletSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    entries?: boolean | CpPlatformWallet$entriesArgs<ExtArgs>
+    _count?: boolean | CpPlatformWalletCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpPlatformWallet"]>
+
+  export type CpPlatformWalletSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlatformWallet"]>
+
+  export type CpPlatformWalletSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpPlatformWalletInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    entries?: boolean | CpPlatformWallet$entriesArgs<ExtArgs>
+    _count?: boolean | CpPlatformWalletCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpPlatformWalletIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $CpPlatformWalletPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpPlatformWallet"
+    objects: {
+      entries: Prisma.$CpWalletEntryPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      currency: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpPlatformWallet"]>
+    composites: {}
+  }
+
+  type CpPlatformWalletGetPayload<S extends boolean | null | undefined | CpPlatformWalletDefaultArgs> = $Result.GetResult<Prisma.$CpPlatformWalletPayload, S>
+
+  type CpPlatformWalletCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpPlatformWalletFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpPlatformWalletCountAggregateInputType | true
+    }
+
+  export interface CpPlatformWalletDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpPlatformWallet'], meta: { name: 'CpPlatformWallet' } }
+    /**
+     * Find zero or one CpPlatformWallet that matches the filter.
+     * @param {CpPlatformWalletFindUniqueArgs} args - Arguments to find a CpPlatformWallet
+     * @example
+     * // Get one CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpPlatformWalletFindUniqueArgs>(args: SelectSubset<T, CpPlatformWalletFindUniqueArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpPlatformWallet that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpPlatformWalletFindUniqueOrThrowArgs} args - Arguments to find a CpPlatformWallet
+     * @example
+     * // Get one CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpPlatformWalletFindUniqueOrThrowArgs>(args: SelectSubset<T, CpPlatformWalletFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpPlatformWallet that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletFindFirstArgs} args - Arguments to find a CpPlatformWallet
+     * @example
+     * // Get one CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpPlatformWalletFindFirstArgs>(args?: SelectSubset<T, CpPlatformWalletFindFirstArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpPlatformWallet that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletFindFirstOrThrowArgs} args - Arguments to find a CpPlatformWallet
+     * @example
+     * // Get one CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpPlatformWalletFindFirstOrThrowArgs>(args?: SelectSubset<T, CpPlatformWalletFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpPlatformWallets that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpPlatformWallets
+     * const cpPlatformWallets = await prisma.cpPlatformWallet.findMany()
+     * 
+     * // Get first 10 CpPlatformWallets
+     * const cpPlatformWallets = await prisma.cpPlatformWallet.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpPlatformWalletWithIdOnly = await prisma.cpPlatformWallet.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpPlatformWalletFindManyArgs>(args?: SelectSubset<T, CpPlatformWalletFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpPlatformWallet.
+     * @param {CpPlatformWalletCreateArgs} args - Arguments to create a CpPlatformWallet.
+     * @example
+     * // Create one CpPlatformWallet
+     * const CpPlatformWallet = await prisma.cpPlatformWallet.create({
+     *   data: {
+     *     // ... data to create a CpPlatformWallet
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpPlatformWalletCreateArgs>(args: SelectSubset<T, CpPlatformWalletCreateArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpPlatformWallets.
+     * @param {CpPlatformWalletCreateManyArgs} args - Arguments to create many CpPlatformWallets.
+     * @example
+     * // Create many CpPlatformWallets
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpPlatformWalletCreateManyArgs>(args?: SelectSubset<T, CpPlatformWalletCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpPlatformWallets and returns the data saved in the database.
+     * @param {CpPlatformWalletCreateManyAndReturnArgs} args - Arguments to create many CpPlatformWallets.
+     * @example
+     * // Create many CpPlatformWallets
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpPlatformWallets and only return the `id`
+     * const cpPlatformWalletWithIdOnly = await prisma.cpPlatformWallet.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpPlatformWalletCreateManyAndReturnArgs>(args?: SelectSubset<T, CpPlatformWalletCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpPlatformWallet.
+     * @param {CpPlatformWalletDeleteArgs} args - Arguments to delete one CpPlatformWallet.
+     * @example
+     * // Delete one CpPlatformWallet
+     * const CpPlatformWallet = await prisma.cpPlatformWallet.delete({
+     *   where: {
+     *     // ... filter to delete one CpPlatformWallet
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpPlatformWalletDeleteArgs>(args: SelectSubset<T, CpPlatformWalletDeleteArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpPlatformWallet.
+     * @param {CpPlatformWalletUpdateArgs} args - Arguments to update one CpPlatformWallet.
+     * @example
+     * // Update one CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpPlatformWalletUpdateArgs>(args: SelectSubset<T, CpPlatformWalletUpdateArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpPlatformWallets.
+     * @param {CpPlatformWalletDeleteManyArgs} args - Arguments to filter CpPlatformWallets to delete.
+     * @example
+     * // Delete a few CpPlatformWallets
+     * const { count } = await prisma.cpPlatformWallet.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpPlatformWalletDeleteManyArgs>(args?: SelectSubset<T, CpPlatformWalletDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpPlatformWallets.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpPlatformWallets
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpPlatformWalletUpdateManyArgs>(args: SelectSubset<T, CpPlatformWalletUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpPlatformWallet.
+     * @param {CpPlatformWalletUpsertArgs} args - Arguments to update or create a CpPlatformWallet.
+     * @example
+     * // Update or create a CpPlatformWallet
+     * const cpPlatformWallet = await prisma.cpPlatformWallet.upsert({
+     *   create: {
+     *     // ... data to create a CpPlatformWallet
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpPlatformWallet we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpPlatformWalletUpsertArgs>(args: SelectSubset<T, CpPlatformWalletUpsertArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpPlatformWallets.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletCountArgs} args - Arguments to filter CpPlatformWallets to count.
+     * @example
+     * // Count the number of CpPlatformWallets
+     * const count = await prisma.cpPlatformWallet.count({
+     *   where: {
+     *     // ... the filter for the CpPlatformWallets we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpPlatformWalletCountArgs>(
+      args?: Subset<T, CpPlatformWalletCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpPlatformWalletCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpPlatformWallet.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpPlatformWalletAggregateArgs>(args: Subset<T, CpPlatformWalletAggregateArgs>): Prisma.PrismaPromise<GetCpPlatformWalletAggregateType<T>>
+
+    /**
+     * Group by CpPlatformWallet.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformWalletGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpPlatformWalletGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpPlatformWalletGroupByArgs['orderBy'] }
+        : { orderBy?: CpPlatformWalletGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpPlatformWalletGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpPlatformWalletGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpPlatformWallet model
+   */
+  readonly fields: CpPlatformWalletFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpPlatformWallet.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpPlatformWalletClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    entries<T extends CpPlatformWallet$entriesArgs<ExtArgs> = {}>(args?: Subset<T, CpPlatformWallet$entriesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpPlatformWallet model
+   */ 
+  interface CpPlatformWalletFieldRefs {
+    readonly id: FieldRef<"CpPlatformWallet", 'String'>
+    readonly tenantId: FieldRef<"CpPlatformWallet", 'String'>
+    readonly currency: FieldRef<"CpPlatformWallet", 'String'>
+    readonly createdAt: FieldRef<"CpPlatformWallet", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpPlatformWallet", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpPlatformWallet findUnique
+   */
+  export type CpPlatformWalletFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformWallet to fetch.
+     */
+    where: CpPlatformWalletWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformWallet findUniqueOrThrow
+   */
+  export type CpPlatformWalletFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformWallet to fetch.
+     */
+    where: CpPlatformWalletWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformWallet findFirst
+   */
+  export type CpPlatformWalletFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformWallet to fetch.
+     */
+    where?: CpPlatformWalletWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformWallets to fetch.
+     */
+    orderBy?: CpPlatformWalletOrderByWithRelationInput | CpPlatformWalletOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformWallets.
+     */
+    cursor?: CpPlatformWalletWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformWallets from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformWallets.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformWallets.
+     */
+    distinct?: CpPlatformWalletScalarFieldEnum | CpPlatformWalletScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformWallet findFirstOrThrow
+   */
+  export type CpPlatformWalletFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformWallet to fetch.
+     */
+    where?: CpPlatformWalletWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformWallets to fetch.
+     */
+    orderBy?: CpPlatformWalletOrderByWithRelationInput | CpPlatformWalletOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformWallets.
+     */
+    cursor?: CpPlatformWalletWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformWallets from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformWallets.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformWallets.
+     */
+    distinct?: CpPlatformWalletScalarFieldEnum | CpPlatformWalletScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformWallet findMany
+   */
+  export type CpPlatformWalletFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformWallets to fetch.
+     */
+    where?: CpPlatformWalletWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformWallets to fetch.
+     */
+    orderBy?: CpPlatformWalletOrderByWithRelationInput | CpPlatformWalletOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpPlatformWallets.
+     */
+    cursor?: CpPlatformWalletWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformWallets from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformWallets.
+     */
+    skip?: number
+    distinct?: CpPlatformWalletScalarFieldEnum | CpPlatformWalletScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformWallet create
+   */
+  export type CpPlatformWalletCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpPlatformWallet.
+     */
+    data: XOR<CpPlatformWalletCreateInput, CpPlatformWalletUncheckedCreateInput>
+  }
+
+  /**
+   * CpPlatformWallet createMany
+   */
+  export type CpPlatformWalletCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpPlatformWallets.
+     */
+    data: CpPlatformWalletCreateManyInput | CpPlatformWalletCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformWallet createManyAndReturn
+   */
+  export type CpPlatformWalletCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpPlatformWallets.
+     */
+    data: CpPlatformWalletCreateManyInput | CpPlatformWalletCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformWallet update
+   */
+  export type CpPlatformWalletUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpPlatformWallet.
+     */
+    data: XOR<CpPlatformWalletUpdateInput, CpPlatformWalletUncheckedUpdateInput>
+    /**
+     * Choose, which CpPlatformWallet to update.
+     */
+    where: CpPlatformWalletWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformWallet updateMany
+   */
+  export type CpPlatformWalletUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpPlatformWallets.
+     */
+    data: XOR<CpPlatformWalletUpdateManyMutationInput, CpPlatformWalletUncheckedUpdateManyInput>
+    /**
+     * Filter which CpPlatformWallets to update
+     */
+    where?: CpPlatformWalletWhereInput
+  }
+
+  /**
+   * CpPlatformWallet upsert
+   */
+  export type CpPlatformWalletUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpPlatformWallet to update in case it exists.
+     */
+    where: CpPlatformWalletWhereUniqueInput
+    /**
+     * In case the CpPlatformWallet found by the `where` argument doesn't exist, create a new CpPlatformWallet with this data.
+     */
+    create: XOR<CpPlatformWalletCreateInput, CpPlatformWalletUncheckedCreateInput>
+    /**
+     * In case the CpPlatformWallet was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpPlatformWalletUpdateInput, CpPlatformWalletUncheckedUpdateInput>
+  }
+
+  /**
+   * CpPlatformWallet delete
+   */
+  export type CpPlatformWalletDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+    /**
+     * Filter which CpPlatformWallet to delete.
+     */
+    where: CpPlatformWalletWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformWallet deleteMany
+   */
+  export type CpPlatformWalletDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformWallets to delete
+     */
+    where?: CpPlatformWalletWhereInput
+  }
+
+  /**
+   * CpPlatformWallet.entries
+   */
+  export type CpPlatformWallet$entriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    where?: CpWalletEntryWhereInput
+    orderBy?: CpWalletEntryOrderByWithRelationInput | CpWalletEntryOrderByWithRelationInput[]
+    cursor?: CpWalletEntryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpWalletEntryScalarFieldEnum | CpWalletEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformWallet without action
+   */
+  export type CpPlatformWalletDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformWallet
+     */
+    select?: CpPlatformWalletSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpPlatformWalletInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpWalletEntry
+   */
+
+  export type AggregateCpWalletEntry = {
+    _count: CpWalletEntryCountAggregateOutputType | null
+    _avg: CpWalletEntryAvgAggregateOutputType | null
+    _sum: CpWalletEntrySumAggregateOutputType | null
+    _min: CpWalletEntryMinAggregateOutputType | null
+    _max: CpWalletEntryMaxAggregateOutputType | null
+  }
+
+  export type CpWalletEntryAvgAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpWalletEntrySumAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpWalletEntryMinAggregateOutputType = {
+    id: string | null
+    walletId: string | null
+    type: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    referenceId: string | null
+    referenceType: string | null
+    description: string | null
+    createdAt: Date | null
+  }
+
+  export type CpWalletEntryMaxAggregateOutputType = {
+    id: string | null
+    walletId: string | null
+    type: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    referenceId: string | null
+    referenceType: string | null
+    description: string | null
+    createdAt: Date | null
+  }
+
+  export type CpWalletEntryCountAggregateOutputType = {
+    id: number
+    walletId: number
+    type: number
+    amountMinorUnits: number
+    currency: number
+    referenceId: number
+    referenceType: number
+    description: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CpWalletEntryAvgAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpWalletEntrySumAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpWalletEntryMinAggregateInputType = {
+    id?: true
+    walletId?: true
+    type?: true
+    amountMinorUnits?: true
+    currency?: true
+    referenceId?: true
+    referenceType?: true
+    description?: true
+    createdAt?: true
+  }
+
+  export type CpWalletEntryMaxAggregateInputType = {
+    id?: true
+    walletId?: true
+    type?: true
+    amountMinorUnits?: true
+    currency?: true
+    referenceId?: true
+    referenceType?: true
+    description?: true
+    createdAt?: true
+  }
+
+  export type CpWalletEntryCountAggregateInputType = {
+    id?: true
+    walletId?: true
+    type?: true
+    amountMinorUnits?: true
+    currency?: true
+    referenceId?: true
+    referenceType?: true
+    description?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CpWalletEntryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpWalletEntry to aggregate.
+     */
+    where?: CpWalletEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpWalletEntries to fetch.
+     */
+    orderBy?: CpWalletEntryOrderByWithRelationInput | CpWalletEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpWalletEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpWalletEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpWalletEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpWalletEntries
+    **/
+    _count?: true | CpWalletEntryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpWalletEntryAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpWalletEntrySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpWalletEntryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpWalletEntryMaxAggregateInputType
+  }
+
+  export type GetCpWalletEntryAggregateType<T extends CpWalletEntryAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpWalletEntry]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpWalletEntry[P]>
+      : GetScalarType<T[P], AggregateCpWalletEntry[P]>
+  }
+
+
+
+
+  export type CpWalletEntryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpWalletEntryWhereInput
+    orderBy?: CpWalletEntryOrderByWithAggregationInput | CpWalletEntryOrderByWithAggregationInput[]
+    by: CpWalletEntryScalarFieldEnum[] | CpWalletEntryScalarFieldEnum
+    having?: CpWalletEntryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpWalletEntryCountAggregateInputType | true
+    _avg?: CpWalletEntryAvgAggregateInputType
+    _sum?: CpWalletEntrySumAggregateInputType
+    _min?: CpWalletEntryMinAggregateInputType
+    _max?: CpWalletEntryMaxAggregateInputType
+  }
+
+  export type CpWalletEntryGroupByOutputType = {
+    id: string
+    walletId: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId: string | null
+    referenceType: string | null
+    description: string | null
+    createdAt: Date
+    _count: CpWalletEntryCountAggregateOutputType | null
+    _avg: CpWalletEntryAvgAggregateOutputType | null
+    _sum: CpWalletEntrySumAggregateOutputType | null
+    _min: CpWalletEntryMinAggregateOutputType | null
+    _max: CpWalletEntryMaxAggregateOutputType | null
+  }
+
+  type GetCpWalletEntryGroupByPayload<T extends CpWalletEntryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpWalletEntryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpWalletEntryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpWalletEntryGroupByOutputType[P]>
+            : GetScalarType<T[P], CpWalletEntryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpWalletEntrySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    walletId?: boolean
+    type?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    referenceId?: boolean
+    referenceType?: boolean
+    description?: boolean
+    createdAt?: boolean
+    wallet?: boolean | CpPlatformWalletDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpWalletEntry"]>
+
+  export type CpWalletEntrySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    walletId?: boolean
+    type?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    referenceId?: boolean
+    referenceType?: boolean
+    description?: boolean
+    createdAt?: boolean
+    wallet?: boolean | CpPlatformWalletDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpWalletEntry"]>
+
+  export type CpWalletEntrySelectScalar = {
+    id?: boolean
+    walletId?: boolean
+    type?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    referenceId?: boolean
+    referenceType?: boolean
+    description?: boolean
+    createdAt?: boolean
+  }
+
+  export type CpWalletEntryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    wallet?: boolean | CpPlatformWalletDefaultArgs<ExtArgs>
+  }
+  export type CpWalletEntryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    wallet?: boolean | CpPlatformWalletDefaultArgs<ExtArgs>
+  }
+
+  export type $CpWalletEntryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpWalletEntry"
+    objects: {
+      wallet: Prisma.$CpPlatformWalletPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      walletId: string
+      type: string
+      amountMinorUnits: number
+      currency: string
+      referenceId: string | null
+      referenceType: string | null
+      description: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["cpWalletEntry"]>
+    composites: {}
+  }
+
+  type CpWalletEntryGetPayload<S extends boolean | null | undefined | CpWalletEntryDefaultArgs> = $Result.GetResult<Prisma.$CpWalletEntryPayload, S>
+
+  type CpWalletEntryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpWalletEntryFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpWalletEntryCountAggregateInputType | true
+    }
+
+  export interface CpWalletEntryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpWalletEntry'], meta: { name: 'CpWalletEntry' } }
+    /**
+     * Find zero or one CpWalletEntry that matches the filter.
+     * @param {CpWalletEntryFindUniqueArgs} args - Arguments to find a CpWalletEntry
+     * @example
+     * // Get one CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpWalletEntryFindUniqueArgs>(args: SelectSubset<T, CpWalletEntryFindUniqueArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpWalletEntry that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpWalletEntryFindUniqueOrThrowArgs} args - Arguments to find a CpWalletEntry
+     * @example
+     * // Get one CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpWalletEntryFindUniqueOrThrowArgs>(args: SelectSubset<T, CpWalletEntryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpWalletEntry that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryFindFirstArgs} args - Arguments to find a CpWalletEntry
+     * @example
+     * // Get one CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpWalletEntryFindFirstArgs>(args?: SelectSubset<T, CpWalletEntryFindFirstArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpWalletEntry that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryFindFirstOrThrowArgs} args - Arguments to find a CpWalletEntry
+     * @example
+     * // Get one CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpWalletEntryFindFirstOrThrowArgs>(args?: SelectSubset<T, CpWalletEntryFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpWalletEntries that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpWalletEntries
+     * const cpWalletEntries = await prisma.cpWalletEntry.findMany()
+     * 
+     * // Get first 10 CpWalletEntries
+     * const cpWalletEntries = await prisma.cpWalletEntry.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpWalletEntryWithIdOnly = await prisma.cpWalletEntry.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpWalletEntryFindManyArgs>(args?: SelectSubset<T, CpWalletEntryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpWalletEntry.
+     * @param {CpWalletEntryCreateArgs} args - Arguments to create a CpWalletEntry.
+     * @example
+     * // Create one CpWalletEntry
+     * const CpWalletEntry = await prisma.cpWalletEntry.create({
+     *   data: {
+     *     // ... data to create a CpWalletEntry
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpWalletEntryCreateArgs>(args: SelectSubset<T, CpWalletEntryCreateArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpWalletEntries.
+     * @param {CpWalletEntryCreateManyArgs} args - Arguments to create many CpWalletEntries.
+     * @example
+     * // Create many CpWalletEntries
+     * const cpWalletEntry = await prisma.cpWalletEntry.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpWalletEntryCreateManyArgs>(args?: SelectSubset<T, CpWalletEntryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpWalletEntries and returns the data saved in the database.
+     * @param {CpWalletEntryCreateManyAndReturnArgs} args - Arguments to create many CpWalletEntries.
+     * @example
+     * // Create many CpWalletEntries
+     * const cpWalletEntry = await prisma.cpWalletEntry.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpWalletEntries and only return the `id`
+     * const cpWalletEntryWithIdOnly = await prisma.cpWalletEntry.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpWalletEntryCreateManyAndReturnArgs>(args?: SelectSubset<T, CpWalletEntryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpWalletEntry.
+     * @param {CpWalletEntryDeleteArgs} args - Arguments to delete one CpWalletEntry.
+     * @example
+     * // Delete one CpWalletEntry
+     * const CpWalletEntry = await prisma.cpWalletEntry.delete({
+     *   where: {
+     *     // ... filter to delete one CpWalletEntry
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpWalletEntryDeleteArgs>(args: SelectSubset<T, CpWalletEntryDeleteArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpWalletEntry.
+     * @param {CpWalletEntryUpdateArgs} args - Arguments to update one CpWalletEntry.
+     * @example
+     * // Update one CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpWalletEntryUpdateArgs>(args: SelectSubset<T, CpWalletEntryUpdateArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpWalletEntries.
+     * @param {CpWalletEntryDeleteManyArgs} args - Arguments to filter CpWalletEntries to delete.
+     * @example
+     * // Delete a few CpWalletEntries
+     * const { count } = await prisma.cpWalletEntry.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpWalletEntryDeleteManyArgs>(args?: SelectSubset<T, CpWalletEntryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpWalletEntries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpWalletEntries
+     * const cpWalletEntry = await prisma.cpWalletEntry.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpWalletEntryUpdateManyArgs>(args: SelectSubset<T, CpWalletEntryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpWalletEntry.
+     * @param {CpWalletEntryUpsertArgs} args - Arguments to update or create a CpWalletEntry.
+     * @example
+     * // Update or create a CpWalletEntry
+     * const cpWalletEntry = await prisma.cpWalletEntry.upsert({
+     *   create: {
+     *     // ... data to create a CpWalletEntry
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpWalletEntry we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpWalletEntryUpsertArgs>(args: SelectSubset<T, CpWalletEntryUpsertArgs<ExtArgs>>): Prisma__CpWalletEntryClient<$Result.GetResult<Prisma.$CpWalletEntryPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpWalletEntries.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryCountArgs} args - Arguments to filter CpWalletEntries to count.
+     * @example
+     * // Count the number of CpWalletEntries
+     * const count = await prisma.cpWalletEntry.count({
+     *   where: {
+     *     // ... the filter for the CpWalletEntries we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpWalletEntryCountArgs>(
+      args?: Subset<T, CpWalletEntryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpWalletEntryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpWalletEntry.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpWalletEntryAggregateArgs>(args: Subset<T, CpWalletEntryAggregateArgs>): Prisma.PrismaPromise<GetCpWalletEntryAggregateType<T>>
+
+    /**
+     * Group by CpWalletEntry.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpWalletEntryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpWalletEntryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpWalletEntryGroupByArgs['orderBy'] }
+        : { orderBy?: CpWalletEntryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpWalletEntryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpWalletEntryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpWalletEntry model
+   */
+  readonly fields: CpWalletEntryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpWalletEntry.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpWalletEntryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    wallet<T extends CpPlatformWalletDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpPlatformWalletDefaultArgs<ExtArgs>>): Prisma__CpPlatformWalletClient<$Result.GetResult<Prisma.$CpPlatformWalletPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpWalletEntry model
+   */ 
+  interface CpWalletEntryFieldRefs {
+    readonly id: FieldRef<"CpWalletEntry", 'String'>
+    readonly walletId: FieldRef<"CpWalletEntry", 'String'>
+    readonly type: FieldRef<"CpWalletEntry", 'String'>
+    readonly amountMinorUnits: FieldRef<"CpWalletEntry", 'Int'>
+    readonly currency: FieldRef<"CpWalletEntry", 'String'>
+    readonly referenceId: FieldRef<"CpWalletEntry", 'String'>
+    readonly referenceType: FieldRef<"CpWalletEntry", 'String'>
+    readonly description: FieldRef<"CpWalletEntry", 'String'>
+    readonly createdAt: FieldRef<"CpWalletEntry", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpWalletEntry findUnique
+   */
+  export type CpWalletEntryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter, which CpWalletEntry to fetch.
+     */
+    where: CpWalletEntryWhereUniqueInput
+  }
+
+  /**
+   * CpWalletEntry findUniqueOrThrow
+   */
+  export type CpWalletEntryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter, which CpWalletEntry to fetch.
+     */
+    where: CpWalletEntryWhereUniqueInput
+  }
+
+  /**
+   * CpWalletEntry findFirst
+   */
+  export type CpWalletEntryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter, which CpWalletEntry to fetch.
+     */
+    where?: CpWalletEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpWalletEntries to fetch.
+     */
+    orderBy?: CpWalletEntryOrderByWithRelationInput | CpWalletEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpWalletEntries.
+     */
+    cursor?: CpWalletEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpWalletEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpWalletEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpWalletEntries.
+     */
+    distinct?: CpWalletEntryScalarFieldEnum | CpWalletEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CpWalletEntry findFirstOrThrow
+   */
+  export type CpWalletEntryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter, which CpWalletEntry to fetch.
+     */
+    where?: CpWalletEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpWalletEntries to fetch.
+     */
+    orderBy?: CpWalletEntryOrderByWithRelationInput | CpWalletEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpWalletEntries.
+     */
+    cursor?: CpWalletEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpWalletEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpWalletEntries.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpWalletEntries.
+     */
+    distinct?: CpWalletEntryScalarFieldEnum | CpWalletEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CpWalletEntry findMany
+   */
+  export type CpWalletEntryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter, which CpWalletEntries to fetch.
+     */
+    where?: CpWalletEntryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpWalletEntries to fetch.
+     */
+    orderBy?: CpWalletEntryOrderByWithRelationInput | CpWalletEntryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpWalletEntries.
+     */
+    cursor?: CpWalletEntryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpWalletEntries from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpWalletEntries.
+     */
+    skip?: number
+    distinct?: CpWalletEntryScalarFieldEnum | CpWalletEntryScalarFieldEnum[]
+  }
+
+  /**
+   * CpWalletEntry create
+   */
+  export type CpWalletEntryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpWalletEntry.
+     */
+    data: XOR<CpWalletEntryCreateInput, CpWalletEntryUncheckedCreateInput>
+  }
+
+  /**
+   * CpWalletEntry createMany
+   */
+  export type CpWalletEntryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpWalletEntries.
+     */
+    data: CpWalletEntryCreateManyInput | CpWalletEntryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpWalletEntry createManyAndReturn
+   */
+  export type CpWalletEntryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpWalletEntries.
+     */
+    data: CpWalletEntryCreateManyInput | CpWalletEntryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpWalletEntry update
+   */
+  export type CpWalletEntryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpWalletEntry.
+     */
+    data: XOR<CpWalletEntryUpdateInput, CpWalletEntryUncheckedUpdateInput>
+    /**
+     * Choose, which CpWalletEntry to update.
+     */
+    where: CpWalletEntryWhereUniqueInput
+  }
+
+  /**
+   * CpWalletEntry updateMany
+   */
+  export type CpWalletEntryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpWalletEntries.
+     */
+    data: XOR<CpWalletEntryUpdateManyMutationInput, CpWalletEntryUncheckedUpdateManyInput>
+    /**
+     * Filter which CpWalletEntries to update
+     */
+    where?: CpWalletEntryWhereInput
+  }
+
+  /**
+   * CpWalletEntry upsert
+   */
+  export type CpWalletEntryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpWalletEntry to update in case it exists.
+     */
+    where: CpWalletEntryWhereUniqueInput
+    /**
+     * In case the CpWalletEntry found by the `where` argument doesn't exist, create a new CpWalletEntry with this data.
+     */
+    create: XOR<CpWalletEntryCreateInput, CpWalletEntryUncheckedCreateInput>
+    /**
+     * In case the CpWalletEntry was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpWalletEntryUpdateInput, CpWalletEntryUncheckedUpdateInput>
+  }
+
+  /**
+   * CpWalletEntry delete
+   */
+  export type CpWalletEntryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+    /**
+     * Filter which CpWalletEntry to delete.
+     */
+    where: CpWalletEntryWhereUniqueInput
+  }
+
+  /**
+   * CpWalletEntry deleteMany
+   */
+  export type CpWalletEntryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpWalletEntries to delete
+     */
+    where?: CpWalletEntryWhereInput
+  }
+
+  /**
+   * CpWalletEntry without action
+   */
+  export type CpWalletEntryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpWalletEntry
+     */
+    select?: CpWalletEntrySelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpWalletEntryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpPaymentAttempt
+   */
+
+  export type AggregateCpPaymentAttempt = {
+    _count: CpPaymentAttemptCountAggregateOutputType | null
+    _avg: CpPaymentAttemptAvgAggregateOutputType | null
+    _sum: CpPaymentAttemptSumAggregateOutputType | null
+    _min: CpPaymentAttemptMinAggregateOutputType | null
+    _max: CpPaymentAttemptMaxAggregateOutputType | null
+  }
+
+  export type CpPaymentAttemptAvgAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpPaymentAttemptSumAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpPaymentAttemptMinAggregateOutputType = {
+    id: string | null
+    provider: string | null
+    reference: string | null
+    purpose: string | null
+    tenantId: string | null
+    invoiceId: string | null
+    status: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    customerEmail: string | null
+    customerName: string | null
+    checkoutUrl: string | null
+    accessCode: string | null
+    failureReason: string | null
+    paidAt: Date | null
+    appliedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPaymentAttemptMaxAggregateOutputType = {
+    id: string | null
+    provider: string | null
+    reference: string | null
+    purpose: string | null
+    tenantId: string | null
+    invoiceId: string | null
+    status: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    customerEmail: string | null
+    customerName: string | null
+    checkoutUrl: string | null
+    accessCode: string | null
+    failureReason: string | null
+    paidAt: Date | null
+    appliedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPaymentAttemptCountAggregateOutputType = {
+    id: number
+    provider: number
+    reference: number
+    purpose: number
+    tenantId: number
+    invoiceId: number
+    status: number
+    amountMinorUnits: number
+    currency: number
+    customerEmail: number
+    customerName: number
+    checkoutUrl: number
+    accessCode: number
+    providerPayload: number
+    failureReason: number
+    paidAt: number
+    appliedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpPaymentAttemptAvgAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpPaymentAttemptSumAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpPaymentAttemptMinAggregateInputType = {
+    id?: true
+    provider?: true
+    reference?: true
+    purpose?: true
+    tenantId?: true
+    invoiceId?: true
+    status?: true
+    amountMinorUnits?: true
+    currency?: true
+    customerEmail?: true
+    customerName?: true
+    checkoutUrl?: true
+    accessCode?: true
+    failureReason?: true
+    paidAt?: true
+    appliedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPaymentAttemptMaxAggregateInputType = {
+    id?: true
+    provider?: true
+    reference?: true
+    purpose?: true
+    tenantId?: true
+    invoiceId?: true
+    status?: true
+    amountMinorUnits?: true
+    currency?: true
+    customerEmail?: true
+    customerName?: true
+    checkoutUrl?: true
+    accessCode?: true
+    failureReason?: true
+    paidAt?: true
+    appliedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPaymentAttemptCountAggregateInputType = {
+    id?: true
+    provider?: true
+    reference?: true
+    purpose?: true
+    tenantId?: true
+    invoiceId?: true
+    status?: true
+    amountMinorUnits?: true
+    currency?: true
+    customerEmail?: true
+    customerName?: true
+    checkoutUrl?: true
+    accessCode?: true
+    providerPayload?: true
+    failureReason?: true
+    paidAt?: true
+    appliedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpPaymentAttemptAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPaymentAttempt to aggregate.
+     */
+    where?: CpPaymentAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPaymentAttempts to fetch.
+     */
+    orderBy?: CpPaymentAttemptOrderByWithRelationInput | CpPaymentAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpPaymentAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPaymentAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPaymentAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpPaymentAttempts
+    **/
+    _count?: true | CpPaymentAttemptCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpPaymentAttemptAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpPaymentAttemptSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpPaymentAttemptMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpPaymentAttemptMaxAggregateInputType
+  }
+
+  export type GetCpPaymentAttemptAggregateType<T extends CpPaymentAttemptAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpPaymentAttempt]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpPaymentAttempt[P]>
+      : GetScalarType<T[P], AggregateCpPaymentAttempt[P]>
+  }
+
+
+
+
+  export type CpPaymentAttemptGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpPaymentAttemptWhereInput
+    orderBy?: CpPaymentAttemptOrderByWithAggregationInput | CpPaymentAttemptOrderByWithAggregationInput[]
+    by: CpPaymentAttemptScalarFieldEnum[] | CpPaymentAttemptScalarFieldEnum
+    having?: CpPaymentAttemptScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpPaymentAttemptCountAggregateInputType | true
+    _avg?: CpPaymentAttemptAvgAggregateInputType
+    _sum?: CpPaymentAttemptSumAggregateInputType
+    _min?: CpPaymentAttemptMinAggregateInputType
+    _max?: CpPaymentAttemptMaxAggregateInputType
+  }
+
+  export type CpPaymentAttemptGroupByOutputType = {
+    id: string
+    provider: string
+    reference: string
+    purpose: string
+    tenantId: string | null
+    invoiceId: string | null
+    status: string
+    amountMinorUnits: number
+    currency: string
+    customerEmail: string
+    customerName: string | null
+    checkoutUrl: string | null
+    accessCode: string | null
+    providerPayload: JsonValue | null
+    failureReason: string | null
+    paidAt: Date | null
+    appliedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpPaymentAttemptCountAggregateOutputType | null
+    _avg: CpPaymentAttemptAvgAggregateOutputType | null
+    _sum: CpPaymentAttemptSumAggregateOutputType | null
+    _min: CpPaymentAttemptMinAggregateOutputType | null
+    _max: CpPaymentAttemptMaxAggregateOutputType | null
+  }
+
+  type GetCpPaymentAttemptGroupByPayload<T extends CpPaymentAttemptGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpPaymentAttemptGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpPaymentAttemptGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpPaymentAttemptGroupByOutputType[P]>
+            : GetScalarType<T[P], CpPaymentAttemptGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpPaymentAttemptSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    provider?: boolean
+    reference?: boolean
+    purpose?: boolean
+    tenantId?: boolean
+    invoiceId?: boolean
+    status?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    customerEmail?: boolean
+    customerName?: boolean
+    checkoutUrl?: boolean
+    accessCode?: boolean
+    providerPayload?: boolean
+    failureReason?: boolean
+    paidAt?: boolean
+    appliedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPaymentAttempt"]>
+
+  export type CpPaymentAttemptSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    provider?: boolean
+    reference?: boolean
+    purpose?: boolean
+    tenantId?: boolean
+    invoiceId?: boolean
+    status?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    customerEmail?: boolean
+    customerName?: boolean
+    checkoutUrl?: boolean
+    accessCode?: boolean
+    providerPayload?: boolean
+    failureReason?: boolean
+    paidAt?: boolean
+    appliedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPaymentAttempt"]>
+
+  export type CpPaymentAttemptSelectScalar = {
+    id?: boolean
+    provider?: boolean
+    reference?: boolean
+    purpose?: boolean
+    tenantId?: boolean
+    invoiceId?: boolean
+    status?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    customerEmail?: boolean
+    customerName?: boolean
+    checkoutUrl?: boolean
+    accessCode?: boolean
+    providerPayload?: boolean
+    failureReason?: boolean
+    paidAt?: boolean
+    appliedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CpPaymentAttemptPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpPaymentAttempt"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      provider: string
+      reference: string
+      purpose: string
+      tenantId: string | null
+      invoiceId: string | null
+      status: string
+      amountMinorUnits: number
+      currency: string
+      customerEmail: string
+      customerName: string | null
+      checkoutUrl: string | null
+      accessCode: string | null
+      providerPayload: Prisma.JsonValue | null
+      failureReason: string | null
+      paidAt: Date | null
+      appliedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpPaymentAttempt"]>
+    composites: {}
+  }
+
+  type CpPaymentAttemptGetPayload<S extends boolean | null | undefined | CpPaymentAttemptDefaultArgs> = $Result.GetResult<Prisma.$CpPaymentAttemptPayload, S>
+
+  type CpPaymentAttemptCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpPaymentAttemptFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpPaymentAttemptCountAggregateInputType | true
+    }
+
+  export interface CpPaymentAttemptDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpPaymentAttempt'], meta: { name: 'CpPaymentAttempt' } }
+    /**
+     * Find zero or one CpPaymentAttempt that matches the filter.
+     * @param {CpPaymentAttemptFindUniqueArgs} args - Arguments to find a CpPaymentAttempt
+     * @example
+     * // Get one CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpPaymentAttemptFindUniqueArgs>(args: SelectSubset<T, CpPaymentAttemptFindUniqueArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpPaymentAttempt that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpPaymentAttemptFindUniqueOrThrowArgs} args - Arguments to find a CpPaymentAttempt
+     * @example
+     * // Get one CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpPaymentAttemptFindUniqueOrThrowArgs>(args: SelectSubset<T, CpPaymentAttemptFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpPaymentAttempt that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptFindFirstArgs} args - Arguments to find a CpPaymentAttempt
+     * @example
+     * // Get one CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpPaymentAttemptFindFirstArgs>(args?: SelectSubset<T, CpPaymentAttemptFindFirstArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpPaymentAttempt that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptFindFirstOrThrowArgs} args - Arguments to find a CpPaymentAttempt
+     * @example
+     * // Get one CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpPaymentAttemptFindFirstOrThrowArgs>(args?: SelectSubset<T, CpPaymentAttemptFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpPaymentAttempts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpPaymentAttempts
+     * const cpPaymentAttempts = await prisma.cpPaymentAttempt.findMany()
+     * 
+     * // Get first 10 CpPaymentAttempts
+     * const cpPaymentAttempts = await prisma.cpPaymentAttempt.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpPaymentAttemptWithIdOnly = await prisma.cpPaymentAttempt.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpPaymentAttemptFindManyArgs>(args?: SelectSubset<T, CpPaymentAttemptFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpPaymentAttempt.
+     * @param {CpPaymentAttemptCreateArgs} args - Arguments to create a CpPaymentAttempt.
+     * @example
+     * // Create one CpPaymentAttempt
+     * const CpPaymentAttempt = await prisma.cpPaymentAttempt.create({
+     *   data: {
+     *     // ... data to create a CpPaymentAttempt
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpPaymentAttemptCreateArgs>(args: SelectSubset<T, CpPaymentAttemptCreateArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpPaymentAttempts.
+     * @param {CpPaymentAttemptCreateManyArgs} args - Arguments to create many CpPaymentAttempts.
+     * @example
+     * // Create many CpPaymentAttempts
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpPaymentAttemptCreateManyArgs>(args?: SelectSubset<T, CpPaymentAttemptCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpPaymentAttempts and returns the data saved in the database.
+     * @param {CpPaymentAttemptCreateManyAndReturnArgs} args - Arguments to create many CpPaymentAttempts.
+     * @example
+     * // Create many CpPaymentAttempts
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpPaymentAttempts and only return the `id`
+     * const cpPaymentAttemptWithIdOnly = await prisma.cpPaymentAttempt.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpPaymentAttemptCreateManyAndReturnArgs>(args?: SelectSubset<T, CpPaymentAttemptCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpPaymentAttempt.
+     * @param {CpPaymentAttemptDeleteArgs} args - Arguments to delete one CpPaymentAttempt.
+     * @example
+     * // Delete one CpPaymentAttempt
+     * const CpPaymentAttempt = await prisma.cpPaymentAttempt.delete({
+     *   where: {
+     *     // ... filter to delete one CpPaymentAttempt
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpPaymentAttemptDeleteArgs>(args: SelectSubset<T, CpPaymentAttemptDeleteArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpPaymentAttempt.
+     * @param {CpPaymentAttemptUpdateArgs} args - Arguments to update one CpPaymentAttempt.
+     * @example
+     * // Update one CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpPaymentAttemptUpdateArgs>(args: SelectSubset<T, CpPaymentAttemptUpdateArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpPaymentAttempts.
+     * @param {CpPaymentAttemptDeleteManyArgs} args - Arguments to filter CpPaymentAttempts to delete.
+     * @example
+     * // Delete a few CpPaymentAttempts
+     * const { count } = await prisma.cpPaymentAttempt.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpPaymentAttemptDeleteManyArgs>(args?: SelectSubset<T, CpPaymentAttemptDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpPaymentAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpPaymentAttempts
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpPaymentAttemptUpdateManyArgs>(args: SelectSubset<T, CpPaymentAttemptUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpPaymentAttempt.
+     * @param {CpPaymentAttemptUpsertArgs} args - Arguments to update or create a CpPaymentAttempt.
+     * @example
+     * // Update or create a CpPaymentAttempt
+     * const cpPaymentAttempt = await prisma.cpPaymentAttempt.upsert({
+     *   create: {
+     *     // ... data to create a CpPaymentAttempt
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpPaymentAttempt we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpPaymentAttemptUpsertArgs>(args: SelectSubset<T, CpPaymentAttemptUpsertArgs<ExtArgs>>): Prisma__CpPaymentAttemptClient<$Result.GetResult<Prisma.$CpPaymentAttemptPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpPaymentAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptCountArgs} args - Arguments to filter CpPaymentAttempts to count.
+     * @example
+     * // Count the number of CpPaymentAttempts
+     * const count = await prisma.cpPaymentAttempt.count({
+     *   where: {
+     *     // ... the filter for the CpPaymentAttempts we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpPaymentAttemptCountArgs>(
+      args?: Subset<T, CpPaymentAttemptCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpPaymentAttemptCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpPaymentAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpPaymentAttemptAggregateArgs>(args: Subset<T, CpPaymentAttemptAggregateArgs>): Prisma.PrismaPromise<GetCpPaymentAttemptAggregateType<T>>
+
+    /**
+     * Group by CpPaymentAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPaymentAttemptGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpPaymentAttemptGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpPaymentAttemptGroupByArgs['orderBy'] }
+        : { orderBy?: CpPaymentAttemptGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpPaymentAttemptGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpPaymentAttemptGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpPaymentAttempt model
+   */
+  readonly fields: CpPaymentAttemptFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpPaymentAttempt.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpPaymentAttemptClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpPaymentAttempt model
+   */ 
+  interface CpPaymentAttemptFieldRefs {
+    readonly id: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly provider: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly reference: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly purpose: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly tenantId: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly invoiceId: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly status: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly amountMinorUnits: FieldRef<"CpPaymentAttempt", 'Int'>
+    readonly currency: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly customerEmail: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly customerName: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly checkoutUrl: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly accessCode: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly providerPayload: FieldRef<"CpPaymentAttempt", 'Json'>
+    readonly failureReason: FieldRef<"CpPaymentAttempt", 'String'>
+    readonly paidAt: FieldRef<"CpPaymentAttempt", 'DateTime'>
+    readonly appliedAt: FieldRef<"CpPaymentAttempt", 'DateTime'>
+    readonly createdAt: FieldRef<"CpPaymentAttempt", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpPaymentAttempt", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpPaymentAttempt findUnique
+   */
+  export type CpPaymentAttemptFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPaymentAttempt to fetch.
+     */
+    where: CpPaymentAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpPaymentAttempt findUniqueOrThrow
+   */
+  export type CpPaymentAttemptFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPaymentAttempt to fetch.
+     */
+    where: CpPaymentAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpPaymentAttempt findFirst
+   */
+  export type CpPaymentAttemptFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPaymentAttempt to fetch.
+     */
+    where?: CpPaymentAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPaymentAttempts to fetch.
+     */
+    orderBy?: CpPaymentAttemptOrderByWithRelationInput | CpPaymentAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPaymentAttempts.
+     */
+    cursor?: CpPaymentAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPaymentAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPaymentAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPaymentAttempts.
+     */
+    distinct?: CpPaymentAttemptScalarFieldEnum | CpPaymentAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpPaymentAttempt findFirstOrThrow
+   */
+  export type CpPaymentAttemptFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPaymentAttempt to fetch.
+     */
+    where?: CpPaymentAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPaymentAttempts to fetch.
+     */
+    orderBy?: CpPaymentAttemptOrderByWithRelationInput | CpPaymentAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPaymentAttempts.
+     */
+    cursor?: CpPaymentAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPaymentAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPaymentAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPaymentAttempts.
+     */
+    distinct?: CpPaymentAttemptScalarFieldEnum | CpPaymentAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpPaymentAttempt findMany
+   */
+  export type CpPaymentAttemptFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPaymentAttempts to fetch.
+     */
+    where?: CpPaymentAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPaymentAttempts to fetch.
+     */
+    orderBy?: CpPaymentAttemptOrderByWithRelationInput | CpPaymentAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpPaymentAttempts.
+     */
+    cursor?: CpPaymentAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPaymentAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPaymentAttempts.
+     */
+    skip?: number
+    distinct?: CpPaymentAttemptScalarFieldEnum | CpPaymentAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * CpPaymentAttempt create
+   */
+  export type CpPaymentAttemptCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpPaymentAttempt.
+     */
+    data: XOR<CpPaymentAttemptCreateInput, CpPaymentAttemptUncheckedCreateInput>
+  }
+
+  /**
+   * CpPaymentAttempt createMany
+   */
+  export type CpPaymentAttemptCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpPaymentAttempts.
+     */
+    data: CpPaymentAttemptCreateManyInput | CpPaymentAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPaymentAttempt createManyAndReturn
+   */
+  export type CpPaymentAttemptCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpPaymentAttempts.
+     */
+    data: CpPaymentAttemptCreateManyInput | CpPaymentAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPaymentAttempt update
+   */
+  export type CpPaymentAttemptUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpPaymentAttempt.
+     */
+    data: XOR<CpPaymentAttemptUpdateInput, CpPaymentAttemptUncheckedUpdateInput>
+    /**
+     * Choose, which CpPaymentAttempt to update.
+     */
+    where: CpPaymentAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpPaymentAttempt updateMany
+   */
+  export type CpPaymentAttemptUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpPaymentAttempts.
+     */
+    data: XOR<CpPaymentAttemptUpdateManyMutationInput, CpPaymentAttemptUncheckedUpdateManyInput>
+    /**
+     * Filter which CpPaymentAttempts to update
+     */
+    where?: CpPaymentAttemptWhereInput
+  }
+
+  /**
+   * CpPaymentAttempt upsert
+   */
+  export type CpPaymentAttemptUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpPaymentAttempt to update in case it exists.
+     */
+    where: CpPaymentAttemptWhereUniqueInput
+    /**
+     * In case the CpPaymentAttempt found by the `where` argument doesn't exist, create a new CpPaymentAttempt with this data.
+     */
+    create: XOR<CpPaymentAttemptCreateInput, CpPaymentAttemptUncheckedCreateInput>
+    /**
+     * In case the CpPaymentAttempt was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpPaymentAttemptUpdateInput, CpPaymentAttemptUncheckedUpdateInput>
+  }
+
+  /**
+   * CpPaymentAttempt delete
+   */
+  export type CpPaymentAttemptDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+    /**
+     * Filter which CpPaymentAttempt to delete.
+     */
+    where: CpPaymentAttemptWhereUniqueInput
+  }
+
+  /**
+   * CpPaymentAttempt deleteMany
+   */
+  export type CpPaymentAttemptDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPaymentAttempts to delete
+     */
+    where?: CpPaymentAttemptWhereInput
+  }
+
+  /**
+   * CpPaymentAttempt without action
+   */
+  export type CpPaymentAttemptDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPaymentAttempt
+     */
+    select?: CpPaymentAttemptSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpFeatureFlag
+   */
+
+  export type AggregateCpFeatureFlag = {
+    _count: CpFeatureFlagCountAggregateOutputType | null
+    _min: CpFeatureFlagMinAggregateOutputType | null
+    _max: CpFeatureFlagMaxAggregateOutputType | null
+  }
+
+  export type CpFeatureFlagMinAggregateOutputType = {
+    id: string | null
+    key: string | null
+    description: string | null
+    scope: string | null
+    isEnabled: boolean | null
+    ownedBy: string | null
+    expiresAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpFeatureFlagMaxAggregateOutputType = {
+    id: string | null
+    key: string | null
+    description: string | null
+    scope: string | null
+    isEnabled: boolean | null
+    ownedBy: string | null
+    expiresAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpFeatureFlagCountAggregateOutputType = {
+    id: number
+    key: number
+    description: number
+    scope: number
+    value: number
+    isEnabled: number
+    ownedBy: number
+    expiresAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpFeatureFlagMinAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    scope?: true
+    isEnabled?: true
+    ownedBy?: true
+    expiresAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpFeatureFlagMaxAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    scope?: true
+    isEnabled?: true
+    ownedBy?: true
+    expiresAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpFeatureFlagCountAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    scope?: true
+    value?: true
+    isEnabled?: true
+    ownedBy?: true
+    expiresAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpFeatureFlagAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpFeatureFlag to aggregate.
+     */
+    where?: CpFeatureFlagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlags to fetch.
+     */
+    orderBy?: CpFeatureFlagOrderByWithRelationInput | CpFeatureFlagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpFeatureFlagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpFeatureFlags
+    **/
+    _count?: true | CpFeatureFlagCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpFeatureFlagMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpFeatureFlagMaxAggregateInputType
+  }
+
+  export type GetCpFeatureFlagAggregateType<T extends CpFeatureFlagAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpFeatureFlag]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpFeatureFlag[P]>
+      : GetScalarType<T[P], AggregateCpFeatureFlag[P]>
+  }
+
+
+
+
+  export type CpFeatureFlagGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpFeatureFlagWhereInput
+    orderBy?: CpFeatureFlagOrderByWithAggregationInput | CpFeatureFlagOrderByWithAggregationInput[]
+    by: CpFeatureFlagScalarFieldEnum[] | CpFeatureFlagScalarFieldEnum
+    having?: CpFeatureFlagScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpFeatureFlagCountAggregateInputType | true
+    _min?: CpFeatureFlagMinAggregateInputType
+    _max?: CpFeatureFlagMaxAggregateInputType
+  }
+
+  export type CpFeatureFlagGroupByOutputType = {
+    id: string
+    key: string
+    description: string
+    scope: string
+    value: JsonValue
+    isEnabled: boolean
+    ownedBy: string | null
+    expiresAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpFeatureFlagCountAggregateOutputType | null
+    _min: CpFeatureFlagMinAggregateOutputType | null
+    _max: CpFeatureFlagMaxAggregateOutputType | null
+  }
+
+  type GetCpFeatureFlagGroupByPayload<T extends CpFeatureFlagGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpFeatureFlagGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpFeatureFlagGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpFeatureFlagGroupByOutputType[P]>
+            : GetScalarType<T[P], CpFeatureFlagGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpFeatureFlagSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    scope?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    ownedBy?: boolean
+    expiresAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    overrides?: boolean | CpFeatureFlag$overridesArgs<ExtArgs>
+    _count?: boolean | CpFeatureFlagCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpFeatureFlag"]>
+
+  export type CpFeatureFlagSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    scope?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    ownedBy?: boolean
+    expiresAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpFeatureFlag"]>
+
+  export type CpFeatureFlagSelectScalar = {
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    scope?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    ownedBy?: boolean
+    expiresAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpFeatureFlagInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    overrides?: boolean | CpFeatureFlag$overridesArgs<ExtArgs>
+    _count?: boolean | CpFeatureFlagCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpFeatureFlagIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $CpFeatureFlagPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpFeatureFlag"
+    objects: {
+      overrides: Prisma.$CpFeatureFlagOverridePayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      key: string
+      description: string
+      scope: string
+      value: Prisma.JsonValue
+      isEnabled: boolean
+      ownedBy: string | null
+      expiresAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpFeatureFlag"]>
+    composites: {}
+  }
+
+  type CpFeatureFlagGetPayload<S extends boolean | null | undefined | CpFeatureFlagDefaultArgs> = $Result.GetResult<Prisma.$CpFeatureFlagPayload, S>
+
+  type CpFeatureFlagCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpFeatureFlagFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpFeatureFlagCountAggregateInputType | true
+    }
+
+  export interface CpFeatureFlagDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpFeatureFlag'], meta: { name: 'CpFeatureFlag' } }
+    /**
+     * Find zero or one CpFeatureFlag that matches the filter.
+     * @param {CpFeatureFlagFindUniqueArgs} args - Arguments to find a CpFeatureFlag
+     * @example
+     * // Get one CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpFeatureFlagFindUniqueArgs>(args: SelectSubset<T, CpFeatureFlagFindUniqueArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpFeatureFlag that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpFeatureFlagFindUniqueOrThrowArgs} args - Arguments to find a CpFeatureFlag
+     * @example
+     * // Get one CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpFeatureFlagFindUniqueOrThrowArgs>(args: SelectSubset<T, CpFeatureFlagFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpFeatureFlag that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagFindFirstArgs} args - Arguments to find a CpFeatureFlag
+     * @example
+     * // Get one CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpFeatureFlagFindFirstArgs>(args?: SelectSubset<T, CpFeatureFlagFindFirstArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpFeatureFlag that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagFindFirstOrThrowArgs} args - Arguments to find a CpFeatureFlag
+     * @example
+     * // Get one CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpFeatureFlagFindFirstOrThrowArgs>(args?: SelectSubset<T, CpFeatureFlagFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpFeatureFlags that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpFeatureFlags
+     * const cpFeatureFlags = await prisma.cpFeatureFlag.findMany()
+     * 
+     * // Get first 10 CpFeatureFlags
+     * const cpFeatureFlags = await prisma.cpFeatureFlag.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpFeatureFlagWithIdOnly = await prisma.cpFeatureFlag.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpFeatureFlagFindManyArgs>(args?: SelectSubset<T, CpFeatureFlagFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpFeatureFlag.
+     * @param {CpFeatureFlagCreateArgs} args - Arguments to create a CpFeatureFlag.
+     * @example
+     * // Create one CpFeatureFlag
+     * const CpFeatureFlag = await prisma.cpFeatureFlag.create({
+     *   data: {
+     *     // ... data to create a CpFeatureFlag
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpFeatureFlagCreateArgs>(args: SelectSubset<T, CpFeatureFlagCreateArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpFeatureFlags.
+     * @param {CpFeatureFlagCreateManyArgs} args - Arguments to create many CpFeatureFlags.
+     * @example
+     * // Create many CpFeatureFlags
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpFeatureFlagCreateManyArgs>(args?: SelectSubset<T, CpFeatureFlagCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpFeatureFlags and returns the data saved in the database.
+     * @param {CpFeatureFlagCreateManyAndReturnArgs} args - Arguments to create many CpFeatureFlags.
+     * @example
+     * // Create many CpFeatureFlags
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpFeatureFlags and only return the `id`
+     * const cpFeatureFlagWithIdOnly = await prisma.cpFeatureFlag.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpFeatureFlagCreateManyAndReturnArgs>(args?: SelectSubset<T, CpFeatureFlagCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpFeatureFlag.
+     * @param {CpFeatureFlagDeleteArgs} args - Arguments to delete one CpFeatureFlag.
+     * @example
+     * // Delete one CpFeatureFlag
+     * const CpFeatureFlag = await prisma.cpFeatureFlag.delete({
+     *   where: {
+     *     // ... filter to delete one CpFeatureFlag
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpFeatureFlagDeleteArgs>(args: SelectSubset<T, CpFeatureFlagDeleteArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpFeatureFlag.
+     * @param {CpFeatureFlagUpdateArgs} args - Arguments to update one CpFeatureFlag.
+     * @example
+     * // Update one CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpFeatureFlagUpdateArgs>(args: SelectSubset<T, CpFeatureFlagUpdateArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpFeatureFlags.
+     * @param {CpFeatureFlagDeleteManyArgs} args - Arguments to filter CpFeatureFlags to delete.
+     * @example
+     * // Delete a few CpFeatureFlags
+     * const { count } = await prisma.cpFeatureFlag.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpFeatureFlagDeleteManyArgs>(args?: SelectSubset<T, CpFeatureFlagDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpFeatureFlags.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpFeatureFlags
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpFeatureFlagUpdateManyArgs>(args: SelectSubset<T, CpFeatureFlagUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpFeatureFlag.
+     * @param {CpFeatureFlagUpsertArgs} args - Arguments to update or create a CpFeatureFlag.
+     * @example
+     * // Update or create a CpFeatureFlag
+     * const cpFeatureFlag = await prisma.cpFeatureFlag.upsert({
+     *   create: {
+     *     // ... data to create a CpFeatureFlag
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpFeatureFlag we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpFeatureFlagUpsertArgs>(args: SelectSubset<T, CpFeatureFlagUpsertArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpFeatureFlags.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagCountArgs} args - Arguments to filter CpFeatureFlags to count.
+     * @example
+     * // Count the number of CpFeatureFlags
+     * const count = await prisma.cpFeatureFlag.count({
+     *   where: {
+     *     // ... the filter for the CpFeatureFlags we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpFeatureFlagCountArgs>(
+      args?: Subset<T, CpFeatureFlagCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpFeatureFlagCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpFeatureFlag.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpFeatureFlagAggregateArgs>(args: Subset<T, CpFeatureFlagAggregateArgs>): Prisma.PrismaPromise<GetCpFeatureFlagAggregateType<T>>
+
+    /**
+     * Group by CpFeatureFlag.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpFeatureFlagGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpFeatureFlagGroupByArgs['orderBy'] }
+        : { orderBy?: CpFeatureFlagGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpFeatureFlagGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpFeatureFlagGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpFeatureFlag model
+   */
+  readonly fields: CpFeatureFlagFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpFeatureFlag.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpFeatureFlagClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    overrides<T extends CpFeatureFlag$overridesArgs<ExtArgs> = {}>(args?: Subset<T, CpFeatureFlag$overridesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpFeatureFlag model
+   */ 
+  interface CpFeatureFlagFieldRefs {
+    readonly id: FieldRef<"CpFeatureFlag", 'String'>
+    readonly key: FieldRef<"CpFeatureFlag", 'String'>
+    readonly description: FieldRef<"CpFeatureFlag", 'String'>
+    readonly scope: FieldRef<"CpFeatureFlag", 'String'>
+    readonly value: FieldRef<"CpFeatureFlag", 'Json'>
+    readonly isEnabled: FieldRef<"CpFeatureFlag", 'Boolean'>
+    readonly ownedBy: FieldRef<"CpFeatureFlag", 'String'>
+    readonly expiresAt: FieldRef<"CpFeatureFlag", 'DateTime'>
+    readonly createdAt: FieldRef<"CpFeatureFlag", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpFeatureFlag", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpFeatureFlag findUnique
+   */
+  export type CpFeatureFlagFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlag to fetch.
+     */
+    where: CpFeatureFlagWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlag findUniqueOrThrow
+   */
+  export type CpFeatureFlagFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlag to fetch.
+     */
+    where: CpFeatureFlagWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlag findFirst
+   */
+  export type CpFeatureFlagFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlag to fetch.
+     */
+    where?: CpFeatureFlagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlags to fetch.
+     */
+    orderBy?: CpFeatureFlagOrderByWithRelationInput | CpFeatureFlagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpFeatureFlags.
+     */
+    cursor?: CpFeatureFlagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpFeatureFlags.
+     */
+    distinct?: CpFeatureFlagScalarFieldEnum | CpFeatureFlagScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlag findFirstOrThrow
+   */
+  export type CpFeatureFlagFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlag to fetch.
+     */
+    where?: CpFeatureFlagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlags to fetch.
+     */
+    orderBy?: CpFeatureFlagOrderByWithRelationInput | CpFeatureFlagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpFeatureFlags.
+     */
+    cursor?: CpFeatureFlagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlags.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpFeatureFlags.
+     */
+    distinct?: CpFeatureFlagScalarFieldEnum | CpFeatureFlagScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlag findMany
+   */
+  export type CpFeatureFlagFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlags to fetch.
+     */
+    where?: CpFeatureFlagWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlags to fetch.
+     */
+    orderBy?: CpFeatureFlagOrderByWithRelationInput | CpFeatureFlagOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpFeatureFlags.
+     */
+    cursor?: CpFeatureFlagWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlags from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlags.
+     */
+    skip?: number
+    distinct?: CpFeatureFlagScalarFieldEnum | CpFeatureFlagScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlag create
+   */
+  export type CpFeatureFlagCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpFeatureFlag.
+     */
+    data: XOR<CpFeatureFlagCreateInput, CpFeatureFlagUncheckedCreateInput>
+  }
+
+  /**
+   * CpFeatureFlag createMany
+   */
+  export type CpFeatureFlagCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpFeatureFlags.
+     */
+    data: CpFeatureFlagCreateManyInput | CpFeatureFlagCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpFeatureFlag createManyAndReturn
+   */
+  export type CpFeatureFlagCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpFeatureFlags.
+     */
+    data: CpFeatureFlagCreateManyInput | CpFeatureFlagCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpFeatureFlag update
+   */
+  export type CpFeatureFlagUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpFeatureFlag.
+     */
+    data: XOR<CpFeatureFlagUpdateInput, CpFeatureFlagUncheckedUpdateInput>
+    /**
+     * Choose, which CpFeatureFlag to update.
+     */
+    where: CpFeatureFlagWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlag updateMany
+   */
+  export type CpFeatureFlagUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpFeatureFlags.
+     */
+    data: XOR<CpFeatureFlagUpdateManyMutationInput, CpFeatureFlagUncheckedUpdateManyInput>
+    /**
+     * Filter which CpFeatureFlags to update
+     */
+    where?: CpFeatureFlagWhereInput
+  }
+
+  /**
+   * CpFeatureFlag upsert
+   */
+  export type CpFeatureFlagUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpFeatureFlag to update in case it exists.
+     */
+    where: CpFeatureFlagWhereUniqueInput
+    /**
+     * In case the CpFeatureFlag found by the `where` argument doesn't exist, create a new CpFeatureFlag with this data.
+     */
+    create: XOR<CpFeatureFlagCreateInput, CpFeatureFlagUncheckedCreateInput>
+    /**
+     * In case the CpFeatureFlag was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpFeatureFlagUpdateInput, CpFeatureFlagUncheckedUpdateInput>
+  }
+
+  /**
+   * CpFeatureFlag delete
+   */
+  export type CpFeatureFlagDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+    /**
+     * Filter which CpFeatureFlag to delete.
+     */
+    where: CpFeatureFlagWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlag deleteMany
+   */
+  export type CpFeatureFlagDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpFeatureFlags to delete
+     */
+    where?: CpFeatureFlagWhereInput
+  }
+
+  /**
+   * CpFeatureFlag.overrides
+   */
+  export type CpFeatureFlag$overridesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    where?: CpFeatureFlagOverrideWhereInput
+    orderBy?: CpFeatureFlagOverrideOrderByWithRelationInput | CpFeatureFlagOverrideOrderByWithRelationInput[]
+    cursor?: CpFeatureFlagOverrideWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpFeatureFlagOverrideScalarFieldEnum | CpFeatureFlagOverrideScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlag without action
+   */
+  export type CpFeatureFlagDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlag
+     */
+    select?: CpFeatureFlagSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpFeatureFlagOverride
+   */
+
+  export type AggregateCpFeatureFlagOverride = {
+    _count: CpFeatureFlagOverrideCountAggregateOutputType | null
+    _min: CpFeatureFlagOverrideMinAggregateOutputType | null
+    _max: CpFeatureFlagOverrideMaxAggregateOutputType | null
+  }
+
+  export type CpFeatureFlagOverrideMinAggregateOutputType = {
+    id: string | null
+    flagId: string | null
+    tenantId: string | null
+    countryCode: string | null
+    planTier: string | null
+    isEnabled: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpFeatureFlagOverrideMaxAggregateOutputType = {
+    id: string | null
+    flagId: string | null
+    tenantId: string | null
+    countryCode: string | null
+    planTier: string | null
+    isEnabled: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpFeatureFlagOverrideCountAggregateOutputType = {
+    id: number
+    flagId: number
+    tenantId: number
+    countryCode: number
+    planTier: number
+    value: number
+    isEnabled: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpFeatureFlagOverrideMinAggregateInputType = {
+    id?: true
+    flagId?: true
+    tenantId?: true
+    countryCode?: true
+    planTier?: true
+    isEnabled?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpFeatureFlagOverrideMaxAggregateInputType = {
+    id?: true
+    flagId?: true
+    tenantId?: true
+    countryCode?: true
+    planTier?: true
+    isEnabled?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpFeatureFlagOverrideCountAggregateInputType = {
+    id?: true
+    flagId?: true
+    tenantId?: true
+    countryCode?: true
+    planTier?: true
+    value?: true
+    isEnabled?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpFeatureFlagOverrideAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpFeatureFlagOverride to aggregate.
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlagOverrides to fetch.
+     */
+    orderBy?: CpFeatureFlagOverrideOrderByWithRelationInput | CpFeatureFlagOverrideOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpFeatureFlagOverrideWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlagOverrides from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlagOverrides.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpFeatureFlagOverrides
+    **/
+    _count?: true | CpFeatureFlagOverrideCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpFeatureFlagOverrideMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpFeatureFlagOverrideMaxAggregateInputType
+  }
+
+  export type GetCpFeatureFlagOverrideAggregateType<T extends CpFeatureFlagOverrideAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpFeatureFlagOverride]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpFeatureFlagOverride[P]>
+      : GetScalarType<T[P], AggregateCpFeatureFlagOverride[P]>
+  }
+
+
+
+
+  export type CpFeatureFlagOverrideGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpFeatureFlagOverrideWhereInput
+    orderBy?: CpFeatureFlagOverrideOrderByWithAggregationInput | CpFeatureFlagOverrideOrderByWithAggregationInput[]
+    by: CpFeatureFlagOverrideScalarFieldEnum[] | CpFeatureFlagOverrideScalarFieldEnum
+    having?: CpFeatureFlagOverrideScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpFeatureFlagOverrideCountAggregateInputType | true
+    _min?: CpFeatureFlagOverrideMinAggregateInputType
+    _max?: CpFeatureFlagOverrideMaxAggregateInputType
+  }
+
+  export type CpFeatureFlagOverrideGroupByOutputType = {
+    id: string
+    flagId: string
+    tenantId: string | null
+    countryCode: string | null
+    planTier: string | null
+    value: JsonValue
+    isEnabled: boolean
+    createdAt: Date
+    updatedAt: Date
+    _count: CpFeatureFlagOverrideCountAggregateOutputType | null
+    _min: CpFeatureFlagOverrideMinAggregateOutputType | null
+    _max: CpFeatureFlagOverrideMaxAggregateOutputType | null
+  }
+
+  type GetCpFeatureFlagOverrideGroupByPayload<T extends CpFeatureFlagOverrideGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpFeatureFlagOverrideGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpFeatureFlagOverrideGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpFeatureFlagOverrideGroupByOutputType[P]>
+            : GetScalarType<T[P], CpFeatureFlagOverrideGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpFeatureFlagOverrideSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    flagId?: boolean
+    tenantId?: boolean
+    countryCode?: boolean
+    planTier?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    flag?: boolean | CpFeatureFlagDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpFeatureFlagOverride"]>
+
+  export type CpFeatureFlagOverrideSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    flagId?: boolean
+    tenantId?: boolean
+    countryCode?: boolean
+    planTier?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    flag?: boolean | CpFeatureFlagDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpFeatureFlagOverride"]>
+
+  export type CpFeatureFlagOverrideSelectScalar = {
+    id?: boolean
+    flagId?: boolean
+    tenantId?: boolean
+    countryCode?: boolean
+    planTier?: boolean
+    value?: boolean
+    isEnabled?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpFeatureFlagOverrideInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    flag?: boolean | CpFeatureFlagDefaultArgs<ExtArgs>
+  }
+  export type CpFeatureFlagOverrideIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    flag?: boolean | CpFeatureFlagDefaultArgs<ExtArgs>
+  }
+
+  export type $CpFeatureFlagOverridePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpFeatureFlagOverride"
+    objects: {
+      flag: Prisma.$CpFeatureFlagPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      flagId: string
+      tenantId: string | null
+      countryCode: string | null
+      planTier: string | null
+      value: Prisma.JsonValue
+      isEnabled: boolean
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpFeatureFlagOverride"]>
+    composites: {}
+  }
+
+  type CpFeatureFlagOverrideGetPayload<S extends boolean | null | undefined | CpFeatureFlagOverrideDefaultArgs> = $Result.GetResult<Prisma.$CpFeatureFlagOverridePayload, S>
+
+  type CpFeatureFlagOverrideCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpFeatureFlagOverrideFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpFeatureFlagOverrideCountAggregateInputType | true
+    }
+
+  export interface CpFeatureFlagOverrideDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpFeatureFlagOverride'], meta: { name: 'CpFeatureFlagOverride' } }
+    /**
+     * Find zero or one CpFeatureFlagOverride that matches the filter.
+     * @param {CpFeatureFlagOverrideFindUniqueArgs} args - Arguments to find a CpFeatureFlagOverride
+     * @example
+     * // Get one CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpFeatureFlagOverrideFindUniqueArgs>(args: SelectSubset<T, CpFeatureFlagOverrideFindUniqueArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpFeatureFlagOverride that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpFeatureFlagOverrideFindUniqueOrThrowArgs} args - Arguments to find a CpFeatureFlagOverride
+     * @example
+     * // Get one CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpFeatureFlagOverrideFindUniqueOrThrowArgs>(args: SelectSubset<T, CpFeatureFlagOverrideFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpFeatureFlagOverride that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideFindFirstArgs} args - Arguments to find a CpFeatureFlagOverride
+     * @example
+     * // Get one CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpFeatureFlagOverrideFindFirstArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideFindFirstArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpFeatureFlagOverride that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideFindFirstOrThrowArgs} args - Arguments to find a CpFeatureFlagOverride
+     * @example
+     * // Get one CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpFeatureFlagOverrideFindFirstOrThrowArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpFeatureFlagOverrides that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpFeatureFlagOverrides
+     * const cpFeatureFlagOverrides = await prisma.cpFeatureFlagOverride.findMany()
+     * 
+     * // Get first 10 CpFeatureFlagOverrides
+     * const cpFeatureFlagOverrides = await prisma.cpFeatureFlagOverride.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpFeatureFlagOverrideWithIdOnly = await prisma.cpFeatureFlagOverride.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpFeatureFlagOverrideFindManyArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpFeatureFlagOverride.
+     * @param {CpFeatureFlagOverrideCreateArgs} args - Arguments to create a CpFeatureFlagOverride.
+     * @example
+     * // Create one CpFeatureFlagOverride
+     * const CpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.create({
+     *   data: {
+     *     // ... data to create a CpFeatureFlagOverride
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpFeatureFlagOverrideCreateArgs>(args: SelectSubset<T, CpFeatureFlagOverrideCreateArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpFeatureFlagOverrides.
+     * @param {CpFeatureFlagOverrideCreateManyArgs} args - Arguments to create many CpFeatureFlagOverrides.
+     * @example
+     * // Create many CpFeatureFlagOverrides
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpFeatureFlagOverrideCreateManyArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpFeatureFlagOverrides and returns the data saved in the database.
+     * @param {CpFeatureFlagOverrideCreateManyAndReturnArgs} args - Arguments to create many CpFeatureFlagOverrides.
+     * @example
+     * // Create many CpFeatureFlagOverrides
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpFeatureFlagOverrides and only return the `id`
+     * const cpFeatureFlagOverrideWithIdOnly = await prisma.cpFeatureFlagOverride.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpFeatureFlagOverrideCreateManyAndReturnArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpFeatureFlagOverride.
+     * @param {CpFeatureFlagOverrideDeleteArgs} args - Arguments to delete one CpFeatureFlagOverride.
+     * @example
+     * // Delete one CpFeatureFlagOverride
+     * const CpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.delete({
+     *   where: {
+     *     // ... filter to delete one CpFeatureFlagOverride
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpFeatureFlagOverrideDeleteArgs>(args: SelectSubset<T, CpFeatureFlagOverrideDeleteArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpFeatureFlagOverride.
+     * @param {CpFeatureFlagOverrideUpdateArgs} args - Arguments to update one CpFeatureFlagOverride.
+     * @example
+     * // Update one CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpFeatureFlagOverrideUpdateArgs>(args: SelectSubset<T, CpFeatureFlagOverrideUpdateArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpFeatureFlagOverrides.
+     * @param {CpFeatureFlagOverrideDeleteManyArgs} args - Arguments to filter CpFeatureFlagOverrides to delete.
+     * @example
+     * // Delete a few CpFeatureFlagOverrides
+     * const { count } = await prisma.cpFeatureFlagOverride.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpFeatureFlagOverrideDeleteManyArgs>(args?: SelectSubset<T, CpFeatureFlagOverrideDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpFeatureFlagOverrides.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpFeatureFlagOverrides
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpFeatureFlagOverrideUpdateManyArgs>(args: SelectSubset<T, CpFeatureFlagOverrideUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpFeatureFlagOverride.
+     * @param {CpFeatureFlagOverrideUpsertArgs} args - Arguments to update or create a CpFeatureFlagOverride.
+     * @example
+     * // Update or create a CpFeatureFlagOverride
+     * const cpFeatureFlagOverride = await prisma.cpFeatureFlagOverride.upsert({
+     *   create: {
+     *     // ... data to create a CpFeatureFlagOverride
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpFeatureFlagOverride we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpFeatureFlagOverrideUpsertArgs>(args: SelectSubset<T, CpFeatureFlagOverrideUpsertArgs<ExtArgs>>): Prisma__CpFeatureFlagOverrideClient<$Result.GetResult<Prisma.$CpFeatureFlagOverridePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpFeatureFlagOverrides.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideCountArgs} args - Arguments to filter CpFeatureFlagOverrides to count.
+     * @example
+     * // Count the number of CpFeatureFlagOverrides
+     * const count = await prisma.cpFeatureFlagOverride.count({
+     *   where: {
+     *     // ... the filter for the CpFeatureFlagOverrides we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpFeatureFlagOverrideCountArgs>(
+      args?: Subset<T, CpFeatureFlagOverrideCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpFeatureFlagOverrideCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpFeatureFlagOverride.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpFeatureFlagOverrideAggregateArgs>(args: Subset<T, CpFeatureFlagOverrideAggregateArgs>): Prisma.PrismaPromise<GetCpFeatureFlagOverrideAggregateType<T>>
+
+    /**
+     * Group by CpFeatureFlagOverride.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpFeatureFlagOverrideGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpFeatureFlagOverrideGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpFeatureFlagOverrideGroupByArgs['orderBy'] }
+        : { orderBy?: CpFeatureFlagOverrideGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpFeatureFlagOverrideGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpFeatureFlagOverrideGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpFeatureFlagOverride model
+   */
+  readonly fields: CpFeatureFlagOverrideFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpFeatureFlagOverride.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpFeatureFlagOverrideClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    flag<T extends CpFeatureFlagDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpFeatureFlagDefaultArgs<ExtArgs>>): Prisma__CpFeatureFlagClient<$Result.GetResult<Prisma.$CpFeatureFlagPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpFeatureFlagOverride model
+   */ 
+  interface CpFeatureFlagOverrideFieldRefs {
+    readonly id: FieldRef<"CpFeatureFlagOverride", 'String'>
+    readonly flagId: FieldRef<"CpFeatureFlagOverride", 'String'>
+    readonly tenantId: FieldRef<"CpFeatureFlagOverride", 'String'>
+    readonly countryCode: FieldRef<"CpFeatureFlagOverride", 'String'>
+    readonly planTier: FieldRef<"CpFeatureFlagOverride", 'String'>
+    readonly value: FieldRef<"CpFeatureFlagOverride", 'Json'>
+    readonly isEnabled: FieldRef<"CpFeatureFlagOverride", 'Boolean'>
+    readonly createdAt: FieldRef<"CpFeatureFlagOverride", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpFeatureFlagOverride", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpFeatureFlagOverride findUnique
+   */
+  export type CpFeatureFlagOverrideFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlagOverride to fetch.
+     */
+    where: CpFeatureFlagOverrideWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlagOverride findUniqueOrThrow
+   */
+  export type CpFeatureFlagOverrideFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlagOverride to fetch.
+     */
+    where: CpFeatureFlagOverrideWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlagOverride findFirst
+   */
+  export type CpFeatureFlagOverrideFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlagOverride to fetch.
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlagOverrides to fetch.
+     */
+    orderBy?: CpFeatureFlagOverrideOrderByWithRelationInput | CpFeatureFlagOverrideOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpFeatureFlagOverrides.
+     */
+    cursor?: CpFeatureFlagOverrideWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlagOverrides from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlagOverrides.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpFeatureFlagOverrides.
+     */
+    distinct?: CpFeatureFlagOverrideScalarFieldEnum | CpFeatureFlagOverrideScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlagOverride findFirstOrThrow
+   */
+  export type CpFeatureFlagOverrideFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlagOverride to fetch.
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlagOverrides to fetch.
+     */
+    orderBy?: CpFeatureFlagOverrideOrderByWithRelationInput | CpFeatureFlagOverrideOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpFeatureFlagOverrides.
+     */
+    cursor?: CpFeatureFlagOverrideWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlagOverrides from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlagOverrides.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpFeatureFlagOverrides.
+     */
+    distinct?: CpFeatureFlagOverrideScalarFieldEnum | CpFeatureFlagOverrideScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlagOverride findMany
+   */
+  export type CpFeatureFlagOverrideFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter, which CpFeatureFlagOverrides to fetch.
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpFeatureFlagOverrides to fetch.
+     */
+    orderBy?: CpFeatureFlagOverrideOrderByWithRelationInput | CpFeatureFlagOverrideOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpFeatureFlagOverrides.
+     */
+    cursor?: CpFeatureFlagOverrideWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpFeatureFlagOverrides from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpFeatureFlagOverrides.
+     */
+    skip?: number
+    distinct?: CpFeatureFlagOverrideScalarFieldEnum | CpFeatureFlagOverrideScalarFieldEnum[]
+  }
+
+  /**
+   * CpFeatureFlagOverride create
+   */
+  export type CpFeatureFlagOverrideCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpFeatureFlagOverride.
+     */
+    data: XOR<CpFeatureFlagOverrideCreateInput, CpFeatureFlagOverrideUncheckedCreateInput>
+  }
+
+  /**
+   * CpFeatureFlagOverride createMany
+   */
+  export type CpFeatureFlagOverrideCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpFeatureFlagOverrides.
+     */
+    data: CpFeatureFlagOverrideCreateManyInput | CpFeatureFlagOverrideCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpFeatureFlagOverride createManyAndReturn
+   */
+  export type CpFeatureFlagOverrideCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpFeatureFlagOverrides.
+     */
+    data: CpFeatureFlagOverrideCreateManyInput | CpFeatureFlagOverrideCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpFeatureFlagOverride update
+   */
+  export type CpFeatureFlagOverrideUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpFeatureFlagOverride.
+     */
+    data: XOR<CpFeatureFlagOverrideUpdateInput, CpFeatureFlagOverrideUncheckedUpdateInput>
+    /**
+     * Choose, which CpFeatureFlagOverride to update.
+     */
+    where: CpFeatureFlagOverrideWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlagOverride updateMany
+   */
+  export type CpFeatureFlagOverrideUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpFeatureFlagOverrides.
+     */
+    data: XOR<CpFeatureFlagOverrideUpdateManyMutationInput, CpFeatureFlagOverrideUncheckedUpdateManyInput>
+    /**
+     * Filter which CpFeatureFlagOverrides to update
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+  }
+
+  /**
+   * CpFeatureFlagOverride upsert
+   */
+  export type CpFeatureFlagOverrideUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpFeatureFlagOverride to update in case it exists.
+     */
+    where: CpFeatureFlagOverrideWhereUniqueInput
+    /**
+     * In case the CpFeatureFlagOverride found by the `where` argument doesn't exist, create a new CpFeatureFlagOverride with this data.
+     */
+    create: XOR<CpFeatureFlagOverrideCreateInput, CpFeatureFlagOverrideUncheckedCreateInput>
+    /**
+     * In case the CpFeatureFlagOverride was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpFeatureFlagOverrideUpdateInput, CpFeatureFlagOverrideUncheckedUpdateInput>
+  }
+
+  /**
+   * CpFeatureFlagOverride delete
+   */
+  export type CpFeatureFlagOverrideDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+    /**
+     * Filter which CpFeatureFlagOverride to delete.
+     */
+    where: CpFeatureFlagOverrideWhereUniqueInput
+  }
+
+  /**
+   * CpFeatureFlagOverride deleteMany
+   */
+  export type CpFeatureFlagOverrideDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpFeatureFlagOverrides to delete
+     */
+    where?: CpFeatureFlagOverrideWhereInput
+  }
+
+  /**
+   * CpFeatureFlagOverride without action
+   */
+  export type CpFeatureFlagOverrideDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpFeatureFlagOverride
+     */
+    select?: CpFeatureFlagOverrideSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpFeatureFlagOverrideInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpPlatformSetting
+   */
+
+  export type AggregateCpPlatformSetting = {
+    _count: CpPlatformSettingCountAggregateOutputType | null
+    _min: CpPlatformSettingMinAggregateOutputType | null
+    _max: CpPlatformSettingMaxAggregateOutputType | null
+  }
+
+  export type CpPlatformSettingMinAggregateOutputType = {
+    id: string | null
+    key: string | null
+    description: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformSettingMaxAggregateOutputType = {
+    id: string | null
+    key: string | null
+    description: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpPlatformSettingCountAggregateOutputType = {
+    id: number
+    key: number
+    description: number
+    value: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpPlatformSettingMinAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformSettingMaxAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpPlatformSettingCountAggregateInputType = {
+    id?: true
+    key?: true
+    description?: true
+    value?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpPlatformSettingAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformSetting to aggregate.
+     */
+    where?: CpPlatformSettingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformSettings to fetch.
+     */
+    orderBy?: CpPlatformSettingOrderByWithRelationInput | CpPlatformSettingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpPlatformSettingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpPlatformSettings
+    **/
+    _count?: true | CpPlatformSettingCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpPlatformSettingMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpPlatformSettingMaxAggregateInputType
+  }
+
+  export type GetCpPlatformSettingAggregateType<T extends CpPlatformSettingAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpPlatformSetting]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpPlatformSetting[P]>
+      : GetScalarType<T[P], AggregateCpPlatformSetting[P]>
+  }
+
+
+
+
+  export type CpPlatformSettingGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpPlatformSettingWhereInput
+    orderBy?: CpPlatformSettingOrderByWithAggregationInput | CpPlatformSettingOrderByWithAggregationInput[]
+    by: CpPlatformSettingScalarFieldEnum[] | CpPlatformSettingScalarFieldEnum
+    having?: CpPlatformSettingScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpPlatformSettingCountAggregateInputType | true
+    _min?: CpPlatformSettingMinAggregateInputType
+    _max?: CpPlatformSettingMaxAggregateInputType
+  }
+
+  export type CpPlatformSettingGroupByOutputType = {
+    id: string
+    key: string
+    description: string | null
+    value: JsonValue
+    createdAt: Date
+    updatedAt: Date
+    _count: CpPlatformSettingCountAggregateOutputType | null
+    _min: CpPlatformSettingMinAggregateOutputType | null
+    _max: CpPlatformSettingMaxAggregateOutputType | null
+  }
+
+  type GetCpPlatformSettingGroupByPayload<T extends CpPlatformSettingGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpPlatformSettingGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpPlatformSettingGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpPlatformSettingGroupByOutputType[P]>
+            : GetScalarType<T[P], CpPlatformSettingGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpPlatformSettingSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    value?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlatformSetting"]>
+
+  export type CpPlatformSettingSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    value?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpPlatformSetting"]>
+
+  export type CpPlatformSettingSelectScalar = {
+    id?: boolean
+    key?: boolean
+    description?: boolean
+    value?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CpPlatformSettingPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpPlatformSetting"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      key: string
+      description: string | null
+      value: Prisma.JsonValue
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpPlatformSetting"]>
+    composites: {}
+  }
+
+  type CpPlatformSettingGetPayload<S extends boolean | null | undefined | CpPlatformSettingDefaultArgs> = $Result.GetResult<Prisma.$CpPlatformSettingPayload, S>
+
+  type CpPlatformSettingCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpPlatformSettingFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpPlatformSettingCountAggregateInputType | true
+    }
+
+  export interface CpPlatformSettingDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpPlatformSetting'], meta: { name: 'CpPlatformSetting' } }
+    /**
+     * Find zero or one CpPlatformSetting that matches the filter.
+     * @param {CpPlatformSettingFindUniqueArgs} args - Arguments to find a CpPlatformSetting
+     * @example
+     * // Get one CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpPlatformSettingFindUniqueArgs>(args: SelectSubset<T, CpPlatformSettingFindUniqueArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpPlatformSetting that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpPlatformSettingFindUniqueOrThrowArgs} args - Arguments to find a CpPlatformSetting
+     * @example
+     * // Get one CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpPlatformSettingFindUniqueOrThrowArgs>(args: SelectSubset<T, CpPlatformSettingFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpPlatformSetting that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingFindFirstArgs} args - Arguments to find a CpPlatformSetting
+     * @example
+     * // Get one CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpPlatformSettingFindFirstArgs>(args?: SelectSubset<T, CpPlatformSettingFindFirstArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpPlatformSetting that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingFindFirstOrThrowArgs} args - Arguments to find a CpPlatformSetting
+     * @example
+     * // Get one CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpPlatformSettingFindFirstOrThrowArgs>(args?: SelectSubset<T, CpPlatformSettingFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpPlatformSettings that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpPlatformSettings
+     * const cpPlatformSettings = await prisma.cpPlatformSetting.findMany()
+     * 
+     * // Get first 10 CpPlatformSettings
+     * const cpPlatformSettings = await prisma.cpPlatformSetting.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpPlatformSettingWithIdOnly = await prisma.cpPlatformSetting.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpPlatformSettingFindManyArgs>(args?: SelectSubset<T, CpPlatformSettingFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpPlatformSetting.
+     * @param {CpPlatformSettingCreateArgs} args - Arguments to create a CpPlatformSetting.
+     * @example
+     * // Create one CpPlatformSetting
+     * const CpPlatformSetting = await prisma.cpPlatformSetting.create({
+     *   data: {
+     *     // ... data to create a CpPlatformSetting
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpPlatformSettingCreateArgs>(args: SelectSubset<T, CpPlatformSettingCreateArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpPlatformSettings.
+     * @param {CpPlatformSettingCreateManyArgs} args - Arguments to create many CpPlatformSettings.
+     * @example
+     * // Create many CpPlatformSettings
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpPlatformSettingCreateManyArgs>(args?: SelectSubset<T, CpPlatformSettingCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpPlatformSettings and returns the data saved in the database.
+     * @param {CpPlatformSettingCreateManyAndReturnArgs} args - Arguments to create many CpPlatformSettings.
+     * @example
+     * // Create many CpPlatformSettings
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpPlatformSettings and only return the `id`
+     * const cpPlatformSettingWithIdOnly = await prisma.cpPlatformSetting.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpPlatformSettingCreateManyAndReturnArgs>(args?: SelectSubset<T, CpPlatformSettingCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpPlatformSetting.
+     * @param {CpPlatformSettingDeleteArgs} args - Arguments to delete one CpPlatformSetting.
+     * @example
+     * // Delete one CpPlatformSetting
+     * const CpPlatformSetting = await prisma.cpPlatformSetting.delete({
+     *   where: {
+     *     // ... filter to delete one CpPlatformSetting
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpPlatformSettingDeleteArgs>(args: SelectSubset<T, CpPlatformSettingDeleteArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpPlatformSetting.
+     * @param {CpPlatformSettingUpdateArgs} args - Arguments to update one CpPlatformSetting.
+     * @example
+     * // Update one CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpPlatformSettingUpdateArgs>(args: SelectSubset<T, CpPlatformSettingUpdateArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpPlatformSettings.
+     * @param {CpPlatformSettingDeleteManyArgs} args - Arguments to filter CpPlatformSettings to delete.
+     * @example
+     * // Delete a few CpPlatformSettings
+     * const { count } = await prisma.cpPlatformSetting.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpPlatformSettingDeleteManyArgs>(args?: SelectSubset<T, CpPlatformSettingDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpPlatformSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpPlatformSettings
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpPlatformSettingUpdateManyArgs>(args: SelectSubset<T, CpPlatformSettingUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpPlatformSetting.
+     * @param {CpPlatformSettingUpsertArgs} args - Arguments to update or create a CpPlatformSetting.
+     * @example
+     * // Update or create a CpPlatformSetting
+     * const cpPlatformSetting = await prisma.cpPlatformSetting.upsert({
+     *   create: {
+     *     // ... data to create a CpPlatformSetting
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpPlatformSetting we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpPlatformSettingUpsertArgs>(args: SelectSubset<T, CpPlatformSettingUpsertArgs<ExtArgs>>): Prisma__CpPlatformSettingClient<$Result.GetResult<Prisma.$CpPlatformSettingPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpPlatformSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingCountArgs} args - Arguments to filter CpPlatformSettings to count.
+     * @example
+     * // Count the number of CpPlatformSettings
+     * const count = await prisma.cpPlatformSetting.count({
+     *   where: {
+     *     // ... the filter for the CpPlatformSettings we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpPlatformSettingCountArgs>(
+      args?: Subset<T, CpPlatformSettingCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpPlatformSettingCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpPlatformSetting.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpPlatformSettingAggregateArgs>(args: Subset<T, CpPlatformSettingAggregateArgs>): Prisma.PrismaPromise<GetCpPlatformSettingAggregateType<T>>
+
+    /**
+     * Group by CpPlatformSetting.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpPlatformSettingGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpPlatformSettingGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpPlatformSettingGroupByArgs['orderBy'] }
+        : { orderBy?: CpPlatformSettingGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpPlatformSettingGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpPlatformSettingGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpPlatformSetting model
+   */
+  readonly fields: CpPlatformSettingFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpPlatformSetting.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpPlatformSettingClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpPlatformSetting model
+   */ 
+  interface CpPlatformSettingFieldRefs {
+    readonly id: FieldRef<"CpPlatformSetting", 'String'>
+    readonly key: FieldRef<"CpPlatformSetting", 'String'>
+    readonly description: FieldRef<"CpPlatformSetting", 'String'>
+    readonly value: FieldRef<"CpPlatformSetting", 'Json'>
+    readonly createdAt: FieldRef<"CpPlatformSetting", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpPlatformSetting", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpPlatformSetting findUnique
+   */
+  export type CpPlatformSettingFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformSetting to fetch.
+     */
+    where: CpPlatformSettingWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformSetting findUniqueOrThrow
+   */
+  export type CpPlatformSettingFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformSetting to fetch.
+     */
+    where: CpPlatformSettingWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformSetting findFirst
+   */
+  export type CpPlatformSettingFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformSetting to fetch.
+     */
+    where?: CpPlatformSettingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformSettings to fetch.
+     */
+    orderBy?: CpPlatformSettingOrderByWithRelationInput | CpPlatformSettingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformSettings.
+     */
+    cursor?: CpPlatformSettingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformSettings.
+     */
+    distinct?: CpPlatformSettingScalarFieldEnum | CpPlatformSettingScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformSetting findFirstOrThrow
+   */
+  export type CpPlatformSettingFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformSetting to fetch.
+     */
+    where?: CpPlatformSettingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformSettings to fetch.
+     */
+    orderBy?: CpPlatformSettingOrderByWithRelationInput | CpPlatformSettingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpPlatformSettings.
+     */
+    cursor?: CpPlatformSettingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpPlatformSettings.
+     */
+    distinct?: CpPlatformSettingScalarFieldEnum | CpPlatformSettingScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformSetting findMany
+   */
+  export type CpPlatformSettingFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter, which CpPlatformSettings to fetch.
+     */
+    where?: CpPlatformSettingWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpPlatformSettings to fetch.
+     */
+    orderBy?: CpPlatformSettingOrderByWithRelationInput | CpPlatformSettingOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpPlatformSettings.
+     */
+    cursor?: CpPlatformSettingWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpPlatformSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpPlatformSettings.
+     */
+    skip?: number
+    distinct?: CpPlatformSettingScalarFieldEnum | CpPlatformSettingScalarFieldEnum[]
+  }
+
+  /**
+   * CpPlatformSetting create
+   */
+  export type CpPlatformSettingCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpPlatformSetting.
+     */
+    data: XOR<CpPlatformSettingCreateInput, CpPlatformSettingUncheckedCreateInput>
+  }
+
+  /**
+   * CpPlatformSetting createMany
+   */
+  export type CpPlatformSettingCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpPlatformSettings.
+     */
+    data: CpPlatformSettingCreateManyInput | CpPlatformSettingCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformSetting createManyAndReturn
+   */
+  export type CpPlatformSettingCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpPlatformSettings.
+     */
+    data: CpPlatformSettingCreateManyInput | CpPlatformSettingCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpPlatformSetting update
+   */
+  export type CpPlatformSettingUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpPlatformSetting.
+     */
+    data: XOR<CpPlatformSettingUpdateInput, CpPlatformSettingUncheckedUpdateInput>
+    /**
+     * Choose, which CpPlatformSetting to update.
+     */
+    where: CpPlatformSettingWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformSetting updateMany
+   */
+  export type CpPlatformSettingUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpPlatformSettings.
+     */
+    data: XOR<CpPlatformSettingUpdateManyMutationInput, CpPlatformSettingUncheckedUpdateManyInput>
+    /**
+     * Filter which CpPlatformSettings to update
+     */
+    where?: CpPlatformSettingWhereInput
+  }
+
+  /**
+   * CpPlatformSetting upsert
+   */
+  export type CpPlatformSettingUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpPlatformSetting to update in case it exists.
+     */
+    where: CpPlatformSettingWhereUniqueInput
+    /**
+     * In case the CpPlatformSetting found by the `where` argument doesn't exist, create a new CpPlatformSetting with this data.
+     */
+    create: XOR<CpPlatformSettingCreateInput, CpPlatformSettingUncheckedCreateInput>
+    /**
+     * In case the CpPlatformSetting was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpPlatformSettingUpdateInput, CpPlatformSettingUncheckedUpdateInput>
+  }
+
+  /**
+   * CpPlatformSetting delete
+   */
+  export type CpPlatformSettingDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+    /**
+     * Filter which CpPlatformSetting to delete.
+     */
+    where: CpPlatformSettingWhereUniqueInput
+  }
+
+  /**
+   * CpPlatformSetting deleteMany
+   */
+  export type CpPlatformSettingDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpPlatformSettings to delete
+     */
+    where?: CpPlatformSettingWhereInput
+  }
+
+  /**
+   * CpPlatformSetting without action
+   */
+  export type CpPlatformSettingDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpPlatformSetting
+     */
+    select?: CpPlatformSettingSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpUsageEvent
+   */
+
+  export type AggregateCpUsageEvent = {
+    _count: CpUsageEventCountAggregateOutputType | null
+    _avg: CpUsageEventAvgAggregateOutputType | null
+    _sum: CpUsageEventSumAggregateOutputType | null
+    _min: CpUsageEventMinAggregateOutputType | null
+    _max: CpUsageEventMaxAggregateOutputType | null
+  }
+
+  export type CpUsageEventAvgAggregateOutputType = {
+    quantity: number | null
+  }
+
+  export type CpUsageEventSumAggregateOutputType = {
+    quantity: number | null
+  }
+
+  export type CpUsageEventMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    eventType: string | null
+    quantity: number | null
+    countryCode: string | null
+    idempotencyKey: string | null
+    occurredAt: Date | null
+    recordedAt: Date | null
+  }
+
+  export type CpUsageEventMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    eventType: string | null
+    quantity: number | null
+    countryCode: string | null
+    idempotencyKey: string | null
+    occurredAt: Date | null
+    recordedAt: Date | null
+  }
+
+  export type CpUsageEventCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    eventType: number
+    quantity: number
+    countryCode: number
+    idempotencyKey: number
+    occurredAt: number
+    recordedAt: number
+    _all: number
+  }
+
+
+  export type CpUsageEventAvgAggregateInputType = {
+    quantity?: true
+  }
+
+  export type CpUsageEventSumAggregateInputType = {
+    quantity?: true
+  }
+
+  export type CpUsageEventMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    eventType?: true
+    quantity?: true
+    countryCode?: true
+    idempotencyKey?: true
+    occurredAt?: true
+    recordedAt?: true
+  }
+
+  export type CpUsageEventMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    eventType?: true
+    quantity?: true
+    countryCode?: true
+    idempotencyKey?: true
+    occurredAt?: true
+    recordedAt?: true
+  }
+
+  export type CpUsageEventCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    eventType?: true
+    quantity?: true
+    countryCode?: true
+    idempotencyKey?: true
+    occurredAt?: true
+    recordedAt?: true
+    _all?: true
+  }
+
+  export type CpUsageEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpUsageEvent to aggregate.
+     */
+    where?: CpUsageEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpUsageEvents to fetch.
+     */
+    orderBy?: CpUsageEventOrderByWithRelationInput | CpUsageEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpUsageEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpUsageEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpUsageEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpUsageEvents
+    **/
+    _count?: true | CpUsageEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpUsageEventAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpUsageEventSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpUsageEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpUsageEventMaxAggregateInputType
+  }
+
+  export type GetCpUsageEventAggregateType<T extends CpUsageEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpUsageEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpUsageEvent[P]>
+      : GetScalarType<T[P], AggregateCpUsageEvent[P]>
+  }
+
+
+
+
+  export type CpUsageEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpUsageEventWhereInput
+    orderBy?: CpUsageEventOrderByWithAggregationInput | CpUsageEventOrderByWithAggregationInput[]
+    by: CpUsageEventScalarFieldEnum[] | CpUsageEventScalarFieldEnum
+    having?: CpUsageEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpUsageEventCountAggregateInputType | true
+    _avg?: CpUsageEventAvgAggregateInputType
+    _sum?: CpUsageEventSumAggregateInputType
+    _min?: CpUsageEventMinAggregateInputType
+    _max?: CpUsageEventMaxAggregateInputType
+  }
+
+  export type CpUsageEventGroupByOutputType = {
+    id: string
+    tenantId: string
+    eventType: string
+    quantity: number
+    countryCode: string | null
+    idempotencyKey: string
+    occurredAt: Date
+    recordedAt: Date
+    _count: CpUsageEventCountAggregateOutputType | null
+    _avg: CpUsageEventAvgAggregateOutputType | null
+    _sum: CpUsageEventSumAggregateOutputType | null
+    _min: CpUsageEventMinAggregateOutputType | null
+    _max: CpUsageEventMaxAggregateOutputType | null
+  }
+
+  type GetCpUsageEventGroupByPayload<T extends CpUsageEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpUsageEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpUsageEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpUsageEventGroupByOutputType[P]>
+            : GetScalarType<T[P], CpUsageEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpUsageEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    eventType?: boolean
+    quantity?: boolean
+    countryCode?: boolean
+    idempotencyKey?: boolean
+    occurredAt?: boolean
+    recordedAt?: boolean
+  }, ExtArgs["result"]["cpUsageEvent"]>
+
+  export type CpUsageEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    eventType?: boolean
+    quantity?: boolean
+    countryCode?: boolean
+    idempotencyKey?: boolean
+    occurredAt?: boolean
+    recordedAt?: boolean
+  }, ExtArgs["result"]["cpUsageEvent"]>
+
+  export type CpUsageEventSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    eventType?: boolean
+    quantity?: boolean
+    countryCode?: boolean
+    idempotencyKey?: boolean
+    occurredAt?: boolean
+    recordedAt?: boolean
+  }
+
+
+  export type $CpUsageEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpUsageEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      eventType: string
+      quantity: number
+      countryCode: string | null
+      idempotencyKey: string
+      occurredAt: Date
+      recordedAt: Date
+    }, ExtArgs["result"]["cpUsageEvent"]>
+    composites: {}
+  }
+
+  type CpUsageEventGetPayload<S extends boolean | null | undefined | CpUsageEventDefaultArgs> = $Result.GetResult<Prisma.$CpUsageEventPayload, S>
+
+  type CpUsageEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpUsageEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpUsageEventCountAggregateInputType | true
+    }
+
+  export interface CpUsageEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpUsageEvent'], meta: { name: 'CpUsageEvent' } }
+    /**
+     * Find zero or one CpUsageEvent that matches the filter.
+     * @param {CpUsageEventFindUniqueArgs} args - Arguments to find a CpUsageEvent
+     * @example
+     * // Get one CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpUsageEventFindUniqueArgs>(args: SelectSubset<T, CpUsageEventFindUniqueArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpUsageEvent that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpUsageEventFindUniqueOrThrowArgs} args - Arguments to find a CpUsageEvent
+     * @example
+     * // Get one CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpUsageEventFindUniqueOrThrowArgs>(args: SelectSubset<T, CpUsageEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpUsageEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventFindFirstArgs} args - Arguments to find a CpUsageEvent
+     * @example
+     * // Get one CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpUsageEventFindFirstArgs>(args?: SelectSubset<T, CpUsageEventFindFirstArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpUsageEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventFindFirstOrThrowArgs} args - Arguments to find a CpUsageEvent
+     * @example
+     * // Get one CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpUsageEventFindFirstOrThrowArgs>(args?: SelectSubset<T, CpUsageEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpUsageEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpUsageEvents
+     * const cpUsageEvents = await prisma.cpUsageEvent.findMany()
+     * 
+     * // Get first 10 CpUsageEvents
+     * const cpUsageEvents = await prisma.cpUsageEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpUsageEventWithIdOnly = await prisma.cpUsageEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpUsageEventFindManyArgs>(args?: SelectSubset<T, CpUsageEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpUsageEvent.
+     * @param {CpUsageEventCreateArgs} args - Arguments to create a CpUsageEvent.
+     * @example
+     * // Create one CpUsageEvent
+     * const CpUsageEvent = await prisma.cpUsageEvent.create({
+     *   data: {
+     *     // ... data to create a CpUsageEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpUsageEventCreateArgs>(args: SelectSubset<T, CpUsageEventCreateArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpUsageEvents.
+     * @param {CpUsageEventCreateManyArgs} args - Arguments to create many CpUsageEvents.
+     * @example
+     * // Create many CpUsageEvents
+     * const cpUsageEvent = await prisma.cpUsageEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpUsageEventCreateManyArgs>(args?: SelectSubset<T, CpUsageEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpUsageEvents and returns the data saved in the database.
+     * @param {CpUsageEventCreateManyAndReturnArgs} args - Arguments to create many CpUsageEvents.
+     * @example
+     * // Create many CpUsageEvents
+     * const cpUsageEvent = await prisma.cpUsageEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpUsageEvents and only return the `id`
+     * const cpUsageEventWithIdOnly = await prisma.cpUsageEvent.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpUsageEventCreateManyAndReturnArgs>(args?: SelectSubset<T, CpUsageEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpUsageEvent.
+     * @param {CpUsageEventDeleteArgs} args - Arguments to delete one CpUsageEvent.
+     * @example
+     * // Delete one CpUsageEvent
+     * const CpUsageEvent = await prisma.cpUsageEvent.delete({
+     *   where: {
+     *     // ... filter to delete one CpUsageEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpUsageEventDeleteArgs>(args: SelectSubset<T, CpUsageEventDeleteArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpUsageEvent.
+     * @param {CpUsageEventUpdateArgs} args - Arguments to update one CpUsageEvent.
+     * @example
+     * // Update one CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpUsageEventUpdateArgs>(args: SelectSubset<T, CpUsageEventUpdateArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpUsageEvents.
+     * @param {CpUsageEventDeleteManyArgs} args - Arguments to filter CpUsageEvents to delete.
+     * @example
+     * // Delete a few CpUsageEvents
+     * const { count } = await prisma.cpUsageEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpUsageEventDeleteManyArgs>(args?: SelectSubset<T, CpUsageEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpUsageEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpUsageEvents
+     * const cpUsageEvent = await prisma.cpUsageEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpUsageEventUpdateManyArgs>(args: SelectSubset<T, CpUsageEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpUsageEvent.
+     * @param {CpUsageEventUpsertArgs} args - Arguments to update or create a CpUsageEvent.
+     * @example
+     * // Update or create a CpUsageEvent
+     * const cpUsageEvent = await prisma.cpUsageEvent.upsert({
+     *   create: {
+     *     // ... data to create a CpUsageEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpUsageEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpUsageEventUpsertArgs>(args: SelectSubset<T, CpUsageEventUpsertArgs<ExtArgs>>): Prisma__CpUsageEventClient<$Result.GetResult<Prisma.$CpUsageEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpUsageEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventCountArgs} args - Arguments to filter CpUsageEvents to count.
+     * @example
+     * // Count the number of CpUsageEvents
+     * const count = await prisma.cpUsageEvent.count({
+     *   where: {
+     *     // ... the filter for the CpUsageEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpUsageEventCountArgs>(
+      args?: Subset<T, CpUsageEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpUsageEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpUsageEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpUsageEventAggregateArgs>(args: Subset<T, CpUsageEventAggregateArgs>): Prisma.PrismaPromise<GetCpUsageEventAggregateType<T>>
+
+    /**
+     * Group by CpUsageEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpUsageEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpUsageEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpUsageEventGroupByArgs['orderBy'] }
+        : { orderBy?: CpUsageEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpUsageEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpUsageEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpUsageEvent model
+   */
+  readonly fields: CpUsageEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpUsageEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpUsageEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpUsageEvent model
+   */ 
+  interface CpUsageEventFieldRefs {
+    readonly id: FieldRef<"CpUsageEvent", 'String'>
+    readonly tenantId: FieldRef<"CpUsageEvent", 'String'>
+    readonly eventType: FieldRef<"CpUsageEvent", 'String'>
+    readonly quantity: FieldRef<"CpUsageEvent", 'Int'>
+    readonly countryCode: FieldRef<"CpUsageEvent", 'String'>
+    readonly idempotencyKey: FieldRef<"CpUsageEvent", 'String'>
+    readonly occurredAt: FieldRef<"CpUsageEvent", 'DateTime'>
+    readonly recordedAt: FieldRef<"CpUsageEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpUsageEvent findUnique
+   */
+  export type CpUsageEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpUsageEvent to fetch.
+     */
+    where: CpUsageEventWhereUniqueInput
+  }
+
+  /**
+   * CpUsageEvent findUniqueOrThrow
+   */
+  export type CpUsageEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpUsageEvent to fetch.
+     */
+    where: CpUsageEventWhereUniqueInput
+  }
+
+  /**
+   * CpUsageEvent findFirst
+   */
+  export type CpUsageEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpUsageEvent to fetch.
+     */
+    where?: CpUsageEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpUsageEvents to fetch.
+     */
+    orderBy?: CpUsageEventOrderByWithRelationInput | CpUsageEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpUsageEvents.
+     */
+    cursor?: CpUsageEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpUsageEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpUsageEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpUsageEvents.
+     */
+    distinct?: CpUsageEventScalarFieldEnum | CpUsageEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpUsageEvent findFirstOrThrow
+   */
+  export type CpUsageEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpUsageEvent to fetch.
+     */
+    where?: CpUsageEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpUsageEvents to fetch.
+     */
+    orderBy?: CpUsageEventOrderByWithRelationInput | CpUsageEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpUsageEvents.
+     */
+    cursor?: CpUsageEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpUsageEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpUsageEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpUsageEvents.
+     */
+    distinct?: CpUsageEventScalarFieldEnum | CpUsageEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpUsageEvent findMany
+   */
+  export type CpUsageEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpUsageEvents to fetch.
+     */
+    where?: CpUsageEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpUsageEvents to fetch.
+     */
+    orderBy?: CpUsageEventOrderByWithRelationInput | CpUsageEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpUsageEvents.
+     */
+    cursor?: CpUsageEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpUsageEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpUsageEvents.
+     */
+    skip?: number
+    distinct?: CpUsageEventScalarFieldEnum | CpUsageEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpUsageEvent create
+   */
+  export type CpUsageEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpUsageEvent.
+     */
+    data: XOR<CpUsageEventCreateInput, CpUsageEventUncheckedCreateInput>
+  }
+
+  /**
+   * CpUsageEvent createMany
+   */
+  export type CpUsageEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpUsageEvents.
+     */
+    data: CpUsageEventCreateManyInput | CpUsageEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpUsageEvent createManyAndReturn
+   */
+  export type CpUsageEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpUsageEvents.
+     */
+    data: CpUsageEventCreateManyInput | CpUsageEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpUsageEvent update
+   */
+  export type CpUsageEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpUsageEvent.
+     */
+    data: XOR<CpUsageEventUpdateInput, CpUsageEventUncheckedUpdateInput>
+    /**
+     * Choose, which CpUsageEvent to update.
+     */
+    where: CpUsageEventWhereUniqueInput
+  }
+
+  /**
+   * CpUsageEvent updateMany
+   */
+  export type CpUsageEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpUsageEvents.
+     */
+    data: XOR<CpUsageEventUpdateManyMutationInput, CpUsageEventUncheckedUpdateManyInput>
+    /**
+     * Filter which CpUsageEvents to update
+     */
+    where?: CpUsageEventWhereInput
+  }
+
+  /**
+   * CpUsageEvent upsert
+   */
+  export type CpUsageEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpUsageEvent to update in case it exists.
+     */
+    where: CpUsageEventWhereUniqueInput
+    /**
+     * In case the CpUsageEvent found by the `where` argument doesn't exist, create a new CpUsageEvent with this data.
+     */
+    create: XOR<CpUsageEventCreateInput, CpUsageEventUncheckedCreateInput>
+    /**
+     * In case the CpUsageEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpUsageEventUpdateInput, CpUsageEventUncheckedUpdateInput>
+  }
+
+  /**
+   * CpUsageEvent delete
+   */
+  export type CpUsageEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+    /**
+     * Filter which CpUsageEvent to delete.
+     */
+    where: CpUsageEventWhereUniqueInput
+  }
+
+  /**
+   * CpUsageEvent deleteMany
+   */
+  export type CpUsageEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpUsageEvents to delete
+     */
+    where?: CpUsageEventWhereInput
+  }
+
+  /**
+   * CpUsageEvent without action
+   */
+  export type CpUsageEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpUsageEvent
+     */
+    select?: CpUsageEventSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpTenantLifecycleEvent
+   */
+
+  export type AggregateCpTenantLifecycleEvent = {
+    _count: CpTenantLifecycleEventCountAggregateOutputType | null
+    _min: CpTenantLifecycleEventMinAggregateOutputType | null
+    _max: CpTenantLifecycleEventMaxAggregateOutputType | null
+  }
+
+  export type CpTenantLifecycleEventMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    fromStatus: string | null
+    toStatus: string | null
+    triggeredBy: string | null
+    actorId: string | null
+    reason: string | null
+    occurredAt: Date | null
+  }
+
+  export type CpTenantLifecycleEventMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    fromStatus: string | null
+    toStatus: string | null
+    triggeredBy: string | null
+    actorId: string | null
+    reason: string | null
+    occurredAt: Date | null
+  }
+
+  export type CpTenantLifecycleEventCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    fromStatus: number
+    toStatus: number
+    triggeredBy: number
+    actorId: number
+    reason: number
+    metadata: number
+    occurredAt: number
+    _all: number
+  }
+
+
+  export type CpTenantLifecycleEventMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    fromStatus?: true
+    toStatus?: true
+    triggeredBy?: true
+    actorId?: true
+    reason?: true
+    occurredAt?: true
+  }
+
+  export type CpTenantLifecycleEventMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    fromStatus?: true
+    toStatus?: true
+    triggeredBy?: true
+    actorId?: true
+    reason?: true
+    occurredAt?: true
+  }
+
+  export type CpTenantLifecycleEventCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    fromStatus?: true
+    toStatus?: true
+    triggeredBy?: true
+    actorId?: true
+    reason?: true
+    metadata?: true
+    occurredAt?: true
+    _all?: true
+  }
+
+  export type CpTenantLifecycleEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpTenantLifecycleEvent to aggregate.
+     */
+    where?: CpTenantLifecycleEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpTenantLifecycleEvents to fetch.
+     */
+    orderBy?: CpTenantLifecycleEventOrderByWithRelationInput | CpTenantLifecycleEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpTenantLifecycleEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpTenantLifecycleEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpTenantLifecycleEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpTenantLifecycleEvents
+    **/
+    _count?: true | CpTenantLifecycleEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpTenantLifecycleEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpTenantLifecycleEventMaxAggregateInputType
+  }
+
+  export type GetCpTenantLifecycleEventAggregateType<T extends CpTenantLifecycleEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpTenantLifecycleEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpTenantLifecycleEvent[P]>
+      : GetScalarType<T[P], AggregateCpTenantLifecycleEvent[P]>
+  }
+
+
+
+
+  export type CpTenantLifecycleEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpTenantLifecycleEventWhereInput
+    orderBy?: CpTenantLifecycleEventOrderByWithAggregationInput | CpTenantLifecycleEventOrderByWithAggregationInput[]
+    by: CpTenantLifecycleEventScalarFieldEnum[] | CpTenantLifecycleEventScalarFieldEnum
+    having?: CpTenantLifecycleEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpTenantLifecycleEventCountAggregateInputType | true
+    _min?: CpTenantLifecycleEventMinAggregateInputType
+    _max?: CpTenantLifecycleEventMaxAggregateInputType
+  }
+
+  export type CpTenantLifecycleEventGroupByOutputType = {
+    id: string
+    tenantId: string
+    fromStatus: string | null
+    toStatus: string
+    triggeredBy: string
+    actorId: string | null
+    reason: string | null
+    metadata: JsonValue | null
+    occurredAt: Date
+    _count: CpTenantLifecycleEventCountAggregateOutputType | null
+    _min: CpTenantLifecycleEventMinAggregateOutputType | null
+    _max: CpTenantLifecycleEventMaxAggregateOutputType | null
+  }
+
+  type GetCpTenantLifecycleEventGroupByPayload<T extends CpTenantLifecycleEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpTenantLifecycleEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpTenantLifecycleEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpTenantLifecycleEventGroupByOutputType[P]>
+            : GetScalarType<T[P], CpTenantLifecycleEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpTenantLifecycleEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    fromStatus?: boolean
+    toStatus?: boolean
+    triggeredBy?: boolean
+    actorId?: boolean
+    reason?: boolean
+    metadata?: boolean
+    occurredAt?: boolean
+  }, ExtArgs["result"]["cpTenantLifecycleEvent"]>
+
+  export type CpTenantLifecycleEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    fromStatus?: boolean
+    toStatus?: boolean
+    triggeredBy?: boolean
+    actorId?: boolean
+    reason?: boolean
+    metadata?: boolean
+    occurredAt?: boolean
+  }, ExtArgs["result"]["cpTenantLifecycleEvent"]>
+
+  export type CpTenantLifecycleEventSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    fromStatus?: boolean
+    toStatus?: boolean
+    triggeredBy?: boolean
+    actorId?: boolean
+    reason?: boolean
+    metadata?: boolean
+    occurredAt?: boolean
+  }
+
+
+  export type $CpTenantLifecycleEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpTenantLifecycleEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      fromStatus: string | null
+      toStatus: string
+      triggeredBy: string
+      actorId: string | null
+      reason: string | null
+      metadata: Prisma.JsonValue | null
+      occurredAt: Date
+    }, ExtArgs["result"]["cpTenantLifecycleEvent"]>
+    composites: {}
+  }
+
+  type CpTenantLifecycleEventGetPayload<S extends boolean | null | undefined | CpTenantLifecycleEventDefaultArgs> = $Result.GetResult<Prisma.$CpTenantLifecycleEventPayload, S>
+
+  type CpTenantLifecycleEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpTenantLifecycleEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpTenantLifecycleEventCountAggregateInputType | true
+    }
+
+  export interface CpTenantLifecycleEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpTenantLifecycleEvent'], meta: { name: 'CpTenantLifecycleEvent' } }
+    /**
+     * Find zero or one CpTenantLifecycleEvent that matches the filter.
+     * @param {CpTenantLifecycleEventFindUniqueArgs} args - Arguments to find a CpTenantLifecycleEvent
+     * @example
+     * // Get one CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpTenantLifecycleEventFindUniqueArgs>(args: SelectSubset<T, CpTenantLifecycleEventFindUniqueArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpTenantLifecycleEvent that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpTenantLifecycleEventFindUniqueOrThrowArgs} args - Arguments to find a CpTenantLifecycleEvent
+     * @example
+     * // Get one CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpTenantLifecycleEventFindUniqueOrThrowArgs>(args: SelectSubset<T, CpTenantLifecycleEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpTenantLifecycleEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventFindFirstArgs} args - Arguments to find a CpTenantLifecycleEvent
+     * @example
+     * // Get one CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpTenantLifecycleEventFindFirstArgs>(args?: SelectSubset<T, CpTenantLifecycleEventFindFirstArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpTenantLifecycleEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventFindFirstOrThrowArgs} args - Arguments to find a CpTenantLifecycleEvent
+     * @example
+     * // Get one CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpTenantLifecycleEventFindFirstOrThrowArgs>(args?: SelectSubset<T, CpTenantLifecycleEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpTenantLifecycleEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpTenantLifecycleEvents
+     * const cpTenantLifecycleEvents = await prisma.cpTenantLifecycleEvent.findMany()
+     * 
+     * // Get first 10 CpTenantLifecycleEvents
+     * const cpTenantLifecycleEvents = await prisma.cpTenantLifecycleEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpTenantLifecycleEventWithIdOnly = await prisma.cpTenantLifecycleEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpTenantLifecycleEventFindManyArgs>(args?: SelectSubset<T, CpTenantLifecycleEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpTenantLifecycleEvent.
+     * @param {CpTenantLifecycleEventCreateArgs} args - Arguments to create a CpTenantLifecycleEvent.
+     * @example
+     * // Create one CpTenantLifecycleEvent
+     * const CpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.create({
+     *   data: {
+     *     // ... data to create a CpTenantLifecycleEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpTenantLifecycleEventCreateArgs>(args: SelectSubset<T, CpTenantLifecycleEventCreateArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpTenantLifecycleEvents.
+     * @param {CpTenantLifecycleEventCreateManyArgs} args - Arguments to create many CpTenantLifecycleEvents.
+     * @example
+     * // Create many CpTenantLifecycleEvents
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpTenantLifecycleEventCreateManyArgs>(args?: SelectSubset<T, CpTenantLifecycleEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpTenantLifecycleEvents and returns the data saved in the database.
+     * @param {CpTenantLifecycleEventCreateManyAndReturnArgs} args - Arguments to create many CpTenantLifecycleEvents.
+     * @example
+     * // Create many CpTenantLifecycleEvents
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpTenantLifecycleEvents and only return the `id`
+     * const cpTenantLifecycleEventWithIdOnly = await prisma.cpTenantLifecycleEvent.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpTenantLifecycleEventCreateManyAndReturnArgs>(args?: SelectSubset<T, CpTenantLifecycleEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpTenantLifecycleEvent.
+     * @param {CpTenantLifecycleEventDeleteArgs} args - Arguments to delete one CpTenantLifecycleEvent.
+     * @example
+     * // Delete one CpTenantLifecycleEvent
+     * const CpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.delete({
+     *   where: {
+     *     // ... filter to delete one CpTenantLifecycleEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpTenantLifecycleEventDeleteArgs>(args: SelectSubset<T, CpTenantLifecycleEventDeleteArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpTenantLifecycleEvent.
+     * @param {CpTenantLifecycleEventUpdateArgs} args - Arguments to update one CpTenantLifecycleEvent.
+     * @example
+     * // Update one CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpTenantLifecycleEventUpdateArgs>(args: SelectSubset<T, CpTenantLifecycleEventUpdateArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpTenantLifecycleEvents.
+     * @param {CpTenantLifecycleEventDeleteManyArgs} args - Arguments to filter CpTenantLifecycleEvents to delete.
+     * @example
+     * // Delete a few CpTenantLifecycleEvents
+     * const { count } = await prisma.cpTenantLifecycleEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpTenantLifecycleEventDeleteManyArgs>(args?: SelectSubset<T, CpTenantLifecycleEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpTenantLifecycleEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpTenantLifecycleEvents
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpTenantLifecycleEventUpdateManyArgs>(args: SelectSubset<T, CpTenantLifecycleEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpTenantLifecycleEvent.
+     * @param {CpTenantLifecycleEventUpsertArgs} args - Arguments to update or create a CpTenantLifecycleEvent.
+     * @example
+     * // Update or create a CpTenantLifecycleEvent
+     * const cpTenantLifecycleEvent = await prisma.cpTenantLifecycleEvent.upsert({
+     *   create: {
+     *     // ... data to create a CpTenantLifecycleEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpTenantLifecycleEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpTenantLifecycleEventUpsertArgs>(args: SelectSubset<T, CpTenantLifecycleEventUpsertArgs<ExtArgs>>): Prisma__CpTenantLifecycleEventClient<$Result.GetResult<Prisma.$CpTenantLifecycleEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpTenantLifecycleEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventCountArgs} args - Arguments to filter CpTenantLifecycleEvents to count.
+     * @example
+     * // Count the number of CpTenantLifecycleEvents
+     * const count = await prisma.cpTenantLifecycleEvent.count({
+     *   where: {
+     *     // ... the filter for the CpTenantLifecycleEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpTenantLifecycleEventCountArgs>(
+      args?: Subset<T, CpTenantLifecycleEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpTenantLifecycleEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpTenantLifecycleEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpTenantLifecycleEventAggregateArgs>(args: Subset<T, CpTenantLifecycleEventAggregateArgs>): Prisma.PrismaPromise<GetCpTenantLifecycleEventAggregateType<T>>
+
+    /**
+     * Group by CpTenantLifecycleEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpTenantLifecycleEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpTenantLifecycleEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpTenantLifecycleEventGroupByArgs['orderBy'] }
+        : { orderBy?: CpTenantLifecycleEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpTenantLifecycleEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpTenantLifecycleEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpTenantLifecycleEvent model
+   */
+  readonly fields: CpTenantLifecycleEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpTenantLifecycleEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpTenantLifecycleEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpTenantLifecycleEvent model
+   */ 
+  interface CpTenantLifecycleEventFieldRefs {
+    readonly id: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly tenantId: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly fromStatus: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly toStatus: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly triggeredBy: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly actorId: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly reason: FieldRef<"CpTenantLifecycleEvent", 'String'>
+    readonly metadata: FieldRef<"CpTenantLifecycleEvent", 'Json'>
+    readonly occurredAt: FieldRef<"CpTenantLifecycleEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpTenantLifecycleEvent findUnique
+   */
+  export type CpTenantLifecycleEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpTenantLifecycleEvent to fetch.
+     */
+    where: CpTenantLifecycleEventWhereUniqueInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent findUniqueOrThrow
+   */
+  export type CpTenantLifecycleEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpTenantLifecycleEvent to fetch.
+     */
+    where: CpTenantLifecycleEventWhereUniqueInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent findFirst
+   */
+  export type CpTenantLifecycleEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpTenantLifecycleEvent to fetch.
+     */
+    where?: CpTenantLifecycleEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpTenantLifecycleEvents to fetch.
+     */
+    orderBy?: CpTenantLifecycleEventOrderByWithRelationInput | CpTenantLifecycleEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpTenantLifecycleEvents.
+     */
+    cursor?: CpTenantLifecycleEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpTenantLifecycleEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpTenantLifecycleEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpTenantLifecycleEvents.
+     */
+    distinct?: CpTenantLifecycleEventScalarFieldEnum | CpTenantLifecycleEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpTenantLifecycleEvent findFirstOrThrow
+   */
+  export type CpTenantLifecycleEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpTenantLifecycleEvent to fetch.
+     */
+    where?: CpTenantLifecycleEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpTenantLifecycleEvents to fetch.
+     */
+    orderBy?: CpTenantLifecycleEventOrderByWithRelationInput | CpTenantLifecycleEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpTenantLifecycleEvents.
+     */
+    cursor?: CpTenantLifecycleEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpTenantLifecycleEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpTenantLifecycleEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpTenantLifecycleEvents.
+     */
+    distinct?: CpTenantLifecycleEventScalarFieldEnum | CpTenantLifecycleEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpTenantLifecycleEvent findMany
+   */
+  export type CpTenantLifecycleEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter, which CpTenantLifecycleEvents to fetch.
+     */
+    where?: CpTenantLifecycleEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpTenantLifecycleEvents to fetch.
+     */
+    orderBy?: CpTenantLifecycleEventOrderByWithRelationInput | CpTenantLifecycleEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpTenantLifecycleEvents.
+     */
+    cursor?: CpTenantLifecycleEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpTenantLifecycleEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpTenantLifecycleEvents.
+     */
+    skip?: number
+    distinct?: CpTenantLifecycleEventScalarFieldEnum | CpTenantLifecycleEventScalarFieldEnum[]
+  }
+
+  /**
+   * CpTenantLifecycleEvent create
+   */
+  export type CpTenantLifecycleEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpTenantLifecycleEvent.
+     */
+    data: XOR<CpTenantLifecycleEventCreateInput, CpTenantLifecycleEventUncheckedCreateInput>
+  }
+
+  /**
+   * CpTenantLifecycleEvent createMany
+   */
+  export type CpTenantLifecycleEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpTenantLifecycleEvents.
+     */
+    data: CpTenantLifecycleEventCreateManyInput | CpTenantLifecycleEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpTenantLifecycleEvent createManyAndReturn
+   */
+  export type CpTenantLifecycleEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpTenantLifecycleEvents.
+     */
+    data: CpTenantLifecycleEventCreateManyInput | CpTenantLifecycleEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpTenantLifecycleEvent update
+   */
+  export type CpTenantLifecycleEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpTenantLifecycleEvent.
+     */
+    data: XOR<CpTenantLifecycleEventUpdateInput, CpTenantLifecycleEventUncheckedUpdateInput>
+    /**
+     * Choose, which CpTenantLifecycleEvent to update.
+     */
+    where: CpTenantLifecycleEventWhereUniqueInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent updateMany
+   */
+  export type CpTenantLifecycleEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpTenantLifecycleEvents.
+     */
+    data: XOR<CpTenantLifecycleEventUpdateManyMutationInput, CpTenantLifecycleEventUncheckedUpdateManyInput>
+    /**
+     * Filter which CpTenantLifecycleEvents to update
+     */
+    where?: CpTenantLifecycleEventWhereInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent upsert
+   */
+  export type CpTenantLifecycleEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpTenantLifecycleEvent to update in case it exists.
+     */
+    where: CpTenantLifecycleEventWhereUniqueInput
+    /**
+     * In case the CpTenantLifecycleEvent found by the `where` argument doesn't exist, create a new CpTenantLifecycleEvent with this data.
+     */
+    create: XOR<CpTenantLifecycleEventCreateInput, CpTenantLifecycleEventUncheckedCreateInput>
+    /**
+     * In case the CpTenantLifecycleEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpTenantLifecycleEventUpdateInput, CpTenantLifecycleEventUncheckedUpdateInput>
+  }
+
+  /**
+   * CpTenantLifecycleEvent delete
+   */
+  export type CpTenantLifecycleEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+    /**
+     * Filter which CpTenantLifecycleEvent to delete.
+     */
+    where: CpTenantLifecycleEventWhereUniqueInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent deleteMany
+   */
+  export type CpTenantLifecycleEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpTenantLifecycleEvents to delete
+     */
+    where?: CpTenantLifecycleEventWhereInput
+  }
+
+  /**
+   * CpTenantLifecycleEvent without action
+   */
+  export type CpTenantLifecycleEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpTenantLifecycleEvent
+     */
+    select?: CpTenantLifecycleEventSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Enums
+   */
+
+  export const TransactionIsolationLevel: {
+    ReadUncommitted: 'ReadUncommitted',
+    ReadCommitted: 'ReadCommitted',
+    RepeatableRead: 'RepeatableRead',
+    Serializable: 'Serializable'
+  };
+
+  export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+  export const CpPlatformUserScalarFieldEnum: {
+    id: 'id',
+    email: 'email',
+    name: 'name',
+    role: 'role',
+    passwordHash: 'passwordHash',
+    isActive: 'isActive',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpPlatformUserScalarFieldEnum = (typeof CpPlatformUserScalarFieldEnum)[keyof typeof CpPlatformUserScalarFieldEnum]
+
+
+  export const CpPlanScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    tier: 'tier',
+    billingInterval: 'billingInterval',
+    basePriceMinorUnits: 'basePriceMinorUnits',
+    currency: 'currency',
+    isActive: 'isActive',
+    features: 'features',
+    customTerms: 'customTerms',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpPlanScalarFieldEnum = (typeof CpPlanScalarFieldEnum)[keyof typeof CpPlanScalarFieldEnum]
+
+
+  export const CpSubscriptionScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    planId: 'planId',
+    status: 'status',
+    currentPeriodStart: 'currentPeriodStart',
+    currentPeriodEnd: 'currentPeriodEnd',
+    cancelAtPeriodEnd: 'cancelAtPeriodEnd',
+    trialEndsAt: 'trialEndsAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpSubscriptionScalarFieldEnum = (typeof CpSubscriptionScalarFieldEnum)[keyof typeof CpSubscriptionScalarFieldEnum]
+
+
+  export const CpInvoiceScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    subscriptionId: 'subscriptionId',
+    status: 'status',
+    amountDueMinorUnits: 'amountDueMinorUnits',
+    amountPaidMinorUnits: 'amountPaidMinorUnits',
+    currency: 'currency',
+    periodStart: 'periodStart',
+    periodEnd: 'periodEnd',
+    dueAt: 'dueAt',
+    paidAt: 'paidAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpInvoiceScalarFieldEnum = (typeof CpInvoiceScalarFieldEnum)[keyof typeof CpInvoiceScalarFieldEnum]
+
+
+  export const CpCollectionAttemptScalarFieldEnum: {
+    id: 'id',
+    invoiceId: 'invoiceId',
+    tenantId: 'tenantId',
+    subscriptionId: 'subscriptionId',
+    kind: 'kind',
+    status: 'status',
+    channel: 'channel',
+    provider: 'provider',
+    paymentReference: 'paymentReference',
+    metadata: 'metadata',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpCollectionAttemptScalarFieldEnum = (typeof CpCollectionAttemptScalarFieldEnum)[keyof typeof CpCollectionAttemptScalarFieldEnum]
+
+
+  export const CpInvoiceLineItemScalarFieldEnum: {
+    id: 'id',
+    invoiceId: 'invoiceId',
+    kind: 'kind',
+    description: 'description',
+    quantity: 'quantity',
+    unitAmountMinorUnits: 'unitAmountMinorUnits',
+    amountMinorUnits: 'amountMinorUnits',
+    metadata: 'metadata',
+    createdAt: 'createdAt'
+  };
+
+  export type CpInvoiceLineItemScalarFieldEnum = (typeof CpInvoiceLineItemScalarFieldEnum)[keyof typeof CpInvoiceLineItemScalarFieldEnum]
+
+
+  export const CpPlatformWalletScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    currency: 'currency',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpPlatformWalletScalarFieldEnum = (typeof CpPlatformWalletScalarFieldEnum)[keyof typeof CpPlatformWalletScalarFieldEnum]
+
+
+  export const CpWalletEntryScalarFieldEnum: {
+    id: 'id',
+    walletId: 'walletId',
+    type: 'type',
+    amountMinorUnits: 'amountMinorUnits',
+    currency: 'currency',
+    referenceId: 'referenceId',
+    referenceType: 'referenceType',
+    description: 'description',
+    createdAt: 'createdAt'
+  };
+
+  export type CpWalletEntryScalarFieldEnum = (typeof CpWalletEntryScalarFieldEnum)[keyof typeof CpWalletEntryScalarFieldEnum]
+
+
+  export const CpPaymentAttemptScalarFieldEnum: {
+    id: 'id',
+    provider: 'provider',
+    reference: 'reference',
+    purpose: 'purpose',
+    tenantId: 'tenantId',
+    invoiceId: 'invoiceId',
+    status: 'status',
+    amountMinorUnits: 'amountMinorUnits',
+    currency: 'currency',
+    customerEmail: 'customerEmail',
+    customerName: 'customerName',
+    checkoutUrl: 'checkoutUrl',
+    accessCode: 'accessCode',
+    providerPayload: 'providerPayload',
+    failureReason: 'failureReason',
+    paidAt: 'paidAt',
+    appliedAt: 'appliedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpPaymentAttemptScalarFieldEnum = (typeof CpPaymentAttemptScalarFieldEnum)[keyof typeof CpPaymentAttemptScalarFieldEnum]
+
+
+  export const CpFeatureFlagScalarFieldEnum: {
+    id: 'id',
+    key: 'key',
+    description: 'description',
+    scope: 'scope',
+    value: 'value',
+    isEnabled: 'isEnabled',
+    ownedBy: 'ownedBy',
+    expiresAt: 'expiresAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpFeatureFlagScalarFieldEnum = (typeof CpFeatureFlagScalarFieldEnum)[keyof typeof CpFeatureFlagScalarFieldEnum]
+
+
+  export const CpFeatureFlagOverrideScalarFieldEnum: {
+    id: 'id',
+    flagId: 'flagId',
+    tenantId: 'tenantId',
+    countryCode: 'countryCode',
+    planTier: 'planTier',
+    value: 'value',
+    isEnabled: 'isEnabled',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpFeatureFlagOverrideScalarFieldEnum = (typeof CpFeatureFlagOverrideScalarFieldEnum)[keyof typeof CpFeatureFlagOverrideScalarFieldEnum]
+
+
+  export const CpPlatformSettingScalarFieldEnum: {
+    id: 'id',
+    key: 'key',
+    description: 'description',
+    value: 'value',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpPlatformSettingScalarFieldEnum = (typeof CpPlatformSettingScalarFieldEnum)[keyof typeof CpPlatformSettingScalarFieldEnum]
+
+
+  export const CpUsageEventScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    eventType: 'eventType',
+    quantity: 'quantity',
+    countryCode: 'countryCode',
+    idempotencyKey: 'idempotencyKey',
+    occurredAt: 'occurredAt',
+    recordedAt: 'recordedAt'
+  };
+
+  export type CpUsageEventScalarFieldEnum = (typeof CpUsageEventScalarFieldEnum)[keyof typeof CpUsageEventScalarFieldEnum]
+
+
+  export const CpTenantLifecycleEventScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    fromStatus: 'fromStatus',
+    toStatus: 'toStatus',
+    triggeredBy: 'triggeredBy',
+    actorId: 'actorId',
+    reason: 'reason',
+    metadata: 'metadata',
+    occurredAt: 'occurredAt'
+  };
+
+  export type CpTenantLifecycleEventScalarFieldEnum = (typeof CpTenantLifecycleEventScalarFieldEnum)[keyof typeof CpTenantLifecycleEventScalarFieldEnum]
+
+
+  export const SortOrder: {
+    asc: 'asc',
+    desc: 'desc'
+  };
+
+  export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+  export const QueryMode: {
+    default: 'default',
+    insensitive: 'insensitive'
+  };
+
+  export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+  export const NullsOrder: {
+    first: 'first',
+    last: 'last'
+  };
+
+  export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  /**
+   * Field references 
+   */
+
+
+  /**
+   * Reference to a field of type 'String'
+   */
+  export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
+    
+
+
+  /**
+   * Reference to a field of type 'String[]'
+   */
+  export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Boolean'
+   */
+  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+  /**
+   * Reference to a field of type 'DateTime'
+   */
+  export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+  /**
+   * Reference to a field of type 'DateTime[]'
+   */
+  export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int'
+   */
+  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float'
+   */
+  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float[]'
+   */
+  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+  /**
+   * Deep Input Types
+   */
+
+
+  export type CpPlatformUserWhereInput = {
+    AND?: CpPlatformUserWhereInput | CpPlatformUserWhereInput[]
+    OR?: CpPlatformUserWhereInput[]
+    NOT?: CpPlatformUserWhereInput | CpPlatformUserWhereInput[]
+    id?: StringFilter<"CpPlatformUser"> | string
+    email?: StringFilter<"CpPlatformUser"> | string
+    name?: StringFilter<"CpPlatformUser"> | string
+    role?: StringFilter<"CpPlatformUser"> | string
+    passwordHash?: StringFilter<"CpPlatformUser"> | string
+    isActive?: BoolFilter<"CpPlatformUser"> | boolean
+    createdAt?: DateTimeFilter<"CpPlatformUser"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformUser"> | Date | string
+  }
+
+  export type CpPlatformUserOrderByWithRelationInput = {
+    id?: SortOrder
+    email?: SortOrder
+    name?: SortOrder
+    role?: SortOrder
+    passwordHash?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformUserWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    email?: string
+    AND?: CpPlatformUserWhereInput | CpPlatformUserWhereInput[]
+    OR?: CpPlatformUserWhereInput[]
+    NOT?: CpPlatformUserWhereInput | CpPlatformUserWhereInput[]
+    name?: StringFilter<"CpPlatformUser"> | string
+    role?: StringFilter<"CpPlatformUser"> | string
+    passwordHash?: StringFilter<"CpPlatformUser"> | string
+    isActive?: BoolFilter<"CpPlatformUser"> | boolean
+    createdAt?: DateTimeFilter<"CpPlatformUser"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformUser"> | Date | string
+  }, "id" | "email">
+
+  export type CpPlatformUserOrderByWithAggregationInput = {
+    id?: SortOrder
+    email?: SortOrder
+    name?: SortOrder
+    role?: SortOrder
+    passwordHash?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpPlatformUserCountOrderByAggregateInput
+    _max?: CpPlatformUserMaxOrderByAggregateInput
+    _min?: CpPlatformUserMinOrderByAggregateInput
+  }
+
+  export type CpPlatformUserScalarWhereWithAggregatesInput = {
+    AND?: CpPlatformUserScalarWhereWithAggregatesInput | CpPlatformUserScalarWhereWithAggregatesInput[]
+    OR?: CpPlatformUserScalarWhereWithAggregatesInput[]
+    NOT?: CpPlatformUserScalarWhereWithAggregatesInput | CpPlatformUserScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpPlatformUser"> | string
+    email?: StringWithAggregatesFilter<"CpPlatformUser"> | string
+    name?: StringWithAggregatesFilter<"CpPlatformUser"> | string
+    role?: StringWithAggregatesFilter<"CpPlatformUser"> | string
+    passwordHash?: StringWithAggregatesFilter<"CpPlatformUser"> | string
+    isActive?: BoolWithAggregatesFilter<"CpPlatformUser"> | boolean
+    createdAt?: DateTimeWithAggregatesFilter<"CpPlatformUser"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpPlatformUser"> | Date | string
+  }
+
+  export type CpPlanWhereInput = {
+    AND?: CpPlanWhereInput | CpPlanWhereInput[]
+    OR?: CpPlanWhereInput[]
+    NOT?: CpPlanWhereInput | CpPlanWhereInput[]
+    id?: StringFilter<"CpPlan"> | string
+    name?: StringFilter<"CpPlan"> | string
+    tier?: StringFilter<"CpPlan"> | string
+    billingInterval?: StringFilter<"CpPlan"> | string
+    basePriceMinorUnits?: IntFilter<"CpPlan"> | number
+    currency?: StringFilter<"CpPlan"> | string
+    isActive?: BoolFilter<"CpPlan"> | boolean
+    features?: JsonFilter<"CpPlan">
+    customTerms?: JsonNullableFilter<"CpPlan">
+    createdAt?: DateTimeFilter<"CpPlan"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlan"> | Date | string
+    subscriptions?: CpSubscriptionListRelationFilter
+  }
+
+  export type CpPlanOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    tier?: SortOrder
+    billingInterval?: SortOrder
+    basePriceMinorUnits?: SortOrder
+    currency?: SortOrder
+    isActive?: SortOrder
+    features?: SortOrder
+    customTerms?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    subscriptions?: CpSubscriptionOrderByRelationAggregateInput
+  }
+
+  export type CpPlanWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpPlanWhereInput | CpPlanWhereInput[]
+    OR?: CpPlanWhereInput[]
+    NOT?: CpPlanWhereInput | CpPlanWhereInput[]
+    name?: StringFilter<"CpPlan"> | string
+    tier?: StringFilter<"CpPlan"> | string
+    billingInterval?: StringFilter<"CpPlan"> | string
+    basePriceMinorUnits?: IntFilter<"CpPlan"> | number
+    currency?: StringFilter<"CpPlan"> | string
+    isActive?: BoolFilter<"CpPlan"> | boolean
+    features?: JsonFilter<"CpPlan">
+    customTerms?: JsonNullableFilter<"CpPlan">
+    createdAt?: DateTimeFilter<"CpPlan"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlan"> | Date | string
+    subscriptions?: CpSubscriptionListRelationFilter
+  }, "id">
+
+  export type CpPlanOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    tier?: SortOrder
+    billingInterval?: SortOrder
+    basePriceMinorUnits?: SortOrder
+    currency?: SortOrder
+    isActive?: SortOrder
+    features?: SortOrder
+    customTerms?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpPlanCountOrderByAggregateInput
+    _avg?: CpPlanAvgOrderByAggregateInput
+    _max?: CpPlanMaxOrderByAggregateInput
+    _min?: CpPlanMinOrderByAggregateInput
+    _sum?: CpPlanSumOrderByAggregateInput
+  }
+
+  export type CpPlanScalarWhereWithAggregatesInput = {
+    AND?: CpPlanScalarWhereWithAggregatesInput | CpPlanScalarWhereWithAggregatesInput[]
+    OR?: CpPlanScalarWhereWithAggregatesInput[]
+    NOT?: CpPlanScalarWhereWithAggregatesInput | CpPlanScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpPlan"> | string
+    name?: StringWithAggregatesFilter<"CpPlan"> | string
+    tier?: StringWithAggregatesFilter<"CpPlan"> | string
+    billingInterval?: StringWithAggregatesFilter<"CpPlan"> | string
+    basePriceMinorUnits?: IntWithAggregatesFilter<"CpPlan"> | number
+    currency?: StringWithAggregatesFilter<"CpPlan"> | string
+    isActive?: BoolWithAggregatesFilter<"CpPlan"> | boolean
+    features?: JsonWithAggregatesFilter<"CpPlan">
+    customTerms?: JsonNullableWithAggregatesFilter<"CpPlan">
+    createdAt?: DateTimeWithAggregatesFilter<"CpPlan"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpPlan"> | Date | string
+  }
+
+  export type CpSubscriptionWhereInput = {
+    AND?: CpSubscriptionWhereInput | CpSubscriptionWhereInput[]
+    OR?: CpSubscriptionWhereInput[]
+    NOT?: CpSubscriptionWhereInput | CpSubscriptionWhereInput[]
+    id?: StringFilter<"CpSubscription"> | string
+    tenantId?: StringFilter<"CpSubscription"> | string
+    planId?: StringFilter<"CpSubscription"> | string
+    status?: StringFilter<"CpSubscription"> | string
+    currentPeriodStart?: DateTimeFilter<"CpSubscription"> | Date | string
+    currentPeriodEnd?: DateTimeFilter<"CpSubscription"> | Date | string
+    cancelAtPeriodEnd?: BoolFilter<"CpSubscription"> | boolean
+    trialEndsAt?: DateTimeNullableFilter<"CpSubscription"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpSubscription"> | Date | string
+    updatedAt?: DateTimeFilter<"CpSubscription"> | Date | string
+    plan?: XOR<CpPlanRelationFilter, CpPlanWhereInput>
+    invoices?: CpInvoiceListRelationFilter
+  }
+
+  export type CpSubscriptionOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    planId?: SortOrder
+    status?: SortOrder
+    currentPeriodStart?: SortOrder
+    currentPeriodEnd?: SortOrder
+    cancelAtPeriodEnd?: SortOrder
+    trialEndsAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    plan?: CpPlanOrderByWithRelationInput
+    invoices?: CpInvoiceOrderByRelationAggregateInput
+  }
+
+  export type CpSubscriptionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tenantId?: string
+    AND?: CpSubscriptionWhereInput | CpSubscriptionWhereInput[]
+    OR?: CpSubscriptionWhereInput[]
+    NOT?: CpSubscriptionWhereInput | CpSubscriptionWhereInput[]
+    planId?: StringFilter<"CpSubscription"> | string
+    status?: StringFilter<"CpSubscription"> | string
+    currentPeriodStart?: DateTimeFilter<"CpSubscription"> | Date | string
+    currentPeriodEnd?: DateTimeFilter<"CpSubscription"> | Date | string
+    cancelAtPeriodEnd?: BoolFilter<"CpSubscription"> | boolean
+    trialEndsAt?: DateTimeNullableFilter<"CpSubscription"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpSubscription"> | Date | string
+    updatedAt?: DateTimeFilter<"CpSubscription"> | Date | string
+    plan?: XOR<CpPlanRelationFilter, CpPlanWhereInput>
+    invoices?: CpInvoiceListRelationFilter
+  }, "id" | "tenantId">
+
+  export type CpSubscriptionOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    planId?: SortOrder
+    status?: SortOrder
+    currentPeriodStart?: SortOrder
+    currentPeriodEnd?: SortOrder
+    cancelAtPeriodEnd?: SortOrder
+    trialEndsAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpSubscriptionCountOrderByAggregateInput
+    _max?: CpSubscriptionMaxOrderByAggregateInput
+    _min?: CpSubscriptionMinOrderByAggregateInput
+  }
+
+  export type CpSubscriptionScalarWhereWithAggregatesInput = {
+    AND?: CpSubscriptionScalarWhereWithAggregatesInput | CpSubscriptionScalarWhereWithAggregatesInput[]
+    OR?: CpSubscriptionScalarWhereWithAggregatesInput[]
+    NOT?: CpSubscriptionScalarWhereWithAggregatesInput | CpSubscriptionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpSubscription"> | string
+    tenantId?: StringWithAggregatesFilter<"CpSubscription"> | string
+    planId?: StringWithAggregatesFilter<"CpSubscription"> | string
+    status?: StringWithAggregatesFilter<"CpSubscription"> | string
+    currentPeriodStart?: DateTimeWithAggregatesFilter<"CpSubscription"> | Date | string
+    currentPeriodEnd?: DateTimeWithAggregatesFilter<"CpSubscription"> | Date | string
+    cancelAtPeriodEnd?: BoolWithAggregatesFilter<"CpSubscription"> | boolean
+    trialEndsAt?: DateTimeNullableWithAggregatesFilter<"CpSubscription"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CpSubscription"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpSubscription"> | Date | string
+  }
+
+  export type CpInvoiceWhereInput = {
+    AND?: CpInvoiceWhereInput | CpInvoiceWhereInput[]
+    OR?: CpInvoiceWhereInput[]
+    NOT?: CpInvoiceWhereInput | CpInvoiceWhereInput[]
+    id?: StringFilter<"CpInvoice"> | string
+    tenantId?: StringFilter<"CpInvoice"> | string
+    subscriptionId?: StringFilter<"CpInvoice"> | string
+    status?: StringFilter<"CpInvoice"> | string
+    amountDueMinorUnits?: IntFilter<"CpInvoice"> | number
+    amountPaidMinorUnits?: IntFilter<"CpInvoice"> | number
+    currency?: StringFilter<"CpInvoice"> | string
+    periodStart?: DateTimeFilter<"CpInvoice"> | Date | string
+    periodEnd?: DateTimeFilter<"CpInvoice"> | Date | string
+    dueAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    paidAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpInvoice"> | Date | string
+    updatedAt?: DateTimeFilter<"CpInvoice"> | Date | string
+    subscription?: XOR<CpSubscriptionRelationFilter, CpSubscriptionWhereInput>
+    lineItems?: CpInvoiceLineItemListRelationFilter
+    collectionAttempts?: CpCollectionAttemptListRelationFilter
+  }
+
+  export type CpInvoiceOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    status?: SortOrder
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+    currency?: SortOrder
+    periodStart?: SortOrder
+    periodEnd?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
+    paidAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    subscription?: CpSubscriptionOrderByWithRelationInput
+    lineItems?: CpInvoiceLineItemOrderByRelationAggregateInput
+    collectionAttempts?: CpCollectionAttemptOrderByRelationAggregateInput
+  }
+
+  export type CpInvoiceWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpInvoiceWhereInput | CpInvoiceWhereInput[]
+    OR?: CpInvoiceWhereInput[]
+    NOT?: CpInvoiceWhereInput | CpInvoiceWhereInput[]
+    tenantId?: StringFilter<"CpInvoice"> | string
+    subscriptionId?: StringFilter<"CpInvoice"> | string
+    status?: StringFilter<"CpInvoice"> | string
+    amountDueMinorUnits?: IntFilter<"CpInvoice"> | number
+    amountPaidMinorUnits?: IntFilter<"CpInvoice"> | number
+    currency?: StringFilter<"CpInvoice"> | string
+    periodStart?: DateTimeFilter<"CpInvoice"> | Date | string
+    periodEnd?: DateTimeFilter<"CpInvoice"> | Date | string
+    dueAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    paidAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpInvoice"> | Date | string
+    updatedAt?: DateTimeFilter<"CpInvoice"> | Date | string
+    subscription?: XOR<CpSubscriptionRelationFilter, CpSubscriptionWhereInput>
+    lineItems?: CpInvoiceLineItemListRelationFilter
+    collectionAttempts?: CpCollectionAttemptListRelationFilter
+  }, "id">
+
+  export type CpInvoiceOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    status?: SortOrder
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+    currency?: SortOrder
+    periodStart?: SortOrder
+    periodEnd?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
+    paidAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpInvoiceCountOrderByAggregateInput
+    _avg?: CpInvoiceAvgOrderByAggregateInput
+    _max?: CpInvoiceMaxOrderByAggregateInput
+    _min?: CpInvoiceMinOrderByAggregateInput
+    _sum?: CpInvoiceSumOrderByAggregateInput
+  }
+
+  export type CpInvoiceScalarWhereWithAggregatesInput = {
+    AND?: CpInvoiceScalarWhereWithAggregatesInput | CpInvoiceScalarWhereWithAggregatesInput[]
+    OR?: CpInvoiceScalarWhereWithAggregatesInput[]
+    NOT?: CpInvoiceScalarWhereWithAggregatesInput | CpInvoiceScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpInvoice"> | string
+    tenantId?: StringWithAggregatesFilter<"CpInvoice"> | string
+    subscriptionId?: StringWithAggregatesFilter<"CpInvoice"> | string
+    status?: StringWithAggregatesFilter<"CpInvoice"> | string
+    amountDueMinorUnits?: IntWithAggregatesFilter<"CpInvoice"> | number
+    amountPaidMinorUnits?: IntWithAggregatesFilter<"CpInvoice"> | number
+    currency?: StringWithAggregatesFilter<"CpInvoice"> | string
+    periodStart?: DateTimeWithAggregatesFilter<"CpInvoice"> | Date | string
+    periodEnd?: DateTimeWithAggregatesFilter<"CpInvoice"> | Date | string
+    dueAt?: DateTimeNullableWithAggregatesFilter<"CpInvoice"> | Date | string | null
+    paidAt?: DateTimeNullableWithAggregatesFilter<"CpInvoice"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CpInvoice"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpInvoice"> | Date | string
+  }
+
+  export type CpCollectionAttemptWhereInput = {
+    AND?: CpCollectionAttemptWhereInput | CpCollectionAttemptWhereInput[]
+    OR?: CpCollectionAttemptWhereInput[]
+    NOT?: CpCollectionAttemptWhereInput | CpCollectionAttemptWhereInput[]
+    id?: StringFilter<"CpCollectionAttempt"> | string
+    invoiceId?: StringFilter<"CpCollectionAttempt"> | string
+    tenantId?: StringFilter<"CpCollectionAttempt"> | string
+    subscriptionId?: StringFilter<"CpCollectionAttempt"> | string
+    kind?: StringFilter<"CpCollectionAttempt"> | string
+    status?: StringFilter<"CpCollectionAttempt"> | string
+    channel?: StringFilter<"CpCollectionAttempt"> | string
+    provider?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    paymentReference?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    metadata?: JsonNullableFilter<"CpCollectionAttempt">
+    createdAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+    invoice?: XOR<CpInvoiceRelationFilter, CpInvoiceWhereInput>
+  }
+
+  export type CpCollectionAttemptOrderByWithRelationInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    kind?: SortOrder
+    status?: SortOrder
+    channel?: SortOrder
+    provider?: SortOrderInput | SortOrder
+    paymentReference?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    invoice?: CpInvoiceOrderByWithRelationInput
+  }
+
+  export type CpCollectionAttemptWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpCollectionAttemptWhereInput | CpCollectionAttemptWhereInput[]
+    OR?: CpCollectionAttemptWhereInput[]
+    NOT?: CpCollectionAttemptWhereInput | CpCollectionAttemptWhereInput[]
+    invoiceId?: StringFilter<"CpCollectionAttempt"> | string
+    tenantId?: StringFilter<"CpCollectionAttempt"> | string
+    subscriptionId?: StringFilter<"CpCollectionAttempt"> | string
+    kind?: StringFilter<"CpCollectionAttempt"> | string
+    status?: StringFilter<"CpCollectionAttempt"> | string
+    channel?: StringFilter<"CpCollectionAttempt"> | string
+    provider?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    paymentReference?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    metadata?: JsonNullableFilter<"CpCollectionAttempt">
+    createdAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+    invoice?: XOR<CpInvoiceRelationFilter, CpInvoiceWhereInput>
+  }, "id">
+
+  export type CpCollectionAttemptOrderByWithAggregationInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    kind?: SortOrder
+    status?: SortOrder
+    channel?: SortOrder
+    provider?: SortOrderInput | SortOrder
+    paymentReference?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpCollectionAttemptCountOrderByAggregateInput
+    _max?: CpCollectionAttemptMaxOrderByAggregateInput
+    _min?: CpCollectionAttemptMinOrderByAggregateInput
+  }
+
+  export type CpCollectionAttemptScalarWhereWithAggregatesInput = {
+    AND?: CpCollectionAttemptScalarWhereWithAggregatesInput | CpCollectionAttemptScalarWhereWithAggregatesInput[]
+    OR?: CpCollectionAttemptScalarWhereWithAggregatesInput[]
+    NOT?: CpCollectionAttemptScalarWhereWithAggregatesInput | CpCollectionAttemptScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    invoiceId?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    tenantId?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    subscriptionId?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    kind?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    status?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    channel?: StringWithAggregatesFilter<"CpCollectionAttempt"> | string
+    provider?: StringNullableWithAggregatesFilter<"CpCollectionAttempt"> | string | null
+    paymentReference?: StringNullableWithAggregatesFilter<"CpCollectionAttempt"> | string | null
+    metadata?: JsonNullableWithAggregatesFilter<"CpCollectionAttempt">
+    createdAt?: DateTimeWithAggregatesFilter<"CpCollectionAttempt"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpCollectionAttempt"> | Date | string
+  }
+
+  export type CpInvoiceLineItemWhereInput = {
+    AND?: CpInvoiceLineItemWhereInput | CpInvoiceLineItemWhereInput[]
+    OR?: CpInvoiceLineItemWhereInput[]
+    NOT?: CpInvoiceLineItemWhereInput | CpInvoiceLineItemWhereInput[]
+    id?: StringFilter<"CpInvoiceLineItem"> | string
+    invoiceId?: StringFilter<"CpInvoiceLineItem"> | string
+    kind?: StringFilter<"CpInvoiceLineItem"> | string
+    description?: StringFilter<"CpInvoiceLineItem"> | string
+    quantity?: IntFilter<"CpInvoiceLineItem"> | number
+    unitAmountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    amountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    metadata?: JsonNullableFilter<"CpInvoiceLineItem">
+    createdAt?: DateTimeFilter<"CpInvoiceLineItem"> | Date | string
+    invoice?: XOR<CpInvoiceRelationFilter, CpInvoiceWhereInput>
+  }
+
+  export type CpInvoiceLineItemOrderByWithRelationInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    kind?: SortOrder
+    description?: SortOrder
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    invoice?: CpInvoiceOrderByWithRelationInput
+  }
+
+  export type CpInvoiceLineItemWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpInvoiceLineItemWhereInput | CpInvoiceLineItemWhereInput[]
+    OR?: CpInvoiceLineItemWhereInput[]
+    NOT?: CpInvoiceLineItemWhereInput | CpInvoiceLineItemWhereInput[]
+    invoiceId?: StringFilter<"CpInvoiceLineItem"> | string
+    kind?: StringFilter<"CpInvoiceLineItem"> | string
+    description?: StringFilter<"CpInvoiceLineItem"> | string
+    quantity?: IntFilter<"CpInvoiceLineItem"> | number
+    unitAmountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    amountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    metadata?: JsonNullableFilter<"CpInvoiceLineItem">
+    createdAt?: DateTimeFilter<"CpInvoiceLineItem"> | Date | string
+    invoice?: XOR<CpInvoiceRelationFilter, CpInvoiceWhereInput>
+  }, "id">
+
+  export type CpInvoiceLineItemOrderByWithAggregationInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    kind?: SortOrder
+    description?: SortOrder
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CpInvoiceLineItemCountOrderByAggregateInput
+    _avg?: CpInvoiceLineItemAvgOrderByAggregateInput
+    _max?: CpInvoiceLineItemMaxOrderByAggregateInput
+    _min?: CpInvoiceLineItemMinOrderByAggregateInput
+    _sum?: CpInvoiceLineItemSumOrderByAggregateInput
+  }
+
+  export type CpInvoiceLineItemScalarWhereWithAggregatesInput = {
+    AND?: CpInvoiceLineItemScalarWhereWithAggregatesInput | CpInvoiceLineItemScalarWhereWithAggregatesInput[]
+    OR?: CpInvoiceLineItemScalarWhereWithAggregatesInput[]
+    NOT?: CpInvoiceLineItemScalarWhereWithAggregatesInput | CpInvoiceLineItemScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpInvoiceLineItem"> | string
+    invoiceId?: StringWithAggregatesFilter<"CpInvoiceLineItem"> | string
+    kind?: StringWithAggregatesFilter<"CpInvoiceLineItem"> | string
+    description?: StringWithAggregatesFilter<"CpInvoiceLineItem"> | string
+    quantity?: IntWithAggregatesFilter<"CpInvoiceLineItem"> | number
+    unitAmountMinorUnits?: IntWithAggregatesFilter<"CpInvoiceLineItem"> | number
+    amountMinorUnits?: IntWithAggregatesFilter<"CpInvoiceLineItem"> | number
+    metadata?: JsonNullableWithAggregatesFilter<"CpInvoiceLineItem">
+    createdAt?: DateTimeWithAggregatesFilter<"CpInvoiceLineItem"> | Date | string
+  }
+
+  export type CpPlatformWalletWhereInput = {
+    AND?: CpPlatformWalletWhereInput | CpPlatformWalletWhereInput[]
+    OR?: CpPlatformWalletWhereInput[]
+    NOT?: CpPlatformWalletWhereInput | CpPlatformWalletWhereInput[]
+    id?: StringFilter<"CpPlatformWallet"> | string
+    tenantId?: StringFilter<"CpPlatformWallet"> | string
+    currency?: StringFilter<"CpPlatformWallet"> | string
+    createdAt?: DateTimeFilter<"CpPlatformWallet"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformWallet"> | Date | string
+    entries?: CpWalletEntryListRelationFilter
+  }
+
+  export type CpPlatformWalletOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    entries?: CpWalletEntryOrderByRelationAggregateInput
+  }
+
+  export type CpPlatformWalletWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tenantId?: string
+    AND?: CpPlatformWalletWhereInput | CpPlatformWalletWhereInput[]
+    OR?: CpPlatformWalletWhereInput[]
+    NOT?: CpPlatformWalletWhereInput | CpPlatformWalletWhereInput[]
+    currency?: StringFilter<"CpPlatformWallet"> | string
+    createdAt?: DateTimeFilter<"CpPlatformWallet"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformWallet"> | Date | string
+    entries?: CpWalletEntryListRelationFilter
+  }, "id" | "tenantId">
+
+  export type CpPlatformWalletOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpPlatformWalletCountOrderByAggregateInput
+    _max?: CpPlatformWalletMaxOrderByAggregateInput
+    _min?: CpPlatformWalletMinOrderByAggregateInput
+  }
+
+  export type CpPlatformWalletScalarWhereWithAggregatesInput = {
+    AND?: CpPlatformWalletScalarWhereWithAggregatesInput | CpPlatformWalletScalarWhereWithAggregatesInput[]
+    OR?: CpPlatformWalletScalarWhereWithAggregatesInput[]
+    NOT?: CpPlatformWalletScalarWhereWithAggregatesInput | CpPlatformWalletScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpPlatformWallet"> | string
+    tenantId?: StringWithAggregatesFilter<"CpPlatformWallet"> | string
+    currency?: StringWithAggregatesFilter<"CpPlatformWallet"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"CpPlatformWallet"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpPlatformWallet"> | Date | string
+  }
+
+  export type CpWalletEntryWhereInput = {
+    AND?: CpWalletEntryWhereInput | CpWalletEntryWhereInput[]
+    OR?: CpWalletEntryWhereInput[]
+    NOT?: CpWalletEntryWhereInput | CpWalletEntryWhereInput[]
+    id?: StringFilter<"CpWalletEntry"> | string
+    walletId?: StringFilter<"CpWalletEntry"> | string
+    type?: StringFilter<"CpWalletEntry"> | string
+    amountMinorUnits?: IntFilter<"CpWalletEntry"> | number
+    currency?: StringFilter<"CpWalletEntry"> | string
+    referenceId?: StringNullableFilter<"CpWalletEntry"> | string | null
+    referenceType?: StringNullableFilter<"CpWalletEntry"> | string | null
+    description?: StringNullableFilter<"CpWalletEntry"> | string | null
+    createdAt?: DateTimeFilter<"CpWalletEntry"> | Date | string
+    wallet?: XOR<CpPlatformWalletRelationFilter, CpPlatformWalletWhereInput>
+  }
+
+  export type CpWalletEntryOrderByWithRelationInput = {
+    id?: SortOrder
+    walletId?: SortOrder
+    type?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    referenceId?: SortOrderInput | SortOrder
+    referenceType?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    wallet?: CpPlatformWalletOrderByWithRelationInput
+  }
+
+  export type CpWalletEntryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpWalletEntryWhereInput | CpWalletEntryWhereInput[]
+    OR?: CpWalletEntryWhereInput[]
+    NOT?: CpWalletEntryWhereInput | CpWalletEntryWhereInput[]
+    walletId?: StringFilter<"CpWalletEntry"> | string
+    type?: StringFilter<"CpWalletEntry"> | string
+    amountMinorUnits?: IntFilter<"CpWalletEntry"> | number
+    currency?: StringFilter<"CpWalletEntry"> | string
+    referenceId?: StringNullableFilter<"CpWalletEntry"> | string | null
+    referenceType?: StringNullableFilter<"CpWalletEntry"> | string | null
+    description?: StringNullableFilter<"CpWalletEntry"> | string | null
+    createdAt?: DateTimeFilter<"CpWalletEntry"> | Date | string
+    wallet?: XOR<CpPlatformWalletRelationFilter, CpPlatformWalletWhereInput>
+  }, "id">
+
+  export type CpWalletEntryOrderByWithAggregationInput = {
+    id?: SortOrder
+    walletId?: SortOrder
+    type?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    referenceId?: SortOrderInput | SortOrder
+    referenceType?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CpWalletEntryCountOrderByAggregateInput
+    _avg?: CpWalletEntryAvgOrderByAggregateInput
+    _max?: CpWalletEntryMaxOrderByAggregateInput
+    _min?: CpWalletEntryMinOrderByAggregateInput
+    _sum?: CpWalletEntrySumOrderByAggregateInput
+  }
+
+  export type CpWalletEntryScalarWhereWithAggregatesInput = {
+    AND?: CpWalletEntryScalarWhereWithAggregatesInput | CpWalletEntryScalarWhereWithAggregatesInput[]
+    OR?: CpWalletEntryScalarWhereWithAggregatesInput[]
+    NOT?: CpWalletEntryScalarWhereWithAggregatesInput | CpWalletEntryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpWalletEntry"> | string
+    walletId?: StringWithAggregatesFilter<"CpWalletEntry"> | string
+    type?: StringWithAggregatesFilter<"CpWalletEntry"> | string
+    amountMinorUnits?: IntWithAggregatesFilter<"CpWalletEntry"> | number
+    currency?: StringWithAggregatesFilter<"CpWalletEntry"> | string
+    referenceId?: StringNullableWithAggregatesFilter<"CpWalletEntry"> | string | null
+    referenceType?: StringNullableWithAggregatesFilter<"CpWalletEntry"> | string | null
+    description?: StringNullableWithAggregatesFilter<"CpWalletEntry"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CpWalletEntry"> | Date | string
+  }
+
+  export type CpPaymentAttemptWhereInput = {
+    AND?: CpPaymentAttemptWhereInput | CpPaymentAttemptWhereInput[]
+    OR?: CpPaymentAttemptWhereInput[]
+    NOT?: CpPaymentAttemptWhereInput | CpPaymentAttemptWhereInput[]
+    id?: StringFilter<"CpPaymentAttempt"> | string
+    provider?: StringFilter<"CpPaymentAttempt"> | string
+    reference?: StringFilter<"CpPaymentAttempt"> | string
+    purpose?: StringFilter<"CpPaymentAttempt"> | string
+    tenantId?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    invoiceId?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    status?: StringFilter<"CpPaymentAttempt"> | string
+    amountMinorUnits?: IntFilter<"CpPaymentAttempt"> | number
+    currency?: StringFilter<"CpPaymentAttempt"> | string
+    customerEmail?: StringFilter<"CpPaymentAttempt"> | string
+    customerName?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    checkoutUrl?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    accessCode?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    providerPayload?: JsonNullableFilter<"CpPaymentAttempt">
+    failureReason?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    paidAt?: DateTimeNullableFilter<"CpPaymentAttempt"> | Date | string | null
+    appliedAt?: DateTimeNullableFilter<"CpPaymentAttempt"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpPaymentAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPaymentAttempt"> | Date | string
+  }
+
+  export type CpPaymentAttemptOrderByWithRelationInput = {
+    id?: SortOrder
+    provider?: SortOrder
+    reference?: SortOrder
+    purpose?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    invoiceId?: SortOrderInput | SortOrder
+    status?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    customerEmail?: SortOrder
+    customerName?: SortOrderInput | SortOrder
+    checkoutUrl?: SortOrderInput | SortOrder
+    accessCode?: SortOrderInput | SortOrder
+    providerPayload?: SortOrderInput | SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    paidAt?: SortOrderInput | SortOrder
+    appliedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPaymentAttemptWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    reference?: string
+    AND?: CpPaymentAttemptWhereInput | CpPaymentAttemptWhereInput[]
+    OR?: CpPaymentAttemptWhereInput[]
+    NOT?: CpPaymentAttemptWhereInput | CpPaymentAttemptWhereInput[]
+    provider?: StringFilter<"CpPaymentAttempt"> | string
+    purpose?: StringFilter<"CpPaymentAttempt"> | string
+    tenantId?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    invoiceId?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    status?: StringFilter<"CpPaymentAttempt"> | string
+    amountMinorUnits?: IntFilter<"CpPaymentAttempt"> | number
+    currency?: StringFilter<"CpPaymentAttempt"> | string
+    customerEmail?: StringFilter<"CpPaymentAttempt"> | string
+    customerName?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    checkoutUrl?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    accessCode?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    providerPayload?: JsonNullableFilter<"CpPaymentAttempt">
+    failureReason?: StringNullableFilter<"CpPaymentAttempt"> | string | null
+    paidAt?: DateTimeNullableFilter<"CpPaymentAttempt"> | Date | string | null
+    appliedAt?: DateTimeNullableFilter<"CpPaymentAttempt"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpPaymentAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPaymentAttempt"> | Date | string
+  }, "id" | "reference">
+
+  export type CpPaymentAttemptOrderByWithAggregationInput = {
+    id?: SortOrder
+    provider?: SortOrder
+    reference?: SortOrder
+    purpose?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    invoiceId?: SortOrderInput | SortOrder
+    status?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    customerEmail?: SortOrder
+    customerName?: SortOrderInput | SortOrder
+    checkoutUrl?: SortOrderInput | SortOrder
+    accessCode?: SortOrderInput | SortOrder
+    providerPayload?: SortOrderInput | SortOrder
+    failureReason?: SortOrderInput | SortOrder
+    paidAt?: SortOrderInput | SortOrder
+    appliedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpPaymentAttemptCountOrderByAggregateInput
+    _avg?: CpPaymentAttemptAvgOrderByAggregateInput
+    _max?: CpPaymentAttemptMaxOrderByAggregateInput
+    _min?: CpPaymentAttemptMinOrderByAggregateInput
+    _sum?: CpPaymentAttemptSumOrderByAggregateInput
+  }
+
+  export type CpPaymentAttemptScalarWhereWithAggregatesInput = {
+    AND?: CpPaymentAttemptScalarWhereWithAggregatesInput | CpPaymentAttemptScalarWhereWithAggregatesInput[]
+    OR?: CpPaymentAttemptScalarWhereWithAggregatesInput[]
+    NOT?: CpPaymentAttemptScalarWhereWithAggregatesInput | CpPaymentAttemptScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    provider?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    reference?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    purpose?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    invoiceId?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    status?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    amountMinorUnits?: IntWithAggregatesFilter<"CpPaymentAttempt"> | number
+    currency?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    customerEmail?: StringWithAggregatesFilter<"CpPaymentAttempt"> | string
+    customerName?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    checkoutUrl?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    accessCode?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    providerPayload?: JsonNullableWithAggregatesFilter<"CpPaymentAttempt">
+    failureReason?: StringNullableWithAggregatesFilter<"CpPaymentAttempt"> | string | null
+    paidAt?: DateTimeNullableWithAggregatesFilter<"CpPaymentAttempt"> | Date | string | null
+    appliedAt?: DateTimeNullableWithAggregatesFilter<"CpPaymentAttempt"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CpPaymentAttempt"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpPaymentAttempt"> | Date | string
+  }
+
+  export type CpFeatureFlagWhereInput = {
+    AND?: CpFeatureFlagWhereInput | CpFeatureFlagWhereInput[]
+    OR?: CpFeatureFlagWhereInput[]
+    NOT?: CpFeatureFlagWhereInput | CpFeatureFlagWhereInput[]
+    id?: StringFilter<"CpFeatureFlag"> | string
+    key?: StringFilter<"CpFeatureFlag"> | string
+    description?: StringFilter<"CpFeatureFlag"> | string
+    scope?: StringFilter<"CpFeatureFlag"> | string
+    value?: JsonFilter<"CpFeatureFlag">
+    isEnabled?: BoolFilter<"CpFeatureFlag"> | boolean
+    ownedBy?: StringNullableFilter<"CpFeatureFlag"> | string | null
+    expiresAt?: DateTimeNullableFilter<"CpFeatureFlag"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpFeatureFlag"> | Date | string
+    updatedAt?: DateTimeFilter<"CpFeatureFlag"> | Date | string
+    overrides?: CpFeatureFlagOverrideListRelationFilter
+  }
+
+  export type CpFeatureFlagOrderByWithRelationInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    ownedBy?: SortOrderInput | SortOrder
+    expiresAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    overrides?: CpFeatureFlagOverrideOrderByRelationAggregateInput
+  }
+
+  export type CpFeatureFlagWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    key?: string
+    AND?: CpFeatureFlagWhereInput | CpFeatureFlagWhereInput[]
+    OR?: CpFeatureFlagWhereInput[]
+    NOT?: CpFeatureFlagWhereInput | CpFeatureFlagWhereInput[]
+    description?: StringFilter<"CpFeatureFlag"> | string
+    scope?: StringFilter<"CpFeatureFlag"> | string
+    value?: JsonFilter<"CpFeatureFlag">
+    isEnabled?: BoolFilter<"CpFeatureFlag"> | boolean
+    ownedBy?: StringNullableFilter<"CpFeatureFlag"> | string | null
+    expiresAt?: DateTimeNullableFilter<"CpFeatureFlag"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpFeatureFlag"> | Date | string
+    updatedAt?: DateTimeFilter<"CpFeatureFlag"> | Date | string
+    overrides?: CpFeatureFlagOverrideListRelationFilter
+  }, "id" | "key">
+
+  export type CpFeatureFlagOrderByWithAggregationInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    ownedBy?: SortOrderInput | SortOrder
+    expiresAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpFeatureFlagCountOrderByAggregateInput
+    _max?: CpFeatureFlagMaxOrderByAggregateInput
+    _min?: CpFeatureFlagMinOrderByAggregateInput
+  }
+
+  export type CpFeatureFlagScalarWhereWithAggregatesInput = {
+    AND?: CpFeatureFlagScalarWhereWithAggregatesInput | CpFeatureFlagScalarWhereWithAggregatesInput[]
+    OR?: CpFeatureFlagScalarWhereWithAggregatesInput[]
+    NOT?: CpFeatureFlagScalarWhereWithAggregatesInput | CpFeatureFlagScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpFeatureFlag"> | string
+    key?: StringWithAggregatesFilter<"CpFeatureFlag"> | string
+    description?: StringWithAggregatesFilter<"CpFeatureFlag"> | string
+    scope?: StringWithAggregatesFilter<"CpFeatureFlag"> | string
+    value?: JsonWithAggregatesFilter<"CpFeatureFlag">
+    isEnabled?: BoolWithAggregatesFilter<"CpFeatureFlag"> | boolean
+    ownedBy?: StringNullableWithAggregatesFilter<"CpFeatureFlag"> | string | null
+    expiresAt?: DateTimeNullableWithAggregatesFilter<"CpFeatureFlag"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CpFeatureFlag"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpFeatureFlag"> | Date | string
+  }
+
+  export type CpFeatureFlagOverrideWhereInput = {
+    AND?: CpFeatureFlagOverrideWhereInput | CpFeatureFlagOverrideWhereInput[]
+    OR?: CpFeatureFlagOverrideWhereInput[]
+    NOT?: CpFeatureFlagOverrideWhereInput | CpFeatureFlagOverrideWhereInput[]
+    id?: StringFilter<"CpFeatureFlagOverride"> | string
+    flagId?: StringFilter<"CpFeatureFlagOverride"> | string
+    tenantId?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    countryCode?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    planTier?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    value?: JsonFilter<"CpFeatureFlagOverride">
+    isEnabled?: BoolFilter<"CpFeatureFlagOverride"> | boolean
+    createdAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+    updatedAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+    flag?: XOR<CpFeatureFlagRelationFilter, CpFeatureFlagWhereInput>
+  }
+
+  export type CpFeatureFlagOverrideOrderByWithRelationInput = {
+    id?: SortOrder
+    flagId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    countryCode?: SortOrderInput | SortOrder
+    planTier?: SortOrderInput | SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    flag?: CpFeatureFlagOrderByWithRelationInput
+  }
+
+  export type CpFeatureFlagOverrideWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpFeatureFlagOverrideWhereInput | CpFeatureFlagOverrideWhereInput[]
+    OR?: CpFeatureFlagOverrideWhereInput[]
+    NOT?: CpFeatureFlagOverrideWhereInput | CpFeatureFlagOverrideWhereInput[]
+    flagId?: StringFilter<"CpFeatureFlagOverride"> | string
+    tenantId?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    countryCode?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    planTier?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    value?: JsonFilter<"CpFeatureFlagOverride">
+    isEnabled?: BoolFilter<"CpFeatureFlagOverride"> | boolean
+    createdAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+    updatedAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+    flag?: XOR<CpFeatureFlagRelationFilter, CpFeatureFlagWhereInput>
+  }, "id">
+
+  export type CpFeatureFlagOverrideOrderByWithAggregationInput = {
+    id?: SortOrder
+    flagId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    countryCode?: SortOrderInput | SortOrder
+    planTier?: SortOrderInput | SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpFeatureFlagOverrideCountOrderByAggregateInput
+    _max?: CpFeatureFlagOverrideMaxOrderByAggregateInput
+    _min?: CpFeatureFlagOverrideMinOrderByAggregateInput
+  }
+
+  export type CpFeatureFlagOverrideScalarWhereWithAggregatesInput = {
+    AND?: CpFeatureFlagOverrideScalarWhereWithAggregatesInput | CpFeatureFlagOverrideScalarWhereWithAggregatesInput[]
+    OR?: CpFeatureFlagOverrideScalarWhereWithAggregatesInput[]
+    NOT?: CpFeatureFlagOverrideScalarWhereWithAggregatesInput | CpFeatureFlagOverrideScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpFeatureFlagOverride"> | string
+    flagId?: StringWithAggregatesFilter<"CpFeatureFlagOverride"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpFeatureFlagOverride"> | string | null
+    countryCode?: StringNullableWithAggregatesFilter<"CpFeatureFlagOverride"> | string | null
+    planTier?: StringNullableWithAggregatesFilter<"CpFeatureFlagOverride"> | string | null
+    value?: JsonWithAggregatesFilter<"CpFeatureFlagOverride">
+    isEnabled?: BoolWithAggregatesFilter<"CpFeatureFlagOverride"> | boolean
+    createdAt?: DateTimeWithAggregatesFilter<"CpFeatureFlagOverride"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpFeatureFlagOverride"> | Date | string
+  }
+
+  export type CpPlatformSettingWhereInput = {
+    AND?: CpPlatformSettingWhereInput | CpPlatformSettingWhereInput[]
+    OR?: CpPlatformSettingWhereInput[]
+    NOT?: CpPlatformSettingWhereInput | CpPlatformSettingWhereInput[]
+    id?: StringFilter<"CpPlatformSetting"> | string
+    key?: StringFilter<"CpPlatformSetting"> | string
+    description?: StringNullableFilter<"CpPlatformSetting"> | string | null
+    value?: JsonFilter<"CpPlatformSetting">
+    createdAt?: DateTimeFilter<"CpPlatformSetting"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformSetting"> | Date | string
+  }
+
+  export type CpPlatformSettingOrderByWithRelationInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrderInput | SortOrder
+    value?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformSettingWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    key?: string
+    AND?: CpPlatformSettingWhereInput | CpPlatformSettingWhereInput[]
+    OR?: CpPlatformSettingWhereInput[]
+    NOT?: CpPlatformSettingWhereInput | CpPlatformSettingWhereInput[]
+    description?: StringNullableFilter<"CpPlatformSetting"> | string | null
+    value?: JsonFilter<"CpPlatformSetting">
+    createdAt?: DateTimeFilter<"CpPlatformSetting"> | Date | string
+    updatedAt?: DateTimeFilter<"CpPlatformSetting"> | Date | string
+  }, "id" | "key">
+
+  export type CpPlatformSettingOrderByWithAggregationInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrderInput | SortOrder
+    value?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpPlatformSettingCountOrderByAggregateInput
+    _max?: CpPlatformSettingMaxOrderByAggregateInput
+    _min?: CpPlatformSettingMinOrderByAggregateInput
+  }
+
+  export type CpPlatformSettingScalarWhereWithAggregatesInput = {
+    AND?: CpPlatformSettingScalarWhereWithAggregatesInput | CpPlatformSettingScalarWhereWithAggregatesInput[]
+    OR?: CpPlatformSettingScalarWhereWithAggregatesInput[]
+    NOT?: CpPlatformSettingScalarWhereWithAggregatesInput | CpPlatformSettingScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpPlatformSetting"> | string
+    key?: StringWithAggregatesFilter<"CpPlatformSetting"> | string
+    description?: StringNullableWithAggregatesFilter<"CpPlatformSetting"> | string | null
+    value?: JsonWithAggregatesFilter<"CpPlatformSetting">
+    createdAt?: DateTimeWithAggregatesFilter<"CpPlatformSetting"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpPlatformSetting"> | Date | string
+  }
+
+  export type CpUsageEventWhereInput = {
+    AND?: CpUsageEventWhereInput | CpUsageEventWhereInput[]
+    OR?: CpUsageEventWhereInput[]
+    NOT?: CpUsageEventWhereInput | CpUsageEventWhereInput[]
+    id?: StringFilter<"CpUsageEvent"> | string
+    tenantId?: StringFilter<"CpUsageEvent"> | string
+    eventType?: StringFilter<"CpUsageEvent"> | string
+    quantity?: IntFilter<"CpUsageEvent"> | number
+    countryCode?: StringNullableFilter<"CpUsageEvent"> | string | null
+    idempotencyKey?: StringFilter<"CpUsageEvent"> | string
+    occurredAt?: DateTimeFilter<"CpUsageEvent"> | Date | string
+    recordedAt?: DateTimeFilter<"CpUsageEvent"> | Date | string
+  }
+
+  export type CpUsageEventOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    eventType?: SortOrder
+    quantity?: SortOrder
+    countryCode?: SortOrderInput | SortOrder
+    idempotencyKey?: SortOrder
+    occurredAt?: SortOrder
+    recordedAt?: SortOrder
+  }
+
+  export type CpUsageEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    idempotencyKey?: string
+    AND?: CpUsageEventWhereInput | CpUsageEventWhereInput[]
+    OR?: CpUsageEventWhereInput[]
+    NOT?: CpUsageEventWhereInput | CpUsageEventWhereInput[]
+    tenantId?: StringFilter<"CpUsageEvent"> | string
+    eventType?: StringFilter<"CpUsageEvent"> | string
+    quantity?: IntFilter<"CpUsageEvent"> | number
+    countryCode?: StringNullableFilter<"CpUsageEvent"> | string | null
+    occurredAt?: DateTimeFilter<"CpUsageEvent"> | Date | string
+    recordedAt?: DateTimeFilter<"CpUsageEvent"> | Date | string
+  }, "id" | "idempotencyKey">
+
+  export type CpUsageEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    eventType?: SortOrder
+    quantity?: SortOrder
+    countryCode?: SortOrderInput | SortOrder
+    idempotencyKey?: SortOrder
+    occurredAt?: SortOrder
+    recordedAt?: SortOrder
+    _count?: CpUsageEventCountOrderByAggregateInput
+    _avg?: CpUsageEventAvgOrderByAggregateInput
+    _max?: CpUsageEventMaxOrderByAggregateInput
+    _min?: CpUsageEventMinOrderByAggregateInput
+    _sum?: CpUsageEventSumOrderByAggregateInput
+  }
+
+  export type CpUsageEventScalarWhereWithAggregatesInput = {
+    AND?: CpUsageEventScalarWhereWithAggregatesInput | CpUsageEventScalarWhereWithAggregatesInput[]
+    OR?: CpUsageEventScalarWhereWithAggregatesInput[]
+    NOT?: CpUsageEventScalarWhereWithAggregatesInput | CpUsageEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpUsageEvent"> | string
+    tenantId?: StringWithAggregatesFilter<"CpUsageEvent"> | string
+    eventType?: StringWithAggregatesFilter<"CpUsageEvent"> | string
+    quantity?: IntWithAggregatesFilter<"CpUsageEvent"> | number
+    countryCode?: StringNullableWithAggregatesFilter<"CpUsageEvent"> | string | null
+    idempotencyKey?: StringWithAggregatesFilter<"CpUsageEvent"> | string
+    occurredAt?: DateTimeWithAggregatesFilter<"CpUsageEvent"> | Date | string
+    recordedAt?: DateTimeWithAggregatesFilter<"CpUsageEvent"> | Date | string
+  }
+
+  export type CpTenantLifecycleEventWhereInput = {
+    AND?: CpTenantLifecycleEventWhereInput | CpTenantLifecycleEventWhereInput[]
+    OR?: CpTenantLifecycleEventWhereInput[]
+    NOT?: CpTenantLifecycleEventWhereInput | CpTenantLifecycleEventWhereInput[]
+    id?: StringFilter<"CpTenantLifecycleEvent"> | string
+    tenantId?: StringFilter<"CpTenantLifecycleEvent"> | string
+    fromStatus?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    toStatus?: StringFilter<"CpTenantLifecycleEvent"> | string
+    triggeredBy?: StringFilter<"CpTenantLifecycleEvent"> | string
+    actorId?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    reason?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    metadata?: JsonNullableFilter<"CpTenantLifecycleEvent">
+    occurredAt?: DateTimeFilter<"CpTenantLifecycleEvent"> | Date | string
+  }
+
+  export type CpTenantLifecycleEventOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    fromStatus?: SortOrderInput | SortOrder
+    toStatus?: SortOrder
+    triggeredBy?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    occurredAt?: SortOrder
+  }
+
+  export type CpTenantLifecycleEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpTenantLifecycleEventWhereInput | CpTenantLifecycleEventWhereInput[]
+    OR?: CpTenantLifecycleEventWhereInput[]
+    NOT?: CpTenantLifecycleEventWhereInput | CpTenantLifecycleEventWhereInput[]
+    tenantId?: StringFilter<"CpTenantLifecycleEvent"> | string
+    fromStatus?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    toStatus?: StringFilter<"CpTenantLifecycleEvent"> | string
+    triggeredBy?: StringFilter<"CpTenantLifecycleEvent"> | string
+    actorId?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    reason?: StringNullableFilter<"CpTenantLifecycleEvent"> | string | null
+    metadata?: JsonNullableFilter<"CpTenantLifecycleEvent">
+    occurredAt?: DateTimeFilter<"CpTenantLifecycleEvent"> | Date | string
+  }, "id">
+
+  export type CpTenantLifecycleEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    fromStatus?: SortOrderInput | SortOrder
+    toStatus?: SortOrder
+    triggeredBy?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    occurredAt?: SortOrder
+    _count?: CpTenantLifecycleEventCountOrderByAggregateInput
+    _max?: CpTenantLifecycleEventMaxOrderByAggregateInput
+    _min?: CpTenantLifecycleEventMinOrderByAggregateInput
+  }
+
+  export type CpTenantLifecycleEventScalarWhereWithAggregatesInput = {
+    AND?: CpTenantLifecycleEventScalarWhereWithAggregatesInput | CpTenantLifecycleEventScalarWhereWithAggregatesInput[]
+    OR?: CpTenantLifecycleEventScalarWhereWithAggregatesInput[]
+    NOT?: CpTenantLifecycleEventScalarWhereWithAggregatesInput | CpTenantLifecycleEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpTenantLifecycleEvent"> | string
+    tenantId?: StringWithAggregatesFilter<"CpTenantLifecycleEvent"> | string
+    fromStatus?: StringNullableWithAggregatesFilter<"CpTenantLifecycleEvent"> | string | null
+    toStatus?: StringWithAggregatesFilter<"CpTenantLifecycleEvent"> | string
+    triggeredBy?: StringWithAggregatesFilter<"CpTenantLifecycleEvent"> | string
+    actorId?: StringNullableWithAggregatesFilter<"CpTenantLifecycleEvent"> | string | null
+    reason?: StringNullableWithAggregatesFilter<"CpTenantLifecycleEvent"> | string | null
+    metadata?: JsonNullableWithAggregatesFilter<"CpTenantLifecycleEvent">
+    occurredAt?: DateTimeWithAggregatesFilter<"CpTenantLifecycleEvent"> | Date | string
+  }
+
+  export type CpPlatformUserCreateInput = {
+    id?: string
+    email: string
+    name: string
+    role: string
+    passwordHash: string
+    isActive?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformUserUncheckedCreateInput = {
+    id?: string
+    email: string
+    name: string
+    role: string
+    passwordHash: string
+    isActive?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformUserUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformUserUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformUserCreateManyInput = {
+    id?: string
+    email: string
+    name: string
+    role: string
+    passwordHash: string
+    isActive?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformUserUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformUserUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlanCreateInput = {
+    id?: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive?: boolean
+    features: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subscriptions?: CpSubscriptionCreateNestedManyWithoutPlanInput
+  }
+
+  export type CpPlanUncheckedCreateInput = {
+    id?: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive?: boolean
+    features: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subscriptions?: CpSubscriptionUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type CpPlanUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subscriptions?: CpSubscriptionUpdateManyWithoutPlanNestedInput
+  }
+
+  export type CpPlanUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subscriptions?: CpSubscriptionUncheckedUpdateManyWithoutPlanNestedInput
+  }
+
+  export type CpPlanCreateManyInput = {
+    id?: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive?: boolean
+    features: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlanUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlanUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpSubscriptionCreateInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    plan: CpPlanCreateNestedOneWithoutSubscriptionsInput
+    invoices?: CpInvoiceCreateNestedManyWithoutSubscriptionInput
+  }
+
+  export type CpSubscriptionUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    planId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    invoices?: CpInvoiceUncheckedCreateNestedManyWithoutSubscriptionInput
+  }
+
+  export type CpSubscriptionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: CpPlanUpdateOneRequiredWithoutSubscriptionsNestedInput
+    invoices?: CpInvoiceUpdateManyWithoutSubscriptionNestedInput
+  }
+
+  export type CpSubscriptionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invoices?: CpInvoiceUncheckedUpdateManyWithoutSubscriptionNestedInput
+  }
+
+  export type CpSubscriptionCreateManyInput = {
+    id?: string
+    tenantId: string
+    planId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpSubscriptionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpSubscriptionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceCreateInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subscription: CpSubscriptionCreateNestedOneWithoutInvoicesInput
+    lineItems?: CpInvoiceLineItemCreateNestedManyWithoutInvoiceInput
+    collectionAttempts?: CpCollectionAttemptCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lineItems?: CpInvoiceLineItemUncheckedCreateNestedManyWithoutInvoiceInput
+    collectionAttempts?: CpCollectionAttemptUncheckedCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subscription?: CpSubscriptionUpdateOneRequiredWithoutInvoicesNestedInput
+    lineItems?: CpInvoiceLineItemUpdateManyWithoutInvoiceNestedInput
+    collectionAttempts?: CpCollectionAttemptUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lineItems?: CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceNestedInput
+    collectionAttempts?: CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceCreateManyInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpInvoiceUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptCreateInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    invoice: CpInvoiceCreateNestedOneWithoutCollectionAttemptsInput
+  }
+
+  export type CpCollectionAttemptUncheckedCreateInput = {
+    id?: string
+    invoiceId: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpCollectionAttemptUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invoice?: CpInvoiceUpdateOneRequiredWithoutCollectionAttemptsNestedInput
+  }
+
+  export type CpCollectionAttemptUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    invoiceId?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptCreateManyInput = {
+    id?: string
+    invoiceId: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpCollectionAttemptUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    invoiceId?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemCreateInput = {
+    id?: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    invoice: CpInvoiceCreateNestedOneWithoutLineItemsInput
+  }
+
+  export type CpInvoiceLineItemUncheckedCreateInput = {
+    id?: string
+    invoiceId: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpInvoiceLineItemUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invoice?: CpInvoiceUpdateOneRequiredWithoutLineItemsNestedInput
+  }
+
+  export type CpInvoiceLineItemUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    invoiceId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemCreateManyInput = {
+    id?: string
+    invoiceId: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpInvoiceLineItemUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    invoiceId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformWalletCreateInput = {
+    id?: string
+    tenantId: string
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    entries?: CpWalletEntryCreateNestedManyWithoutWalletInput
+  }
+
+  export type CpPlatformWalletUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    entries?: CpWalletEntryUncheckedCreateNestedManyWithoutWalletInput
+  }
+
+  export type CpPlatformWalletUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    entries?: CpWalletEntryUpdateManyWithoutWalletNestedInput
+  }
+
+  export type CpPlatformWalletUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    entries?: CpWalletEntryUncheckedUpdateManyWithoutWalletNestedInput
+  }
+
+  export type CpPlatformWalletCreateManyInput = {
+    id?: string
+    tenantId: string
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformWalletUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformWalletUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryCreateInput = {
+    id?: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+    wallet: CpPlatformWalletCreateNestedOneWithoutEntriesInput
+  }
+
+  export type CpWalletEntryUncheckedCreateInput = {
+    id?: string
+    walletId: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CpWalletEntryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    wallet?: CpPlatformWalletUpdateOneRequiredWithoutEntriesNestedInput
+  }
+
+  export type CpWalletEntryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    walletId?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryCreateManyInput = {
+    id?: string
+    walletId: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CpWalletEntryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    walletId?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPaymentAttemptCreateInput = {
+    id?: string
+    provider: string
+    reference: string
+    purpose: string
+    tenantId?: string | null
+    invoiceId?: string | null
+    status?: string
+    amountMinorUnits: number
+    currency: string
+    customerEmail: string
+    customerName?: string | null
+    checkoutUrl?: string | null
+    accessCode?: string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: string | null
+    paidAt?: Date | string | null
+    appliedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPaymentAttemptUncheckedCreateInput = {
+    id?: string
+    provider: string
+    reference: string
+    purpose: string
+    tenantId?: string | null
+    invoiceId?: string | null
+    status?: string
+    amountMinorUnits: number
+    currency: string
+    customerEmail: string
+    customerName?: string | null
+    checkoutUrl?: string | null
+    accessCode?: string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: string | null
+    paidAt?: Date | string | null
+    appliedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPaymentAttemptUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    reference?: StringFieldUpdateOperationsInput | string
+    purpose?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    customerEmail?: StringFieldUpdateOperationsInput | string
+    customerName?: NullableStringFieldUpdateOperationsInput | string | null
+    checkoutUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accessCode?: NullableStringFieldUpdateOperationsInput | string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    appliedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPaymentAttemptUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    reference?: StringFieldUpdateOperationsInput | string
+    purpose?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    customerEmail?: StringFieldUpdateOperationsInput | string
+    customerName?: NullableStringFieldUpdateOperationsInput | string | null
+    checkoutUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accessCode?: NullableStringFieldUpdateOperationsInput | string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    appliedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPaymentAttemptCreateManyInput = {
+    id?: string
+    provider: string
+    reference: string
+    purpose: string
+    tenantId?: string | null
+    invoiceId?: string | null
+    status?: string
+    amountMinorUnits: number
+    currency: string
+    customerEmail: string
+    customerName?: string | null
+    checkoutUrl?: string | null
+    accessCode?: string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: string | null
+    paidAt?: Date | string | null
+    appliedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPaymentAttemptUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    reference?: StringFieldUpdateOperationsInput | string
+    purpose?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    customerEmail?: StringFieldUpdateOperationsInput | string
+    customerName?: NullableStringFieldUpdateOperationsInput | string | null
+    checkoutUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accessCode?: NullableStringFieldUpdateOperationsInput | string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    appliedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPaymentAttemptUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    reference?: StringFieldUpdateOperationsInput | string
+    purpose?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    customerEmail?: StringFieldUpdateOperationsInput | string
+    customerName?: NullableStringFieldUpdateOperationsInput | string | null
+    checkoutUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    accessCode?: NullableStringFieldUpdateOperationsInput | string | null
+    providerPayload?: NullableJsonNullValueInput | InputJsonValue
+    failureReason?: NullableStringFieldUpdateOperationsInput | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    appliedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagCreateInput = {
+    id?: string
+    key: string
+    description: string
+    scope?: string
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled?: boolean
+    ownedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    overrides?: CpFeatureFlagOverrideCreateNestedManyWithoutFlagInput
+  }
+
+  export type CpFeatureFlagUncheckedCreateInput = {
+    id?: string
+    key: string
+    description: string
+    scope?: string
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled?: boolean
+    ownedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    overrides?: CpFeatureFlagOverrideUncheckedCreateNestedManyWithoutFlagInput
+  }
+
+  export type CpFeatureFlagUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    overrides?: CpFeatureFlagOverrideUpdateManyWithoutFlagNestedInput
+  }
+
+  export type CpFeatureFlagUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    overrides?: CpFeatureFlagOverrideUncheckedUpdateManyWithoutFlagNestedInput
+  }
+
+  export type CpFeatureFlagCreateManyInput = {
+    id?: string
+    key: string
+    description: string
+    scope?: string
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled?: boolean
+    ownedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideCreateInput = {
+    id?: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    flag: CpFeatureFlagCreateNestedOneWithoutOverridesInput
+  }
+
+  export type CpFeatureFlagOverrideUncheckedCreateInput = {
+    id?: string
+    flagId: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagOverrideUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    flag?: CpFeatureFlagUpdateOneRequiredWithoutOverridesNestedInput
+  }
+
+  export type CpFeatureFlagOverrideUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    flagId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideCreateManyInput = {
+    id?: string
+    flagId: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagOverrideUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    flagId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformSettingCreateInput = {
+    id?: string
+    key: string
+    description?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformSettingUncheckedCreateInput = {
+    id?: string
+    key: string
+    description?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformSettingUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformSettingUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformSettingCreateManyInput = {
+    id?: string
+    key: string
+    description?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformSettingUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformSettingUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpUsageEventCreateInput = {
+    id?: string
+    tenantId: string
+    eventType: string
+    quantity?: number
+    countryCode?: string | null
+    idempotencyKey: string
+    occurredAt: Date | string
+    recordedAt?: Date | string
+  }
+
+  export type CpUsageEventUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    eventType: string
+    quantity?: number
+    countryCode?: string | null
+    idempotencyKey: string
+    occurredAt: Date | string
+    recordedAt?: Date | string
+  }
+
+  export type CpUsageEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    idempotencyKey?: StringFieldUpdateOperationsInput | string
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpUsageEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    idempotencyKey?: StringFieldUpdateOperationsInput | string
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpUsageEventCreateManyInput = {
+    id?: string
+    tenantId: string
+    eventType: string
+    quantity?: number
+    countryCode?: string | null
+    idempotencyKey: string
+    occurredAt: Date | string
+    recordedAt?: Date | string
+  }
+
+  export type CpUsageEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    idempotencyKey?: StringFieldUpdateOperationsInput | string
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpUsageEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    idempotencyKey?: StringFieldUpdateOperationsInput | string
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpTenantLifecycleEventCreateInput = {
+    id?: string
+    tenantId: string
+    fromStatus?: string | null
+    toStatus: string
+    triggeredBy: string
+    actorId?: string | null
+    reason?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: Date | string
+  }
+
+  export type CpTenantLifecycleEventUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    fromStatus?: string | null
+    toStatus: string
+    triggeredBy: string
+    actorId?: string | null
+    reason?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: Date | string
+  }
+
+  export type CpTenantLifecycleEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fromStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    toStatus?: StringFieldUpdateOperationsInput | string
+    triggeredBy?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpTenantLifecycleEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fromStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    toStatus?: StringFieldUpdateOperationsInput | string
+    triggeredBy?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpTenantLifecycleEventCreateManyInput = {
+    id?: string
+    tenantId: string
+    fromStatus?: string | null
+    toStatus: string
+    triggeredBy: string
+    actorId?: string | null
+    reason?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: Date | string
+  }
+
+  export type CpTenantLifecycleEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fromStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    toStatus?: StringFieldUpdateOperationsInput | string
+    triggeredBy?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpTenantLifecycleEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fromStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    toStatus?: StringFieldUpdateOperationsInput | string
+    triggeredBy?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    occurredAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type StringFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringFilter<$PrismaModel> | string
+  }
+
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
+  export type DateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
+
+  export type CpPlatformUserCountOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    name?: SortOrder
+    role?: SortOrder
+    passwordHash?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformUserMaxOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    name?: SortOrder
+    role?: SortOrder
+    passwordHash?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformUserMinOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    name?: SortOrder
+    role?: SortOrder
+    passwordHash?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type StringWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedStringFilter<$PrismaModel>
+    _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
+  export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+  export type JsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+  export type JsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type CpSubscriptionListRelationFilter = {
+    every?: CpSubscriptionWhereInput
+    some?: CpSubscriptionWhereInput
+    none?: CpSubscriptionWhereInput
+  }
+
+  export type SortOrderInput = {
+    sort: SortOrder
+    nulls?: NullsOrder
+  }
+
+  export type CpSubscriptionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpPlanCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    tier?: SortOrder
+    billingInterval?: SortOrder
+    basePriceMinorUnits?: SortOrder
+    currency?: SortOrder
+    isActive?: SortOrder
+    features?: SortOrder
+    customTerms?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlanAvgOrderByAggregateInput = {
+    basePriceMinorUnits?: SortOrder
+  }
+
+  export type CpPlanMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    tier?: SortOrder
+    billingInterval?: SortOrder
+    basePriceMinorUnits?: SortOrder
+    currency?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlanMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    tier?: SortOrder
+    billingInterval?: SortOrder
+    basePriceMinorUnits?: SortOrder
+    currency?: SortOrder
+    isActive?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlanSumOrderByAggregateInput = {
+    basePriceMinorUnits?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
+  export type DateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type CpPlanRelationFilter = {
+    is?: CpPlanWhereInput
+    isNot?: CpPlanWhereInput
+  }
+
+  export type CpInvoiceListRelationFilter = {
+    every?: CpInvoiceWhereInput
+    some?: CpInvoiceWhereInput
+    none?: CpInvoiceWhereInput
+  }
+
+  export type CpInvoiceOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpSubscriptionCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    planId?: SortOrder
+    status?: SortOrder
+    currentPeriodStart?: SortOrder
+    currentPeriodEnd?: SortOrder
+    cancelAtPeriodEnd?: SortOrder
+    trialEndsAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpSubscriptionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    planId?: SortOrder
+    status?: SortOrder
+    currentPeriodStart?: SortOrder
+    currentPeriodEnd?: SortOrder
+    cancelAtPeriodEnd?: SortOrder
+    trialEndsAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpSubscriptionMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    planId?: SortOrder
+    status?: SortOrder
+    currentPeriodStart?: SortOrder
+    currentPeriodEnd?: SortOrder
+    cancelAtPeriodEnd?: SortOrder
+    trialEndsAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type CpSubscriptionRelationFilter = {
+    is?: CpSubscriptionWhereInput
+    isNot?: CpSubscriptionWhereInput
+  }
+
+  export type CpInvoiceLineItemListRelationFilter = {
+    every?: CpInvoiceLineItemWhereInput
+    some?: CpInvoiceLineItemWhereInput
+    none?: CpInvoiceLineItemWhereInput
+  }
+
+  export type CpCollectionAttemptListRelationFilter = {
+    every?: CpCollectionAttemptWhereInput
+    some?: CpCollectionAttemptWhereInput
+    none?: CpCollectionAttemptWhereInput
+  }
+
+  export type CpInvoiceLineItemOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpCollectionAttemptOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpInvoiceCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    status?: SortOrder
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+    currency?: SortOrder
+    periodStart?: SortOrder
+    periodEnd?: SortOrder
+    dueAt?: SortOrder
+    paidAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpInvoiceAvgOrderByAggregateInput = {
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+  }
+
+  export type CpInvoiceMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    status?: SortOrder
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+    currency?: SortOrder
+    periodStart?: SortOrder
+    periodEnd?: SortOrder
+    dueAt?: SortOrder
+    paidAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpInvoiceMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    status?: SortOrder
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+    currency?: SortOrder
+    periodStart?: SortOrder
+    periodEnd?: SortOrder
+    dueAt?: SortOrder
+    paidAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpInvoiceSumOrderByAggregateInput = {
+    amountDueMinorUnits?: SortOrder
+    amountPaidMinorUnits?: SortOrder
+  }
+
+  export type StringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
+  export type CpInvoiceRelationFilter = {
+    is?: CpInvoiceWhereInput
+    isNot?: CpInvoiceWhereInput
+  }
+
+  export type CpCollectionAttemptCountOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    kind?: SortOrder
+    status?: SortOrder
+    channel?: SortOrder
+    provider?: SortOrder
+    paymentReference?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpCollectionAttemptMaxOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    kind?: SortOrder
+    status?: SortOrder
+    channel?: SortOrder
+    provider?: SortOrder
+    paymentReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpCollectionAttemptMinOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    tenantId?: SortOrder
+    subscriptionId?: SortOrder
+    kind?: SortOrder
+    status?: SortOrder
+    channel?: SortOrder
+    provider?: SortOrder
+    paymentReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
+  export type CpInvoiceLineItemCountOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    kind?: SortOrder
+    description?: SortOrder
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpInvoiceLineItemAvgOrderByAggregateInput = {
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpInvoiceLineItemMaxOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    kind?: SortOrder
+    description?: SortOrder
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpInvoiceLineItemMinOrderByAggregateInput = {
+    id?: SortOrder
+    invoiceId?: SortOrder
+    kind?: SortOrder
+    description?: SortOrder
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpInvoiceLineItemSumOrderByAggregateInput = {
+    quantity?: SortOrder
+    unitAmountMinorUnits?: SortOrder
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpWalletEntryListRelationFilter = {
+    every?: CpWalletEntryWhereInput
+    some?: CpWalletEntryWhereInput
+    none?: CpWalletEntryWhereInput
+  }
+
+  export type CpWalletEntryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpPlatformWalletCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformWalletMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformWalletMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformWalletRelationFilter = {
+    is?: CpPlatformWalletWhereInput
+    isNot?: CpPlatformWalletWhereInput
+  }
+
+  export type CpWalletEntryCountOrderByAggregateInput = {
+    id?: SortOrder
+    walletId?: SortOrder
+    type?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    referenceId?: SortOrder
+    referenceType?: SortOrder
+    description?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpWalletEntryAvgOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpWalletEntryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    walletId?: SortOrder
+    type?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    referenceId?: SortOrder
+    referenceType?: SortOrder
+    description?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpWalletEntryMinOrderByAggregateInput = {
+    id?: SortOrder
+    walletId?: SortOrder
+    type?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    referenceId?: SortOrder
+    referenceType?: SortOrder
+    description?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpWalletEntrySumOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpPaymentAttemptCountOrderByAggregateInput = {
+    id?: SortOrder
+    provider?: SortOrder
+    reference?: SortOrder
+    purpose?: SortOrder
+    tenantId?: SortOrder
+    invoiceId?: SortOrder
+    status?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    customerEmail?: SortOrder
+    customerName?: SortOrder
+    checkoutUrl?: SortOrder
+    accessCode?: SortOrder
+    providerPayload?: SortOrder
+    failureReason?: SortOrder
+    paidAt?: SortOrder
+    appliedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPaymentAttemptAvgOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpPaymentAttemptMaxOrderByAggregateInput = {
+    id?: SortOrder
+    provider?: SortOrder
+    reference?: SortOrder
+    purpose?: SortOrder
+    tenantId?: SortOrder
+    invoiceId?: SortOrder
+    status?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    customerEmail?: SortOrder
+    customerName?: SortOrder
+    checkoutUrl?: SortOrder
+    accessCode?: SortOrder
+    failureReason?: SortOrder
+    paidAt?: SortOrder
+    appliedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPaymentAttemptMinOrderByAggregateInput = {
+    id?: SortOrder
+    provider?: SortOrder
+    reference?: SortOrder
+    purpose?: SortOrder
+    tenantId?: SortOrder
+    invoiceId?: SortOrder
+    status?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    customerEmail?: SortOrder
+    customerName?: SortOrder
+    checkoutUrl?: SortOrder
+    accessCode?: SortOrder
+    failureReason?: SortOrder
+    paidAt?: SortOrder
+    appliedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPaymentAttemptSumOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpFeatureFlagOverrideListRelationFilter = {
+    every?: CpFeatureFlagOverrideWhereInput
+    some?: CpFeatureFlagOverrideWhereInput
+    none?: CpFeatureFlagOverrideWhereInput
+  }
+
+  export type CpFeatureFlagOverrideOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpFeatureFlagCountOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    ownedBy?: SortOrder
+    expiresAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpFeatureFlagMaxOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    isEnabled?: SortOrder
+    ownedBy?: SortOrder
+    expiresAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpFeatureFlagMinOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    isEnabled?: SortOrder
+    ownedBy?: SortOrder
+    expiresAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpFeatureFlagRelationFilter = {
+    is?: CpFeatureFlagWhereInput
+    isNot?: CpFeatureFlagWhereInput
+  }
+
+  export type CpFeatureFlagOverrideCountOrderByAggregateInput = {
+    id?: SortOrder
+    flagId?: SortOrder
+    tenantId?: SortOrder
+    countryCode?: SortOrder
+    planTier?: SortOrder
+    value?: SortOrder
+    isEnabled?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpFeatureFlagOverrideMaxOrderByAggregateInput = {
+    id?: SortOrder
+    flagId?: SortOrder
+    tenantId?: SortOrder
+    countryCode?: SortOrder
+    planTier?: SortOrder
+    isEnabled?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpFeatureFlagOverrideMinOrderByAggregateInput = {
+    id?: SortOrder
+    flagId?: SortOrder
+    tenantId?: SortOrder
+    countryCode?: SortOrder
+    planTier?: SortOrder
+    isEnabled?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformSettingCountOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    value?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformSettingMaxOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpPlatformSettingMinOrderByAggregateInput = {
+    id?: SortOrder
+    key?: SortOrder
+    description?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpUsageEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    eventType?: SortOrder
+    quantity?: SortOrder
+    countryCode?: SortOrder
+    idempotencyKey?: SortOrder
+    occurredAt?: SortOrder
+    recordedAt?: SortOrder
+  }
+
+  export type CpUsageEventAvgOrderByAggregateInput = {
+    quantity?: SortOrder
+  }
+
+  export type CpUsageEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    eventType?: SortOrder
+    quantity?: SortOrder
+    countryCode?: SortOrder
+    idempotencyKey?: SortOrder
+    occurredAt?: SortOrder
+    recordedAt?: SortOrder
+  }
+
+  export type CpUsageEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    eventType?: SortOrder
+    quantity?: SortOrder
+    countryCode?: SortOrder
+    idempotencyKey?: SortOrder
+    occurredAt?: SortOrder
+    recordedAt?: SortOrder
+  }
+
+  export type CpUsageEventSumOrderByAggregateInput = {
+    quantity?: SortOrder
+  }
+
+  export type CpTenantLifecycleEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    fromStatus?: SortOrder
+    toStatus?: SortOrder
+    triggeredBy?: SortOrder
+    actorId?: SortOrder
+    reason?: SortOrder
+    metadata?: SortOrder
+    occurredAt?: SortOrder
+  }
+
+  export type CpTenantLifecycleEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    fromStatus?: SortOrder
+    toStatus?: SortOrder
+    triggeredBy?: SortOrder
+    actorId?: SortOrder
+    reason?: SortOrder
+    occurredAt?: SortOrder
+  }
+
+  export type CpTenantLifecycleEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    fromStatus?: SortOrder
+    toStatus?: SortOrder
+    triggeredBy?: SortOrder
+    actorId?: SortOrder
+    reason?: SortOrder
+    occurredAt?: SortOrder
+  }
+
+  export type StringFieldUpdateOperationsInput = {
+    set?: string
+  }
+
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
+  }
+
+  export type DateTimeFieldUpdateOperationsInput = {
+    set?: Date | string
+  }
+
+  export type CpSubscriptionCreateNestedManyWithoutPlanInput = {
+    create?: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput> | CpSubscriptionCreateWithoutPlanInput[] | CpSubscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutPlanInput | CpSubscriptionCreateOrConnectWithoutPlanInput[]
+    createMany?: CpSubscriptionCreateManyPlanInputEnvelope
+    connect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+  }
+
+  export type CpSubscriptionUncheckedCreateNestedManyWithoutPlanInput = {
+    create?: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput> | CpSubscriptionCreateWithoutPlanInput[] | CpSubscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutPlanInput | CpSubscriptionCreateOrConnectWithoutPlanInput[]
+    createMany?: CpSubscriptionCreateManyPlanInputEnvelope
+    connect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type CpSubscriptionUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput> | CpSubscriptionCreateWithoutPlanInput[] | CpSubscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutPlanInput | CpSubscriptionCreateOrConnectWithoutPlanInput[]
+    upsert?: CpSubscriptionUpsertWithWhereUniqueWithoutPlanInput | CpSubscriptionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: CpSubscriptionCreateManyPlanInputEnvelope
+    set?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    disconnect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    delete?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    connect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    update?: CpSubscriptionUpdateWithWhereUniqueWithoutPlanInput | CpSubscriptionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: CpSubscriptionUpdateManyWithWhereWithoutPlanInput | CpSubscriptionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: CpSubscriptionScalarWhereInput | CpSubscriptionScalarWhereInput[]
+  }
+
+  export type CpSubscriptionUncheckedUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput> | CpSubscriptionCreateWithoutPlanInput[] | CpSubscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutPlanInput | CpSubscriptionCreateOrConnectWithoutPlanInput[]
+    upsert?: CpSubscriptionUpsertWithWhereUniqueWithoutPlanInput | CpSubscriptionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: CpSubscriptionCreateManyPlanInputEnvelope
+    set?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    disconnect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    delete?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    connect?: CpSubscriptionWhereUniqueInput | CpSubscriptionWhereUniqueInput[]
+    update?: CpSubscriptionUpdateWithWhereUniqueWithoutPlanInput | CpSubscriptionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: CpSubscriptionUpdateManyWithWhereWithoutPlanInput | CpSubscriptionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: CpSubscriptionScalarWhereInput | CpSubscriptionScalarWhereInput[]
+  }
+
+  export type CpPlanCreateNestedOneWithoutSubscriptionsInput = {
+    create?: XOR<CpPlanCreateWithoutSubscriptionsInput, CpPlanUncheckedCreateWithoutSubscriptionsInput>
+    connectOrCreate?: CpPlanCreateOrConnectWithoutSubscriptionsInput
+    connect?: CpPlanWhereUniqueInput
+  }
+
+  export type CpInvoiceCreateNestedManyWithoutSubscriptionInput = {
+    create?: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput> | CpInvoiceCreateWithoutSubscriptionInput[] | CpInvoiceUncheckedCreateWithoutSubscriptionInput[]
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutSubscriptionInput | CpInvoiceCreateOrConnectWithoutSubscriptionInput[]
+    createMany?: CpInvoiceCreateManySubscriptionInputEnvelope
+    connect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+  }
+
+  export type CpInvoiceUncheckedCreateNestedManyWithoutSubscriptionInput = {
+    create?: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput> | CpInvoiceCreateWithoutSubscriptionInput[] | CpInvoiceUncheckedCreateWithoutSubscriptionInput[]
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutSubscriptionInput | CpInvoiceCreateOrConnectWithoutSubscriptionInput[]
+    createMany?: CpInvoiceCreateManySubscriptionInputEnvelope
+    connect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+  }
+
+  export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null
+  }
+
+  export type CpPlanUpdateOneRequiredWithoutSubscriptionsNestedInput = {
+    create?: XOR<CpPlanCreateWithoutSubscriptionsInput, CpPlanUncheckedCreateWithoutSubscriptionsInput>
+    connectOrCreate?: CpPlanCreateOrConnectWithoutSubscriptionsInput
+    upsert?: CpPlanUpsertWithoutSubscriptionsInput
+    connect?: CpPlanWhereUniqueInput
+    update?: XOR<XOR<CpPlanUpdateToOneWithWhereWithoutSubscriptionsInput, CpPlanUpdateWithoutSubscriptionsInput>, CpPlanUncheckedUpdateWithoutSubscriptionsInput>
+  }
+
+  export type CpInvoiceUpdateManyWithoutSubscriptionNestedInput = {
+    create?: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput> | CpInvoiceCreateWithoutSubscriptionInput[] | CpInvoiceUncheckedCreateWithoutSubscriptionInput[]
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutSubscriptionInput | CpInvoiceCreateOrConnectWithoutSubscriptionInput[]
+    upsert?: CpInvoiceUpsertWithWhereUniqueWithoutSubscriptionInput | CpInvoiceUpsertWithWhereUniqueWithoutSubscriptionInput[]
+    createMany?: CpInvoiceCreateManySubscriptionInputEnvelope
+    set?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    disconnect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    delete?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    connect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    update?: CpInvoiceUpdateWithWhereUniqueWithoutSubscriptionInput | CpInvoiceUpdateWithWhereUniqueWithoutSubscriptionInput[]
+    updateMany?: CpInvoiceUpdateManyWithWhereWithoutSubscriptionInput | CpInvoiceUpdateManyWithWhereWithoutSubscriptionInput[]
+    deleteMany?: CpInvoiceScalarWhereInput | CpInvoiceScalarWhereInput[]
+  }
+
+  export type CpInvoiceUncheckedUpdateManyWithoutSubscriptionNestedInput = {
+    create?: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput> | CpInvoiceCreateWithoutSubscriptionInput[] | CpInvoiceUncheckedCreateWithoutSubscriptionInput[]
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutSubscriptionInput | CpInvoiceCreateOrConnectWithoutSubscriptionInput[]
+    upsert?: CpInvoiceUpsertWithWhereUniqueWithoutSubscriptionInput | CpInvoiceUpsertWithWhereUniqueWithoutSubscriptionInput[]
+    createMany?: CpInvoiceCreateManySubscriptionInputEnvelope
+    set?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    disconnect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    delete?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    connect?: CpInvoiceWhereUniqueInput | CpInvoiceWhereUniqueInput[]
+    update?: CpInvoiceUpdateWithWhereUniqueWithoutSubscriptionInput | CpInvoiceUpdateWithWhereUniqueWithoutSubscriptionInput[]
+    updateMany?: CpInvoiceUpdateManyWithWhereWithoutSubscriptionInput | CpInvoiceUpdateManyWithWhereWithoutSubscriptionInput[]
+    deleteMany?: CpInvoiceScalarWhereInput | CpInvoiceScalarWhereInput[]
+  }
+
+  export type CpSubscriptionCreateNestedOneWithoutInvoicesInput = {
+    create?: XOR<CpSubscriptionCreateWithoutInvoicesInput, CpSubscriptionUncheckedCreateWithoutInvoicesInput>
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutInvoicesInput
+    connect?: CpSubscriptionWhereUniqueInput
+  }
+
+  export type CpInvoiceLineItemCreateNestedManyWithoutInvoiceInput = {
+    create?: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput> | CpInvoiceLineItemCreateWithoutInvoiceInput[] | CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput | CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput[]
+    createMany?: CpInvoiceLineItemCreateManyInvoiceInputEnvelope
+    connect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+  }
+
+  export type CpCollectionAttemptCreateNestedManyWithoutInvoiceInput = {
+    create?: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput> | CpCollectionAttemptCreateWithoutInvoiceInput[] | CpCollectionAttemptUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpCollectionAttemptCreateOrConnectWithoutInvoiceInput | CpCollectionAttemptCreateOrConnectWithoutInvoiceInput[]
+    createMany?: CpCollectionAttemptCreateManyInvoiceInputEnvelope
+    connect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+  }
+
+  export type CpInvoiceLineItemUncheckedCreateNestedManyWithoutInvoiceInput = {
+    create?: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput> | CpInvoiceLineItemCreateWithoutInvoiceInput[] | CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput | CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput[]
+    createMany?: CpInvoiceLineItemCreateManyInvoiceInputEnvelope
+    connect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+  }
+
+  export type CpCollectionAttemptUncheckedCreateNestedManyWithoutInvoiceInput = {
+    create?: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput> | CpCollectionAttemptCreateWithoutInvoiceInput[] | CpCollectionAttemptUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpCollectionAttemptCreateOrConnectWithoutInvoiceInput | CpCollectionAttemptCreateOrConnectWithoutInvoiceInput[]
+    createMany?: CpCollectionAttemptCreateManyInvoiceInputEnvelope
+    connect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+  }
+
+  export type CpSubscriptionUpdateOneRequiredWithoutInvoicesNestedInput = {
+    create?: XOR<CpSubscriptionCreateWithoutInvoicesInput, CpSubscriptionUncheckedCreateWithoutInvoicesInput>
+    connectOrCreate?: CpSubscriptionCreateOrConnectWithoutInvoicesInput
+    upsert?: CpSubscriptionUpsertWithoutInvoicesInput
+    connect?: CpSubscriptionWhereUniqueInput
+    update?: XOR<XOR<CpSubscriptionUpdateToOneWithWhereWithoutInvoicesInput, CpSubscriptionUpdateWithoutInvoicesInput>, CpSubscriptionUncheckedUpdateWithoutInvoicesInput>
+  }
+
+  export type CpInvoiceLineItemUpdateManyWithoutInvoiceNestedInput = {
+    create?: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput> | CpInvoiceLineItemCreateWithoutInvoiceInput[] | CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput | CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput[]
+    upsert?: CpInvoiceLineItemUpsertWithWhereUniqueWithoutInvoiceInput | CpInvoiceLineItemUpsertWithWhereUniqueWithoutInvoiceInput[]
+    createMany?: CpInvoiceLineItemCreateManyInvoiceInputEnvelope
+    set?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    disconnect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    delete?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    connect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    update?: CpInvoiceLineItemUpdateWithWhereUniqueWithoutInvoiceInput | CpInvoiceLineItemUpdateWithWhereUniqueWithoutInvoiceInput[]
+    updateMany?: CpInvoiceLineItemUpdateManyWithWhereWithoutInvoiceInput | CpInvoiceLineItemUpdateManyWithWhereWithoutInvoiceInput[]
+    deleteMany?: CpInvoiceLineItemScalarWhereInput | CpInvoiceLineItemScalarWhereInput[]
+  }
+
+  export type CpCollectionAttemptUpdateManyWithoutInvoiceNestedInput = {
+    create?: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput> | CpCollectionAttemptCreateWithoutInvoiceInput[] | CpCollectionAttemptUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpCollectionAttemptCreateOrConnectWithoutInvoiceInput | CpCollectionAttemptCreateOrConnectWithoutInvoiceInput[]
+    upsert?: CpCollectionAttemptUpsertWithWhereUniqueWithoutInvoiceInput | CpCollectionAttemptUpsertWithWhereUniqueWithoutInvoiceInput[]
+    createMany?: CpCollectionAttemptCreateManyInvoiceInputEnvelope
+    set?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    disconnect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    delete?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    connect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    update?: CpCollectionAttemptUpdateWithWhereUniqueWithoutInvoiceInput | CpCollectionAttemptUpdateWithWhereUniqueWithoutInvoiceInput[]
+    updateMany?: CpCollectionAttemptUpdateManyWithWhereWithoutInvoiceInput | CpCollectionAttemptUpdateManyWithWhereWithoutInvoiceInput[]
+    deleteMany?: CpCollectionAttemptScalarWhereInput | CpCollectionAttemptScalarWhereInput[]
+  }
+
+  export type CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceNestedInput = {
+    create?: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput> | CpInvoiceLineItemCreateWithoutInvoiceInput[] | CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput | CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput[]
+    upsert?: CpInvoiceLineItemUpsertWithWhereUniqueWithoutInvoiceInput | CpInvoiceLineItemUpsertWithWhereUniqueWithoutInvoiceInput[]
+    createMany?: CpInvoiceLineItemCreateManyInvoiceInputEnvelope
+    set?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    disconnect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    delete?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    connect?: CpInvoiceLineItemWhereUniqueInput | CpInvoiceLineItemWhereUniqueInput[]
+    update?: CpInvoiceLineItemUpdateWithWhereUniqueWithoutInvoiceInput | CpInvoiceLineItemUpdateWithWhereUniqueWithoutInvoiceInput[]
+    updateMany?: CpInvoiceLineItemUpdateManyWithWhereWithoutInvoiceInput | CpInvoiceLineItemUpdateManyWithWhereWithoutInvoiceInput[]
+    deleteMany?: CpInvoiceLineItemScalarWhereInput | CpInvoiceLineItemScalarWhereInput[]
+  }
+
+  export type CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceNestedInput = {
+    create?: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput> | CpCollectionAttemptCreateWithoutInvoiceInput[] | CpCollectionAttemptUncheckedCreateWithoutInvoiceInput[]
+    connectOrCreate?: CpCollectionAttemptCreateOrConnectWithoutInvoiceInput | CpCollectionAttemptCreateOrConnectWithoutInvoiceInput[]
+    upsert?: CpCollectionAttemptUpsertWithWhereUniqueWithoutInvoiceInput | CpCollectionAttemptUpsertWithWhereUniqueWithoutInvoiceInput[]
+    createMany?: CpCollectionAttemptCreateManyInvoiceInputEnvelope
+    set?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    disconnect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    delete?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    connect?: CpCollectionAttemptWhereUniqueInput | CpCollectionAttemptWhereUniqueInput[]
+    update?: CpCollectionAttemptUpdateWithWhereUniqueWithoutInvoiceInput | CpCollectionAttemptUpdateWithWhereUniqueWithoutInvoiceInput[]
+    updateMany?: CpCollectionAttemptUpdateManyWithWhereWithoutInvoiceInput | CpCollectionAttemptUpdateManyWithWhereWithoutInvoiceInput[]
+    deleteMany?: CpCollectionAttemptScalarWhereInput | CpCollectionAttemptScalarWhereInput[]
+  }
+
+  export type CpInvoiceCreateNestedOneWithoutCollectionAttemptsInput = {
+    create?: XOR<CpInvoiceCreateWithoutCollectionAttemptsInput, CpInvoiceUncheckedCreateWithoutCollectionAttemptsInput>
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutCollectionAttemptsInput
+    connect?: CpInvoiceWhereUniqueInput
+  }
+
+  export type NullableStringFieldUpdateOperationsInput = {
+    set?: string | null
+  }
+
+  export type CpInvoiceUpdateOneRequiredWithoutCollectionAttemptsNestedInput = {
+    create?: XOR<CpInvoiceCreateWithoutCollectionAttemptsInput, CpInvoiceUncheckedCreateWithoutCollectionAttemptsInput>
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutCollectionAttemptsInput
+    upsert?: CpInvoiceUpsertWithoutCollectionAttemptsInput
+    connect?: CpInvoiceWhereUniqueInput
+    update?: XOR<XOR<CpInvoiceUpdateToOneWithWhereWithoutCollectionAttemptsInput, CpInvoiceUpdateWithoutCollectionAttemptsInput>, CpInvoiceUncheckedUpdateWithoutCollectionAttemptsInput>
+  }
+
+  export type CpInvoiceCreateNestedOneWithoutLineItemsInput = {
+    create?: XOR<CpInvoiceCreateWithoutLineItemsInput, CpInvoiceUncheckedCreateWithoutLineItemsInput>
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutLineItemsInput
+    connect?: CpInvoiceWhereUniqueInput
+  }
+
+  export type CpInvoiceUpdateOneRequiredWithoutLineItemsNestedInput = {
+    create?: XOR<CpInvoiceCreateWithoutLineItemsInput, CpInvoiceUncheckedCreateWithoutLineItemsInput>
+    connectOrCreate?: CpInvoiceCreateOrConnectWithoutLineItemsInput
+    upsert?: CpInvoiceUpsertWithoutLineItemsInput
+    connect?: CpInvoiceWhereUniqueInput
+    update?: XOR<XOR<CpInvoiceUpdateToOneWithWhereWithoutLineItemsInput, CpInvoiceUpdateWithoutLineItemsInput>, CpInvoiceUncheckedUpdateWithoutLineItemsInput>
+  }
+
+  export type CpWalletEntryCreateNestedManyWithoutWalletInput = {
+    create?: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput> | CpWalletEntryCreateWithoutWalletInput[] | CpWalletEntryUncheckedCreateWithoutWalletInput[]
+    connectOrCreate?: CpWalletEntryCreateOrConnectWithoutWalletInput | CpWalletEntryCreateOrConnectWithoutWalletInput[]
+    createMany?: CpWalletEntryCreateManyWalletInputEnvelope
+    connect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+  }
+
+  export type CpWalletEntryUncheckedCreateNestedManyWithoutWalletInput = {
+    create?: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput> | CpWalletEntryCreateWithoutWalletInput[] | CpWalletEntryUncheckedCreateWithoutWalletInput[]
+    connectOrCreate?: CpWalletEntryCreateOrConnectWithoutWalletInput | CpWalletEntryCreateOrConnectWithoutWalletInput[]
+    createMany?: CpWalletEntryCreateManyWalletInputEnvelope
+    connect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+  }
+
+  export type CpWalletEntryUpdateManyWithoutWalletNestedInput = {
+    create?: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput> | CpWalletEntryCreateWithoutWalletInput[] | CpWalletEntryUncheckedCreateWithoutWalletInput[]
+    connectOrCreate?: CpWalletEntryCreateOrConnectWithoutWalletInput | CpWalletEntryCreateOrConnectWithoutWalletInput[]
+    upsert?: CpWalletEntryUpsertWithWhereUniqueWithoutWalletInput | CpWalletEntryUpsertWithWhereUniqueWithoutWalletInput[]
+    createMany?: CpWalletEntryCreateManyWalletInputEnvelope
+    set?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    disconnect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    delete?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    connect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    update?: CpWalletEntryUpdateWithWhereUniqueWithoutWalletInput | CpWalletEntryUpdateWithWhereUniqueWithoutWalletInput[]
+    updateMany?: CpWalletEntryUpdateManyWithWhereWithoutWalletInput | CpWalletEntryUpdateManyWithWhereWithoutWalletInput[]
+    deleteMany?: CpWalletEntryScalarWhereInput | CpWalletEntryScalarWhereInput[]
+  }
+
+  export type CpWalletEntryUncheckedUpdateManyWithoutWalletNestedInput = {
+    create?: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput> | CpWalletEntryCreateWithoutWalletInput[] | CpWalletEntryUncheckedCreateWithoutWalletInput[]
+    connectOrCreate?: CpWalletEntryCreateOrConnectWithoutWalletInput | CpWalletEntryCreateOrConnectWithoutWalletInput[]
+    upsert?: CpWalletEntryUpsertWithWhereUniqueWithoutWalletInput | CpWalletEntryUpsertWithWhereUniqueWithoutWalletInput[]
+    createMany?: CpWalletEntryCreateManyWalletInputEnvelope
+    set?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    disconnect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    delete?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    connect?: CpWalletEntryWhereUniqueInput | CpWalletEntryWhereUniqueInput[]
+    update?: CpWalletEntryUpdateWithWhereUniqueWithoutWalletInput | CpWalletEntryUpdateWithWhereUniqueWithoutWalletInput[]
+    updateMany?: CpWalletEntryUpdateManyWithWhereWithoutWalletInput | CpWalletEntryUpdateManyWithWhereWithoutWalletInput[]
+    deleteMany?: CpWalletEntryScalarWhereInput | CpWalletEntryScalarWhereInput[]
+  }
+
+  export type CpPlatformWalletCreateNestedOneWithoutEntriesInput = {
+    create?: XOR<CpPlatformWalletCreateWithoutEntriesInput, CpPlatformWalletUncheckedCreateWithoutEntriesInput>
+    connectOrCreate?: CpPlatformWalletCreateOrConnectWithoutEntriesInput
+    connect?: CpPlatformWalletWhereUniqueInput
+  }
+
+  export type CpPlatformWalletUpdateOneRequiredWithoutEntriesNestedInput = {
+    create?: XOR<CpPlatformWalletCreateWithoutEntriesInput, CpPlatformWalletUncheckedCreateWithoutEntriesInput>
+    connectOrCreate?: CpPlatformWalletCreateOrConnectWithoutEntriesInput
+    upsert?: CpPlatformWalletUpsertWithoutEntriesInput
+    connect?: CpPlatformWalletWhereUniqueInput
+    update?: XOR<XOR<CpPlatformWalletUpdateToOneWithWhereWithoutEntriesInput, CpPlatformWalletUpdateWithoutEntriesInput>, CpPlatformWalletUncheckedUpdateWithoutEntriesInput>
+  }
+
+  export type CpFeatureFlagOverrideCreateNestedManyWithoutFlagInput = {
+    create?: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput> | CpFeatureFlagOverrideCreateWithoutFlagInput[] | CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput[]
+    connectOrCreate?: CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput | CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput[]
+    createMany?: CpFeatureFlagOverrideCreateManyFlagInputEnvelope
+    connect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+  }
+
+  export type CpFeatureFlagOverrideUncheckedCreateNestedManyWithoutFlagInput = {
+    create?: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput> | CpFeatureFlagOverrideCreateWithoutFlagInput[] | CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput[]
+    connectOrCreate?: CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput | CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput[]
+    createMany?: CpFeatureFlagOverrideCreateManyFlagInputEnvelope
+    connect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+  }
+
+  export type CpFeatureFlagOverrideUpdateManyWithoutFlagNestedInput = {
+    create?: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput> | CpFeatureFlagOverrideCreateWithoutFlagInput[] | CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput[]
+    connectOrCreate?: CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput | CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput[]
+    upsert?: CpFeatureFlagOverrideUpsertWithWhereUniqueWithoutFlagInput | CpFeatureFlagOverrideUpsertWithWhereUniqueWithoutFlagInput[]
+    createMany?: CpFeatureFlagOverrideCreateManyFlagInputEnvelope
+    set?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    disconnect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    delete?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    connect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    update?: CpFeatureFlagOverrideUpdateWithWhereUniqueWithoutFlagInput | CpFeatureFlagOverrideUpdateWithWhereUniqueWithoutFlagInput[]
+    updateMany?: CpFeatureFlagOverrideUpdateManyWithWhereWithoutFlagInput | CpFeatureFlagOverrideUpdateManyWithWhereWithoutFlagInput[]
+    deleteMany?: CpFeatureFlagOverrideScalarWhereInput | CpFeatureFlagOverrideScalarWhereInput[]
+  }
+
+  export type CpFeatureFlagOverrideUncheckedUpdateManyWithoutFlagNestedInput = {
+    create?: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput> | CpFeatureFlagOverrideCreateWithoutFlagInput[] | CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput[]
+    connectOrCreate?: CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput | CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput[]
+    upsert?: CpFeatureFlagOverrideUpsertWithWhereUniqueWithoutFlagInput | CpFeatureFlagOverrideUpsertWithWhereUniqueWithoutFlagInput[]
+    createMany?: CpFeatureFlagOverrideCreateManyFlagInputEnvelope
+    set?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    disconnect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    delete?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    connect?: CpFeatureFlagOverrideWhereUniqueInput | CpFeatureFlagOverrideWhereUniqueInput[]
+    update?: CpFeatureFlagOverrideUpdateWithWhereUniqueWithoutFlagInput | CpFeatureFlagOverrideUpdateWithWhereUniqueWithoutFlagInput[]
+    updateMany?: CpFeatureFlagOverrideUpdateManyWithWhereWithoutFlagInput | CpFeatureFlagOverrideUpdateManyWithWhereWithoutFlagInput[]
+    deleteMany?: CpFeatureFlagOverrideScalarWhereInput | CpFeatureFlagOverrideScalarWhereInput[]
+  }
+
+  export type CpFeatureFlagCreateNestedOneWithoutOverridesInput = {
+    create?: XOR<CpFeatureFlagCreateWithoutOverridesInput, CpFeatureFlagUncheckedCreateWithoutOverridesInput>
+    connectOrCreate?: CpFeatureFlagCreateOrConnectWithoutOverridesInput
+    connect?: CpFeatureFlagWhereUniqueInput
+  }
+
+  export type CpFeatureFlagUpdateOneRequiredWithoutOverridesNestedInput = {
+    create?: XOR<CpFeatureFlagCreateWithoutOverridesInput, CpFeatureFlagUncheckedCreateWithoutOverridesInput>
+    connectOrCreate?: CpFeatureFlagCreateOrConnectWithoutOverridesInput
+    upsert?: CpFeatureFlagUpsertWithoutOverridesInput
+    connect?: CpFeatureFlagWhereUniqueInput
+    update?: XOR<XOR<CpFeatureFlagUpdateToOneWithWhereWithoutOverridesInput, CpFeatureFlagUpdateWithoutOverridesInput>, CpFeatureFlagUncheckedUpdateWithoutOverridesInput>
+  }
+
+  export type NestedStringFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringFilter<$PrismaModel> | string
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
+  export type NestedDateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
+
+  export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedStringFilter<$PrismaModel>
+    _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type NestedIntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
+  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+  export type NestedJsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedIntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+  export type NestedJsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type NestedStringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
+  export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
+  export type CpSubscriptionCreateWithoutPlanInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    invoices?: CpInvoiceCreateNestedManyWithoutSubscriptionInput
+  }
+
+  export type CpSubscriptionUncheckedCreateWithoutPlanInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    invoices?: CpInvoiceUncheckedCreateNestedManyWithoutSubscriptionInput
+  }
+
+  export type CpSubscriptionCreateOrConnectWithoutPlanInput = {
+    where: CpSubscriptionWhereUniqueInput
+    create: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type CpSubscriptionCreateManyPlanInputEnvelope = {
+    data: CpSubscriptionCreateManyPlanInput | CpSubscriptionCreateManyPlanInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpSubscriptionUpsertWithWhereUniqueWithoutPlanInput = {
+    where: CpSubscriptionWhereUniqueInput
+    update: XOR<CpSubscriptionUpdateWithoutPlanInput, CpSubscriptionUncheckedUpdateWithoutPlanInput>
+    create: XOR<CpSubscriptionCreateWithoutPlanInput, CpSubscriptionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type CpSubscriptionUpdateWithWhereUniqueWithoutPlanInput = {
+    where: CpSubscriptionWhereUniqueInput
+    data: XOR<CpSubscriptionUpdateWithoutPlanInput, CpSubscriptionUncheckedUpdateWithoutPlanInput>
+  }
+
+  export type CpSubscriptionUpdateManyWithWhereWithoutPlanInput = {
+    where: CpSubscriptionScalarWhereInput
+    data: XOR<CpSubscriptionUpdateManyMutationInput, CpSubscriptionUncheckedUpdateManyWithoutPlanInput>
+  }
+
+  export type CpSubscriptionScalarWhereInput = {
+    AND?: CpSubscriptionScalarWhereInput | CpSubscriptionScalarWhereInput[]
+    OR?: CpSubscriptionScalarWhereInput[]
+    NOT?: CpSubscriptionScalarWhereInput | CpSubscriptionScalarWhereInput[]
+    id?: StringFilter<"CpSubscription"> | string
+    tenantId?: StringFilter<"CpSubscription"> | string
+    planId?: StringFilter<"CpSubscription"> | string
+    status?: StringFilter<"CpSubscription"> | string
+    currentPeriodStart?: DateTimeFilter<"CpSubscription"> | Date | string
+    currentPeriodEnd?: DateTimeFilter<"CpSubscription"> | Date | string
+    cancelAtPeriodEnd?: BoolFilter<"CpSubscription"> | boolean
+    trialEndsAt?: DateTimeNullableFilter<"CpSubscription"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpSubscription"> | Date | string
+    updatedAt?: DateTimeFilter<"CpSubscription"> | Date | string
+  }
+
+  export type CpPlanCreateWithoutSubscriptionsInput = {
+    id?: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive?: boolean
+    features: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlanUncheckedCreateWithoutSubscriptionsInput = {
+    id?: string
+    name: string
+    tier: string
+    billingInterval: string
+    basePriceMinorUnits: number
+    currency: string
+    isActive?: boolean
+    features: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlanCreateOrConnectWithoutSubscriptionsInput = {
+    where: CpPlanWhereUniqueInput
+    create: XOR<CpPlanCreateWithoutSubscriptionsInput, CpPlanUncheckedCreateWithoutSubscriptionsInput>
+  }
+
+  export type CpInvoiceCreateWithoutSubscriptionInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lineItems?: CpInvoiceLineItemCreateNestedManyWithoutInvoiceInput
+    collectionAttempts?: CpCollectionAttemptCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceUncheckedCreateWithoutSubscriptionInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lineItems?: CpInvoiceLineItemUncheckedCreateNestedManyWithoutInvoiceInput
+    collectionAttempts?: CpCollectionAttemptUncheckedCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceCreateOrConnectWithoutSubscriptionInput = {
+    where: CpInvoiceWhereUniqueInput
+    create: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput>
+  }
+
+  export type CpInvoiceCreateManySubscriptionInputEnvelope = {
+    data: CpInvoiceCreateManySubscriptionInput | CpInvoiceCreateManySubscriptionInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpPlanUpsertWithoutSubscriptionsInput = {
+    update: XOR<CpPlanUpdateWithoutSubscriptionsInput, CpPlanUncheckedUpdateWithoutSubscriptionsInput>
+    create: XOR<CpPlanCreateWithoutSubscriptionsInput, CpPlanUncheckedCreateWithoutSubscriptionsInput>
+    where?: CpPlanWhereInput
+  }
+
+  export type CpPlanUpdateToOneWithWhereWithoutSubscriptionsInput = {
+    where?: CpPlanWhereInput
+    data: XOR<CpPlanUpdateWithoutSubscriptionsInput, CpPlanUncheckedUpdateWithoutSubscriptionsInput>
+  }
+
+  export type CpPlanUpdateWithoutSubscriptionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlanUncheckedUpdateWithoutSubscriptionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    tier?: StringFieldUpdateOperationsInput | string
+    billingInterval?: StringFieldUpdateOperationsInput | string
+    basePriceMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    features?: JsonNullValueInput | InputJsonValue
+    customTerms?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceUpsertWithWhereUniqueWithoutSubscriptionInput = {
+    where: CpInvoiceWhereUniqueInput
+    update: XOR<CpInvoiceUpdateWithoutSubscriptionInput, CpInvoiceUncheckedUpdateWithoutSubscriptionInput>
+    create: XOR<CpInvoiceCreateWithoutSubscriptionInput, CpInvoiceUncheckedCreateWithoutSubscriptionInput>
+  }
+
+  export type CpInvoiceUpdateWithWhereUniqueWithoutSubscriptionInput = {
+    where: CpInvoiceWhereUniqueInput
+    data: XOR<CpInvoiceUpdateWithoutSubscriptionInput, CpInvoiceUncheckedUpdateWithoutSubscriptionInput>
+  }
+
+  export type CpInvoiceUpdateManyWithWhereWithoutSubscriptionInput = {
+    where: CpInvoiceScalarWhereInput
+    data: XOR<CpInvoiceUpdateManyMutationInput, CpInvoiceUncheckedUpdateManyWithoutSubscriptionInput>
+  }
+
+  export type CpInvoiceScalarWhereInput = {
+    AND?: CpInvoiceScalarWhereInput | CpInvoiceScalarWhereInput[]
+    OR?: CpInvoiceScalarWhereInput[]
+    NOT?: CpInvoiceScalarWhereInput | CpInvoiceScalarWhereInput[]
+    id?: StringFilter<"CpInvoice"> | string
+    tenantId?: StringFilter<"CpInvoice"> | string
+    subscriptionId?: StringFilter<"CpInvoice"> | string
+    status?: StringFilter<"CpInvoice"> | string
+    amountDueMinorUnits?: IntFilter<"CpInvoice"> | number
+    amountPaidMinorUnits?: IntFilter<"CpInvoice"> | number
+    currency?: StringFilter<"CpInvoice"> | string
+    periodStart?: DateTimeFilter<"CpInvoice"> | Date | string
+    periodEnd?: DateTimeFilter<"CpInvoice"> | Date | string
+    dueAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    paidAt?: DateTimeNullableFilter<"CpInvoice"> | Date | string | null
+    createdAt?: DateTimeFilter<"CpInvoice"> | Date | string
+    updatedAt?: DateTimeFilter<"CpInvoice"> | Date | string
+  }
+
+  export type CpSubscriptionCreateWithoutInvoicesInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    plan: CpPlanCreateNestedOneWithoutSubscriptionsInput
+  }
+
+  export type CpSubscriptionUncheckedCreateWithoutInvoicesInput = {
+    id?: string
+    tenantId: string
+    planId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpSubscriptionCreateOrConnectWithoutInvoicesInput = {
+    where: CpSubscriptionWhereUniqueInput
+    create: XOR<CpSubscriptionCreateWithoutInvoicesInput, CpSubscriptionUncheckedCreateWithoutInvoicesInput>
+  }
+
+  export type CpInvoiceLineItemCreateWithoutInvoiceInput = {
+    id?: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput = {
+    id?: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpInvoiceLineItemCreateOrConnectWithoutInvoiceInput = {
+    where: CpInvoiceLineItemWhereUniqueInput
+    create: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput>
+  }
+
+  export type CpInvoiceLineItemCreateManyInvoiceInputEnvelope = {
+    data: CpInvoiceLineItemCreateManyInvoiceInput | CpInvoiceLineItemCreateManyInvoiceInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpCollectionAttemptCreateWithoutInvoiceInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpCollectionAttemptUncheckedCreateWithoutInvoiceInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpCollectionAttemptCreateOrConnectWithoutInvoiceInput = {
+    where: CpCollectionAttemptWhereUniqueInput
+    create: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput>
+  }
+
+  export type CpCollectionAttemptCreateManyInvoiceInputEnvelope = {
+    data: CpCollectionAttemptCreateManyInvoiceInput | CpCollectionAttemptCreateManyInvoiceInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpSubscriptionUpsertWithoutInvoicesInput = {
+    update: XOR<CpSubscriptionUpdateWithoutInvoicesInput, CpSubscriptionUncheckedUpdateWithoutInvoicesInput>
+    create: XOR<CpSubscriptionCreateWithoutInvoicesInput, CpSubscriptionUncheckedCreateWithoutInvoicesInput>
+    where?: CpSubscriptionWhereInput
+  }
+
+  export type CpSubscriptionUpdateToOneWithWhereWithoutInvoicesInput = {
+    where?: CpSubscriptionWhereInput
+    data: XOR<CpSubscriptionUpdateWithoutInvoicesInput, CpSubscriptionUncheckedUpdateWithoutInvoicesInput>
+  }
+
+  export type CpSubscriptionUpdateWithoutInvoicesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: CpPlanUpdateOneRequiredWithoutSubscriptionsNestedInput
+  }
+
+  export type CpSubscriptionUncheckedUpdateWithoutInvoicesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemUpsertWithWhereUniqueWithoutInvoiceInput = {
+    where: CpInvoiceLineItemWhereUniqueInput
+    update: XOR<CpInvoiceLineItemUpdateWithoutInvoiceInput, CpInvoiceLineItemUncheckedUpdateWithoutInvoiceInput>
+    create: XOR<CpInvoiceLineItemCreateWithoutInvoiceInput, CpInvoiceLineItemUncheckedCreateWithoutInvoiceInput>
+  }
+
+  export type CpInvoiceLineItemUpdateWithWhereUniqueWithoutInvoiceInput = {
+    where: CpInvoiceLineItemWhereUniqueInput
+    data: XOR<CpInvoiceLineItemUpdateWithoutInvoiceInput, CpInvoiceLineItemUncheckedUpdateWithoutInvoiceInput>
+  }
+
+  export type CpInvoiceLineItemUpdateManyWithWhereWithoutInvoiceInput = {
+    where: CpInvoiceLineItemScalarWhereInput
+    data: XOR<CpInvoiceLineItemUpdateManyMutationInput, CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceInput>
+  }
+
+  export type CpInvoiceLineItemScalarWhereInput = {
+    AND?: CpInvoiceLineItemScalarWhereInput | CpInvoiceLineItemScalarWhereInput[]
+    OR?: CpInvoiceLineItemScalarWhereInput[]
+    NOT?: CpInvoiceLineItemScalarWhereInput | CpInvoiceLineItemScalarWhereInput[]
+    id?: StringFilter<"CpInvoiceLineItem"> | string
+    invoiceId?: StringFilter<"CpInvoiceLineItem"> | string
+    kind?: StringFilter<"CpInvoiceLineItem"> | string
+    description?: StringFilter<"CpInvoiceLineItem"> | string
+    quantity?: IntFilter<"CpInvoiceLineItem"> | number
+    unitAmountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    amountMinorUnits?: IntFilter<"CpInvoiceLineItem"> | number
+    metadata?: JsonNullableFilter<"CpInvoiceLineItem">
+    createdAt?: DateTimeFilter<"CpInvoiceLineItem"> | Date | string
+  }
+
+  export type CpCollectionAttemptUpsertWithWhereUniqueWithoutInvoiceInput = {
+    where: CpCollectionAttemptWhereUniqueInput
+    update: XOR<CpCollectionAttemptUpdateWithoutInvoiceInput, CpCollectionAttemptUncheckedUpdateWithoutInvoiceInput>
+    create: XOR<CpCollectionAttemptCreateWithoutInvoiceInput, CpCollectionAttemptUncheckedCreateWithoutInvoiceInput>
+  }
+
+  export type CpCollectionAttemptUpdateWithWhereUniqueWithoutInvoiceInput = {
+    where: CpCollectionAttemptWhereUniqueInput
+    data: XOR<CpCollectionAttemptUpdateWithoutInvoiceInput, CpCollectionAttemptUncheckedUpdateWithoutInvoiceInput>
+  }
+
+  export type CpCollectionAttemptUpdateManyWithWhereWithoutInvoiceInput = {
+    where: CpCollectionAttemptScalarWhereInput
+    data: XOR<CpCollectionAttemptUpdateManyMutationInput, CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceInput>
+  }
+
+  export type CpCollectionAttemptScalarWhereInput = {
+    AND?: CpCollectionAttemptScalarWhereInput | CpCollectionAttemptScalarWhereInput[]
+    OR?: CpCollectionAttemptScalarWhereInput[]
+    NOT?: CpCollectionAttemptScalarWhereInput | CpCollectionAttemptScalarWhereInput[]
+    id?: StringFilter<"CpCollectionAttempt"> | string
+    invoiceId?: StringFilter<"CpCollectionAttempt"> | string
+    tenantId?: StringFilter<"CpCollectionAttempt"> | string
+    subscriptionId?: StringFilter<"CpCollectionAttempt"> | string
+    kind?: StringFilter<"CpCollectionAttempt"> | string
+    status?: StringFilter<"CpCollectionAttempt"> | string
+    channel?: StringFilter<"CpCollectionAttempt"> | string
+    provider?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    paymentReference?: StringNullableFilter<"CpCollectionAttempt"> | string | null
+    metadata?: JsonNullableFilter<"CpCollectionAttempt">
+    createdAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"CpCollectionAttempt"> | Date | string
+  }
+
+  export type CpInvoiceCreateWithoutCollectionAttemptsInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subscription: CpSubscriptionCreateNestedOneWithoutInvoicesInput
+    lineItems?: CpInvoiceLineItemCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceUncheckedCreateWithoutCollectionAttemptsInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lineItems?: CpInvoiceLineItemUncheckedCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceCreateOrConnectWithoutCollectionAttemptsInput = {
+    where: CpInvoiceWhereUniqueInput
+    create: XOR<CpInvoiceCreateWithoutCollectionAttemptsInput, CpInvoiceUncheckedCreateWithoutCollectionAttemptsInput>
+  }
+
+  export type CpInvoiceUpsertWithoutCollectionAttemptsInput = {
+    update: XOR<CpInvoiceUpdateWithoutCollectionAttemptsInput, CpInvoiceUncheckedUpdateWithoutCollectionAttemptsInput>
+    create: XOR<CpInvoiceCreateWithoutCollectionAttemptsInput, CpInvoiceUncheckedCreateWithoutCollectionAttemptsInput>
+    where?: CpInvoiceWhereInput
+  }
+
+  export type CpInvoiceUpdateToOneWithWhereWithoutCollectionAttemptsInput = {
+    where?: CpInvoiceWhereInput
+    data: XOR<CpInvoiceUpdateWithoutCollectionAttemptsInput, CpInvoiceUncheckedUpdateWithoutCollectionAttemptsInput>
+  }
+
+  export type CpInvoiceUpdateWithoutCollectionAttemptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subscription?: CpSubscriptionUpdateOneRequiredWithoutInvoicesNestedInput
+    lineItems?: CpInvoiceLineItemUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceUncheckedUpdateWithoutCollectionAttemptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lineItems?: CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceCreateWithoutLineItemsInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subscription: CpSubscriptionCreateNestedOneWithoutInvoicesInput
+    collectionAttempts?: CpCollectionAttemptCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceUncheckedCreateWithoutLineItemsInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    collectionAttempts?: CpCollectionAttemptUncheckedCreateNestedManyWithoutInvoiceInput
+  }
+
+  export type CpInvoiceCreateOrConnectWithoutLineItemsInput = {
+    where: CpInvoiceWhereUniqueInput
+    create: XOR<CpInvoiceCreateWithoutLineItemsInput, CpInvoiceUncheckedCreateWithoutLineItemsInput>
+  }
+
+  export type CpInvoiceUpsertWithoutLineItemsInput = {
+    update: XOR<CpInvoiceUpdateWithoutLineItemsInput, CpInvoiceUncheckedUpdateWithoutLineItemsInput>
+    create: XOR<CpInvoiceCreateWithoutLineItemsInput, CpInvoiceUncheckedCreateWithoutLineItemsInput>
+    where?: CpInvoiceWhereInput
+  }
+
+  export type CpInvoiceUpdateToOneWithWhereWithoutLineItemsInput = {
+    where?: CpInvoiceWhereInput
+    data: XOR<CpInvoiceUpdateWithoutLineItemsInput, CpInvoiceUncheckedUpdateWithoutLineItemsInput>
+  }
+
+  export type CpInvoiceUpdateWithoutLineItemsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subscription?: CpSubscriptionUpdateOneRequiredWithoutInvoicesNestedInput
+    collectionAttempts?: CpCollectionAttemptUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceUncheckedUpdateWithoutLineItemsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    collectionAttempts?: CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpWalletEntryCreateWithoutWalletInput = {
+    id?: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CpWalletEntryUncheckedCreateWithoutWalletInput = {
+    id?: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CpWalletEntryCreateOrConnectWithoutWalletInput = {
+    where: CpWalletEntryWhereUniqueInput
+    create: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput>
+  }
+
+  export type CpWalletEntryCreateManyWalletInputEnvelope = {
+    data: CpWalletEntryCreateManyWalletInput | CpWalletEntryCreateManyWalletInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpWalletEntryUpsertWithWhereUniqueWithoutWalletInput = {
+    where: CpWalletEntryWhereUniqueInput
+    update: XOR<CpWalletEntryUpdateWithoutWalletInput, CpWalletEntryUncheckedUpdateWithoutWalletInput>
+    create: XOR<CpWalletEntryCreateWithoutWalletInput, CpWalletEntryUncheckedCreateWithoutWalletInput>
+  }
+
+  export type CpWalletEntryUpdateWithWhereUniqueWithoutWalletInput = {
+    where: CpWalletEntryWhereUniqueInput
+    data: XOR<CpWalletEntryUpdateWithoutWalletInput, CpWalletEntryUncheckedUpdateWithoutWalletInput>
+  }
+
+  export type CpWalletEntryUpdateManyWithWhereWithoutWalletInput = {
+    where: CpWalletEntryScalarWhereInput
+    data: XOR<CpWalletEntryUpdateManyMutationInput, CpWalletEntryUncheckedUpdateManyWithoutWalletInput>
+  }
+
+  export type CpWalletEntryScalarWhereInput = {
+    AND?: CpWalletEntryScalarWhereInput | CpWalletEntryScalarWhereInput[]
+    OR?: CpWalletEntryScalarWhereInput[]
+    NOT?: CpWalletEntryScalarWhereInput | CpWalletEntryScalarWhereInput[]
+    id?: StringFilter<"CpWalletEntry"> | string
+    walletId?: StringFilter<"CpWalletEntry"> | string
+    type?: StringFilter<"CpWalletEntry"> | string
+    amountMinorUnits?: IntFilter<"CpWalletEntry"> | number
+    currency?: StringFilter<"CpWalletEntry"> | string
+    referenceId?: StringNullableFilter<"CpWalletEntry"> | string | null
+    referenceType?: StringNullableFilter<"CpWalletEntry"> | string | null
+    description?: StringNullableFilter<"CpWalletEntry"> | string | null
+    createdAt?: DateTimeFilter<"CpWalletEntry"> | Date | string
+  }
+
+  export type CpPlatformWalletCreateWithoutEntriesInput = {
+    id?: string
+    tenantId: string
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformWalletUncheckedCreateWithoutEntriesInput = {
+    id?: string
+    tenantId: string
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpPlatformWalletCreateOrConnectWithoutEntriesInput = {
+    where: CpPlatformWalletWhereUniqueInput
+    create: XOR<CpPlatformWalletCreateWithoutEntriesInput, CpPlatformWalletUncheckedCreateWithoutEntriesInput>
+  }
+
+  export type CpPlatformWalletUpsertWithoutEntriesInput = {
+    update: XOR<CpPlatformWalletUpdateWithoutEntriesInput, CpPlatformWalletUncheckedUpdateWithoutEntriesInput>
+    create: XOR<CpPlatformWalletCreateWithoutEntriesInput, CpPlatformWalletUncheckedCreateWithoutEntriesInput>
+    where?: CpPlatformWalletWhereInput
+  }
+
+  export type CpPlatformWalletUpdateToOneWithWhereWithoutEntriesInput = {
+    where?: CpPlatformWalletWhereInput
+    data: XOR<CpPlatformWalletUpdateWithoutEntriesInput, CpPlatformWalletUncheckedUpdateWithoutEntriesInput>
+  }
+
+  export type CpPlatformWalletUpdateWithoutEntriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpPlatformWalletUncheckedUpdateWithoutEntriesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideCreateWithoutFlagInput = {
+    id?: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput = {
+    id?: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput = {
+    where: CpFeatureFlagOverrideWhereUniqueInput
+    create: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput>
+  }
+
+  export type CpFeatureFlagOverrideCreateManyFlagInputEnvelope = {
+    data: CpFeatureFlagOverrideCreateManyFlagInput | CpFeatureFlagOverrideCreateManyFlagInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpFeatureFlagOverrideUpsertWithWhereUniqueWithoutFlagInput = {
+    where: CpFeatureFlagOverrideWhereUniqueInput
+    update: XOR<CpFeatureFlagOverrideUpdateWithoutFlagInput, CpFeatureFlagOverrideUncheckedUpdateWithoutFlagInput>
+    create: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput>
+  }
+
+  export type CpFeatureFlagOverrideUpdateWithWhereUniqueWithoutFlagInput = {
+    where: CpFeatureFlagOverrideWhereUniqueInput
+    data: XOR<CpFeatureFlagOverrideUpdateWithoutFlagInput, CpFeatureFlagOverrideUncheckedUpdateWithoutFlagInput>
+  }
+
+  export type CpFeatureFlagOverrideUpdateManyWithWhereWithoutFlagInput = {
+    where: CpFeatureFlagOverrideScalarWhereInput
+    data: XOR<CpFeatureFlagOverrideUpdateManyMutationInput, CpFeatureFlagOverrideUncheckedUpdateManyWithoutFlagInput>
+  }
+
+  export type CpFeatureFlagOverrideScalarWhereInput = {
+    AND?: CpFeatureFlagOverrideScalarWhereInput | CpFeatureFlagOverrideScalarWhereInput[]
+    OR?: CpFeatureFlagOverrideScalarWhereInput[]
+    NOT?: CpFeatureFlagOverrideScalarWhereInput | CpFeatureFlagOverrideScalarWhereInput[]
+    id?: StringFilter<"CpFeatureFlagOverride"> | string
+    flagId?: StringFilter<"CpFeatureFlagOverride"> | string
+    tenantId?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    countryCode?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    planTier?: StringNullableFilter<"CpFeatureFlagOverride"> | string | null
+    value?: JsonFilter<"CpFeatureFlagOverride">
+    isEnabled?: BoolFilter<"CpFeatureFlagOverride"> | boolean
+    createdAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+    updatedAt?: DateTimeFilter<"CpFeatureFlagOverride"> | Date | string
+  }
+
+  export type CpFeatureFlagCreateWithoutOverridesInput = {
+    id?: string
+    key: string
+    description: string
+    scope?: string
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled?: boolean
+    ownedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagUncheckedCreateWithoutOverridesInput = {
+    id?: string
+    key: string
+    description: string
+    scope?: string
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled?: boolean
+    ownedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagCreateOrConnectWithoutOverridesInput = {
+    where: CpFeatureFlagWhereUniqueInput
+    create: XOR<CpFeatureFlagCreateWithoutOverridesInput, CpFeatureFlagUncheckedCreateWithoutOverridesInput>
+  }
+
+  export type CpFeatureFlagUpsertWithoutOverridesInput = {
+    update: XOR<CpFeatureFlagUpdateWithoutOverridesInput, CpFeatureFlagUncheckedUpdateWithoutOverridesInput>
+    create: XOR<CpFeatureFlagCreateWithoutOverridesInput, CpFeatureFlagUncheckedCreateWithoutOverridesInput>
+    where?: CpFeatureFlagWhereInput
+  }
+
+  export type CpFeatureFlagUpdateToOneWithWhereWithoutOverridesInput = {
+    where?: CpFeatureFlagWhereInput
+    data: XOR<CpFeatureFlagUpdateWithoutOverridesInput, CpFeatureFlagUncheckedUpdateWithoutOverridesInput>
+  }
+
+  export type CpFeatureFlagUpdateWithoutOverridesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagUncheckedUpdateWithoutOverridesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    key?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    scope?: StringFieldUpdateOperationsInput | string
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    ownedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpSubscriptionCreateManyPlanInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    currentPeriodStart: Date | string
+    currentPeriodEnd: Date | string
+    cancelAtPeriodEnd?: boolean
+    trialEndsAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpSubscriptionUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invoices?: CpInvoiceUpdateManyWithoutSubscriptionNestedInput
+  }
+
+  export type CpSubscriptionUncheckedUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invoices?: CpInvoiceUncheckedUpdateManyWithoutSubscriptionNestedInput
+  }
+
+  export type CpSubscriptionUncheckedUpdateManyWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    currentPeriodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    currentPeriodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    cancelAtPeriodEnd?: BoolFieldUpdateOperationsInput | boolean
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceCreateManySubscriptionInput = {
+    id?: string
+    tenantId: string
+    status?: string
+    amountDueMinorUnits: number
+    amountPaidMinorUnits?: number
+    currency: string
+    periodStart: Date | string
+    periodEnd: Date | string
+    dueAt?: Date | string | null
+    paidAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpInvoiceUpdateWithoutSubscriptionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lineItems?: CpInvoiceLineItemUpdateManyWithoutInvoiceNestedInput
+    collectionAttempts?: CpCollectionAttemptUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceUncheckedUpdateWithoutSubscriptionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lineItems?: CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceNestedInput
+    collectionAttempts?: CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceNestedInput
+  }
+
+  export type CpInvoiceUncheckedUpdateManyWithoutSubscriptionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    amountDueMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountPaidMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
+    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemCreateManyInvoiceInput = {
+    id?: string
+    kind: string
+    description: string
+    quantity?: number
+    unitAmountMinorUnits: number
+    amountMinorUnits: number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpCollectionAttemptCreateManyInvoiceInput = {
+    id?: string
+    tenantId: string
+    subscriptionId: string
+    kind: string
+    status: string
+    channel: string
+    provider?: string | null
+    paymentReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpInvoiceLineItemUpdateWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemUncheckedUpdateWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpInvoiceLineItemUncheckedUpdateManyWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    quantity?: IntFieldUpdateOperationsInput | number
+    unitAmountMinorUnits?: IntFieldUpdateOperationsInput | number
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptUpdateWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptUncheckedUpdateWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpCollectionAttemptUncheckedUpdateManyWithoutInvoiceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    channel?: StringFieldUpdateOperationsInput | string
+    provider?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryCreateManyWalletInput = {
+    id?: string
+    type: string
+    amountMinorUnits: number
+    currency: string
+    referenceId?: string | null
+    referenceType?: string | null
+    description?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CpWalletEntryUpdateWithoutWalletInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryUncheckedUpdateWithoutWalletInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpWalletEntryUncheckedUpdateManyWithoutWalletInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    amountMinorUnits?: IntFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    referenceId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceType?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideCreateManyFlagInput = {
+    id?: string
+    tenantId?: string | null
+    countryCode?: string | null
+    planTier?: string | null
+    value: JsonNullValueInput | InputJsonValue
+    isEnabled: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpFeatureFlagOverrideUpdateWithoutFlagInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideUncheckedUpdateWithoutFlagInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpFeatureFlagOverrideUncheckedUpdateManyWithoutFlagInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    planTier?: NullableStringFieldUpdateOperationsInput | string | null
+    value?: JsonNullValueInput | InputJsonValue
+    isEnabled?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+
+
+  /**
+   * Aliases for legacy arg types
+   */
+    /**
+     * @deprecated Use CpPlanCountOutputTypeDefaultArgs instead
+     */
+    export type CpPlanCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlanCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpSubscriptionCountOutputTypeDefaultArgs instead
+     */
+    export type CpSubscriptionCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpSubscriptionCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpInvoiceCountOutputTypeDefaultArgs instead
+     */
+    export type CpInvoiceCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpInvoiceCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPlatformWalletCountOutputTypeDefaultArgs instead
+     */
+    export type CpPlatformWalletCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlatformWalletCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpFeatureFlagCountOutputTypeDefaultArgs instead
+     */
+    export type CpFeatureFlagCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpFeatureFlagCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPlatformUserDefaultArgs instead
+     */
+    export type CpPlatformUserArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlatformUserDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPlanDefaultArgs instead
+     */
+    export type CpPlanArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlanDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpSubscriptionDefaultArgs instead
+     */
+    export type CpSubscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpSubscriptionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpInvoiceDefaultArgs instead
+     */
+    export type CpInvoiceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpInvoiceDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpCollectionAttemptDefaultArgs instead
+     */
+    export type CpCollectionAttemptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpCollectionAttemptDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpInvoiceLineItemDefaultArgs instead
+     */
+    export type CpInvoiceLineItemArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpInvoiceLineItemDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPlatformWalletDefaultArgs instead
+     */
+    export type CpPlatformWalletArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlatformWalletDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpWalletEntryDefaultArgs instead
+     */
+    export type CpWalletEntryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpWalletEntryDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPaymentAttemptDefaultArgs instead
+     */
+    export type CpPaymentAttemptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPaymentAttemptDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpFeatureFlagDefaultArgs instead
+     */
+    export type CpFeatureFlagArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpFeatureFlagDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpFeatureFlagOverrideDefaultArgs instead
+     */
+    export type CpFeatureFlagOverrideArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpFeatureFlagOverrideDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpPlatformSettingDefaultArgs instead
+     */
+    export type CpPlatformSettingArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlatformSettingDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpUsageEventDefaultArgs instead
+     */
+    export type CpUsageEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpUsageEventDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpTenantLifecycleEventDefaultArgs instead
+     */
+    export type CpTenantLifecycleEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpTenantLifecycleEventDefaultArgs<ExtArgs>
+
+  /**
+   * Batch Payload for updateMany & deleteMany & createMany
+   */
+
+  export type BatchPayload = {
+    count: number
+  }
+
+  /**
+   * DMMF
+   */
+  export const dmmf: runtime.BaseDMMF
+}

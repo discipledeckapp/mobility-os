@@ -1,0 +1,50 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  # Deploy control plane first — api-core depends on it for lifecycle calls
+  deploy-control-plane:
+    name: Deploy api-control-plane
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl --silent --show-error --fail \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API_CONTROL_PLANE }}"
+
+  deploy-backends:
+    name: Deploy api-core & api-intelligence
+    runs-on: ubuntu-latest
+    needs: deploy-control-plane
+    strategy:
+      matrix:
+        hook:
+          - secret: RENDER_DEPLOY_HOOK_API_CORE
+          - secret: RENDER_DEPLOY_HOOK_API_INTELLIGENCE
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl --silent --show-error --fail \
+            -X POST "${{ secrets[matrix.hook.secret] }}"
+
+  deploy-frontends:
+    name: Deploy frontends
+    runs-on: ubuntu-latest
+    needs: deploy-backends
+    strategy:
+      matrix:
+        hook:
+          - secret: RENDER_DEPLOY_HOOK_TENANT_WEB
+          - secret: RENDER_DEPLOY_HOOK_CONTROL_PLANE_WEB
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl --silent --show-error --fail \
+            -X POST "${{ secrets[matrix.hook.secret] }}"

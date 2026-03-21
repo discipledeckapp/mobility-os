@@ -1,0 +1,125 @@
+// =============================================================================
+// tenancy-domain
+// Core tenant hierarchy types, request-scoped context, and ownership guards.
+// No database access. No framework dependencies.
+// =============================================================================
+
+// ── Branded scalar types ──────────────────────────────────────────────────────
+
+/** Opaque identifier for a top-level tenant account (the SaaS subscriber). */
+export type TenantId = string & { readonly __brand: 'TenantId' };
+
+/** Opaque identifier for a legal/commercial entity within a tenant. */
+export type BusinessEntityId = string & { readonly __brand: 'BusinessEntityId' };
+
+/** Opaque identifier for an operating branch/depot within a business entity. */
+export type OperatingUnitId = string & { readonly __brand: 'OperatingUnitId' };
+
+/** Opaque identifier for a fleet within an operating unit. */
+export type FleetId = string & { readonly __brand: 'FleetId' };
+
+export const asTenantId = (id: string): TenantId => id as TenantId;
+export const asBusinessEntityId = (id: string): BusinessEntityId => id as BusinessEntityId;
+export const asOperatingUnitId = (id: string): OperatingUnitId => id as OperatingUnitId;
+export const asFleetId = (id: string): FleetId => id as FleetId;
+
+// ── Tenant lifecycle ──────────────────────────────────────────────────────────
+
+/**
+ * Canonical lifecycle stages for a tenant account.
+ * See docs/platform/tenant-lifecycle.md for stage definitions and transitions.
+ */
+export enum TenantStatus {
+  Lead = 'lead',
+  Prospect = 'prospect',
+  Onboarded = 'onboarded',
+  Active = 'active',
+  PastDue = 'past_due',
+  GracePeriod = 'grace_period',
+  Suspended = 'suspended',
+  Terminated = 'terminated',
+  Archived = 'archived',
+}
+
+/** Terminal stages — a tenant in one of these states cannot transition forward. */
+export const TERMINAL_TENANT_STATUSES = new Set<TenantStatus>([
+  TenantStatus.Terminated,
+  TenantStatus.Archived,
+]);
+
+// ── Request-scoped context ────────────────────────────────────────────────────
+
+/**
+ * Tenant context extracted from a verified JWT and attached to every
+ * authenticated request in api-core.
+ *
+ * operatingUnitId is absent for users whose access is scoped to the full
+ * business entity (e.g. TENANT_OWNER, FINANCE_OFFICER at entity level).
+ */
+export interface TenantContext {
+  tenantId: TenantId;
+  /** The subject claim from the JWT — identifies the user record. */
+  userId: string;
+  businessEntityId: BusinessEntityId;
+  /** Role string — use @mobility-os/authz-model TenantRole for typed checks. */
+  role: string;
+  /** Present when the user is scoped to a specific operating unit. */
+  operatingUnitId?: OperatingUnitId;
+}
+
+/**
+ * Extract TenantContext from a decoded JWT payload.
+ * Throws with a descriptive message if any required claim is missing or malformed.
+ */
+export function tenantContextFromJwt(payload: Record<string, unknown>): TenantContext {
+  const { tenantId, sub, businessEntityId, role } = payload as Record<string, unknown>;
+
+  if (
+    typeof tenantId !== 'string' ||
+    typeof sub !== 'string' ||
+    typeof businessEntityId !== 'string' ||
+    typeof role !== 'string'
+  ) {
+    throw new Error(
+      'Invalid JWT payload: required claims missing or wrong type. ' +
+        'Expected: tenantId (string), sub (string), businessEntityId (string), role (string).',
+    );
+  }
+
+  const ctx: TenantContext = {
+    tenantId: asTenantId(tenantId),
+    userId: sub,
+    businessEntityId: asBusinessEntityId(businessEntityId),
+    role,
+  };
+
+  const { operatingUnitId } = payload as Record<string, unknown>;
+  if (typeof operatingUnitId === 'string') {
+    ctx.operatingUnitId = asOperatingUnitId(operatingUnitId);
+  }
+
+  return ctx;
+}
+
+// ── Ownership guards ──────────────────────────────────────────────────────────
+
+/**
+ * Assert that a resource's tenantId matches the requesting tenant's context.
+ *
+ * Throws a generic Error — the caller (NestJS guard or service) is responsible
+ * for translating this to an appropriate HTTP response (403 or 404 depending
+ * on whether the resource's existence should be disclosed).
+ */
+export function assertTenantOwnership(resourceTenantId: TenantId, requestTenantId: TenantId): void {
+  if (resourceTenantId !== requestTenantId) {
+    throw new Error('Tenant ownership assertion failed');
+  }
+}
+
+/**
+ * Type-safe check variant — returns boolean instead of throwing.
+ * Prefer assertTenantOwnership in service code; use this in conditional logic.
+ */
+export function hasTenantOwnership(resourceTenantId: TenantId, requestTenantId: TenantId): boolean {
+  return resourceTenantId === requestTenantId;
+}

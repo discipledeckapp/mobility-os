@@ -1,0 +1,364 @@
+// =============================================================================
+// Control Plane — Prisma Schema (api-control-plane)
+//
+// Table naming: cp_* prefix on every table.
+// This schema must never reference tables from the tenant operations plane
+// (api-core) as Prisma relations — tenantId is a plain String cross-reference.
+//
+// Wallet entries are immutable ledger rows. Corrections are separate
+// reversal entries. See docs/decisions/ADR-009-wallet-separation.md.
+//
+// Generated client output: src/generated/prisma
+// (relative to this file: ../../generated/prisma)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Platform Users ───────────────────────────────────────────────────────────
+// Control-plane staff users. This remains separate from tenant-plane users and
+// is never referenced from tenant operations tables.
+
+model CpPlatformUser {
+  id           String @id @default(cuid())
+  email        String @unique
+  name         String
+  role         String
+  passwordHash String
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email, isActive])
+  @@map("cp_platform_users")
+}
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+// The plan catalog. Standard plans have null customTerms.
+// Enterprise plans set customTerms with negotiated rate overrides.
+
+model CpPlan {
+  id   String @id @default(cuid())
+  name String
+  // PlanTier from @mobility-os/billing-domain: starter | growth | enterprise
+  tier String
+  // BillingInterval: monthly | annual
+  billingInterval String
+  // Base price in minor currency units (e.g. kobo for NGN, cents for USD).
+  basePriceMinorUnits Int
+  // ISO 4217 currency code.
+  currency String
+  isActive Boolean @default(true)
+  // Feature matrix: seatLimit, fleetCap, intelligenceEnabled, etc.
+  features Json
+  // Negotiated overrides for enterprise tenants. Null on standard plans.
+  customTerms Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions CpSubscription[]
+
+  @@map("cp_plans")
+}
+
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+// One active subscription per tenant at any time (@unique on tenantId).
+
+model CpSubscription {
+  id       String @id @default(cuid())
+  // References tenants.id in api-core's database (cross-schema, no Prisma relation).
+  tenantId String @unique
+  planId   String
+  // SubscriptionStatus from @mobility-os/billing-domain.
+  status   String @default("trialing")
+
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean   @default(false)
+  trialEndsAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan     CpPlan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  invoices CpInvoice[]
+
+  @@index([tenantId])
+  @@map("cp_subscriptions")
+}
+
+// ── Invoices ──────────────────────────────────────────────────────────────────
+
+model CpInvoice {
+  id             String @id @default(cuid())
+  tenantId       String
+  subscriptionId String
+  // InvoiceStatus: draft | open | paid | void | uncollectible
+  status         String @default("draft")
+
+  // All amounts in minor currency units.
+  amountDueMinorUnits  Int
+  amountPaidMinorUnits Int @default(0)
+  // ISO 4217 currency code — must match the subscription's plan currency.
+  currency String
+
+  periodStart DateTime
+  periodEnd   DateTime
+  dueAt       DateTime?
+  paidAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscription CpSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  lineItems    CpInvoiceLineItem[]
+  collectionAttempts CpCollectionAttempt[]
+
+  @@index([tenantId])
+  @@index([subscriptionId])
+  @@map("cp_invoices")
+}
+
+model CpCollectionAttempt {
+  id             String @id @default(cuid())
+  invoiceId       String
+  tenantId        String
+  subscriptionId  String
+  kind            String
+  status          String
+  channel         String
+  provider        String?
+  paymentReference String?
+  metadata        Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice CpInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, kind, status])
+  @@index([tenantId, createdAt])
+  @@index([subscriptionId, createdAt])
+  @@map("cp_collection_attempts")
+}
+
+model CpInvoiceLineItem {
+  id        String @id @default(cuid())
+  invoiceId String
+  kind      String
+  description String
+  quantity  Int    @default(1)
+  unitAmountMinorUnits Int
+  amountMinorUnits Int
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  invoice CpInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("cp_invoice_line_items")
+}
+
+// ── Platform Wallets ──────────────────────────────────────────────────────────
+// SaaS billing wallets. Distinct from tenant operational wallets (ow_*).
+// One platform wallet per tenant. Balance is derived from ledger entries.
+// See docs/decisions/ADR-009-wallet-separation.md.
+
+model CpPlatformWallet {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  // ISO 4217. Wallet currency must match the tenant's plan currency.
+  currency String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries CpWalletEntry[]
+
+  @@map("cp_platform_wallets")
+}
+
+// Platform wallet ledger (double-entry, append-only).
+// Balance = SUM(amount WHERE type = 'credit') - SUM(amount WHERE type = 'debit')
+// Reversals are new rows referencing the original entry, not mutations.
+
+model CpWalletEntry {
+  id       String @id @default(cuid())
+  walletId String
+  // WalletEntryType: credit | debit | reversal
+  type     String
+  // Amount in minor units. Always positive — type encodes the direction.
+  amountMinorUnits Int
+  currency         String
+  // ID of the originating event (invoice, payment, adjustment, etc.).
+  referenceId   String?
+  // 'invoice' | 'payment' | 'credit_note' | 'adjustment' | 'reversal'
+  referenceType String?
+  description   String?
+
+  createdAt DateTime @default(now())
+  // No updatedAt — entries are immutable after creation.
+
+  wallet CpPlatformWallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([walletId])
+  @@map("cp_wallet_entries")
+}
+
+// ── Payment Attempts ─────────────────────────────────────────────────────────
+// Persistent checkout/payment tracking for external providers.
+// This records initialization, webhook callbacks, provider verification, and
+// whether the successful payment was applied to an invoice or platform wallet.
+
+model CpPaymentAttempt {
+  id String @id @default(cuid())
+  provider String
+  reference String @unique
+  // 'invoice_settlement' | 'platform_wallet_topup'
+  purpose String
+  tenantId String?
+  invoiceId String?
+  status String @default("initialized")
+  amountMinorUnits Int
+  currency String
+  customerEmail String
+  customerName String?
+  checkoutUrl String?
+  accessCode String?
+  providerPayload Json?
+  failureReason String?
+  paidAt DateTime?
+  appliedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider, status])
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@map("cp_payment_attempts")
+}
+
+// ── Feature Flags ─────────────────────────────────────────────────────────────
+// Two-table model: flags define the default; overrides set per-tenant/plan/country values.
+// See docs/platform/feature-flag-strategy.md.
+
+model CpFeatureFlag {
+  id          String @id @default(cuid())
+  // Stable string key used in code (e.g. 'intelligence_add_on').
+  key         String @unique
+  description String
+  // 'global' | 'country' | 'plan' | 'tenant' — the narrowest applicable scope.
+  scope       String @default("global")
+  // Default value for this flag (usually a boolean, but can be structured).
+  value       Json
+  isEnabled   Boolean  @default(false)
+  // Engineering owner — for cleanup tracking.
+  ownedBy     String?
+  // Flag should be removed from code by this date.
+  expiresAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  overrides CpFeatureFlagOverride[]
+
+  @@map("cp_feature_flags")
+}
+
+// Per-scope flag overrides. Exactly one of tenantId / countryCode / planTier is set.
+// Override resolution order: tenant > plan > country > global.
+
+model CpFeatureFlagOverride {
+  id          String @id @default(cuid())
+  flagId      String
+  // Exactly one scope selector is non-null:
+  tenantId    String?
+  countryCode String?
+  planTier    String?
+  value       Json
+  isEnabled   Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flag CpFeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  @@index([flagId])
+  @@index([tenantId])
+  @@map("cp_feature_flag_overrides")
+}
+
+// ── Platform Settings ────────────────────────────────────────────────────────
+// Structured admin configuration for non-boolean platform controls.
+// This is intentionally separate from feature flags because these values
+// represent governed routing/config objects rather than simple toggles.
+
+model CpPlatformSetting {
+  id String @id @default(cuid())
+  // Stable settings key (e.g. 'identity_verification_routing')
+  key String @unique
+  description String?
+  // Structured configuration payload governed by platform admin workflows.
+  value Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cp_platform_settings")
+}
+
+// ── Usage Events ──────────────────────────────────────────────────────────────
+// Raw metered events ingested from api-core. Aggregated nightly for invoicing.
+// See docs/platform/usage-metering.md.
+
+model CpUsageEvent {
+  id       String @id @default(cuid())
+  tenantId String
+  // Event type: 'active_vehicle' | 'active_driver' | 'identity_verification' |
+  //             'biometric_match' | 'remittance_transaction' | 'api_call'
+  eventType     String
+  quantity      Int      @default(1)
+  countryCode   String?
+  // Idempotency key — prevents double-counting on retries.
+  idempotencyKey String  @unique
+  occurredAt     DateTime
+  recordedAt     DateTime @default(now())
+
+  @@index([tenantId, eventType])
+  @@index([occurredAt])
+  @@map("cp_usage_events")
+}
+
+// ── Tenant Lifecycle Events ───────────────────────────────────────────────────
+// Append-only log of all tenant lifecycle transitions.
+// See docs/platform/tenant-lifecycle.md.
+
+model CpTenantLifecycleEvent {
+  id       String @id @default(cuid())
+  tenantId String
+  // TenantStatus from @mobility-os/tenancy-domain.
+  fromStatus String?
+  toStatus   String
+  // Who triggered the transition: 'system' | 'platform_admin' | 'billing'
+  triggeredBy String
+  // Staff user ID if triggered manually; null for automated transitions.
+  actorId String?
+  reason  String?
+  metadata Json?
+
+  occurredAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("cp_tenant_lifecycle_events")
+}

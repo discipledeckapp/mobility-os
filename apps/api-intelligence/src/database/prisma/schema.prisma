@@ -1,0 +1,263 @@
+// =============================================================================
+// Intelligence Plane — Prisma Schema (api-intelligence)
+//
+// Table naming: intel_* prefix on every table.
+// This schema owns the canonical person graph. Tenant data planes reference
+// intel_persons.id as a plain String foreign key — no Prisma cross-schema
+// relations.
+//
+// pgvector is declared as an extension so migrations install it automatically.
+// Biometric embeddings are stored as encrypted Bytes (AES-256 ciphertext).
+// Vector similarity search uses raw SQL queries executed by the matching
+// service — the embedding bytes are never returned to API callers.
+//
+// See docs/intelligence/ for the full design.
+//
+// Generated client output: src/generated/prisma
+// (relative to this file: ../../generated/prisma)
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  // pgvector: installed by prisma migrate; used for vector similarity
+  // in raw SQL queries within the matching service.
+  extensions = [pgvector(map: "vector")]
+}
+
+// ── Canonical Persons ─────────────────────────────────────────────────────────
+// One record per real-world person across the entire platform.
+// Tenant operational records (driver profiles, etc.) reference this id.
+// See docs/intelligence/person-graph.md.
+
+model IntelPerson {
+  id String @id @default(cuid())
+
+  // Aggregate risk score 0–100. Recomputed when any contributing signal changes.
+  globalRiskScore Int     @default(0)
+  isWatchlisted   Boolean @default(false)
+  // True if an unresolved identity conflict (duplicate identity) exists.
+  hasDuplicateFlag Boolean @default(false)
+  // Count of active fraud signals. Derived field kept denormalized for query speed.
+  fraudSignalCount Int @default(0)
+
+  // Confidence of the most recent successful identity verification (0.0–1.0).
+  verificationConfidence Float @default(0)
+  fullName               String?
+  dateOfBirth            String?
+  address                String?
+  gender                 String?
+  photoUrl               String?
+  verificationStatus     String?
+  verificationProvider   String?
+  verificationCountryCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identifiers     IntelPersonIdentifier[]
+  biometrics      IntelBiometricProfile[]
+  riskSignals     IntelRiskSignal[]
+  tenantPresences IntelPersonTenantPresence[]
+  reviewCases     IntelReviewCase[]
+
+  @@map("intel_persons")
+}
+
+// ── Person Identifiers ────────────────────────────────────────────────────────
+// Government IDs, phone numbers, emails, etc. linked to a canonical person.
+// See docs/intelligence/identity-resolution.md — Resolution Inputs.
+
+model IntelPersonIdentifier {
+  id       String @id @default(cuid())
+  personId String
+  // IdentifierType from @mobility-os/intelligence-domain:
+  // NATIONAL_ID | PASSPORT | DRIVERS_LICENSE | PHONE | EMAIL | TAX_ID | BANK_ID
+  type  String
+  // Normalized value (E.164 for phone, lowercase for email, etc.).
+  value String
+  // ISO 3166-1 alpha-2 — required for NATIONAL_ID to disambiguate countries.
+  countryCode String?
+  isVerified  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  // Global uniqueness per (type, value) — a duplicate triggers a conflict review.
+  // Exception: PHONE and EMAIL may be shared (family members); handled by the
+  // resolution algorithm with lower weight. See identity-resolution.md.
+  @@unique([type, value])
+  @@index([personId])
+  @@map("intel_person_identifiers")
+}
+
+// ── Biometric Profiles ────────────────────────────────────────────────────────
+// Encrypted face / fingerprint embeddings.
+// Raw biometric images are NOT stored — only the mathematical embedding.
+//
+// Storage design:
+//   embeddingCiphertext: AES-256-GCM encrypted embedding vector bytes.
+//   The encryption key is BIOMETRIC_ENCRYPTION_KEY from env.
+//   The unencrypted vector is only materialised in memory during similarity
+//   searches, which are executed via raw SQL using a decrypted shadow table
+//   or in-process comparison (matching service handles this).
+
+model IntelBiometricProfile {
+  id       String @id @default(cuid())
+  personId String
+  // BiometricModality: face | fingerprint
+  modality String
+  // AES-256-GCM ciphertext of the embedding vector (Bytes, not vector type).
+  // The nonce / IV is prepended to the ciphertext (first 12 bytes).
+  embeddingCiphertext Bytes
+  // Quality score of the source image at enrollment time (0.0–1.0).
+  qualityScore Float
+  // False after a superseding enrollment or erasure request.
+  isActive Boolean @default(true)
+
+  enrolledAt DateTime @default(now())
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([personId, modality, isActive])
+  @@map("intel_biometric_profiles")
+}
+
+// ── Risk Signals ──────────────────────────────────────────────────────────────
+// Fraud indicators and risk flags attached to a canonical person.
+// Signals are immutable — deactivated by setting isActive = false.
+
+model IntelRiskSignal {
+  id       String @id @default(cuid())
+  personId String
+  // FraudSignalType from @mobility-os/intelligence-domain.
+  type     String
+  // 'low' | 'medium' | 'high' | 'critical'
+  severity String
+  // Who contributed this signal: 'system' | 'tenant_report' | 'external_feed'
+  source     String
+  isActive   Boolean @default(true)
+  // Structured metadata (e.g. conflicting person IDs, tenant ID for reports).
+  // Never contains PII from another tenant's operational records.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([personId, isActive])
+  @@map("intel_risk_signals")
+}
+
+// ── Person Tenant Presence ────────────────────────────────────────────────────
+// Tracks which tenants a person has appeared in, and in which operational role.
+// Cross-tenant — a person may appear in many tenants and may serve in multiple
+// roles (e.g. driver at one tenant, guarantor at another — or both at the same
+// tenant, which triggers a cross-role risk signal).
+// Tenants do not see each other's records; used internally for risk aggregation.
+
+model IntelPersonTenantPresence {
+  id       String @id @default(cuid())
+  personId String
+  // References tenants.id in api-core (cross-schema, no Prisma relation).
+  tenantId String
+  // Operational role: 'driver' | 'guarantor'
+  // Defaults to 'driver' so existing rows retain their meaning without migration.
+  roleType String @default("driver")
+
+  createdAt DateTime @default(now())
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  // A person appears once per (tenant, role) pair.
+  // The same person CAN appear as both driver and guarantor at the same tenant —
+  // which is a valid state (surfaced as a cross_role_presence risk signal).
+  @@unique([personId, tenantId, roleType])
+  @@index([tenantId])
+  @@index([personId, roleType])
+  @@map("intel_person_tenant_presences")
+}
+
+// ── Review Cases ──────────────────────────────────────────────────────────────
+// Created when identity resolution cannot auto-decide.
+// A platform intelligence reviewer adjudicates: merge, separate, or flag fraud.
+// See docs/intelligence/identity-resolution.md — Review Cases.
+
+model IntelReviewCase {
+  id       String @id @default(cuid())
+  personId String
+  // ReviewCaseStatus: open | in_review | resolved | escalated
+  status   String @default("open")
+  // Resolution type: 'merge' | 'separate' | 'fraud_confirmed' | 'dismissed'
+  resolution String?
+  // The composite confidence score that triggered this case (0.0–1.0).
+  confidenceScore Float
+  // Structured evidence: identifier conflicts, biometric match scores, etc.
+  // Never contains raw cross-tenant operational records.
+  evidence Json
+  // Platform staff user ID who reviewed this case.
+  reviewedBy String?
+  reviewedAt DateTime?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@map("intel_review_cases")
+}
+
+// ── Watchlist Entries ─────────────────────────────────────────────────────────
+// Platform-level watchlist. Tenants see isWatchlisted: boolean only.
+
+model IntelWatchlistEntry {
+  id       String @id @default(cuid())
+  personId String
+  // WatchlistEntryType: platform_blacklist | fraud_suspect | duplicate_identity |
+  //                     document_fraud | external_sanctions
+  type   String
+  reason String
+  // Platform staff user who added this entry.
+  addedBy   String
+  // Null means permanent; set to auto-expire temporary flags.
+  expiresAt DateTime?
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId, isActive])
+  @@map("intel_watchlist_entries")
+}
+
+// ── Linkage Events ────────────────────────────────────────────────────────────
+// Append-only audit trail of all person linkage decisions.
+// See docs/intelligence/cross-tenant-linkage-policy.md — Audit Trail.
+
+model IntelLinkageEvent {
+  id String @id @default(cuid())
+  // The person record affected by this event.
+  personId String
+  // 'auto_linked' | 'manual_linked' | 'separated' | 'merged' | 'conflict_flagged'
+  eventType String
+  // Confidence score at time of decision (automated events only).
+  confidenceScore Float?
+  // 'system' for automated; platform staff user ID for manual.
+  actor    String
+  reason   String?
+  metadata Json?
+
+  occurredAt DateTime @default(now())
+
+  @@index([personId])
+  @@map("intel_linkage_events")
+}

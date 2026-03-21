@@ -1,0 +1,258 @@
+services:
+  - type: web
+    name: mobility-os-api-core
+    env: node
+    plan: free
+    rootDir: .
+    healthCheckPath: /api/health
+    buildCommand: >-
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @mobility-os/env-config build &&
+      pnpm --filter @mobility-os/authz-model build &&
+      pnpm --filter @mobility-os/tenancy-domain build &&
+      pnpm --filter @mobility-os/domain-config build &&
+      pnpm --filter @mobility-os/intelligence-domain build &&
+      pnpm --filter @mobility-os/api-core db:generate &&
+      pnpm --filter @mobility-os/api-core build
+    startCommand: >-
+      pnpm --filter @mobility-os/api-core db:migrate &&
+      pnpm --filter @mobility-os/api-core start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mobility-os-postgres
+          property: connectionString
+      - key: DATABASE_CONNECTION_LIMIT
+        value: 10
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: TENANT_WEB_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CONTROL_PLANE_API_URL
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        generateValue: true
+      - key: INTELLIGENCE_API_URL
+        sync: false
+      - key: INTELLIGENCE_API_KEY
+        generateValue: true
+      - key: ZEPTOMAIL_API_URL
+        value: https://api.zeptomail.com/v1.1/email
+      - key: ZEPTOMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM_ADDRESS
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: Mobiris
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: SUPPORT_PHONE_PRIMARY
+        sync: false
+      - key: SUPPORT_PHONE_SECONDARY
+        sync: false
+      - key: WEBSITE_URL
+        sync: false
+      - key: SOCIAL_HANDLE
+        sync: false
+
+  - type: web
+    name: mobility-os-api-control-plane
+    env: node
+    plan: free
+    rootDir: .
+    healthCheckPath: /api/health
+    buildCommand: >-
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @mobility-os/env-config build &&
+      pnpm --filter @mobility-os/authz-model build &&
+      pnpm --filter @mobility-os/tenancy-domain build &&
+      pnpm --filter @mobility-os/domain-config build &&
+      pnpm --filter @mobility-os/billing-domain build &&
+      pnpm --filter @mobility-os/api-control-plane db:generate &&
+      pnpm --filter @mobility-os/api-control-plane build
+    startCommand: >-
+      pnpm --filter @mobility-os/api-control-plane db:migrate &&
+      pnpm --filter @mobility-os/api-control-plane start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3100
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mobility-os-postgres
+          property: connectionString
+      - key: DATABASE_CONNECTION_LIMIT
+        value: 10
+      - key: PLATFORM_JWT_SECRET
+        generateValue: true
+      - key: PLATFORM_JWT_EXPIRES_IN
+        value: 8h
+      - key: PLATFORM_BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: PLATFORM_BOOTSTRAP_ADMIN_PASSWORD
+        generateValue: true
+      - key: CONTROL_PLANE_WEB_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
+      - key: API_CORE_BASE_URL
+        sync: false
+      - key: FLUTTERWAVE_BASE_URL
+        value: https://api.flutterwave.com/v3
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
+        sync: false
+      - key: PAYSTACK_BASE_URL
+        value: https://api.paystack.co
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: BILLING_PAYMENT_RETURN_URL
+        sync: false
+      - key: BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS
+        value: false
+
+  - type: web
+    name: mobility-os-api-intelligence
+    env: node
+    plan: free
+    rootDir: .
+    healthCheckPath: /api/health
+    buildCommand: >-
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @mobility-os/env-config build &&
+      pnpm --filter @mobility-os/authz-model build &&
+      pnpm --filter @mobility-os/tenancy-domain build &&
+      pnpm --filter @mobility-os/domain-config build &&
+      pnpm --filter @mobility-os/intelligence-domain build &&
+      pnpm --filter @mobility-os/api-intelligence db:generate &&
+      pnpm --filter @mobility-os/api-intelligence build
+    startCommand: >-
+      pnpm --filter @mobility-os/api-intelligence db:migrate &&
+      pnpm --filter @mobility-os/api-intelligence start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mobility-os-postgres
+          property: connectionString
+      - key: DATABASE_CONNECTION_LIMIT
+        value: 10
+      - key: PLATFORM_JWT_SECRET
+        sync: false
+      - key: INTELLIGENCE_API_KEY
+        sync: false
+      - key: CONTROL_PLANE_BASE_URL
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
+      - key: VERIFICATION_FEE_AMOUNT_MINOR_UNITS
+        value: 0
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REKOGNITION_LIVENESS_MIN_CONFIDENCE
+        value: 90
+      - key: AWS_REKOGNITION_MOCK_LIVENESS_RESPONSE
+        sync: false
+      - key: YOUVERIFY_API_KEY
+        sync: false
+      - key: YOUVERIFY_BASE_URL
+        sync: false
+      - key: YOUVERIFY_MOCK_RESPONSE
+        sync: false
+      - key: YOUVERIFY_LIVENESS_MOCK_RESPONSE
+        sync: false
+      - key: SMILE_IDENTITY_API_KEY
+        sync: false
+      - key: SMILE_IDENTITY_BASE_URL
+        sync: false
+      - key: SMILE_IDENTITY_MOCK_RESPONSE
+        sync: false
+      - key: SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE
+        sync: false
+      - key: AZURE_FACE_ENDPOINT
+        sync: false
+      - key: AZURE_FACE_API_KEY
+        sync: false
+      - key: AZURE_FACE_LIVENESS_MIN_CONFIDENCE
+        value: 0.7
+      - key: AZURE_FACE_LIVENESS_MOCK_RESPONSE
+        sync: false
+      - key: BIOMETRIC_ENCRYPTION_KEY
+        generateValue: true
+      - key: BIOMETRIC_AUTO_LINK_THRESHOLD
+        value: 0.95
+      - key: BIOMETRIC_MIN_QUALITY_SCORE
+        value: 0.7
+
+  - type: web
+    name: mobility-os-tenant-web
+    env: node
+    plan: free
+    rootDir: .
+    healthCheckPath: /health
+    buildCommand: >-
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @mobility-os/domain-config build &&
+      pnpm --filter @mobility-os/ui build &&
+      pnpm --filter tenant-web build
+    startCommand: pnpm --filter tenant-web start -- -p $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+
+  - type: web
+    name: mobility-os-control-plane-web
+    env: node
+    plan: free
+    rootDir: .
+    healthCheckPath: /health
+    buildCommand: >-
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @mobility-os/domain-config build &&
+      pnpm --filter @mobility-os/ui build &&
+      pnpm --filter control-plane-web build
+    startCommand: pnpm --filter control-plane-web start -- -p $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3200
+      - key: NEXT_PUBLIC_CONTROL_PLANE_API_URL
+        sync: false
+
+databases:
+  - name: mobility-os-postgres
+    plan: free

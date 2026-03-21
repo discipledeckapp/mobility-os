@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: "9.15.0"
+  NODE_VERSION: "20"
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Biome check
+        run: pnpm check
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-type-check-${{ github.sha }}
+          restore-keys: turbo-type-check-
+
+      - name: Build shared packages
+        run: |
+          pnpm --filter @mobility-os/env-config build
+          pnpm --filter @mobility-os/authz-model build
+          pnpm --filter @mobility-os/tenancy-domain build
+          pnpm --filter @mobility-os/domain-config build
+          pnpm --filter @mobility-os/billing-domain build
+          pnpm --filter @mobility-os/intelligence-domain build
+
+      - name: Type check
+        run: pnpm turbo type-check
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mobility_os_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mobility_os_test
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-test-${{ github.sha }}
+          restore-keys: turbo-test-
+
+      - name: Build shared packages
+        run: |
+          pnpm --filter @mobility-os/env-config build
+          pnpm --filter @mobility-os/authz-model build
+          pnpm --filter @mobility-os/tenancy-domain build
+          pnpm --filter @mobility-os/domain-config build
+          pnpm --filter @mobility-os/billing-domain build
+          pnpm --filter @mobility-os/intelligence-domain build
+
+      - name: Generate Prisma clients
+        run: |
+          pnpm --filter @mobility-os/api-core db:generate
+          pnpm --filter @mobility-os/api-control-plane db:generate
+          pnpm --filter @mobility-os/api-intelligence db:generate
+
+      - name: Run migrations
+        run: |
+          pnpm --filter @mobility-os/api-core db:migrate
+          pnpm --filter @mobility-os/api-control-plane db:migrate
+          pnpm --filter @mobility-os/api-intelligence db:migrate
+
+      - name: Run tests
+        run: pnpm turbo test --concurrency=3

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": ".",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"]
+  },
+  "include": ["*.ts", "*.tsx", "brand/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

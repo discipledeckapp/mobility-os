@@ -1,0 +1,27 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class TenantResponseDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  slug!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ description: 'ISO 3166-1 alpha-2 country code' })
+  country!: string;
+
+  @ApiProperty({ description: 'TenantStatus value from tenancy-domain' })
+  status!: string;
+
+  @ApiPropertyOptional({ description: 'Arbitrary platform metadata' })
+  metadata?: Record<string, unknown> | null;
+
+  @ApiProperty()
+  createdAt!: Date;
+
+  @ApiProperty()
+  updatedAt!: Date;
+}

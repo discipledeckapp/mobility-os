@@ -1,0 +1,101 @@
+vin,decodedMake,decodedModel,decodedModelYear,vehicleType,bodyClass
+MOB00000000000001,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000002,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000003,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000004,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000005,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000006,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000007,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000008,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000009,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000010,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000011,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000012,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000013,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000014,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000015,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000016,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000017,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000018,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000019,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000020,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000021,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000022,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000023,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000024,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000025,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000026,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000027,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000028,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000029,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000030,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000031,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000032,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000033,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000034,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000035,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000036,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000037,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000038,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000039,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000040,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000041,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000042,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000043,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000044,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000045,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000046,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000047,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000048,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000049,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000050,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000051,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000052,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000053,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000054,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000055,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000056,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000057,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000058,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000059,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000060,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000061,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000062,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000063,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000064,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000065,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000066,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000067,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000068,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000069,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000070,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000071,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000072,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000073,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000074,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000075,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000076,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000077,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000078,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000079,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000080,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000081,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000082,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000083,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000084,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000085,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000086,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000087,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000088,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000089,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000090,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000091,HONDA,Accord,2016,Passenger Car,Sedan/Saloon
+MOB00000000000092,TOYOTA,Camry,2017,Passenger Car,Sedan/Saloon
+MOB00000000000093,LEXUS,RX 350,2018,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000094,FORD,Escape,2019,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000095,HYUNDAI,Elantra,2020,Passenger Car,Sedan/Saloon
+MOB00000000000096,KIA,Sportage,2021,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000097,MERCEDES-BENZ,C 300,2022,Passenger Car,Sedan/Saloon
+MOB00000000000098,BMW,X5,2023,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
+MOB00000000000099,NISSAN,Altima,2024,Passenger Car,Sedan/Saloon
+MOB00000000000100,CHEVROLET,Equinox,2015,Multipurpose Passenger Vehicle,Sport Utility Vehicle (SUV)
