@@ -38,32 +38,5 @@ jobs:
           curl --silent --show-error --fail \
             -X POST "${{ secrets[matrix.hook.secret] }}"
 
-  deploy-tenant-web:
-    name: Deploy tenant-web (Vercel)
-    runs-on: ubuntu-latest
-    needs: deploy-backends
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Link Vercel project
-        run: |
-          mkdir -p .vercel
-          echo '{"projectId":"${{ secrets.VERCEL_TENANT_WEB_PROJECT_ID }}","orgId":"${{ secrets.VERCEL_ORG_ID }}"}' > .vercel/project.json
-
-      - name: Deploy to Vercel
-        run: npx vercel@latest --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
-
-  deploy-control-plane-web:
-    name: Deploy control-plane-web (Vercel)
-    runs-on: ubuntu-latest
-    needs: deploy-backends
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Link Vercel project
-        run: |
-          mkdir -p .vercel
-          echo '{"projectId":"${{ secrets.VERCEL_CONTROL_PLANE_WEB_PROJECT_ID }}","orgId":"${{ secrets.VERCEL_ORG_ID }}"}' > .vercel/project.json
-
-      - name: Deploy to Vercel
-        run: npx vercel@latest --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
+  # Vercel deploys tenant-web and control-plane-web automatically
+  # via GitHub integration on every push to main.
