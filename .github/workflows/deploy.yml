@@ -42,9 +42,6 @@ jobs:
     name: Deploy tenant-web (Vercel)
     runs-on: ubuntu-latest
     needs: deploy-backends
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_TENANT_WEB_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,15 +55,13 @@ jobs:
           cache: pnpm
 
       - name: Deploy to Vercel
+        working-directory: apps/tenant-web
         run: npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }}
 
   deploy-control-plane-web:
     name: Deploy control-plane-web (Vercel)
     runs-on: ubuntu-latest
     needs: deploy-backends
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_CONTROL_PLANE_WEB_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,4 +75,5 @@ jobs:
           cache: pnpm
 
       - name: Deploy to Vercel
+        working-directory: apps/control-plane-web
         run: npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }}
