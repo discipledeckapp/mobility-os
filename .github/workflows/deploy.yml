@@ -57,11 +57,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel
-
       - name: Deploy to Vercel
-        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }}
 
   deploy-control-plane-web:
     name: Deploy control-plane-web (Vercel)
@@ -82,8 +79,5 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel
-
       - name: Deploy to Vercel
-        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }}
