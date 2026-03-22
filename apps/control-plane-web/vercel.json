@@ -1,4 +1,4 @@
 {
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm --filter @mobility-os/env-config build && pnpm --filter @mobility-os/authz-model build && pnpm --filter @mobility-os/tenancy-domain build && pnpm --filter @mobility-os/domain-config build && pnpm --filter @mobility-os/billing-domain build && pnpm --filter control-plane-web build"
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=control-plane-web"
 }
