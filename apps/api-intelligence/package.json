@@ -4,7 +4,7 @@
   "private": true,
   "description": "Intelligence API — canonical person graph, biometric uniqueness, identity resolution, risk scoring",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && rm -rf dist/generated && mkdir -p dist/generated && cp -R src/generated/prisma dist/generated/prisma",
     "dev": "prisma generate && rm -rf dist/generated && mkdir -p dist/generated && cp -R src/generated/prisma dist/generated/prisma && nest start --watch",
     "start": "node dist/main",
     "lint": "biome check ./src",
