@@ -25,6 +25,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="mobiris-mobile-ops"/>
+        <data android:scheme="mobiris"/>
       </intent-filter>
     </activity>
   </application>
