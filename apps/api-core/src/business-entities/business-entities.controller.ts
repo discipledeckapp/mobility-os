@@ -1,5 +1,5 @@
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -14,6 +14,7 @@ import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import { BusinessEntitiesService } from './business-entities.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { CreateBusinessEntityDto } from './dto/create-business-entity.dto';
+import { UpdateBusinessEntityDto } from './dto/update-business-entity.dto';
 
 @ApiTags('Business Entities')
 @ApiBearerAuth()
@@ -38,6 +39,16 @@ export class BusinessEntitiesController {
   @ApiCreatedResponse({ description: 'Business entity created' })
   create(@CurrentTenant() ctx: TenantContext, @Body() dto: CreateBusinessEntityDto) {
     return this.service.create(ctx.tenantId, dto);
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ description: 'Business entity updated' })
+  update(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateBusinessEntityDto,
+  ) {
+    return this.service.update(ctx.tenantId, id, dto);
   }
 
   @Delete(':id')

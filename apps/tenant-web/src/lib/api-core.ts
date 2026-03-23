@@ -282,6 +282,18 @@ export interface BusinessEntityRecord {
   updatedAt: string;
 }
 
+export interface CreateBusinessEntityInput {
+  name: string;
+  country: string;
+  businessModel: string;
+}
+
+export interface UpdateBusinessEntityInput {
+  name: string;
+  country: string;
+  businessModel: string;
+}
+
 export interface OperatingUnitRecord {
   id: string;
   tenantId: string;
@@ -801,6 +813,31 @@ export async function getBusinessEntity(
   token?: string,
 ): Promise<BusinessEntityRecord> {
   return apiCoreFetch<BusinessEntityRecord>(`/business-entities/${businessEntityId}`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createBusinessEntity(
+  input: CreateBusinessEntityInput,
+  token?: string,
+): Promise<BusinessEntityRecord> {
+  return apiCoreFetch<BusinessEntityRecord>('/business-entities', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateBusinessEntity(
+  businessEntityId: string,
+  input: UpdateBusinessEntityInput,
+  token?: string,
+): Promise<BusinessEntityRecord> {
+  return apiCoreFetch<BusinessEntityRecord>(`/business-entities/${businessEntityId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });

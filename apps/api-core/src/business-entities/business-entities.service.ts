@@ -5,6 +5,7 @@ import type { BusinessEntity } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { CreateBusinessEntityDto } from './dto/create-business-entity.dto';
+import type { UpdateBusinessEntityDto } from './dto/update-business-entity.dto';
 
 @Injectable()
 export class BusinessEntitiesService {
@@ -44,6 +45,27 @@ export class BusinessEntitiesService {
         country: dto.country,
         businessModel: dto.businessModel,
         status: dto.status ?? 'active',
+      },
+    });
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    dto: UpdateBusinessEntityDto,
+  ): Promise<BusinessEntity> {
+    await this.findOne(tenantId, id);
+
+    if (dto.businessModel) {
+      getBusinessModel(dto.businessModel);
+    }
+
+    return this.prisma.businessEntity.update({
+      where: { id },
+      data: {
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.country ? { country: dto.country } : {}),
+        ...(dto.businessModel ? { businessModel: dto.businessModel } : {}),
       },
     });
   }
