@@ -118,6 +118,7 @@ type DriverGuarantorRecord = {
   personId?: string | null;
   name: string;
   phone: string;
+  email?: string | null;
   countryCode?: string | null;
   relationship?: string | null;
   status: string;
@@ -578,7 +579,7 @@ export class DriversService {
   async sendSelfServiceLink(
     tenantId: string,
     id: string,
-  ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string }> {
+  ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
     const driver = await this.findOne(tenantId, id);
 
     if (!driver.email) {
@@ -587,21 +588,183 @@ export class DriversService {
       );
     }
 
-    const token = await this.createSelfServiceToken(driver.tenantId, driver.id);
-    const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/drivers/${encodeURIComponent(driver.id)}/self-service?token=${encodeURIComponent(token)}`;
+    const [token, otpCode] = await Promise.all([
+      this.createSelfServiceToken(driver.tenantId, driver.id),
+      this.createAndStoreSelfServiceOtp(driver.tenantId, 'driver', driver.id),
+    ]);
+
+    const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/driver-self-service?token=${encodeURIComponent(token)}`;
 
     await this.authEmailService.sendDriverSelfServiceVerificationEmail({
       email: driver.email,
       name: `${driver.firstName} ${driver.lastName}`,
       driverName: `${driver.firstName} ${driver.lastName}`,
       verificationUrl,
+      otpCode,
     });
 
     return {
       delivery: 'email',
       verificationUrl,
       destination: driver.email,
+      otpCode,
     };
+  }
+
+  async sendGuarantorSelfServiceLink(
+    tenantId: string,
+    driverId: string,
+  ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
+    const driver = await this.findOne(tenantId, driverId);
+    const guarantor = await this.driverGuarantors.findUnique({ where: { driverId: driver.id } });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor has been linked to this driver yet.');
+    }
+
+    if (!guarantor.email) {
+      throw new BadRequestException(
+        'Guarantor has no email address; please add one before sending a verification link.',
+      );
+    }
+
+    const [token, otpCode] = await Promise.all([
+      this.createGuarantorSelfServiceToken(driver.tenantId, driver.id),
+      this.createAndStoreSelfServiceOtp(driver.tenantId, 'guarantor', driver.id),
+    ]);
+
+    const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/guarantor-self-service?token=${encodeURIComponent(token)}`;
+
+    await this.authEmailService.sendGuarantorSelfServiceVerificationEmail({
+      email: guarantor.email,
+      guarantorName: guarantor.name,
+      driverName: `${driver.firstName} ${driver.lastName}`,
+      verificationUrl,
+      otpCode,
+    });
+
+    return {
+      delivery: 'email',
+      verificationUrl,
+      destination: guarantor.email,
+      otpCode,
+    };
+  }
+
+  async exchangeDriverSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
+    const normalizedCode = otpCode.trim().toUpperCase();
+    const now = new Date();
+
+    const otp = await this.prisma.selfServiceOtp.findUnique({
+      where: { otpCode: normalizedCode },
+    });
+
+    if (!otp || otp.subjectType !== 'driver' || otp.usedAt !== null || otp.expiresAt < now) {
+      throw new UnauthorizedException('This verification code is invalid or has expired.');
+    }
+
+    await this.prisma.selfServiceOtp.update({
+      where: { id: otp.id },
+      data: { usedAt: now },
+    });
+
+    const token = await this.createSelfServiceToken(otp.tenantId, otp.subjectId);
+    return { token };
+  }
+
+  async exchangeGuarantorSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
+    const normalizedCode = otpCode.trim().toUpperCase();
+    const now = new Date();
+
+    const otp = await this.prisma.selfServiceOtp.findUnique({
+      where: { otpCode: normalizedCode },
+    });
+
+    if (!otp || otp.subjectType !== 'guarantor' || otp.usedAt !== null || otp.expiresAt < now) {
+      throw new UnauthorizedException('This verification code is invalid or has expired.');
+    }
+
+    await this.prisma.selfServiceOtp.update({
+      where: { id: otp.id },
+      data: { usedAt: now },
+    });
+
+    const token = await this.createGuarantorSelfServiceToken(otp.tenantId, otp.subjectId);
+    return { token };
+  }
+
+  async getGuarantorSelfServiceContext(
+    token: string,
+  ): Promise<{
+    guarantorName: string;
+    guarantorPhone: string;
+    guarantorEmail: string | null;
+    guarantorCountryCode: string | null;
+    guarantorRelationship: string | null;
+    guarantorPersonId: string | null;
+    guarantorStatus: string;
+    driverName: string;
+    driverId: string;
+    tenantId: string;
+  }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: driver.id },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    return {
+      guarantorName: guarantor.name,
+      guarantorPhone: guarantor.phone,
+      guarantorEmail: guarantor.email ?? null,
+      guarantorCountryCode: guarantor.countryCode ?? null,
+      guarantorRelationship: guarantor.relationship ?? null,
+      guarantorPersonId: guarantor.personId ?? null,
+      guarantorStatus: guarantor.status,
+      driverName: `${driver.firstName} ${driver.lastName}`,
+      driverId: driver.id,
+      tenantId: driver.tenantId,
+    };
+  }
+
+  async initializeGuarantorLivenessSessionFromSelfService(
+    token: string,
+    countryCode?: string,
+  ): Promise<{
+    providerName: string;
+    sessionId: string;
+    expiresAt?: string;
+    fallbackChain: string[];
+  }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: driver.id },
+    });
+    const resolvedCountryCode = countryCode ?? guarantor?.countryCode ?? driver.nationality;
+
+    if (!resolvedCountryCode) {
+      throw new BadRequestException(
+        'countryCode is required when neither the guarantor nor the driver has a nationality set.',
+      );
+    }
+
+    return this.intelligenceClient.initializeLivenessSession({
+      tenantId: payload.tenantId,
+      countryCode: resolvedCountryCode,
+    });
+  }
+
+  async resolveGuarantorIdentityFromSelfService(
+    token: string,
+    dto: ResolveDriverIdentityDto,
+  ) {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, dto);
   }
 
   async listDocuments(tenantId: string, id: string): Promise<DriverDocumentRecord[]> {
@@ -1596,8 +1759,83 @@ export class DriversService {
         tenantId,
         driverId,
       },
-      { expiresIn: '30m' },
+      { expiresIn: '48h' },
     );
+  }
+
+  private readonly guarantorSelfServicePurpose = 'guarantor_self_service';
+
+  private async createGuarantorSelfServiceToken(
+    tenantId: string,
+    driverId: string,
+  ): Promise<string> {
+    return this.jwtService.signAsync(
+      {
+        purpose: this.guarantorSelfServicePurpose,
+        tenantId,
+        driverId,
+      },
+      { expiresIn: '48h' },
+    );
+  }
+
+  private async verifyGuarantorSelfServiceToken(
+    token: string,
+  ): Promise<{ tenantId: string; driverId: string }> {
+    try {
+      const payload = (await this.jwtService.verifyAsync(token)) as {
+        purpose?: string;
+        tenantId?: string;
+        driverId?: string;
+      };
+
+      if (
+        payload.purpose !== this.guarantorSelfServicePurpose ||
+        !payload.tenantId ||
+        !payload.driverId
+      ) {
+        throw new UnauthorizedException('The guarantor verification link is invalid.');
+      }
+
+      return { tenantId: payload.tenantId, driverId: payload.driverId };
+    } catch {
+      throw new UnauthorizedException(
+        'The guarantor verification link is invalid or expired.',
+      );
+    }
+  }
+
+  private generateOtpCode(): string {
+    // Unambiguous uppercase alphanumeric — excludes 0/O, 1/I
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from(
+      { length: 6 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join('');
+  }
+
+  private async createAndStoreSelfServiceOtp(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+  ): Promise<string> {
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h
+
+    // Retry up to 5 times on collision (theoretical only with 6 chars / 1B possibilities)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const otpCode = this.generateOtpCode();
+      try {
+        await this.prisma.selfServiceOtp.create({
+          data: { tenantId, subjectType, subjectId, otpCode, expiresAt },
+        });
+        return otpCode;
+      } catch {
+        // Unique constraint violation — retry with a new code
+        if (attempt === 4) throw new Error('Failed to generate a unique OTP after 5 attempts');
+      }
+    }
+
+    throw new Error('OTP generation failed');
   }
 
   private async verifySelfServiceToken(

@@ -129,6 +129,7 @@ export class GuarantorsService {
         fleetId: dto.fleetId,
         name: dto.name.trim(),
         phone: normalizedPhone,
+        email: dto.email?.trim().toLowerCase() ?? null,
         countryCode: dto.countryCode?.toUpperCase() ?? null,
         relationship: dto.relationship?.trim() || null,
       },
@@ -226,6 +227,9 @@ export class GuarantorsService {
       data: {
         fleetId: nextFleetId,
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.email !== undefined
+          ? { email: dto.email?.trim().toLowerCase() || null }
+          : {}),
         ...(dto.countryCode !== undefined
           ? { countryCode: dto.countryCode?.toUpperCase() || null }
           : {}),

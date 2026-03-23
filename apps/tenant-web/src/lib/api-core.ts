@@ -140,6 +140,7 @@ export interface DriverSelfServiceDeliveryRecord {
   delivery: 'email';
   verificationUrl: string;
   destination: string;
+  otpCode?: string;
 }
 
 export interface DriverDocumentRecord {
@@ -167,6 +168,7 @@ export interface DriverGuarantorRecord {
   personId?: string | null;
   name: string;
   phone: string;
+  email?: string | null;
   countryCode?: string | null;
   relationship?: string | null;
   status: string;
@@ -1035,11 +1037,26 @@ export async function getDriverGuarantor(
   });
 }
 
+export async function sendGuarantorSelfServiceLink(
+  driverId: string,
+  token?: string,
+): Promise<DriverSelfServiceDeliveryRecord> {
+  return apiCoreFetch<DriverSelfServiceDeliveryRecord>(
+    `/drivers/${driverId}/guarantor/self-service-links`,
+    {
+      method: 'POST',
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
 export async function createOrUpdateDriverGuarantor(
   driverId: string,
   input: {
     name: string;
     phone: string;
+    email?: string;
     countryCode?: string;
     relationship?: string;
   },
@@ -1218,6 +1235,72 @@ export async function uploadDriverSelfServiceDocument(
     body: JSON.stringify({ token: selfServiceToken, ...input }),
     cache: 'no-store',
   });
+}
+
+export async function exchangeDriverSelfServiceOtp(
+  otpCode: string,
+): Promise<{ token: string }> {
+  return apiCoreFetch<{ token: string }>('/driver-self-service/exchange-otp', {
+    method: 'POST',
+    body: JSON.stringify({ otpCode }),
+    cache: 'no-store',
+  });
+}
+
+export async function getGuarantorSelfServiceContext(
+  selfServiceToken: string,
+): Promise<{
+  guarantorName: string;
+  guarantorPhone: string;
+  guarantorEmail: string | null;
+  guarantorCountryCode: string | null;
+  guarantorRelationship: string | null;
+  guarantorPersonId: string | null;
+  guarantorStatus: string;
+  driverName: string;
+  driverId: string;
+  tenantId: string;
+}> {
+  return apiCoreFetch('/guarantor-self-service/context', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken }),
+    cache: 'no-store',
+  });
+}
+
+export async function exchangeGuarantorSelfServiceOtp(
+  otpCode: string,
+): Promise<{ token: string }> {
+  return apiCoreFetch<{ token: string }>('/guarantor-self-service/exchange-otp', {
+    method: 'POST',
+    body: JSON.stringify({ otpCode }),
+    cache: 'no-store',
+  });
+}
+
+export async function createGuarantorSelfServiceLivenessSession(
+  selfServiceToken: string,
+  input: { countryCode?: string } = {},
+): Promise<DriverLivenessSessionRecord> {
+  return apiCoreFetch<DriverLivenessSessionRecord>('/guarantor-self-service/liveness-sessions', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function resolveGuarantorSelfServiceIdentity(
+  selfServiceToken: string,
+  input: DriverIdentityResolutionInput,
+): Promise<DriverIdentityResolutionResult> {
+  return apiCoreFetch<DriverIdentityResolutionResult>(
+    '/guarantor-self-service/identity-resolution',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function getVehicle(vehicleId: string, token?: string): Promise<VehicleDetailRecord> {

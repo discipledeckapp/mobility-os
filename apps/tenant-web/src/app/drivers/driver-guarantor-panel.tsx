@@ -18,10 +18,13 @@ import type { DriverGuarantorRecord } from '../../lib/api-core';
 import {
   removeDriverGuarantorAction,
   saveDriverGuarantorAction,
+  sendGuarantorSelfServiceLinkAction,
   type DriverGuarantorActionState,
+  type SendDriverSelfServiceLinkActionState,
 } from './actions';
 
 const initialState: DriverGuarantorActionState = {};
+const initialSendLinkState: SendDriverSelfServiceLinkActionState = {};
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value));
@@ -52,6 +55,10 @@ export function DriverGuarantorPanel({
   const [removeState, removeAction, isRemoving] = useActionState(
     removeDriverGuarantorAction,
     initialState,
+  );
+  const [sendLinkState, sendLinkAction, isSendingLink] = useActionState(
+    sendGuarantorSelfServiceLinkAction,
+    initialSendLinkState,
   );
   const isDisconnected = guarantor?.status === 'disconnected';
 
@@ -88,6 +95,10 @@ export function DriverGuarantorPanel({
             <div className="space-y-1">
               <Text tone="muted">Phone</Text>
               <Text>{guarantor.phone}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Email</Text>
+              <Text>{guarantor.email || 'Not recorded'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Phone country</Text>
@@ -144,6 +155,19 @@ export function DriverGuarantorPanel({
               />
               <Text tone="muted">
                 If you do not choose a country, enter the number in full international format.
+              </Text>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`guarantor-email-${driverId}`}>Email</Label>
+              <Input
+                defaultValue={guarantor?.email ?? ''}
+                id={`guarantor-email-${driverId}`}
+                name="email"
+                placeholder="guarantor@example.com"
+                type="email"
+              />
+              <Text tone="muted">
+                Required to send a guarantor self-service verification link.
               </Text>
             </div>
             <div className="space-y-2">
@@ -220,6 +244,37 @@ export function DriverGuarantorPanel({
               Disconnect guarantor
             </Button>
           )
+        ) : null}
+
+        {guarantor && !isDisconnected && guarantor.email ? (
+          <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <Text>Guarantor self-service verification</Text>
+                <Text tone="muted">
+                  Send a link to <span className="font-medium text-slate-700">{guarantor.email}</span> so the guarantor can complete their own identity verification.
+                </Text>
+              </div>
+              <form action={sendLinkAction}>
+                <input name="driverId" type="hidden" value={driverId} />
+                <Button disabled={isSendingLink} size="sm" type="submit" variant="ghost">
+                  {isSendingLink ? 'Sending…' : 'Send verification link'}
+                </Button>
+              </form>
+            </div>
+            {sendLinkState.error ? (
+              <Text tone="danger" className="mt-2">{sendLinkState.error}</Text>
+            ) : null}
+            {sendLinkState.success ? (
+              <Text tone="success" className="mt-2">{sendLinkState.success}</Text>
+            ) : null}
+          </div>
+        ) : guarantor && !isDisconnected && !guarantor.email ? (
+          <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-dashed border-slate-200 bg-slate-50 p-4">
+            <Text tone="muted">
+              Add the guarantor's email address to send them a self-service verification link.
+            </Text>
+          </div>
         ) : null}
 
         {saveState.error ? <Text tone="danger">{saveState.error}</Text> : null}

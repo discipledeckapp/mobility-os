@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class UpdateGuarantorDto {
   @ApiPropertyOptional()
@@ -23,6 +23,14 @@ export class UpdateGuarantorDto {
     message: 'phone must contain only digits and may start with +',
   })
   phone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address for self-service verification link delivery',
+    example: 'chinwe.okafor@example.com',
+  })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({ example: 'NG' })
   @IsOptional()

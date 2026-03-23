@@ -192,6 +192,8 @@ services:
         sync: false
       - key: SMILE_IDENTITY_API_KEY
         sync: false
+      - key: SMILE_IDENTITY_PARTNER_ID
+        sync: false
       - key: SMILE_IDENTITY_BASE_URL
         sync: false
       - key: SMILE_IDENTITY_MOCK_RESPONSE

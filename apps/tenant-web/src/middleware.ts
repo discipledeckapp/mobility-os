@@ -10,7 +10,9 @@ export function middleware(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
-    pathname.startsWith('/reset-password');
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/driver-self-service') ||
+    pathname.startsWith('/guarantor-self-service');
 
   if (!hasUsableSession && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);

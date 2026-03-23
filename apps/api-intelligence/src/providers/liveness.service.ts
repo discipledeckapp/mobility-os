@@ -339,9 +339,9 @@ export class LivenessService {
       case 'amazon_rekognition':
         return this.evaluateAmazonRekognition(evidence);
       case 'youverify':
-        return this.evaluateMockProvider('YOUVERIFY_LIVENESS_MOCK_RESPONSE', evidence);
+        return this.evaluateYouVerifyLiveness(evidence);
       case 'smile_identity':
-        return this.evaluateMockProvider('SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE', evidence);
+        return this.evaluateSmileIdentityLiveness(evidence);
       case 'internal_free_service':
         return this.evaluateInlineEvidence(evidence);
       default:
@@ -366,7 +366,7 @@ export class LivenessService {
       case 'youverify':
         return this.initializeYouVerifySession(input);
       case 'smile_identity':
-        return this.initializeMockSession('SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE', 'smile');
+        return this.initializeSmileIdentitySession(input);
       case 'internal_free_service':
         return {
           sessionId: `internal-free-${input.tenantId}-${Date.now()}`,
@@ -703,5 +703,203 @@ export class LivenessService {
     }
 
     return { passed: false, reason: 'provider_unavailable' };
+  }
+
+  // ── YouVerify Liveness ───────────────────────────────────────────────────────
+
+  private async evaluateYouVerifyLiveness(
+    evidence?: LivenessCheckInput['evidence'],
+  ): Promise<{ passed: boolean; confidenceScore?: number; reason?: string }> {
+    const mock = this.configService.get<string>('YOUVERIFY_LIVENESS_MOCK_RESPONSE');
+    if (mock) {
+      const payload = JSON.parse(mock) as { passed?: boolean; confidenceScore?: number };
+      return {
+        passed: payload.passed === true,
+        ...(payload.confidenceScore !== undefined
+          ? { confidenceScore: payload.confidenceScore }
+          : {}),
+        reason: payload.passed === true ? 'passed' : 'failed',
+      };
+    }
+
+    if (!evidence?.sessionId) {
+      return { passed: false, reason: 'provider_unavailable' };
+    }
+
+    const apiKey = this.configService.get<string>('YOUVERIFY_API_KEY');
+    const baseUrl = this.configService.get<string>('YOUVERIFY_BASE_URL');
+    if (!apiKey || !baseUrl) {
+      return { passed: false, reason: 'provider_unavailable' };
+    }
+
+    try {
+      const url = `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/${encodeURIComponent(evidence.sessionId)}`;
+      const response = await getJson(url, { token: apiKey });
+
+      if (response.statusCode !== 200) {
+        return { passed: false, reason: 'provider_error' };
+      }
+
+      const payload = response.payload as {
+        data?: {
+          livenessStatus?: string;
+          livenessDecision?: string;
+          confidence?: number;
+        };
+      };
+
+      const data = payload.data;
+      if (!data) {
+        return { passed: false, reason: 'provider_error' };
+      }
+
+      const passed =
+        data.livenessDecision === 'approved' || data.livenessStatus === 'alive';
+      const confidence =
+        typeof data.confidence === 'number' ? data.confidence : undefined;
+
+      return {
+        passed,
+        ...(confidence !== undefined
+          ? { confidenceScore: Math.round(confidence * 100) }
+          : {}),
+        reason: passed ? 'passed' : 'failed',
+      };
+    } catch {
+      return { passed: false, reason: 'provider_error' };
+    }
+  }
+
+  // ── Smile Identity Liveness ──────────────────────────────────────────────────
+
+  private async initializeSmileIdentitySession(
+    input: LivenessSessionInitInput,
+  ): Promise<{
+    sessionId?: string;
+    clientAuthToken?: string;
+    expiresAt?: string;
+    reason?: string;
+  }> {
+    const mock = this.configService.get<string>('SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE');
+    if (mock) {
+      return {
+        sessionId: `smile-mock-${input.tenantId}-${Date.now()}`,
+        clientAuthToken: 'smile-mock-web-token',
+        expiresAt: new Date(Date.now() + 120_000).toISOString(),
+        reason: 'initialized',
+      };
+    }
+
+    const apiKey = this.configService.get<string>('SMILE_IDENTITY_API_KEY');
+    const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
+    const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
+    if (!apiKey || !partnerId || !baseUrl) {
+      return { reason: 'provider_unavailable' };
+    }
+
+    const timestamp = new Date().toISOString();
+    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
+
+    try {
+      const response = await postJson(
+        `${baseUrl.replace(/\/$/, '')}/v1/token`,
+        {},
+        {
+          partner_id: partnerId,
+          timestamp,
+          signature,
+          product: 'biometric_kyc',
+        },
+      );
+
+      const payload = response.payload as { token?: string; expires_at?: string };
+      if (!payload.token) {
+        return { reason: 'provider_error' };
+      }
+
+      return {
+        sessionId: `smile-${input.tenantId}-${Date.now()}`,
+        clientAuthToken: payload.token,
+        expiresAt: payload.expires_at ?? new Date(Date.now() + 120_000).toISOString(),
+        reason: 'initialized',
+      };
+    } catch {
+      return { reason: 'provider_error' };
+    }
+  }
+
+  private async evaluateSmileIdentityLiveness(
+    evidence?: LivenessCheckInput['evidence'],
+  ): Promise<{ passed: boolean; confidenceScore?: number; reason?: string }> {
+    const mock = this.configService.get<string>('SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE');
+    if (mock) {
+      const payload = JSON.parse(mock) as { passed?: boolean; confidenceScore?: number };
+      return {
+        passed: payload.passed === true,
+        ...(payload.confidenceScore !== undefined
+          ? { confidenceScore: payload.confidenceScore }
+          : {}),
+        reason: payload.passed === true ? 'passed' : 'failed',
+      };
+    }
+
+    if (!evidence?.sessionId) {
+      return { passed: false, reason: 'provider_unavailable' };
+    }
+
+    const apiKey = this.configService.get<string>('SMILE_IDENTITY_API_KEY');
+    const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
+    const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
+    if (!apiKey || !partnerId || !baseUrl) {
+      return { passed: false, reason: 'provider_unavailable' };
+    }
+
+    // SmileID Web SDK returns user_id and job_id encoded as "userId::jobId"
+    const separatorIndex = evidence.sessionId.indexOf('::');
+    if (separatorIndex === -1) {
+      return this.evaluateInlineEvidence(evidence);
+    }
+
+    const userId = evidence.sessionId.slice(0, separatorIndex);
+    const jobId = evidence.sessionId.slice(separatorIndex + 2);
+
+    const timestamp = new Date().toISOString();
+    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
+
+    try {
+      const response = await postJson(
+        `${baseUrl.replace(/\/$/, '')}/v1/get_job_status`,
+        {},
+        {
+          partner_id: partnerId,
+          timestamp,
+          signature,
+          user_id: userId,
+          job_id: jobId,
+          return_history: false,
+          return_images: false,
+        },
+      );
+
+      const payload = response.payload as {
+        job_complete?: boolean;
+        job_success?: boolean;
+        Actions?: { Liveness_Check?: string };
+      };
+
+      if (!payload.job_complete) {
+        return { passed: false, reason: 'session_pending' };
+      }
+
+      const passed =
+        payload.job_success === true && payload.Actions?.Liveness_Check === 'Passed';
+
+      return {
+        passed,
+        reason: passed ? 'passed' : 'failed',
+      };
+    } catch {
+      return { passed: false, reason: 'provider_error' };
+    }
   }
 }

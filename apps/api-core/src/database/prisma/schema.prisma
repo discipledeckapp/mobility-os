@@ -275,6 +275,7 @@ model DriverGuarantor {
   personId     String?
   name         String
   phone        String
+  email        String?
   countryCode  String?
   relationship String?
   status       String @default("active")
@@ -299,6 +300,7 @@ model Guarantor {
   personId     String?
   name         String
   phone        String
+  email        String?
   countryCode  String?
   relationship String?
   status       String @default("active")
@@ -673,4 +675,27 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+// ── Self-Service OTPs ─────────────────────────────────────────────────────────
+// Short-lived one-time passcodes that allow drivers and guarantors to start their
+// self-service verification flow from the mobile app without clicking a link.
+// OTP is generated alongside the JWT self-service token and included in the email.
+
+model SelfServiceOtp {
+  id          String    @id @default(cuid())
+  tenantId    String
+  // "driver" or "guarantor" — indicates which subject this OTP belongs to
+  subjectType String
+  // For drivers: driverId. For guarantors: driverId (the linked driver).
+  subjectId   String
+  otpCode     String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([otpCode])
+  @@index([tenantId, subjectId])
+  @@map("self_service_otps")
 }

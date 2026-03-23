@@ -30,8 +30,10 @@ import {
 import {
   sendDriverSelfServiceLinkAction,
   startDriverSelfServiceVerificationAction,
+  startGuarantorSelfServiceVerificationAction,
   resolveDriverVerificationAction,
   resolveDriverSelfServiceVerificationAction,
+  resolveGuarantorSelfServiceVerificationAction,
   startDriverVerificationAction,
   type ResolveDriverVerificationActionState,
   type SendDriverSelfServiceLinkActionState,
@@ -83,11 +85,11 @@ export function DriverIdentityVerification({
 }: {
   driver: DriverRecord;
   defaultCountryCode?: string | null;
-  mode?: 'operator' | 'self_service';
+  mode?: 'operator' | 'self_service' | 'guarantor_self_service';
   selfServiceToken?: string | null;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
-  const [isOpen, setIsOpen] = useState(mode === 'self_service');
+  const [isOpen, setIsOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
     () =>
@@ -129,15 +131,19 @@ export function DriverIdentityVerification({
     initialSendState,
   );
   const [startState, startFormAction, isStarting] = useActionState(
-    mode === 'self_service'
-      ? startDriverSelfServiceVerificationAction
-      : startDriverVerificationAction,
+    mode === 'guarantor_self_service'
+      ? startGuarantorSelfServiceVerificationAction
+      : mode === 'self_service'
+        ? startDriverSelfServiceVerificationAction
+        : startDriverVerificationAction,
     initialStartState,
   );
   const [resolveState, resolveFormAction, isResolving] = useActionState(
-    mode === 'self_service'
-      ? resolveDriverSelfServiceVerificationAction
-      : resolveDriverVerificationAction,
+    mode === 'guarantor_self_service'
+      ? resolveGuarantorSelfServiceVerificationAction
+      : mode === 'self_service'
+        ? resolveDriverSelfServiceVerificationAction
+        : resolveDriverVerificationAction,
     initialResolveState,
   );
 
@@ -390,7 +396,7 @@ export function DriverIdentityVerification({
               ) : null}
 
               <form action={startFormAction} className="space-y-3">
-                {mode === 'self_service' ? (
+                {mode === 'self_service' || mode === 'guarantor_self_service' ? (
                   <input name="token" type="hidden" value={selfServiceToken ?? ''} />
                 ) : (
                   <input name="driverId" type="hidden" value={driver.id} />
@@ -471,7 +477,7 @@ export function DriverIdentityVerification({
               </div>
 
               {/* Hidden fields */}
-              {mode === 'self_service' ? (
+              {mode === 'self_service' || mode === 'guarantor_self_service' ? (
                 <input name="token" type="hidden" value={selfServiceToken ?? ''} />
               ) : (
                 <input name="driverId" type="hidden" value={driver.id} />
@@ -506,7 +512,11 @@ export function DriverIdentityVerification({
                   name="subjectConsent"
                   type="checkbox"
                 />
-                <span>I confirm the driver has given consent for identity and liveness verification.</span>
+                <span>
+                  {mode === 'guarantor_self_service'
+                    ? 'I confirm I have given consent for my identity and liveness to be verified.'
+                    : 'I confirm the driver has given consent for identity and liveness verification.'}
+                </span>
               </label>
 
               <Button

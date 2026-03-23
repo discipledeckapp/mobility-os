@@ -49,6 +49,7 @@ const schema = z.object({
   YOUVERIFY_LIVENESS_MOCK_RESPONSE: z.string().optional(),
 
   SMILE_IDENTITY_API_KEY: z.string().optional(),
+  SMILE_IDENTITY_PARTNER_ID: z.string().optional(),
   SMILE_IDENTITY_BASE_URL: z.string().url().optional(),
   SMILE_IDENTITY_MOCK_RESPONSE: z.string().optional(),
   SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE: z.string().optional(),

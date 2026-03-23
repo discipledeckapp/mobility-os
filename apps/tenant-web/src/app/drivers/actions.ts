@@ -5,9 +5,11 @@ import { redirect } from 'next/navigation';
 import { getCountryConfig, isCountrySupported } from '@mobility-os/domain-config';
 import {
   createOrUpdateDriverGuarantor,
+  sendGuarantorSelfServiceLink,
   createDriver,
   createDriverLivenessSession,
   createDriverSelfServiceLivenessSession,
+  createGuarantorSelfServiceLivenessSession,
   linkDriverMobileAccessUser,
   removeDriverGuarantor,
   reviewDriverDocument,
@@ -15,6 +17,7 @@ import {
   uploadDriverSelfServiceDocument,
   resolveDriverIdentity,
   resolveDriverSelfServiceIdentity,
+  resolveGuarantorSelfServiceIdentity,
   sendDriverSelfServiceLink,
   unlinkDriverMobileAccessUser,
   updateDriverStatus,
@@ -404,6 +407,127 @@ export async function resolveDriverSelfServiceVerificationAction(
   }
 }
 
+export async function startGuarantorSelfServiceVerificationAction(
+  _prevState: StartDriverVerificationActionState,
+  formData: FormData,
+): Promise<StartDriverVerificationActionState> {
+  const token = getOptionalTrimmedValue(formData, 'token');
+  const countryCode = getOptionalTrimmedValue(formData, 'countryCode').toUpperCase();
+
+  if (!token) {
+    return { error: 'The guarantor verification link is missing or invalid.' };
+  }
+
+  try {
+    const session = await createGuarantorSelfServiceLivenessSession(token, {
+      ...(countryCode ? { countryCode } : {}),
+    });
+
+    return { session };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to start guarantor verification at this time.';
+
+    return {
+      error: message,
+      ...(message.toLowerCase().includes('live verification is unavailable')
+        ? { errorCode: 'liveness_unavailable' as const }
+        : {}),
+    };
+  }
+}
+
+export async function resolveGuarantorSelfServiceVerificationAction(
+  _prevState: ResolveDriverVerificationActionState,
+  formData: FormData,
+): Promise<ResolveDriverVerificationActionState> {
+  const token = getOptionalTrimmedValue(formData, 'token');
+  const countryCode = getOptionalTrimmedValue(formData, 'countryCode').toUpperCase();
+  const sessionId = getOptionalTrimmedValue(formData, 'sessionId');
+  const providerName = getOptionalTrimmedValue(formData, 'providerName');
+  const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
+  const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
+  const enteredIdentifiers = getIdentifierValues(formData);
+  const verificationMode = getOptionalTrimmedValue(formData, 'verificationMode');
+
+  if (!token) {
+    return { error: 'The guarantor verification link is missing or expired.' };
+  }
+
+  if (verificationMode !== 'manual' && !sessionId) {
+    return { error: 'Start live verification before submitting this identity check.' };
+  }
+
+  if (enteredIdentifiers.length === 0) {
+    return { error: 'Enter at least one identity identifier before submitting verification.' };
+  }
+
+  if (!subjectConsent) {
+    return { error: 'Consent must be confirmed before submitting verification.' };
+  }
+
+  try {
+    const result = await resolveGuarantorSelfServiceIdentity(token, {
+      ...(countryCode ? { countryCode } : {}),
+      subjectConsent,
+      ...(selfieImageBase64 ? { selfieImageBase64 } : {}),
+      identifiers: enteredIdentifiers.map((identifier) => ({
+        type: identifier.type,
+        value: identifier.value,
+        ...(countryCode ? { countryCode } : {}),
+      })),
+      ...(verificationMode !== 'manual'
+        ? {
+            livenessCheck: {
+              ...(providerName ? { provider: providerName } : {}),
+              sessionId,
+            },
+          }
+        : {}),
+    });
+
+    return {
+      result,
+      success: 'Guarantor identity verification submitted successfully.',
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to resolve guarantor identity at this time.',
+    };
+  }
+}
+
+export async function sendGuarantorSelfServiceLinkAction(
+  _prevState: SendDriverSelfServiceLinkActionState,
+  formData: FormData,
+): Promise<SendDriverSelfServiceLinkActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+
+  if (!driverId) {
+    return { error: 'Driver is required before sending a guarantor verification link.' };
+  }
+
+  try {
+    const delivery = await sendGuarantorSelfServiceLink(driverId);
+    return {
+      delivery,
+      success: `A guarantor verification link was sent to ${delivery.destination}.`,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to send the guarantor verification link.',
+    };
+  }
+}
+
 export async function sendDriverSelfServiceLinkAction(
   _prevState: SendDriverSelfServiceLinkActionState,
   formData: FormData,
@@ -468,6 +592,7 @@ export async function saveDriverGuarantorAction(
   const phone = getOptionalTrimmedValue(formData, 'phone');
   const countryCode = getOptionalTrimmedValue(formData, 'countryCode').toUpperCase();
   const relationship = getOptionalTrimmedValue(formData, 'relationship');
+  const email = getOptionalTrimmedValue(formData, 'email');
 
   if (!driverId || !name || !phone) {
     return { error: 'Name and phone are required before saving a guarantor.' };
@@ -477,6 +602,7 @@ export async function saveDriverGuarantorAction(
     await createOrUpdateDriverGuarantor(driverId, {
       name,
       phone,
+      ...(email ? { email } : {}),
       ...(countryCode ? { countryCode } : {}),
       ...(relationship ? { relationship } : {}),
     });

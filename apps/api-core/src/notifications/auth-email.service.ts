@@ -290,8 +290,18 @@ export class AuthEmailService {
     name: string;
     driverName: string;
     verificationUrl: string;
+    otpCode?: string;
   }): Promise<void> {
     const brand = this.getBrandContext();
+    const otpBlock = input.otpCode
+      ? `
+        <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in the Mobiris app</div>
+          <div style="margin-top:10px;font-size:36px;font-weight:700;letter-spacing:0.2em;color:#0f172a;font-family:'Courier New',Courier,monospace;">${input.otpCode}</div>
+          <div style="margin-top:6px;font-size:12px;color:#94a3b8;">Code expires in 48 hours</div>
+        </div>`
+      : '';
+
     const html = renderAuthEmailShell(
       'Complete your Mobiris driver verification',
       'Driver Verification',
@@ -302,6 +312,7 @@ export class AuthEmailService {
           <div style="margin-top:10px;font-size:22px;font-weight:700;color:#0f172a;">${input.driverName}</div>
           <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Use the secure link below on the device that will capture the live selfie.</div>
         </div>
+        ${otpBlock}
         <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.name}, if you were not expecting this request, ignore this email and contact your organisation operator.</p>
       `,
       'Start self-service verification',
@@ -312,6 +323,48 @@ export class AuthEmailService {
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
       subject: 'Complete your Mobiris driver verification',
+      htmlBody: html,
+    });
+  }
+
+  async sendGuarantorSelfServiceVerificationEmail(input: {
+    email: string;
+    guarantorName: string;
+    driverName: string;
+    verificationUrl: string;
+    otpCode?: string;
+  }): Promise<void> {
+    const brand = this.getBrandContext();
+    const otpBlock = input.otpCode
+      ? `
+        <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in the Mobiris app</div>
+          <div style="margin-top:10px;font-size:36px;font-weight:700;letter-spacing:0.2em;color:#0f172a;font-family:'Courier New',Courier,monospace;">${input.otpCode}</div>
+          <div style="margin-top:6px;font-size:12px;color:#94a3b8;">Code expires in 48 hours</div>
+        </div>`
+      : '';
+
+    const html = renderAuthEmailShell(
+      'Guarantor verification — Mobiris',
+      'Guarantor Verification',
+      `You have been named as a guarantor for ${input.driverName}. Please complete your identity verification to confirm your role.`,
+      `
+        <div style="border:1px solid #fde68a;border-radius:16px;background:#fffbeb;padding:20px;">
+          <div style="font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Driver you are guaranteeing</div>
+          <div style="margin-top:10px;font-size:22px;font-weight:700;color:#0f172a;">${input.driverName}</div>
+          <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Use the secure link below on the device that will capture the live selfie. Once complete, the operator will be notified.</div>
+        </div>
+        ${otpBlock}
+        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.guarantorName}, if you were not expecting this request, please ignore this email or contact the operator directly.</p>
+      `,
+      'Start guarantor verification',
+      input.verificationUrl,
+      brand,
+    );
+
+    await this.mailer.sendEmail({
+      to: [{ address: input.email, name: input.guarantorName }],
+      subject: `Guarantor verification request — ${input.driverName}`,
       htmlBody: html,
     });
   }

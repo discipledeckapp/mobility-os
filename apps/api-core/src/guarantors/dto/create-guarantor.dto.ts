@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class CreateGuarantorDto {
   @ApiProperty()
@@ -22,6 +22,14 @@ export class CreateGuarantorDto {
     message: 'phone must contain only digits and may start with +',
   })
   phone!: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address — required to send a self-service verification link',
+    example: 'chinwe.okafor@example.com',
+  })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({ example: 'NG' })
   @IsOptional()

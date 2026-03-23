@@ -317,19 +317,20 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       return this.normalizeMockResponse(identifier.type, mockResponse);
     }
 
-    const localMockMode =
-      this.configService.get<string>('IDENTITY_PROVIDER_MOCK_MODE') === 'true' ||
-      this.configService.get<string>('NODE_ENV') !== 'production';
-    if (localMockMode) {
-      const localMock = getLocalNigeriaMockVerification(identifier, providerVerification);
-      if (localMock) {
-        return localMock;
-      }
-    }
-
     const apiKey = this.configService.get<string>('YOUVERIFY_API_KEY');
     const baseUrl = this.configService.get<string>('YOUVERIFY_BASE_URL');
+
+    // No live credentials — fall back to local mock only in non-production
     if (!apiKey || !baseUrl) {
+      const localMockMode =
+        this.configService.get<string>('IDENTITY_PROVIDER_MOCK_MODE') === 'true' ||
+        this.configService.get<string>('NODE_ENV') !== 'production';
+      if (localMockMode) {
+        const localMock = getLocalNigeriaMockVerification(identifier, providerVerification);
+        if (localMock) {
+          return localMock;
+        }
+      }
       return {
         status: 'provider_unavailable',
         providerName: this.name,
@@ -442,6 +443,48 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
   }
 }
 
+// ── Smile Identity helpers ─────────────────────────────────────────────────
+
+const SMILE_IDENTITY_ID_TYPE_MAP: Record<string, string> = {
+  NATIONAL_ID: 'NIN_NO_PHOTO',
+  BANK_ID: 'BVN',
+};
+
+function smileIdentitySignature(apiKey: string, partnerId: string, timestamp: string): string {
+  const { createHmac } = require('node:crypto') as typeof import('node:crypto');
+  return createHmac('sha256', apiKey)
+    .update(`${timestamp}${partnerId}sid_request`)
+    .digest('base64');
+}
+
+function normalizeSmileIdentityResponse(
+  providerName: string,
+  identifierType: string,
+  payload: Record<string, unknown>,
+): IdentityVerificationResult {
+  const resultCode = typeof payload.ResultCode === 'string' ? payload.ResultCode : '';
+  // 1012 = exact match, 1013 = partial match — both count as verified
+  const verified = resultCode === '1012' || resultCode === '1013';
+  const fullName =
+    typeof payload.FullName === 'string' && payload.FullName.length > 0
+      ? payload.FullName
+      : undefined;
+
+  return {
+    status: verified ? 'verified' : 'no_match',
+    providerName,
+    verificationStatus:
+      typeof payload.ResultText === 'string' ? payload.ResultText : 'unverified',
+    matchedIdentifierType: identifierType,
+    enrichment: {
+      ...(fullName ? { fullName } : {}),
+      ...(typeof payload.DOB === 'string' ? { dateOfBirth: payload.DOB } : {}),
+      ...(typeof payload.Gender === 'string' ? { gender: payload.Gender } : {}),
+      ...(typeof payload.Country === 'string' ? { address: payload.Country } : {}),
+    },
+  };
+}
+
 @Injectable()
 export class SmileIdentityProvider implements IdentityProviderAdapter {
   readonly name = 'smile_identity';
@@ -454,7 +497,7 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
 
   async verify(
     identifiers: VerificationIdentifierInput[],
-    _providerVerification?: {
+    providerVerification?: {
       subjectConsent?: boolean;
       validationData?: {
         firstName?: string;
@@ -479,20 +522,77 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
     }
 
     const apiKey = this.configService.get<string>('SMILE_IDENTITY_API_KEY');
+    const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
     const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
-    if (!apiKey || !baseUrl) {
+
+    if (!apiKey || !partnerId || !baseUrl) {
       return {
         status: 'provider_unavailable',
         providerName: this.name,
-        reason: 'Smile Identity credentials or base URL not configured',
+        reason: 'Smile Identity credentials not fully configured (SMILE_IDENTITY_API_KEY, SMILE_IDENTITY_PARTNER_ID, SMILE_IDENTITY_BASE_URL required)',
       };
     }
 
-    return {
-      status: 'provider_unavailable',
-      providerName: this.name,
-      reason: 'live Smile Identity integration endpoint is not configured in this environment',
-    };
+    if (providerVerification?.subjectConsent !== true) {
+      return {
+        status: 'skipped',
+        providerName: this.name,
+        reason: 'Smile Identity requires subject consent before lookup',
+      };
+    }
+
+    const idTypeSlug = SMILE_IDENTITY_ID_TYPE_MAP[identifier.type];
+    if (!idTypeSlug) {
+      return {
+        status: 'skipped',
+        providerName: this.name,
+        reason: `Smile Identity has no mapping for identifier type ${identifier.type}`,
+      };
+    }
+
+    const countryCode = (identifier.countryCode ?? 'NG').toUpperCase();
+    const timestamp = new Date().toISOString();
+    const signature = smileIdentitySignature(apiKey, partnerId, timestamp);
+
+    try {
+      const response = await postJson(
+        `${baseUrl.replace(/\/$/, '')}/v1/id_verification`,
+        {},
+        {
+          partner_id: partnerId,
+          timestamp,
+          signature,
+          country: countryCode,
+          id_type: idTypeSlug,
+          id_number: identifier.value,
+          ...(providerVerification?.validationData?.firstName
+            ? { first_name: providerVerification.validationData.firstName }
+            : {}),
+          ...(providerVerification?.validationData?.lastName
+            ? { last_name: providerVerification.validationData.lastName }
+            : {}),
+          ...(providerVerification?.validationData?.dateOfBirth
+            ? { dob: providerVerification.validationData.dateOfBirth }
+            : {}),
+        },
+      );
+
+      if (!isRecord(response.payload)) {
+        return {
+          status: 'provider_error',
+          providerName: this.name,
+          reason: `Smile Identity returned a non-object response with status ${response.statusCode}`,
+        };
+      }
+
+      return normalizeSmileIdentityResponse(this.name, identifier.type, response.payload);
+    } catch (error) {
+      return {
+        status: 'provider_error',
+        providerName: this.name,
+        reason: error instanceof Error ? error.message : 'Smile Identity request failed unexpectedly',
+      };
+    }
   }
 
   private normalizeMockResponse(

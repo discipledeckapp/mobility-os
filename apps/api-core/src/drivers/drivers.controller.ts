@@ -226,6 +226,17 @@ export class DriversController {
    * driver at this tenant — a risk signal is emitted automatically.
    * Throws 409 if the guarantor resolves to the same canonical person as the driver.
    */
+  @Post(':id/guarantor/self-service-links')
+  @RequirePermissions(Permission.GuarantorsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: Object })
+  sendGuarantorSelfServiceLink(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+  ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
+    return this.service.sendGuarantorSelfServiceLink(ctx.tenantId, id);
+  }
+
   @Post(':id/guarantor/identity-resolution')
   @RequirePermissions(Permission.GuarantorsWrite)
   @UseGuards(PermissionsGuard)
@@ -501,6 +512,12 @@ export class DriversController {
 export class DriverSelfServiceController {
   constructor(private readonly service: DriversService) {}
 
+  @Post('exchange-otp')
+  @ApiCreatedResponse({ type: Object })
+  exchangeOtp(@Body('otpCode') otpCode: string): Promise<{ token: string }> {
+    return this.service.exchangeDriverSelfServiceOtp(otpCode);
+  }
+
   @Post('context')
   @ApiCreatedResponse({ type: DriverResponseDto })
   async getContext(@Body('token') token: string): Promise<DriverResponseDto> {
@@ -617,5 +634,41 @@ export class DriverSelfServiceController {
       `inline; filename="${document.fileName.replace(/"/g, '')}"`,
     );
     return new StreamableFile(document.buffer);
+  }
+}
+
+@Controller('guarantor-self-service')
+export class GuarantorSelfServiceController {
+  constructor(private readonly service: DriversService) {}
+
+  @Post('exchange-otp')
+  @ApiCreatedResponse({ type: Object })
+  exchangeOtp(@Body('otpCode') otpCode: string): Promise<{ token: string }> {
+    return this.service.exchangeGuarantorSelfServiceOtp(otpCode);
+  }
+
+  @Post('context')
+  @ApiCreatedResponse({ type: Object })
+  getContext(@Body('token') token: string) {
+    return this.service.getGuarantorSelfServiceContext(token);
+  }
+
+  @Post('liveness-sessions')
+  @ApiCreatedResponse({ type: Object })
+  initializeLivenessSession(
+    @Body('token') token: string,
+    @Body('countryCode') countryCode?: string,
+  ) {
+    return this.service.initializeGuarantorLivenessSessionFromSelfService(token, countryCode);
+  }
+
+  @Post('identity-resolution')
+  @ApiCreatedResponse({ type: Object })
+  resolveIdentity(
+    @Body('token') token: string,
+    @Body() dto: ResolveDriverIdentityDto & { token?: string },
+  ) {
+    const { token: _ignored, ...payload } = dto;
+    return this.service.resolveGuarantorIdentityFromSelfService(token, payload);
   }
 }

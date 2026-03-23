@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class CreateOrUpdateDriverGuarantorDto {
   @ApiProperty({ example: 'Chinwe Okafor' })
@@ -17,6 +17,14 @@ export class CreateOrUpdateDriverGuarantorDto {
     message: 'phone must contain only digits and may start with +',
   })
   phone!: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address — required to send a guarantor self-service verification link',
+    example: 'chinwe.okafor@example.com',
+  })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({ description: 'ISO 3166-1 alpha-2 phone country context', example: 'NG' })
   @IsOptional()
