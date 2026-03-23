@@ -35,7 +35,7 @@ Multi-tenant B2B SaaS platform for transport operators. Three planes:
 3. **Cross-tenant intelligence** is surfaced as risk signals only — never raw records from other tenants.
 4. **No country-specific logic in core code.** Nigeria (or any country) appears only as a config profile in `packages/domain-config/countries/`. Core domain code must be country-agnostic.
 5. All DB schemas are prefixed by plane: `cp_*` (control plane), `ow_*` (operational wallets), `intel_*` (intelligence).
-6. `packages/` is the canonical package location. `apps/packages/` is a legacy structure to be migrated.
+6. `packages/` is the canonical package location.
 
 ## Tech Stack
 

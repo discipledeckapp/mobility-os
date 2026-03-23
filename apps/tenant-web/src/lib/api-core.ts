@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import { TENANT_AUTH_COOKIE_NAME, parseTenantJwtPayload } from './auth';
 
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
@@ -678,6 +677,11 @@ export async function getTenantApiToken(explicitToken?: string): Promise<string>
     return explicitToken;
   }
 
+  if (typeof window !== 'undefined') {
+    throw new Error('No tenant auth token is available. Log in to continue.');
+  }
+
+  const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(TENANT_AUTH_COOKIE_NAME)?.value;
   if (cookieToken) {

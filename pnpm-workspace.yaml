@@ -8,6 +8,3 @@ packages:
   - 'apps/mobile-ops'
   # Shared packages (canonical location)
   - 'packages/*'
-  # Note: apps/packages/* contains a legacy copy of several packages.
-  # Canonical source of truth is packages/*. apps/packages/* should be
-  # removed once all consumers are migrated.
