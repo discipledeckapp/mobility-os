@@ -23,6 +23,7 @@ import { OperationalWalletsModule } from './operational-wallets/operational-wall
 import { RemittanceModule } from './remittance/remittance.module';
 import { ReportsModule } from './reports/reports.module';
 import { SelfSignupModule } from './self-signup/self-signup.module';
+import { TeamModule } from './team/team.module';
 import { TenantBillingModule } from './tenant-billing/tenant-billing.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { VehicleCatalogModule } from './vehicle-catalog/vehicle-catalog.module';
@@ -133,6 +134,7 @@ function createLoggerModule() {
     InternalProvisioningModule,
     InternalTenantsModule,
     SelfSignupModule,
+    TeamModule,
     // AccountingModule,
 
     // ── Ancillary ─────────────────────────────────────────────────────────────

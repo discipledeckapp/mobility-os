@@ -73,6 +73,69 @@ function slugify(name: string): string {
     .slice(0, 60);
 }
 
+// ── Password strength ──────────────────────────────────────────────────────────
+function getPasswordStrength(password: string): {
+  score: number;
+  label: string;
+  barColor: string;
+  textColor: string;
+} {
+  if (!password) return { score: 0, label: '', barColor: '', textColor: '' };
+
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { score, label: 'Weak', barColor: 'bg-red-400', textColor: 'text-red-500' };
+  if (score === 3) return { score, label: 'Fair', barColor: 'bg-amber-400', textColor: 'text-amber-600' };
+  if (score === 4) return { score, label: 'Good', barColor: 'bg-yellow-400', textColor: 'text-yellow-600' };
+  if (score === 5) return { score, label: 'Strong', barColor: 'bg-emerald-400', textColor: 'text-emerald-600' };
+  return { score, label: 'Very strong', barColor: 'bg-emerald-500', textColor: 'text-emerald-700' };
+}
+
+// ── Eye icons ──────────────────────────────────────────────────────────────────
+function EyeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" x2="23" y1="1" y2="23" />
+    </svg>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export function SignupForm() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -89,6 +152,8 @@ export function SignupForm() {
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Step 3 — OTP verification
   const [otpCode, setOtpCode] = useState('');
@@ -128,6 +193,8 @@ export function SignupForm() {
       }
     });
   }
+
+  const passwordStrength = getPasswordStrength(adminPassword);
 
   // ── Step 1: Organisation details ──────────────────────────────────────────
   if (step === 1) {
@@ -274,31 +341,74 @@ export function SignupForm() {
 
           <div className="space-y-1.5">
             <Label htmlFor="adminPassword">Password</Label>
-            <Input
-              autoComplete="new-password"
-              id="adminPassword"
-              minLength={8}
-              name="adminPassword"
-              onChange={(e) => setAdminPassword(e.target.value)}
-              placeholder="Minimum 8 characters"
-              required
-              type="password"
-              value={adminPassword}
-            />
+            <div className="relative">
+              <Input
+                autoComplete="new-password"
+                className="pr-10"
+                id="adminPassword"
+                minLength={8}
+                name="adminPassword"
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+                required
+                type={showPassword ? 'text' : 'password'}
+                value={adminPassword}
+              />
+              <button
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                onClick={() => setShowPassword((v) => !v)}
+                type="button"
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+            {/* Password strength indicator */}
+            {adminPassword.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((segment) => (
+                    <div
+                      key={segment}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        passwordStrength.score >= segment + 1
+                          ? passwordStrength.barColor
+                          : 'bg-slate-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className={`text-xs font-medium ${passwordStrength.textColor}`}>
+                  {passwordStrength.label}
+                  {passwordStrength.score <= 3 && ' — add uppercase, numbers, or symbols'}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="confirmPassword">Confirm password</Label>
-            <Input
-              autoComplete="new-password"
-              id="confirmPassword"
-              name="confirmPassword"
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              required
-              type="password"
-              value={confirmPassword}
-            />
+            <div className="relative">
+              <Input
+                autoComplete="new-password"
+                className="pr-10"
+                id="confirmPassword"
+                name="confirmPassword"
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                required
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+              />
+              <button
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                type="button"
+              >
+                {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </div>
 
           {registerState.error ? (

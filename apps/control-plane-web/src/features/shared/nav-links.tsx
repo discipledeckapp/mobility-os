@@ -11,6 +11,7 @@ const navigationItems = [
   { href: '/billing-operations', label: 'Billing operations' },
   { href: '/wallets', label: 'Platform wallets' },
   { href: '/feature-flags', label: 'Feature flags' },
+  { href: '/staff', label: 'Staff' },
 ] as const;
 
 function cx(...classes: Array<string | false | null | undefined>): string {

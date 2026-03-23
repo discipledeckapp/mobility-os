@@ -520,3 +520,48 @@ export async function provisionTenant(
     token: await getPlatformApiToken(token),
   });
 }
+
+// ── Staff management ───────────────────────────────────────────────────────────
+
+export interface StaffMemberRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateStaffMemberInput {
+  name: string;
+  email: string;
+  role: string;
+  password: string;
+}
+
+export async function listStaffMembers(token?: string): Promise<StaffMemberRecord[]> {
+  return apiControlPlaneFetch<StaffMemberRecord[]>('/staff', {
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function createStaffMember(
+  input: CreateStaffMemberInput,
+  token?: string,
+): Promise<StaffMemberRecord> {
+  return apiControlPlaneFetch<StaffMemberRecord>('/staff', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function deactivateStaffMember(
+  userId: string,
+  token?: string,
+): Promise<{ message: string }> {
+  return apiControlPlaneFetch<{ message: string }>(`/staff/${userId}`, {
+    method: 'DELETE',
+    token: await getPlatformApiToken(token),
+  });
+}

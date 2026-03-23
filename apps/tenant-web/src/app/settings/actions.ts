@@ -1,9 +1,19 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { changeTenantPassword, updateTenantProfile } from '../../lib/api-core';
+import {
+  changeTenantPassword,
+  deactivateTeamMember,
+  inviteTeamMember,
+  updateTenantProfile,
+} from '../../lib/api-core';
 
 export interface SettingsActionState {
+  success?: string;
+  error?: string;
+}
+
+export interface TeamActionState {
   success?: string;
   error?: string;
 }
@@ -58,6 +68,51 @@ export async function changePasswordAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to change password.',
+    };
+  }
+}
+
+export async function inviteTeamMemberAction(
+  _previousState: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const name = String(formData.get('name') ?? '').trim();
+  const email = String(formData.get('email') ?? '').trim();
+  const role = String(formData.get('role') ?? '').trim();
+  const phone = String(formData.get('phone') ?? '').trim();
+
+  if (!name || !email || !role) {
+    return { error: 'Name, email, and role are required.' };
+  }
+
+  try {
+    await inviteTeamMember({ name, email, role, ...(phone ? { phone } : {}) });
+    revalidatePath('/settings');
+    return { success: `Invite sent to ${email}. They will receive an email to set their password.` };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to send invite.',
+    };
+  }
+}
+
+export async function deactivateTeamMemberAction(
+  _previousState: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const userId = String(formData.get('userId') ?? '').trim();
+
+  if (!userId) {
+    return { error: 'User ID is required.' };
+  }
+
+  try {
+    await deactivateTeamMember(userId);
+    revalidatePath('/settings');
+    return { success: 'Team member deactivated.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to deactivate team member.',
     };
   }
 }

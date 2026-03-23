@@ -1552,3 +1552,54 @@ export async function listOperationalWalletEntries(
     token: await getTenantApiToken(token),
   });
 }
+
+// ── Team management ────────────────────────────────────────────────────────────
+
+export interface TeamMemberRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  isActive: boolean;
+  isEmailVerified: boolean;
+  createdAt: string;
+}
+
+export interface InviteTeamMemberInput {
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+}
+
+export async function listTeamMembers(token?: string): Promise<TeamMemberRecord[]> {
+  return apiCoreFetch<TeamMemberRecord[]>('/team', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function inviteTeamMember(
+  input: InviteTeamMemberInput,
+  token?: string,
+): Promise<TeamMemberRecord> {
+  return apiCoreFetch<TeamMemberRecord>('/team/invite', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function deactivateTeamMember(
+  userId: string,
+  token?: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>(`/team/${userId}`, {
+    method: 'DELETE',
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}

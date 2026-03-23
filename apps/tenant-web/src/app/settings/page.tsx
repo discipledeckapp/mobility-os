@@ -1,9 +1,16 @@
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
-import { getTenantMe, getTenantSession } from '../../lib/api-core';
+import { getTenantMe, getTenantSession, listTeamMembers } from '../../lib/api-core';
 import { SettingsPanel } from './settings-panel';
+import { TeamPanel } from './team-panel';
 
 export default async function SettingsPage() {
-  const [tenant, session] = await Promise.all([getTenantMe(), getTenantSession()]);
+  const [tenant, session, members] = await Promise.all([
+    getTenantMe(),
+    getTenantSession(),
+    listTeamMembers().catch(() => []),
+  ]);
+
+  const canManage = session.permissions.includes('tenants:write');
 
   return (
     <TenantAppShell
@@ -11,7 +18,10 @@ export default async function SettingsPage() {
       eyebrow="Workspace"
       title="Settings"
     >
-      <SettingsPanel session={session} tenant={tenant} />
+      <div className="space-y-8">
+        <SettingsPanel session={session} tenant={tenant} />
+        <TeamPanel canManage={canManage} members={members} />
+      </div>
     </TenantAppShell>
   );
 }

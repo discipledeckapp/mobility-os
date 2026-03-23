@@ -15,6 +15,7 @@ import { PlansModule } from './plans/plans.module';
 import { PlatformSettingsModule } from './platform-settings/platform-settings.module';
 import { PlatformWalletsModule } from './platform-wallets/platform-wallets.module';
 import { ProvisioningModule } from './provisioning/provisioning.module';
+import { StaffModule } from './staff/staff.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { TenantLifecycleModule } from './tenant-lifecycle/tenant-lifecycle.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -110,6 +111,7 @@ function createLoggerModule() {
     FeatureFlagsModule,
     PaymentsModule,
     ProvisioningModule,
+    StaffModule,
 
     // ── Operations ────────────────────────────────────────────────────────────
     // SupportModule,
