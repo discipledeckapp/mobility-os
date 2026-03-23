@@ -90,11 +90,11 @@ export class IntelligenceClient {
   constructor(private readonly configService: ConfigService) {}
 
   async initializeLivenessSession(input: InitLivenessSessionInput): Promise<LivenessSessionResult> {
-    return this.post<LivenessSessionResult>('/internal/matching/liveness-sessions', input);
+    return this.post<LivenessSessionResult>('/api/v1/internal/matching/liveness-sessions', input);
   }
 
   async resolveEnrollment(input: ResolveEnrollmentInput): Promise<MatchingResult> {
-    return this.post<MatchingResult>('/internal/matching/enrollments', input);
+    return this.post<MatchingResult>('/api/v1/internal/matching/enrollments', input);
   }
 
   async queryPersonRisk(personId: string): Promise<{
@@ -116,11 +116,11 @@ export class IntelligenceClient {
       verificationStatus?: string;
       verificationProvider?: string;
       verificationCountryCode?: string;
-    }>(`/query/persons/${personId}`);
+    }>(`/api/v1/query/persons/${personId}`);
   }
 
   async queryPersonRolePresence(personId: string): Promise<PersonRolePresence> {
-    return this.get<PersonRolePresence>(`/query/persons/${personId}/role-presence`);
+    return this.get<PersonRolePresence>(`/api/v1/query/persons/${personId}/role-presence`);
   }
 
   private async get<T>(path: string): Promise<T> {
