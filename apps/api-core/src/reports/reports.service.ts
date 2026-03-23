@@ -14,6 +14,88 @@ export class ReportsService {
     private readonly vehiclesService: VehiclesService,
   ) {}
 
+  async getOverview(tenantId: string) {
+    const [wallets, walletEntries, remittances, driverStatusCounts] = await Promise.all([
+      this.prisma.operationalWallet.findMany({
+        where: { tenantId },
+        select: { id: true, currency: true },
+      }),
+      this.prisma.operationalWalletEntry.findMany({
+        where: {
+          wallet: {
+            tenantId,
+          },
+        },
+        select: {
+          walletId: true,
+          type: true,
+          amountMinorUnits: true,
+          currency: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.remittance.findMany({
+        where: { tenantId },
+        select: {
+          amountMinorUnits: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.driver.groupBy({
+        by: ['status'],
+        where: { tenantId },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const walletCurrency = wallets[0]?.currency ?? walletEntries[0]?.currency ?? 'NGN';
+    let totalInflowMinorUnits = 0;
+    let totalOutflowMinorUnits = 0;
+    const balanceByWalletId = new Map<string, number>();
+
+    for (const entry of walletEntries) {
+      const currentBalance = balanceByWalletId.get(entry.walletId) ?? 0;
+      if (entry.type === 'credit') {
+        totalInflowMinorUnits += entry.amountMinorUnits;
+        balanceByWalletId.set(entry.walletId, currentBalance + entry.amountMinorUnits);
+      } else {
+        totalOutflowMinorUnits += entry.amountMinorUnits;
+        balanceByWalletId.set(entry.walletId, currentBalance - entry.amountMinorUnits);
+      }
+    }
+
+    const totalBalanceMinorUnits = Array.from(balanceByWalletId.values()).reduce(
+      (sum, balance) => sum + balance,
+      0,
+    );
+
+    const dailyRemittanceTrend = this.buildDailyTrend(remittances, 7);
+    const weeklyRemittanceTrend = this.buildWeeklyTrend(remittances, 6);
+    const active = driverStatusCounts.find((item) => item.status === 'active')?._count._all ?? 0;
+    const inactive = driverStatusCounts.reduce((sum, item) => {
+      if (item.status === 'active') {
+        return sum;
+      }
+      return sum + item._count._all;
+    }, 0);
+
+    return {
+      wallet: {
+        currency: walletCurrency,
+        totalBalanceMinorUnits,
+        totalInflowMinorUnits,
+        totalOutflowMinorUnits,
+      },
+      dailyRemittanceTrend,
+      weeklyRemittanceTrend,
+      driverActivity: {
+        active,
+        inactive,
+      },
+    };
+  }
+
   async getOperationalReadiness(tenantId: string) {
     const [driversPage, vehicles, latestAssignments, approvedLicences] = await Promise.all([
       this.driversService.list(tenantId, { limit: 200 }),
@@ -125,5 +207,70 @@ export class ReportsService {
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
+  }
+
+  private buildDailyTrend(
+    remittances: Array<{ amountMinorUnits: number; createdAt: Date }>,
+    days: number,
+  ) {
+    const buckets = new Map<string, number>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let index = days - 1; index >= 0; index -= 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - index);
+      buckets.set(date.toISOString().slice(0, 10), 0);
+    }
+
+    for (const remittance of remittances) {
+      const key = remittance.createdAt.toISOString().slice(0, 10);
+      if (!buckets.has(key)) {
+        continue;
+      }
+      buckets.set(key, (buckets.get(key) ?? 0) + remittance.amountMinorUnits);
+    }
+
+    return Array.from(buckets.entries()).map(([label, amountMinorUnits]) => ({
+      label,
+      amountMinorUnits,
+    }));
+  }
+
+  private buildWeeklyTrend(
+    remittances: Array<{ amountMinorUnits: number; createdAt: Date }>,
+    weeks: number,
+  ) {
+    const now = new Date();
+    const currentWeekStart = this.startOfWeek(now);
+    const buckets = new Map<string, number>();
+
+    for (let index = weeks - 1; index >= 0; index -= 1) {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() - index * 7);
+      buckets.set(date.toISOString().slice(0, 10), 0);
+    }
+
+    for (const remittance of remittances) {
+      const weekStart = this.startOfWeek(remittance.createdAt).toISOString().slice(0, 10);
+      if (!buckets.has(weekStart)) {
+        continue;
+      }
+      buckets.set(weekStart, (buckets.get(weekStart) ?? 0) + remittance.amountMinorUnits);
+    }
+
+    return Array.from(buckets.entries()).map(([label, amountMinorUnits]) => ({
+      label,
+      amountMinorUnits,
+    }));
+  }
+
+  private startOfWeek(value: Date) {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    const day = date.getDay();
+    const diff = (day + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date;
   }
 }

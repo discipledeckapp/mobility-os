@@ -252,6 +252,28 @@ export interface OperationalReadinessReportRecord {
   vehicles: VehicleReadinessReportRecord[];
 }
 
+export interface ReportsOverviewWalletRecord {
+  currency: string;
+  totalBalanceMinorUnits: number;
+  totalInflowMinorUnits: number;
+  totalOutflowMinorUnits: number;
+}
+
+export interface ReportsOverviewTrendPointRecord {
+  label: string;
+  amountMinorUnits: number;
+}
+
+export interface ReportsOverviewRecord {
+  wallet: ReportsOverviewWalletRecord;
+  dailyRemittanceTrend: ReportsOverviewTrendPointRecord[];
+  weeklyRemittanceTrend: ReportsOverviewTrendPointRecord[];
+  driverActivity: {
+    active: number;
+    inactive: number;
+  };
+}
+
 export interface LicenceExpiryReportRecord {
   driverId: string;
   fullName: string;
@@ -1301,6 +1323,13 @@ export async function getOperationalReadinessReport(
   token?: string,
 ): Promise<OperationalReadinessReportRecord> {
   return apiCoreFetch<OperationalReadinessReportRecord>('/reports/operational-readiness', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function getReportsOverview(token?: string): Promise<ReportsOverviewRecord> {
+  return apiCoreFetch<ReportsOverviewRecord>('/reports/overview', {
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });

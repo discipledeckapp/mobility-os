@@ -2,6 +2,15 @@ import { ReportsService } from './reports.service';
 
 describe('ReportsService', () => {
   const prisma = {
+    operationalWallet: {
+      findMany: jest.fn(),
+    },
+    operationalWalletEntry: {
+      findMany: jest.fn(),
+    },
+    remittance: {
+      findMany: jest.fn(),
+    },
     vehicle: {
       findMany: jest.fn(),
     },
@@ -13,6 +22,7 @@ describe('ReportsService', () => {
     },
     driver: {
       findMany: jest.fn(),
+      groupBy: jest.fn(),
     },
   };
 
@@ -36,28 +46,33 @@ describe('ReportsService', () => {
   });
 
   it('builds operational readiness from driver, vehicle, assignment, and licence inputs', async () => {
-    driversService.list.mockResolvedValue([
-      {
-        id: 'driver_1',
-        firstName: 'Ada',
-        lastName: 'Okafor',
-        fleetId: 'fleet_1',
-        activationReadiness: 'ready',
-        activationReadinessReasons: [],
-        assignmentReadiness: 'ready',
-        riskBand: 'low',
-      },
-      {
-        id: 'driver_2',
-        firstName: 'Kojo',
-        lastName: 'Mensah',
-        fleetId: 'fleet_2',
-        activationReadiness: 'not_ready',
-        activationReadinessReasons: ['Approved driver licence is missing.'],
-        assignmentReadiness: 'not_ready',
-        riskBand: 'medium',
-      },
-    ]);
+    driversService.list.mockResolvedValue({
+      data: [
+        {
+          id: 'driver_1',
+          firstName: 'Ada',
+          lastName: 'Okafor',
+          fleetId: 'fleet_1',
+          activationReadiness: 'ready',
+          activationReadinessReasons: [],
+          assignmentReadiness: 'ready',
+          riskBand: 'low',
+        },
+        {
+          id: 'driver_2',
+          firstName: 'Kojo',
+          lastName: 'Mensah',
+          fleetId: 'fleet_2',
+          activationReadiness: 'not_ready',
+          activationReadinessReasons: ['Approved driver licence is missing.'],
+          assignmentReadiness: 'not_ready',
+          riskBand: 'medium',
+        },
+      ],
+      total: 2,
+      page: 1,
+      limit: 200,
+    });
     prisma.vehicle.findMany.mockResolvedValue([
       { id: 'vehicle_1', tenantId: 'tenant_1', createdAt: new Date('2026-03-01T00:00:00.000Z') },
     ]);
@@ -86,7 +101,7 @@ describe('ReportsService', () => {
 
     const result = await service.getOperationalReadiness('tenant_1');
 
-    expect(driversService.list).toHaveBeenCalledWith('tenant_1');
+    expect(driversService.list).toHaveBeenCalledWith('tenant_1', { limit: 200 });
     expect(result.drivers).toEqual([
       expect.objectContaining({
         id: 'driver_1',
@@ -159,5 +174,53 @@ describe('ReportsService', () => {
     expect(first).toBeDefined();
     expect(second).toBeDefined();
     expect(first?.daysUntilExpiry).toBeLessThanOrEqual(second?.daysUntilExpiry as number);
+  });
+
+  it('builds overview metrics for wallet, remittance, and driver activity', async () => {
+    prisma.operationalWallet.findMany.mockResolvedValue([
+      { id: 'wallet_1', currency: 'NGN' },
+    ]);
+    prisma.operationalWalletEntry.findMany.mockResolvedValue([
+      {
+        walletId: 'wallet_1',
+        type: 'credit',
+        amountMinorUnits: 300000,
+        currency: 'NGN',
+        createdAt: new Date('2026-03-20T10:00:00.000Z'),
+      },
+      {
+        walletId: 'wallet_1',
+        type: 'debit',
+        amountMinorUnits: 50000,
+        currency: 'NGN',
+        createdAt: new Date('2026-03-21T10:00:00.000Z'),
+      },
+    ]);
+    prisma.remittance.findMany.mockResolvedValue([
+      {
+        amountMinorUnits: 100000,
+        createdAt: new Date(),
+      },
+    ]);
+    prisma.driver.groupBy.mockResolvedValue([
+      { status: 'active', _count: { _all: 4 } },
+      { status: 'inactive', _count: { _all: 2 } },
+      { status: 'suspended', _count: { _all: 1 } },
+    ]);
+
+    const result = await service.getOverview('tenant_1');
+
+    expect(result.wallet).toEqual({
+      currency: 'NGN',
+      totalBalanceMinorUnits: 250000,
+      totalInflowMinorUnits: 300000,
+      totalOutflowMinorUnits: 50000,
+    });
+    expect(result.dailyRemittanceTrend).toHaveLength(7);
+    expect(result.weeklyRemittanceTrend).toHaveLength(6);
+    expect(result.driverActivity).toEqual({
+      active: 4,
+      inactive: 3,
+    });
   });
 });

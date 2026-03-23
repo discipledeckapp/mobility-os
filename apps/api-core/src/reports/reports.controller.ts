@@ -11,6 +11,7 @@ import {
   LicenceExpiryReportItemDto,
   OperationalReadinessResponseDto,
 } from './dto/operational-readiness-response.dto';
+import { ReportsOverviewResponseDto } from './dto/reports-overview-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ReportsService } from './reports.service';
 
@@ -20,6 +21,14 @@ import { ReportsService } from './reports.service';
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
+
+  @Get('overview')
+  @RequirePermissions(Permission.DriversRead, Permission.RemittanceRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: ReportsOverviewResponseDto })
+  getOverview(@CurrentTenant() ctx: TenantContext) {
+    return this.reportsService.getOverview(ctx.tenantId);
+  }
 
   @Get('operational-readiness')
   @RequirePermissions(Permission.DriversRead, Permission.VehiclesRead)

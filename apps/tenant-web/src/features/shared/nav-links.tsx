@@ -218,7 +218,7 @@ const navigationItems = [
   { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
   { href: '/remittance', label: 'Remittance', Icon: RemittanceIcon },
   { href: '/wallet', label: 'Wallet', Icon: WalletIcon },
-  { href: '/reports/readiness', label: 'Reports', Icon: ReportsIcon },
+  { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
   { href: '/settings', label: 'Settings', Icon: SettingsIcon },
 ] as const satisfies ReadonlyArray<{ href: Route; label: string; Icon: NavIcon }>;
 
