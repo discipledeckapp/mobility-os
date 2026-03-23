@@ -55,6 +55,25 @@ const schema = z.object({
     .url('INTELLIGENCE_API_URL must be a valid URL')
     .min(1, 'INTELLIGENCE_API_URL is required'),
   INTELLIGENCE_API_KEY: z.string().min(1, 'INTELLIGENCE_API_KEY is required'),
+  DOCUMENT_STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
+  DOCUMENT_STORAGE_LOCAL_ROOT: z.string().optional(),
+  DOCUMENT_STORAGE_MAX_FILE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  DOCUMENT_STORAGE_S3_BUCKET: z.string().optional(),
+  DOCUMENT_STORAGE_S3_REGION: z.string().default('auto'),
+  DOCUMENT_STORAGE_S3_ENDPOINT: z.string().url('DOCUMENT_STORAGE_S3_ENDPOINT must be a valid URL').optional(),
+  DOCUMENT_STORAGE_S3_ACCESS_KEY_ID: z.string().optional(),
+  DOCUMENT_STORAGE_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  DOCUMENT_STORAGE_S3_PUBLIC_BASE_URL: z
+    .string()
+    .url('DOCUMENT_STORAGE_S3_PUBLIC_BASE_URL must be a valid URL')
+    .optional(),
+  DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE: z
+    .union([z.boolean(), z.string()])
+    .transform((value) => {
+      if (typeof value === 'boolean') return value;
+      return value === 'true';
+    })
+    .default(true),
 });
 
 export type ApiCoreEnv = z.infer<typeof schema>;
@@ -70,5 +89,27 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
     const lines = result.error.errors.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`[api-core] Environment validation failed:\n${lines}`);
   }
-  return result.data;
+  const data = result.data;
+
+  if (data.NODE_ENV === 'production' && data.DOCUMENT_STORAGE_PROVIDER !== 's3') {
+    throw new Error(
+      '[api-core] Environment validation failed:\n  DOCUMENT_STORAGE_PROVIDER: production requires s3-backed document storage.',
+    );
+  }
+
+  if (data.DOCUMENT_STORAGE_PROVIDER === 's3') {
+    const missing = [
+      ['DOCUMENT_STORAGE_S3_BUCKET', data.DOCUMENT_STORAGE_S3_BUCKET],
+      ['DOCUMENT_STORAGE_S3_ENDPOINT', data.DOCUMENT_STORAGE_S3_ENDPOINT],
+      ['DOCUMENT_STORAGE_S3_ACCESS_KEY_ID', data.DOCUMENT_STORAGE_S3_ACCESS_KEY_ID],
+      ['DOCUMENT_STORAGE_S3_SECRET_ACCESS_KEY', data.DOCUMENT_STORAGE_S3_SECRET_ACCESS_KEY],
+    ].filter(([, value]) => !value);
+
+    if (missing.length > 0) {
+      const lines = missing.map(([key]) => `  ${key}: is required when DOCUMENT_STORAGE_PROVIDER=s3`);
+      throw new Error(`[api-core] Environment validation failed:\n${lines.join('\n')}`);
+    }
+  }
+
+  return data;
 }

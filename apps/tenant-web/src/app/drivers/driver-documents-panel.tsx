@@ -215,7 +215,7 @@ export function DriverDocumentsPanel({
           <div className="space-y-2">
             <Label htmlFor={`driver-document-file-${driverId}`}>Document file</Label>
             <input
-              accept=".pdf,image/*"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
               className="block w-full rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 py-2 text-sm text-[var(--mobiris-ink)]"
               id={`driver-document-file-${driverId}`}
               name="documentFile"

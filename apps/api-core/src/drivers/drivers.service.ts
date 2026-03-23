@@ -129,6 +129,14 @@ type DriverGuarantorRecord = {
   updatedAt: Date;
 };
 
+const MAX_DOCUMENT_FILE_BYTES_FALLBACK = 10 * 1024 * 1024;
+const ALLOWED_DRIVER_DOCUMENT_CONTENT_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
 type MobileAccessUserRecord = {
   id: string;
   tenantId: string;
@@ -151,6 +159,7 @@ type DriverDocumentRecord = {
   contentType: string;
   fileDataUrl?: string | null;
   storageKey?: string | null;
+  storageUrl?: string | null;
   uploadedBy: string;
   status: string;
   expiresAt?: Date | null;
@@ -855,16 +864,22 @@ export class DriversService {
   ): Promise<DriverDocumentRecord> {
     const driver = await this.findOne(tenantId, id);
     const fileBuffer = this.decodeIncomingDocument(dto);
-    const storedFile = await this.documentStorageService.uploadFile(fileBuffer, dto.fileName);
+    this.validateDocumentUpload(fileBuffer, dto.contentType);
+    const storedFile = await this.documentStorageService.uploadFile(
+      fileBuffer,
+      dto.fileName,
+      this.normalizeDocumentContentType(dto.contentType),
+    );
     return this.driverDocuments.create({
       data: {
         tenantId: driver.tenantId,
         driverId: driver.id,
         documentType: dto.documentType,
         fileName: dto.fileName,
-        contentType: dto.contentType,
+        contentType: this.normalizeDocumentContentType(dto.contentType),
         fileDataUrl: null,
         storageKey: storedFile.storageKey,
+        storageUrl: storedFile.storageUrl,
         uploadedBy: dto.uploadedBy,
         status: 'pending',
         expiresAt: null,
@@ -1619,6 +1634,66 @@ export class DriversService {
     }
 
     throw new BadRequestException('Document content is required.');
+  }
+
+  private validateDocumentUpload(buffer: Buffer, contentType: string): void {
+    const normalizedContentType = this.normalizeDocumentContentType(contentType);
+    const maxFileBytes =
+      Number(process.env.DOCUMENT_STORAGE_MAX_FILE_BYTES) || MAX_DOCUMENT_FILE_BYTES_FALLBACK;
+
+    if (buffer.byteLength === 0) {
+      throw new BadRequestException('Document content is required.');
+    }
+
+    if (buffer.byteLength > maxFileBytes) {
+      throw new BadRequestException(
+        `Document files must be ${Math.floor(maxFileBytes / (1024 * 1024))} MB or smaller.`,
+      );
+    }
+
+    if (!ALLOWED_DRIVER_DOCUMENT_CONTENT_TYPES.has(normalizedContentType)) {
+      throw new BadRequestException('Only PDF, JPEG, PNG, and WEBP document uploads are allowed.');
+    }
+
+    if (!this.bufferMatchesDeclaredContentType(buffer, normalizedContentType)) {
+      throw new BadRequestException('Uploaded document content does not match the declared file type.');
+    }
+  }
+
+  private normalizeDocumentContentType(contentType: string): string {
+    return contentType.split(';', 1)[0]?.trim().toLowerCase() ?? 'application/octet-stream';
+  }
+
+  private bufferMatchesDeclaredContentType(buffer: Buffer, contentType: string): boolean {
+    if (contentType === 'application/pdf') {
+      return buffer.subarray(0, 5).toString('utf8') === '%PDF-';
+    }
+
+    if (contentType === 'image/jpeg') {
+      return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    }
+
+    if (contentType === 'image/png') {
+      return (
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47 &&
+        buffer[4] === 0x0d &&
+        buffer[5] === 0x0a &&
+        buffer[6] === 0x1a &&
+        buffer[7] === 0x0a
+      );
+    }
+
+    if (contentType === 'image/webp') {
+      return (
+        buffer.subarray(0, 4).toString('utf8') === 'RIFF' &&
+        buffer.subarray(8, 12).toString('utf8') === 'WEBP'
+      );
+    }
+
+    return false;
   }
 
   private decodeLegacyDataUrl(fileDataUrl: string): { buffer: Buffer } {

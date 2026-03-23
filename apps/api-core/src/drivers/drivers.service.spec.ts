@@ -70,7 +70,7 @@ describe('DriversService', () => {
     prisma.user.findMany.mockResolvedValue([]);
     documentStorageService.uploadFile.mockResolvedValue({
       storageKey: 'doc-key',
-      absolutePath: '/tmp/doc-key',
+      storageUrl: 'https://storage.example.com/driver-documents/doc-key',
     });
     intelligenceClient.queryPersonRisk.mockResolvedValue({
       riskBand: 'low',
@@ -270,15 +270,20 @@ describe('DriversService', () => {
       documentType: 'drivers-license',
       fileName: 'licence.pdf',
       contentType: 'application/pdf',
-      fileBase64: 'YWJj',
+      fileBase64: Buffer.from('%PDF-1.4\n').toString('base64'),
       uploadedBy: 'operator',
     });
 
-    expect(documentStorageService.uploadFile).toHaveBeenCalled();
+    expect(documentStorageService.uploadFile).toHaveBeenCalledWith(
+      Buffer.from('%PDF-1.4\n'),
+      'licence.pdf',
+      'application/pdf',
+    );
     expect(prisma.driverDocument.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         status: 'pending',
         storageKey: 'doc-key',
+        storageUrl: 'https://storage.example.com/driver-documents/doc-key',
         reviewedBy: null,
         reviewedAt: null,
       }),

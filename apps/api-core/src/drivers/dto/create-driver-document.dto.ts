@@ -23,7 +23,7 @@ export class CreateDriverDocumentDto {
 
   @ApiProperty({
     description:
-      'Base64 representation of the uploaded file payload. The API stores the file through the document storage service instead of inline in the database.',
+      'Base64 representation of the uploaded file payload. The API persists the decoded file into object storage and stores metadata only in the database.',
   })
   @IsString()
   @IsNotEmpty()

@@ -27,6 +27,14 @@ import {
   type DriverLivenessSessionRecord,
 } from '../../lib/api-core';
 
+const MAX_DRIVER_DOCUMENT_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_DRIVER_DOCUMENT_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
 export interface CreateDriverActionState {
   error?: string;
   success?: string;
@@ -725,13 +733,19 @@ export async function uploadDriverDocumentAction(
     return { error: 'Select a document file before uploading.' };
   }
 
+  const normalizedContentType = normalizeDriverDocumentContentType(file.type);
+  const validationError = validateDriverDocumentFile(file.size, normalizedContentType);
+  if (validationError) {
+    return { error: validationError };
+  }
+
   const fileBase64 = Buffer.from(await file.arrayBuffer()).toString('base64');
 
   try {
     await uploadDriverDocument(driverId, {
       documentType,
       fileName: file.name,
-      contentType: file.type || 'application/octet-stream',
+      contentType: normalizedContentType,
       fileBase64,
       uploadedBy: 'operator',
     });
@@ -764,13 +778,19 @@ export async function uploadDriverSelfServiceDocumentAction(
     return { error: 'Select a document file before uploading.' };
   }
 
+  const normalizedContentType = normalizeDriverDocumentContentType(file.type);
+  const validationError = validateDriverDocumentFile(file.size, normalizedContentType);
+  if (validationError) {
+    return { error: validationError };
+  }
+
   const fileBase64 = Buffer.from(await file.arrayBuffer()).toString('base64');
 
   try {
     await uploadDriverSelfServiceDocument(token, {
       documentType,
       fileName: file.name,
-      contentType: file.type || 'application/octet-stream',
+      contentType: normalizedContentType,
       fileBase64,
       uploadedBy: 'driver_self_service',
     });
@@ -784,6 +804,22 @@ export async function uploadDriverSelfServiceDocumentAction(
   }
 
   return { success: 'Driver document uploaded successfully.' };
+}
+
+function normalizeDriverDocumentContentType(contentType: string): string {
+  return contentType.split(';', 1)[0]?.trim().toLowerCase() ?? 'application/octet-stream';
+}
+
+function validateDriverDocumentFile(size: number, contentType: string): string | null {
+  if (size > MAX_DRIVER_DOCUMENT_FILE_BYTES) {
+    return 'Document files must be 10 MB or smaller.';
+  }
+
+  if (!ALLOWED_DRIVER_DOCUMENT_TYPES.has(contentType)) {
+    return 'Only PDF, JPEG, PNG, and WEBP document uploads are allowed.';
+  }
+
+  return null;
 }
 
 export async function reviewDriverDocumentAction(

@@ -286,6 +286,7 @@ export class DriversController {
       documents.map((document) => ({
         ...document,
         storageKey: document.storageKey ?? null,
+        storageUrl: document.storageUrl ?? null,
         previewUrl: `/api/drivers/${id}/documents/${document.id}/content`,
       })),
     );
@@ -619,6 +620,7 @@ export class DriverSelfServiceController {
       documents.map((document) => ({
         ...document,
         storageKey: document.storageKey ?? null,
+        storageUrl: document.storageUrl ?? null,
         previewUrl: `/api/drivers/${document.driverId}/documents/${document.id}/content?token=${encodeURIComponent(token)}`,
       })),
     );

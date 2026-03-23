@@ -23,6 +23,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1015.0",
     "@fastify/cors": "^10.0.2",
     "@fastify/static": "^7.0.0",
     "@mobility-os/authz-model": "workspace:*",
@@ -40,6 +41,7 @@
     "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^5.22.0",
+    "@aws-sdk/client-s3": "^3.916.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "nestjs-pino": "^4.6.1",
@@ -68,13 +70,19 @@
     "schema": "src/database/prisma/schema.prisma"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": ".",
     "testRegex": ".*\\.(spec|e2e-spec)\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "collectCoverageFrom": ["src/**/*.(t|j)s"],
+    "collectCoverageFrom": [
+      "src/**/*.(t|j)s"
+    ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"
   }

@@ -355,6 +355,8 @@ model DriverDocument {
   fileDataUrl String?
   // Opaque key resolved through the document storage service.
   storageKey  String?
+  // Canonical object URL in backing storage. UI should still use authenticated preview routes.
+  storageUrl  String?
   uploadedBy  String
   status      String @default("pending")
   expiresAt   DateTime?
@@ -371,6 +373,7 @@ model DriverDocument {
   @@index([status])
   @@index([expiresAt])
   @@index([storageKey])
+  @@index([storageUrl])
   @@map("driver_documents")
 }
 

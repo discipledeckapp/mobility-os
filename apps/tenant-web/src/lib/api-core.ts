@@ -150,6 +150,7 @@ export interface DriverDocumentRecord {
   fileName: string;
   contentType: string;
   storageKey?: string | null;
+  storageUrl?: string | null;
   previewUrl?: string | null;
   uploadedBy: string;
   status: string;
