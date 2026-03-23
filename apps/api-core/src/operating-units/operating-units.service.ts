@@ -4,6 +4,7 @@ import type { OperatingUnit } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { CreateOperatingUnitDto } from './dto/create-operating-unit.dto';
+import type { UpdateOperatingUnitDto } from './dto/update-operating-unit.dto';
 
 @Injectable()
 export class OperatingUnitsService {
@@ -49,6 +50,34 @@ export class OperatingUnitsService {
         businessEntityId: dto.businessEntityId,
         name: dto.name,
         status: dto.status ?? 'active',
+      },
+    });
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    dto: UpdateOperatingUnitDto,
+  ): Promise<OperatingUnit> {
+    await this.findOne(tenantId, id);
+
+    if (dto.businessEntityId) {
+      const entity = await this.prisma.businessEntity.findUnique({
+        where: { id: dto.businessEntityId },
+      });
+
+      if (!entity) {
+        throw new NotFoundException(`BusinessEntity '${dto.businessEntityId}' not found`);
+      }
+
+      assertTenantOwnership(asTenantId(entity.tenantId), asTenantId(tenantId));
+    }
+
+    return this.prisma.operatingUnit.update({
+      where: { id },
+      data: {
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.businessEntityId ? { businessEntityId: dto.businessEntityId } : {}),
       },
     });
   }

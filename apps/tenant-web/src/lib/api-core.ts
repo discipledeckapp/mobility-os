@@ -271,6 +271,18 @@ export interface FleetRecord {
   updatedAt: string;
 }
 
+export interface CreateFleetInput {
+  operatingUnitId: string;
+  name: string;
+  businessModel: string;
+}
+
+export interface UpdateFleetInput {
+  operatingUnitId: string;
+  name: string;
+  businessModel: string;
+}
+
 export interface BusinessEntityRecord {
   id: string;
   tenantId: string;
@@ -302,6 +314,16 @@ export interface OperatingUnitRecord {
   status: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateOperatingUnitInput {
+  businessEntityId: string;
+  name: string;
+}
+
+export interface UpdateOperatingUnitInput {
+  businessEntityId: string;
+  name: string;
 }
 
 export interface CreateDriverInput {
@@ -801,6 +823,31 @@ export async function getFleet(fleetId: string, token?: string): Promise<FleetRe
   });
 }
 
+export async function createFleet(
+  input: CreateFleetInput,
+  token?: string,
+): Promise<FleetRecord> {
+  return apiCoreFetch<FleetRecord>('/fleets', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateFleet(
+  fleetId: string,
+  input: UpdateFleetInput,
+  token?: string,
+): Promise<FleetRecord> {
+  return apiCoreFetch<FleetRecord>(`/fleets/${fleetId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function listBusinessEntities(token?: string): Promise<BusinessEntityRecord[]> {
   return apiCoreFetch<BusinessEntityRecord[]>('/business-entities', {
     cache: 'no-store',
@@ -854,6 +901,41 @@ export async function listOperatingUnits(
   const query = params.toString();
 
   return apiCoreFetch<OperatingUnitRecord[]>(`/operating-units${query ? `?${query}` : ''}`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function getOperatingUnit(
+  operatingUnitId: string,
+  token?: string,
+): Promise<OperatingUnitRecord> {
+  return apiCoreFetch<OperatingUnitRecord>(`/operating-units/${operatingUnitId}`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createOperatingUnit(
+  input: CreateOperatingUnitInput,
+  token?: string,
+): Promise<OperatingUnitRecord> {
+  return apiCoreFetch<OperatingUnitRecord>('/operating-units', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateOperatingUnit(
+  operatingUnitId: string,
+  input: UpdateOperatingUnitInput,
+  token?: string,
+): Promise<OperatingUnitRecord> {
+  return apiCoreFetch<OperatingUnitRecord>(`/operating-units/${operatingUnitId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });

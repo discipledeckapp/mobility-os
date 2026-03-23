@@ -1,5 +1,5 @@
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -12,6 +12,7 @@ import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { CreateOperatingUnitDto } from './dto/create-operating-unit.dto';
+import { UpdateOperatingUnitDto } from './dto/update-operating-unit.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { OperatingUnitsService } from './operating-units.service';
 
@@ -39,6 +40,16 @@ export class OperatingUnitsController {
   @ApiCreatedResponse({ description: 'Operating unit created' })
   create(@CurrentTenant() ctx: TenantContext, @Body() dto: CreateOperatingUnitDto) {
     return this.service.create(ctx.tenantId, dto);
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ description: 'Operating unit updated' })
+  update(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateOperatingUnitDto,
+  ) {
+    return this.service.update(ctx.tenantId, id, dto);
   }
 
   @Delete(':id')
