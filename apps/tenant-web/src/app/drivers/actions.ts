@@ -108,10 +108,10 @@ export async function createDriverAction(
     payload.nationality = nationality;
   }
 
+  let driverId: string;
   try {
     const driver = await createDriver(payload);
-    revalidatePath('/drivers');
-    redirect(`/drivers/${driver.id}?tab=verification`);
+    driverId = driver.id;
   } catch (error) {
     return {
       error:
@@ -121,6 +121,8 @@ export async function createDriverAction(
     };
   }
 
+  revalidatePath('/drivers');
+  redirect(`/drivers/${driverId}?tab=verification`);
 }
 
 function getOptionalTrimmedValue(formData: FormData, key: string): string {
