@@ -651,7 +651,9 @@ export async function apiCoreFetch<T>(
   options: ApiCoreRequestOptions = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set('content-type', 'application/json');
+  if (options.body !== undefined) {
+    headers.set('content-type', 'application/json');
+  }
   if (options.token) {
     headers.set('authorization', `Bearer ${options.token}`);
   }

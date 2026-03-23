@@ -297,7 +297,7 @@ export function DriverIdentityVerification({
                 type="submit"
                 variant="ghost"
               >
-                {isSendingLink ? 'Sending...' : 'Send self-service link'}
+                {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
               </Button>
             </form>
           </span>
