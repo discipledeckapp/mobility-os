@@ -84,10 +84,12 @@ export function DriverRecordsPanel({
   drivers,
   fleets,
   errorMessage,
+  totalDrivers,
 }: {
   drivers: DriverRecord[];
   fleets: FleetRecord[];
   errorMessage?: string | null;
+  totalDrivers: number;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [fleetId, setFleetId] = useState('');
@@ -183,7 +185,7 @@ export function DriverRecordsPanel({
               <div className="space-y-1 px-5 py-4">
                 <Text tone="muted">Total drivers</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.length}
+                  {totalDrivers}
                 </p>
               </div>
             </div>
@@ -281,7 +283,7 @@ export function DriverRecordsPanel({
             </div>
           </div>
         }
-        totalItems={drivers.length}
+        totalItems={totalDrivers}
       >
         <Table>
           <TableHeader>

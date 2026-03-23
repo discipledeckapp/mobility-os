@@ -554,4 +554,67 @@ describe('DriversService', () => {
     expect(result.total).toBe(1);
     expect(result.data).toHaveLength(1);
   });
+
+  it('still lists drivers when guarantor enrichment fails', async () => {
+    prisma.driver.findMany.mockResolvedValue([
+      {
+        id: 'driver_1',
+        tenantId: 'tenant_1',
+        fleetId: 'fleet_1',
+        businessEntityId: 'be_1',
+        operatingUnitId: 'ou_1',
+        firstName: 'Ada',
+        lastName: 'Okafor',
+        phone: '+2348012345678',
+        status: 'inactive',
+        identityStatus: 'unverified',
+      },
+    ]);
+    prisma.driver.count.mockResolvedValue(1);
+    prisma.driverGuarantor.findMany.mockRejectedValue(new Error('relation "driver_guarantors" does not exist'));
+
+    const result = await service.list('tenant_1', { limit: 25 });
+
+    expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
+      id: 'driver_1',
+      hasGuarantor: false,
+      guarantorStatus: null,
+      hasApprovedLicence: false,
+      hasMobileAccess: false,
+      mobileAccessStatus: 'missing',
+      activationReadiness: 'not_ready',
+    });
+  });
+
+  it('still lists drivers when mobile-access enrichment fails', async () => {
+    prisma.driver.findMany.mockResolvedValue([
+      {
+        id: 'driver_1',
+        tenantId: 'tenant_1',
+        fleetId: 'fleet_1',
+        businessEntityId: 'be_1',
+        operatingUnitId: 'ou_1',
+        firstName: 'Ada',
+        lastName: 'Okafor',
+        phone: '+2348012345678',
+        status: 'inactive',
+        identityStatus: 'unverified',
+      },
+    ]);
+    prisma.driver.count.mockResolvedValue(1);
+    prisma.user.findMany.mockRejectedValue(new Error('column "mobileAccessRevoked" does not exist'));
+
+    const result = await service.list('tenant_1', { limit: 25 });
+
+    expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
+      id: 'driver_1',
+      hasMobileAccess: false,
+      mobileAccessStatus: 'missing',
+      activationReadiness: 'not_ready',
+    });
+  });
 });

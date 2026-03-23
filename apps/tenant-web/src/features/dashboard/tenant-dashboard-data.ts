@@ -203,6 +203,7 @@ function buildRecentActivity(
 
 export async function getDashboardData(): Promise<DashboardData> {
   const settle = async <T>(loader: () => Promise<T>): Promise<T> => loader();
+  const notes: string[] = [];
 
   const tenant = await getTenantMe().catch(() => null);
   const locale = getFormattingLocale(tenant?.country);
@@ -242,8 +243,40 @@ export async function getDashboardData(): Promise<DashboardData> {
   const vehicles = vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [];
   const assignments = assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [];
   const remittances = remittancesResult.status === 'fulfilled' ? remittancesResult.value.data : [];
+  const totalDrivers = driversResult.status === 'fulfilled' ? driversResult.value.total : 0;
 
-  const totalDrivers = drivers.length;
+  if (driversResult.status === 'rejected') {
+    const message =
+      driversResult.reason instanceof Error
+        ? driversResult.reason.message
+        : String(driversResult.reason);
+    notes.push(`Driver data is temporarily unavailable: ${message}`);
+  }
+
+  if (vehiclesResult.status === 'rejected') {
+    const message =
+      vehiclesResult.reason instanceof Error
+        ? vehiclesResult.reason.message
+        : String(vehiclesResult.reason);
+    notes.push(`Vehicle data is temporarily unavailable: ${message}`);
+  }
+
+  if (assignmentsResult.status === 'rejected') {
+    const message =
+      assignmentsResult.reason instanceof Error
+        ? assignmentsResult.reason.message
+        : String(assignmentsResult.reason);
+    notes.push(`Assignment data is temporarily unavailable: ${message}`);
+  }
+
+  if (remittancesResult.status === 'rejected') {
+    const message =
+      remittancesResult.reason instanceof Error
+        ? remittancesResult.reason.message
+        : String(remittancesResult.reason);
+    notes.push(`Remittance data is temporarily unavailable: ${message}`);
+  }
+
   const activeDrivers = drivers.filter((driver) => driver.status === 'active').length;
   const totalVehicles = vehicles.length;
   const activeAssignments = assignments.filter(
@@ -319,7 +352,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     ],
     recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, remittances),
     featureCards: getDashboardFeatureCards(),
-    notes: [],
+    notes,
     isEmpty:
       drivers.length === 0 &&
       vehicles.length === 0 &&

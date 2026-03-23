@@ -122,6 +122,7 @@ export function TenantDashboardShell({
   remittanceSummary,
   recentActivity,
   featureCards,
+  notes,
   isEmpty,
 }: TenantDashboardShellProps) {
   const badgeToneBySummaryTone = {
@@ -154,6 +155,21 @@ export function TenantDashboardShell({
       eyebrow="Operations"
       title="Dashboard"
     >
+      {notes.length > 0 ? (
+        <div className="mb-6 space-y-3">
+          {notes.map((note) => (
+            <Card
+              className="border-amber-200 bg-amber-50/80 shadow-[0_4px_16px_-8px_rgba(120,53,15,0.18)]"
+              key={note}
+            >
+              <CardContent className="px-5 py-4">
+                <Text tone="muted">{note}</Text>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+
       {/* Metric cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {summary.map((item) => {

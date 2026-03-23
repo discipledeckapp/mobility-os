@@ -9,6 +9,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -169,6 +170,8 @@ const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
 
 @Injectable()
 export class DriversService {
+  private readonly logger = new Logger(DriversService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly intelligenceClient: IntelligenceClient,
@@ -353,17 +356,20 @@ export class DriversService {
     ]);
 
     const enrichedDrivers = await this.enrichDriversWithRisk(drivers);
-    const driversWithGuarantors = await this.attachGuarantorSummaries(tenantId, enrichedDrivers);
-    const driversWithDocuments = await this.attachDocumentSummaries(
+    const driversWithGuarantors = await this.attachGuarantorSummariesSafely(
+      tenantId,
+      enrichedDrivers,
+    );
+    const driversWithDocuments = await this.attachDocumentSummariesSafely(
       tenantId,
       driversWithGuarantors,
     );
-    const driversWithMobileAccess = await this.attachMobileAccessSummaries(
+    const driversWithMobileAccess = await this.attachMobileAccessSummariesSafely(
       tenantId,
       driversWithDocuments,
     );
     return {
-      data: await this.attachReadinessSummaries(driversWithMobileAccess),
+      data: await this.attachReadinessSummariesSafely(driversWithMobileAccess),
       total,
       page,
       limit,
@@ -1178,6 +1184,113 @@ export class DriversService {
     } catch {
       return driver;
     }
+  }
+
+  private withDefaultGuarantorSummary<
+    TDriver extends DriverWithIdentityState & DriverIntelligenceSummary,
+  >(driver: TDriver): TDriver & DriverGuarantorSummary {
+    return {
+      ...driver,
+      hasGuarantor: false,
+      guarantorStatus: null,
+      guarantorDisconnectedAt: null,
+      guarantorPersonId: null,
+      guarantorRiskBand: null,
+      guarantorIsWatchlisted: null,
+      guarantorIsAlsoDriver: false,
+    };
+  }
+
+  private withDefaultDocumentSummary<
+    TDriver extends DriverWithIdentityState & DriverIntelligenceSummary & DriverGuarantorSummary,
+  >(driver: TDriver): TDriver & DriverDocumentSummary {
+    return {
+      ...driver,
+      hasApprovedLicence: false,
+      pendingDocumentCount: 0,
+      rejectedDocumentCount: 0,
+      expiredDocumentCount: 0,
+    };
+  }
+
+  private withDefaultMobileAccessSummary<
+    TDriver extends DriverWithIdentityState &
+      DriverIntelligenceSummary &
+      DriverGuarantorSummary &
+      DriverDocumentSummary,
+  >(driver: TDriver): TDriver & DriverMobileAccessSummary {
+    return {
+      ...driver,
+      hasMobileAccess: false,
+      mobileAccessStatus: 'missing',
+    };
+  }
+
+  private async attachGuarantorSummariesSafely<
+    TDriver extends DriverWithIdentityState & DriverIntelligenceSummary,
+  >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverGuarantorSummary>> {
+    try {
+      return await this.attachGuarantorSummaries(tenantId, drivers);
+    } catch (error) {
+      this.logger.warn(
+        `Driver guarantor enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
+      );
+      return drivers.map((driver) => this.withDefaultGuarantorSummary(driver));
+    }
+  }
+
+  private async attachDocumentSummariesSafely<
+    TDriver extends DriverWithIdentityState & DriverIntelligenceSummary & DriverGuarantorSummary,
+  >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverDocumentSummary>> {
+    try {
+      return await this.attachDocumentSummaries(tenantId, drivers);
+    } catch (error) {
+      this.logger.warn(
+        `Driver document enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
+      );
+      return drivers.map((driver) => this.withDefaultDocumentSummary(driver));
+    }
+  }
+
+  private async attachMobileAccessSummariesSafely<
+    TDriver extends DriverWithIdentityState &
+      DriverIntelligenceSummary &
+      DriverGuarantorSummary &
+      DriverDocumentSummary,
+  >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverMobileAccessSummary>> {
+    try {
+      return await this.attachMobileAccessSummaries(tenantId, drivers);
+    } catch (error) {
+      this.logger.warn(
+        `Driver mobile-access enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
+      );
+      return drivers.map((driver) => this.withDefaultMobileAccessSummary(driver));
+    }
+  }
+
+  private async attachReadinessSummariesSafely<
+    TDriver extends DriverWithIdentityState &
+      DriverIntelligenceSummary &
+      DriverGuarantorSummary &
+      DriverDocumentSummary &
+      DriverMobileAccessSummary,
+  >(drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
+    try {
+      return await this.attachReadinessSummaries(drivers);
+    } catch (error) {
+      this.logger.warn(`Driver readiness enrichment failed: ${this.getErrorMessage(error)}`);
+      return drivers.map((driver) => ({
+        ...driver,
+        activationReadiness: 'not_ready',
+        activationReadinessReasons: [],
+        assignmentReadiness: 'not_ready',
+        assignmentReadinessReasons: [],
+      }));
+    }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 
   async create(tenantId: string, dto: CreateDriverDto): Promise<Driver> {

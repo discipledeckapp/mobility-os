@@ -126,6 +126,13 @@ Optional:
 - start command:
   - `pnpm --filter @mobility-os/api-core db:migrate && pnpm --filter @mobility-os/api-core start`
 
+### Migration safety
+
+- `api-core` production deploys now fail closed on migration errors.
+- Automatic baselining is disabled by default because it can mark migrations as applied while the schema is only partially present.
+- Only use `ALLOW_MIGRATION_BASELINE=true` for a deliberate one-time recovery on a known legacy database after verifying the live schema manually.
+- Do not leave `ALLOW_MIGRATION_BASELINE=true` enabled for normal deploys.
+
 ## Pilot Checklist
 
 1. Create a Neon database for `api-core`.
