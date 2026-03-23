@@ -14,6 +14,12 @@ export interface SupportedIdentifierType {
   type: string;
   /** Human-readable label shown in UI — country-specific (e.g. 'NIN', 'CNI'). */
   label: string;
+  /** If set, the value must be exactly this many characters. */
+  exactLength?: number;
+  /** If true, only digit characters are accepted. */
+  numericOnly?: boolean;
+  /** If true, this identifier must be provided before verification can proceed. */
+  required?: boolean;
 }
 
 export interface IdentityVerificationProviderConfig {

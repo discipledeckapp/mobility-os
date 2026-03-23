@@ -19,6 +19,7 @@ import {
   getCountryConfig,
   getSupportedCountryCodes,
   isCountrySupported,
+  type SupportedIdentifierType,
 } from '@mobility-os/domain-config';
 import type { DriverRecord } from '../../lib/api-core';
 import {
@@ -41,48 +42,38 @@ const initialStartState: StartDriverVerificationActionState = {};
 const initialResolveState: ResolveDriverVerificationActionState = {};
 const initialSendState: SendDriverSelfServiceLinkActionState = {};
 
-function VerificationStepIndicator({
-  current,
-}: {
-  current: 1 | 2 | 3;
-}) {
-  return (
-    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-      {[1, 2, 3].map((step) => (
-        <div className="flex items-center gap-2" key={step}>
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-full ${
-              step === current
-                ? 'bg-[var(--mobiris-primary)] text-white'
-                : step < current
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-slate-100 text-slate-500'
-            }`}
-          >
-            {step}
-          </div>
-          {step < 3 ? <div className="h-px w-8 bg-slate-200" /> : null}
-        </div>
-      ))}
-      <span className="ml-2 text-slate-400">Step {current} of 3</span>
-    </div>
+// ── Identifier helpers ────────────────────────────────────────────────────────
+
+/** Returns the identifier types that should be collected manually (excludes auto-captured types). */
+function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[] {
+  if (!isCountrySupported(countryCode)) return [];
+  return getCountryConfig(countryCode).supportedIdentifierTypes.filter(
+    (id) => id.type !== 'PHONE' && id.type !== 'EMAIL',
   );
 }
 
-function getIdentifierOptions(countryCode: string): Array<{ value: string; label: string }> {
-  if (!isCountrySupported(countryCode)) return [];
-  return getCountryConfig(countryCode).supportedIdentifierTypes.map((id) => ({
-    value: id.type,
-    label: id.label,
-  }));
+function validateIdentifierValue(value: string, config: SupportedIdentifierType): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return config.required ? `${config.label} is required` : null;
+  }
+  if (config.numericOnly && !/^\d+$/.test(trimmed)) {
+    return `${config.label} must contain digits only`;
+  }
+  if (config.exactLength && trimmed.length !== config.exactLength) {
+    return `${config.label} must be exactly ${config.exactLength} digits`;
+  }
+  return null;
 }
 
-function getIdentifierPlaceholder(optionLabel: string): string {
-  if (optionLabel.includes('NIN')) return 'Enter the driver NIN';
-  if (optionLabel.includes('BVN')) return 'Enter the driver BVN';
-  if (optionLabel.includes('Phone')) return 'Phone is already on the driver record';
-  return `Enter ${optionLabel}`;
+function isIdentifierPhaseComplete(
+  identifierTypes: SupportedIdentifierType[],
+  values: Record<string, string>,
+): boolean {
+  return identifierTypes.every((id) => validateIdentifierValue(values[id.type] ?? '', id) === null);
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function DriverIdentityVerification({
   driver,
@@ -106,11 +97,33 @@ export function DriverIdentityVerification({
       })),
     [],
   );
-  const identifierOptions = useMemo(() => getIdentifierOptions(countryCode), [countryCode]);
-  const manualIdentifierOptions = useMemo(
-    () => identifierOptions.filter((option) => option.value !== 'PHONE' && option.value !== 'EMAIL'),
-    [identifierOptions],
+
+  const identifierTypes = useMemo(() => getManualIdentifierTypes(countryCode), [countryCode]);
+  const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
+  const [identifierTouched, setIdentifierTouched] = useState<Record<string, boolean>>({});
+
+  // Reset identifier state when country changes
+  useEffect(() => {
+    setIdentifierValues({});
+    setIdentifierTouched({});
+  }, [countryCode]);
+
+  const identifierErrors = useMemo(
+    () =>
+      Object.fromEntries(
+        identifierTypes.map((id) => [
+          id.type,
+          validateIdentifierValue(identifierValues[id.type] ?? '', id),
+        ]),
+      ),
+    [identifierTypes, identifierValues],
   );
+
+  const idPhaseComplete = useMemo(
+    () => isIdentifierPhaseComplete(identifierTypes, identifierValues),
+    [identifierTypes, identifierValues],
+  );
+
   const [sendState, sendLinkAction, isSendingLink] = useActionState(
     sendDriverSelfServiceLinkAction,
     initialSendState,
@@ -127,14 +140,15 @@ export function DriverIdentityVerification({
       : resolveDriverVerificationAction,
     initialResolveState,
   );
+
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const [selfieImageBase64, setSelfieImageBase64] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
   const [verificationMode, setVerificationMode] = useState<'live' | 'manual'>('live');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
   const identityStatus = getDriverIdentityStatus(driver, resolveState.result);
   const session = startState.session;
   const result = resolveState.result;
@@ -142,58 +156,33 @@ export function DriverIdentityVerification({
   const identityLabel = getDriverIdentityLabel(identityStatus);
   const canSendSelfServiceLink = Boolean(driver.email);
   const isManualMode = verificationMode === 'manual';
-  const currentStep: 1 | 2 | 3 = isManualMode
-    ? result
-      ? 3
-      : 2
-    : !startState.session
-      ? 1
-      : !selfieImageBase64
-        ? 2
-        : 3;
+  const livenessUnavailable = startState.errorCode === 'liveness_unavailable';
 
   useEffect(() => {
     return () => {
-      if (selfiePreviewUrl) {
-        URL.revokeObjectURL(selfiePreviewUrl);
-      }
-
+      if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
       if (streamRef.current) {
-        for (const track of streamRef.current.getTracks()) {
-          track.stop();
-        }
+        for (const track of streamRef.current.getTracks()) track.stop();
       }
     };
   }, [selfiePreviewUrl]);
 
   useEffect(() => {
-    if (isManualMode || !session || cameraReady || selfiePreviewUrl || streamRef.current) {
-      return;
-    }
-
+    if (isManualMode || !session || cameraReady || selfiePreviewUrl || streamRef.current) return;
     void startCamera();
   }, [cameraReady, isManualMode, selfiePreviewUrl, session]);
 
   async function startCamera(): Promise<void> {
     setCameraError(null);
-
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('This browser cannot access the camera for live selfie capture.');
       return;
     }
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false,
-      });
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       if (streamRef.current) {
-        for (const track of streamRef.current.getTracks()) {
-          track.stop();
-        }
+        for (const track of streamRef.current.getTracks()) track.stop();
       }
-
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -202,75 +191,55 @@ export function DriverIdentityVerification({
       setCameraReady(true);
     } catch (error) {
       setCameraError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to access the camera for live selfie capture.',
+        error instanceof Error ? error.message : 'Unable to access the camera for live selfie capture.',
       );
     }
   }
 
   function captureSelfie(): void {
-    if (!videoRef.current) {
-      setCameraError('Camera preview is not ready yet.');
-      return;
-    }
-
+    if (!videoRef.current) { setCameraError('Camera preview is not ready yet.'); return; }
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const context = canvas.getContext('2d');
-
-    if (!context) {
-      setCameraError('Unable to capture the selfie image.');
-      return;
-    }
-
+    if (!context) { setCameraError('Unable to capture the selfie image.'); return; }
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     const [, base64 = ''] = dataUrl.split(',');
-
-    if (selfiePreviewUrl) {
-      URL.revokeObjectURL(selfiePreviewUrl);
-    }
-
+    if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
     setSelfieImageBase64(base64);
     setSelfiePreviewUrl(dataUrl);
     setCameraReady(false);
-
     if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) {
-        track.stop();
-      }
+      for (const track of streamRef.current.getTracks()) track.stop();
       streamRef.current = null;
     }
   }
 
   function resetSelfieCapture(): void {
     if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) {
-        track.stop();
-      }
+      for (const track of streamRef.current.getTracks()) track.stop();
       streamRef.current = null;
     }
-    if (selfiePreviewUrl) {
-      URL.revokeObjectURL(selfiePreviewUrl);
-    }
+    if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
     setSelfiePreviewUrl(null);
     setSelfieImageBase64('');
     setCameraError(null);
     setCameraReady(false);
   }
 
-  function updateIdentifierValue(identifierType: string, value: string): void {
-    setIdentifierValues((current) => ({
-      ...current,
-      [identifierType]: value,
-    }));
+  function updateIdentifierValue(type: string, value: string): void {
+    setIdentifierValues((current) => ({ ...current, [type]: value }));
+  }
+
+  function markIdentifierTouched(type: string): void {
+    setIdentifierTouched((current) => ({ ...current, [type]: true }));
   }
 
   return (
     <div className="space-y-4">
+      {/* Operator action bar */}
       {mode === 'operator' ? (
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={identityTone}>{identityLabel}</Badge>
@@ -282,30 +251,15 @@ export function DriverIdentityVerification({
               Open review
             </Link>
           ) : null}
-          <span
-            title={
-              canSendSelfServiceLink
-                ? undefined
-                : 'Add email address to send a self-service link.'
-            }
-          >
+          <span title={canSendSelfServiceLink ? undefined : 'Add email address to send a self-service link.'}>
             <form action={sendLinkAction}>
               <input name="driverId" type="hidden" value={driver.id} />
-              <Button
-                disabled={isSendingLink || !canSendSelfServiceLink}
-                size="sm"
-                type="submit"
-                variant="ghost"
-              >
+              <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit" variant="ghost">
                 {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
               </Button>
             </form>
           </span>
-          <Button
-            onClick={() => setIsOpen((current) => !current)}
-            size="sm"
-            variant="secondary"
-          >
+          <Button onClick={() => setIsOpen((current) => !current)} size="sm" variant="secondary">
             {isOpen ? 'Hide verification' : identityStatus === 'verified' ? 'Re-verify identity' : 'Verify identity'}
           </Button>
         </div>
@@ -316,15 +270,10 @@ export function DriverIdentityVerification({
           Review case {driver.identityReviewCaseId} is holding this driver until a manual decision is recorded.
         </Text>
       ) : null}
-
-      {mode === 'operator' && sendState.error ? (
-        <Text tone="danger">{sendState.error}</Text>
-      ) : null}
-      {mode === 'operator' && sendState.success ? (
-        <Text tone="success">{sendState.success}</Text>
-      ) : null}
+      {mode === 'operator' && sendState.error ? <Text tone="danger">{sendState.error}</Text> : null}
+      {mode === 'operator' && sendState.success ? <Text tone="success">{sendState.success}</Text> : null}
       {mode === 'operator' && !driver.email ? (
-        <Text tone="muted">Add email address to send a self-service link.</Text>
+        <Text tone="muted">Add an email address to this driver record to send a self-verification link.</Text>
       ) : null}
 
       {isOpen ? (
@@ -334,90 +283,194 @@ export function DriverIdentityVerification({
               {mode === 'self_service' ? 'Complete identity verification' : 'Verify identity'}
             </CardTitle>
             <CardDescription>
-              Complete live verification step by step, or continue with manual verification only when live liveness is unavailable.
+              Enter the driver's identification numbers first, then complete live or manual verification.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <VerificationStepIndicator current={currentStep} />
+          <CardContent className="space-y-6">
 
-            <form action={startFormAction} className="grid gap-4 md:grid-cols-2">
-              {mode === 'self_service' ? (
-                <input name="token" type="hidden" value={selfServiceToken ?? ''} />
-              ) : (
-                <input name="driverId" type="hidden" value={driver.id} />
-              )}
+            {/* ── Step 1: Country + Identifiers ── */}
+            <div className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] text-xs font-bold text-white">1</div>
+                <Text tone="strong">Identification numbers</Text>
+              </div>
+              <Text tone="muted">
+                Enter the driver's identification numbers before starting verification. NIN is required; BVN is optional but recommended.
+              </Text>
 
-              <SearchableSelect
-                helperText="Country defaults to the organisation or driver country."
-                inputId={`countryCode-${driver.id}`}
-                label="Country"
-                name="countryCode"
-                onChange={setCountryCode}
-                options={countryOptions}
-                placeholder="Select country"
-                required
-                value={countryCode}
-              />
-              <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4 md:col-span-2">
-                <Text tone="strong">Step 1: Choose how to verify</Text>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <SearchableSelect
+                    helperText="Country determines which identifier types are required."
+                    inputId={`countryCode-${driver.id}`}
+                    label="Country"
+                    onChange={setCountryCode}
+                    options={countryOptions}
+                    placeholder="Select country"
+                    required
+                    value={countryCode}
+                  />
+                </div>
+
+                {identifierTypes.map((idType) => {
+                  const value = identifierValues[idType.type] ?? '';
+                  const error = identifierTouched[idType.type] ? identifierErrors[idType.type] : null;
+                  const hint = [
+                    idType.exactLength ? `${idType.exactLength} digits` : null,
+                    idType.numericOnly ? 'numbers only' : null,
+                    idType.required ? 'required' : 'optional',
+                  ].filter(Boolean).join(' · ');
+
+                  return (
+                    <div className="space-y-1.5" key={idType.type}>
+                      <Label htmlFor={`${idType.type}-${driver.id}`}>
+                        {idType.label}
+                        {idType.required ? <span className="ml-1 text-rose-500">*</span> : <span className="ml-1 text-slate-400">(optional)</span>}
+                      </Label>
+                      <Input
+                        autoComplete="off"
+                        id={`${idType.type}-${driver.id}`}
+                        inputMode={idType.numericOnly ? 'numeric' : 'text'}
+                        maxLength={idType.exactLength}
+                        onBlur={() => markIdentifierTouched(idType.type)}
+                        onChange={(e) => {
+                          const raw = idType.numericOnly ? e.target.value.replace(/\D/g, '') : e.target.value;
+                          updateIdentifierValue(idType.type, raw);
+                        }}
+                        placeholder={`Enter ${hint}`}
+                        value={value}
+                      />
+                      {error ? (
+                        <Text tone="danger">{error}</Text>
+                      ) : value.length > 0 && !identifierErrors[idType.type] ? (
+                        <Text tone="success">✓ Valid</Text>
+                      ) : (
+                        <Text tone="muted">{hint}</Text>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Phone on record — shown for context */}
+                <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
+                  <Text tone="muted">Phone on record</Text>
+                  <Text>{driver.phone}</Text>
+                </div>
+                {driver.email ? (
+                  <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
+                    <Text tone="muted">Email on record</Text>
+                    <Text>{driver.email}</Text>
+                  </div>
+                ) : null}
+              </div>
+
+              {!idPhaseComplete && identifierTypes.some((id) => id.required) ? (
                 <Text tone="muted">
-                  Start the live session to open the camera on this device. If live liveness is unavailable, switch to manual verification only and submit identifiers for review.
+                  Enter a valid NIN to unlock verification.
                 </Text>
+              ) : idPhaseComplete ? (
+                <Text tone="success">Identification numbers look good — proceed to verification below.</Text>
+              ) : null}
+            </div>
+
+            {/* ── Step 2: Choose method + Start liveness ── */}
+            <div className={`space-y-4 rounded-[var(--mobiris-radius-card)] border p-4 transition-opacity ${idPhaseComplete ? 'border-[var(--mobiris-border)] bg-white opacity-100' : 'border-slate-100 bg-slate-50/50 opacity-50'}`}>
+              <div className="flex items-center gap-2">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>2</div>
+                <Text tone="strong">Choose verification method</Text>
+              </div>
+
+              {livenessUnavailable ? (
+                <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+                  <Text tone="strong">Live verification is not available right now</Text>
+                  <Text tone="muted">
+                    The identity verification service is not configured on this environment. Use manual verification to submit identifiers for review instead.
+                  </Text>
+                </div>
+              ) : null}
+
+              <form action={startFormAction} className="space-y-3">
+                {mode === 'self_service' ? (
+                  <input name="token" type="hidden" value={selfServiceToken ?? ''} />
+                ) : (
+                  <input name="driverId" type="hidden" value={driver.id} />
+                )}
+                <input name="countryCode" type="hidden" value={countryCode} />
+
                 <div className="flex flex-wrap gap-3">
                   <Button
-                    disabled={isStarting}
+                    disabled={!idPhaseComplete || isStarting || livenessUnavailable}
                     onClick={() => setVerificationMode('live')}
                     type="submit"
                   >
-                    {isStarting && verificationMode === 'live' ? 'Starting...' : startState.errorCode === 'liveness_unavailable' ? 'Try again' : 'Start live verification'}
+                    {isStarting && verificationMode === 'live' ? 'Starting...' : 'Start live verification'}
                   </Button>
                   <Button
-                    onClick={() => {
-                      setVerificationMode('manual');
-                      resetSelfieCapture();
-                    }}
+                    disabled={!idPhaseComplete}
+                    onClick={() => { setVerificationMode('manual'); resetSelfieCapture(); }}
                     type="button"
                     variant="secondary"
                   >
                     Manual verification only
                   </Button>
                 </div>
-              </div>
-            </form>
+              </form>
 
-            {startState.error ? <Text tone="danger">{startState.error}</Text> : null}
+              {startState.error && !livenessUnavailable ? (
+                <Text tone="danger">{startState.error}</Text>
+              ) : null}
 
-            <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
-              <Text tone="strong">Verification session</Text>
-              <Text tone="muted">
-                {isManualMode
-                  ? 'Manual verification is active. Submit identifiers and consent without a live selfie.'
-                  : 'Once the live session starts, the camera opens on this device so the selfie can be captured immediately.'}
-              </Text>
+              {/* Liveness session info */}
               {session && !isManualMode ? (
-                <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                  <Text>Provider: {session.providerName}</Text>
-                  <Text>{cameraReady ? 'Camera is ready' : selfiePreviewUrl ? 'Selfie captured' : 'Opening camera...'}</Text>
-                  <Text>
-                    Backup checks:{' '}
-                    {session.fallbackChain.length > 0
-                      ? session.fallbackChain.join(', ')
-                      : 'None reported'}
-                  </Text>
-                  <Text>Expires: {session.expiresAt ? session.expiresAt : 'Not provided'}</Text>
+                <div className="rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4 space-y-2">
+                  <Text tone="strong">Live session active</Text>
+                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                    <Text>Provider: {session.providerName}</Text>
+                    <Text>{cameraReady ? 'Camera is ready' : selfiePreviewUrl ? 'Selfie captured' : 'Opening camera...'}</Text>
+                    <Text>Expires: {session.expiresAt ?? 'Not provided'}</Text>
+                    <Text>Fallbacks: {session.fallbackChain.length > 0 ? session.fallbackChain.join(', ') : 'None'}</Text>
+                  </div>
                 </div>
-              ) : isManualMode ? (
-                <Text tone="muted">
-                  This submission will continue without a live selfie and may be routed into manual review.
-                </Text>
-              ) : (
-                <Text tone="muted">
-                  Start live verification to create the liveness session and open the camera.
-                </Text>
-              )}
+              ) : null}
+
+              {/* Camera */}
+              {session && !isManualMode && !cameraReady && !selfiePreviewUrl ? (
+                <Button onClick={() => void startCamera()} type="button" variant="secondary">Open camera again</Button>
+              ) : null}
+              {cameraReady && !isManualMode ? (
+                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
+                  <video
+                    autoPlay
+                    className="max-h-64 w-full rounded-[var(--mobiris-radius-card)] bg-slate-950 object-cover"
+                    muted
+                    playsInline
+                    ref={videoRef}
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button onClick={captureSelfie} type="button">Capture selfie</Button>
+                    <Button onClick={resetSelfieCapture} type="button" variant="ghost">Cancel camera</Button>
+                  </div>
+                </div>
+              ) : null}
+              {selfiePreviewUrl && !isManualMode ? (
+                <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
+                  <Text tone="strong">Captured selfie</Text>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img alt="Captured live selfie preview" className="max-h-48 rounded-[var(--mobiris-radius-card)] object-cover" src={selfiePreviewUrl} />
+                  <Button onClick={resetSelfieCapture} type="button" variant="ghost">Retake selfie</Button>
+                </div>
+              ) : null}
+              {cameraError ? <Text tone="danger">{cameraError}</Text> : null}
             </div>
 
-            <form action={resolveFormAction} className="grid gap-4 md:grid-cols-2">
+            {/* ── Step 3: Consent + Submit ── */}
+            <form action={resolveFormAction} className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
+              <div className="flex items-center gap-2">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>3</div>
+                <Text tone="strong">Consent and submit</Text>
+              </div>
+
+              {/* Hidden fields */}
               {mode === 'self_service' ? (
                 <input name="token" type="hidden" value={selfServiceToken ?? ''} />
               ) : (
@@ -427,159 +480,74 @@ export function DriverIdentityVerification({
               <input name="countryCode" type="hidden" value={countryCode} />
               <input name="providerName" type="hidden" value={session?.providerName ?? ''} />
               <input name="sessionId" type="hidden" value={session?.sessionId ?? ''} />
-              {manualIdentifierOptions.map((option) => (
+              <input name="selfieImageBase64" type="hidden" value={selfieImageBase64} />
+              {identifierTypes.map((idType) => (
                 <input
-                  key={option.value}
-                  name={`identifier_${option.value}`}
+                  key={idType.type}
+                  name={`identifier_${idType.type}`}
                   type="hidden"
-                  value={identifierValues[option.value] ?? ''}
+                  value={(identifierValues[idType.type] ?? '').trim()}
                 />
               ))}
 
-              <div className="space-y-3 md:col-span-2">
-                <Text tone="strong">Step 2: Enter identifiers and consent</Text>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {manualIdentifierOptions.map((option) => (
-                    <div className="space-y-2" key={option.value}>
-                      <Label htmlFor={`${option.value}-${driver.id}`}>{option.label}</Label>
-                      <Input
-                        autoComplete="off"
-                        id={`${option.value}-${driver.id}`}
-                        onChange={(event) => updateIdentifierValue(option.value, event.target.value)}
-                        placeholder={getIdentifierPlaceholder(option.label)}
-                        value={identifierValues[option.value] ?? ''}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="grid gap-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Text tone="muted">Phone on record</Text>
-                    <Text>{driver.phone}</Text>
-                  </div>
-                  <div className="space-y-1">
-                    <Text tone="muted">Email on record</Text>
-                    <Text>{driver.email ?? 'No email recorded'}</Text>
-                  </div>
-                </div>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    className="size-4 accent-[var(--mobiris-primary)]"
-                    name="subjectConsent"
-                    type="checkbox"
-                  />
-                  <span>I confirm the driver has given consent for liveness and identity verification.</span>
-                </label>
-              </div>
+              <Text tone="muted">
+                {isManualMode
+                  ? 'This submission will proceed without a live selfie and may be routed to manual review.'
+                  : !session
+                    ? 'Start live verification above before submitting.'
+                    : !selfieImageBase64
+                      ? 'Capture a live selfie above before submitting.'
+                      : 'Ready to submit.'}
+              </Text>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor={`selfieCapture-${driver.id}`}>Step 3: Live selfie</Label>
-                <input name="selfieImageBase64" type="hidden" value={selfieImageBase64} />
-                {!isManualMode ? (
-                  <Text tone="muted">
-                    File upload is disabled here. Use the live camera flow below so the verification run stays tied to the active liveness session.
-                  </Text>
-                ) : null}
-                {!session && !isManualMode ? (
-                  <Text tone="muted">
-                    Start live verification first to open the camera on this device.
-                  </Text>
-                ) : null}
-                {session && !isManualMode && !cameraReady && !selfiePreviewUrl ? (
-                  <Button onClick={() => void startCamera()} type="button" variant="secondary">
-                    Open camera again
-                  </Button>
-                ) : null}
-                {cameraReady && !isManualMode ? (
-                  <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
-                    <video
-                      autoPlay
-                      className="max-h-64 w-full rounded-[var(--mobiris-radius-card)] bg-slate-950 object-cover"
-                      muted
-                      playsInline
-                      ref={videoRef}
-                    />
-                    <div className="flex flex-wrap gap-3">
-                      <Button onClick={captureSelfie} type="button">
-                        Capture selfie
-                      </Button>
-                      <Button onClick={resetSelfieCapture} type="button" variant="ghost">
-                        Cancel camera
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-                {selfiePreviewUrl && !isManualMode ? (
-                  <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
-                    <Text tone="strong">Captured live selfie</Text>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt="Captured live selfie preview"
-                      className="max-h-48 rounded-[var(--mobiris-radius-card)] object-cover"
-                      src={selfiePreviewUrl}
-                    />
-                    <Button onClick={resetSelfieCapture} type="button" variant="ghost">
-                      Retake selfie
-                    </Button>
-                  </div>
-                ) : null}
-                {cameraError ? <Text tone="danger">{cameraError}</Text> : null}
-              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  className="size-4 accent-[var(--mobiris-primary)]"
+                  name="subjectConsent"
+                  type="checkbox"
+                />
+                <span>I confirm the driver has given consent for identity and liveness verification.</span>
+              </label>
 
-              <div className="md:col-span-2">
-                <Button
-                  disabled={isResolving || (!isManualMode && (!session || !selfieImageBase64))}
-                  type="submit"
-                >
-                  {isResolving ? 'Submitting...' : isManualMode ? 'Submit manual verification' : 'Submit verification'}
-                </Button>
-                {!isManualMode && !selfieImageBase64 ? (
-                  <Text className="mt-2" tone="muted">
-                    Capture a live selfie before submitting verification.
-                  </Text>
-                ) : null}
-              </div>
+              <Button
+                disabled={
+                  !idPhaseComplete ||
+                  isResolving ||
+                  (!isManualMode && (!session || !selfieImageBase64))
+                }
+                type="submit"
+              >
+                {isResolving
+                  ? 'Submitting...'
+                  : isManualMode
+                    ? 'Submit for manual review'
+                    : 'Submit verification'}
+              </Button>
+
+              {resolveState.error ? <Text tone="danger">{resolveState.error}</Text> : null}
+
+              {result ? (
+                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={identityTone}>{identityLabel}</Badge>
+                    {resolveState.success ? <Text>{resolveState.success}</Text> : null}
+                  </div>
+                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                    <Text>Decision: {result.decision}</Text>
+                    <Text>Provider status: {result.providerVerificationStatus ?? result.providerLookupStatus ?? 'Not provided'}</Text>
+                    <Text>Liveness passed: {result.livenessPassed === true ? 'Yes' : result.livenessPassed === false ? 'No' : 'Awaiting provider evidence'}</Text>
+                    <Text>Liveness confidence: {result.livenessConfidenceScore ?? 'Not returned'}</Text>
+                    <Text>Provider: {result.livenessProviderName ?? result.providerName ?? 'Not returned'}</Text>
+                    <Text>Confidence: {result.verificationConfidence ?? 'Not returned'}</Text>
+                  </div>
+                  {result.livenessReason ? <Text tone="muted">{result.livenessReason}</Text> : null}
+                  {identityStatus === 'review_needed' ? (
+                    <Text>This driver cannot be activated yet. Open the review guidance to see what your operations team should do next.</Text>
+                  ) : null}
+                </div>
+              ) : null}
             </form>
 
-            {resolveState.error ? <Text tone="danger">{resolveState.error}</Text> : null}
-
-            {result ? (
-              <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={identityTone}>{identityLabel}</Badge>
-                  {resolveState.success ? <Text>{resolveState.success}</Text> : null}
-                </div>
-                <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                  <Text>Decision: {result.decision}</Text>
-                  <Text>
-                    Provider status: {result.providerVerificationStatus ?? result.providerLookupStatus ?? 'Not provided'}
-                  </Text>
-                  <Text>
-                    Liveness passed:{' '}
-                    {result.livenessPassed === true
-                      ? 'Yes'
-                      : result.livenessPassed === false
-                        ? 'No'
-                        : 'Awaiting provider evidence'}
-                  </Text>
-                  <Text>
-                    Liveness confidence: {result.livenessConfidenceScore ?? 'Not returned'}
-                  </Text>
-                  <Text>Provider: {result.livenessProviderName ?? result.providerName ?? 'Not returned'}</Text>
-                  <Text>Confidence: {result.verificationConfidence ?? 'Not returned'}</Text>
-                </div>
-                {result.livenessReason || result.providerVerificationStatus || result.providerLookupStatus ? (
-                  <Text tone="muted">
-                    {result.livenessReason ?? result.providerVerificationStatus ?? result.providerLookupStatus}
-                  </Text>
-                ) : null}
-                {identityStatus === 'review_needed' ? (
-                  <Text>
-                    This driver cannot be activated yet. Open the review guidance to see what your operations team should do next.
-                  </Text>
-                ) : null}
-              </div>
-            ) : null}
           </CardContent>
         </Card>
       ) : null}
