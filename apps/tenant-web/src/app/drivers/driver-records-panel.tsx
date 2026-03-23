@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import type { Route } from 'next';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -84,19 +86,36 @@ export function DriverRecordsPanel({
   drivers,
   fleets,
   errorMessage,
+  filteredDrivers,
+  initialFleetId,
+  initialIdentityStatus,
+  initialPage,
+  initialPageSize,
+  initialSearchQuery,
+  initialStatus,
   totalDrivers,
 }: {
   drivers: DriverRecord[];
   fleets: FleetRecord[];
   errorMessage?: string | null;
+  filteredDrivers: number;
+  initialFleetId: string;
+  initialIdentityStatus: string;
+  initialPage: number;
+  initialPageSize: number;
+  initialSearchQuery: string;
+  initialStatus: string;
   totalDrivers: number;
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [fleetId, setFleetId] = useState('');
-  const [status, setStatus] = useState('');
-  const [identityStatus, setIdentityStatus] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [fleetId, setFleetId] = useState(initialFleetId);
+  const [status, setStatus] = useState(initialStatus);
+  const [identityStatus, setIdentityStatus] = useState(initialIdentityStatus);
+  const page = initialPage;
+  const pageSize = initialPageSize;
 
   const fleetLabels = useMemo(
     () => new Map(fleets.map((fleet) => [fleet.id, fleet.name])),
@@ -104,41 +123,21 @@ export function DriverRecordsPanel({
   );
   const fleetOptions = useMemo(() => toFleetOptions(fleets), [fleets]);
 
-  const filteredDrivers = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+  const updateSearch = (updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
 
-    return drivers.filter((driver) => {
-      if (fleetId && driver.fleetId !== fleetId) return false;
-      if (status && driver.status !== status) return false;
-      if (identityStatus && driver.identityStatus !== identityStatus) return false;
+    for (const [key, value] of Object.entries(updates)) {
+      const normalized = typeof value === 'number' ? String(value) : value;
+      if (!normalized) {
+        params.delete(key);
+      } else {
+        params.set(key, normalized);
+      }
+    }
 
-      if (!normalizedQuery) return true;
-
-      const haystack = [
-        `${driver.firstName} ${driver.lastName}`,
-        driver.phone,
-        driver.email,
-        driver.nationality,
-        driver.identityReviewCaseId,
-        driver.mobileAccessStatus,
-        fleetLabels.get(driver.fleetId),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
-    });
-  }, [drivers, fleetId, fleetLabels, identityStatus, searchQuery, status]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, fleetId, status, identityStatus]);
-
-  const paginatedDrivers = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredDrivers.slice(startIndex, startIndex + pageSize);
-  }, [filteredDrivers, page, pageSize]);
+    const query = params.toString();
+    router.replace((query ? `${pathname}?${query}` : pathname) as Route);
+  };
 
   return (
     <div className="space-y-6">
@@ -155,11 +154,11 @@ export function DriverRecordsPanel({
         emptyState={
           <div className="space-y-3">
             <Text tone="muted">
-              {drivers.length === 0
+              {filteredDrivers === 0
                 ? 'No drivers have been added for this organisation yet.'
                 : 'No drivers match the current search or filters.'}
             </Text>
-            {drivers.length === 0 ? (
+            {totalDrivers === 0 ? (
               <Link
                 className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
                 href="/drivers/new"
@@ -170,12 +169,9 @@ export function DriverRecordsPanel({
           </div>
         }
         errorMessage={errorMessage}
-        filteredItems={filteredDrivers.length}
-        onPageChange={setPage}
-        onPageSizeChange={(nextPageSize) => {
-          setPageSize(nextPageSize);
-          setPage(1);
-        }}
+        filteredItems={filteredDrivers}
+        onPageChange={(nextPage) => updateSearch({ page: nextPage })}
+        onPageSizeChange={(nextPageSize) => updateSearch({ pageSize: nextPageSize, page: 1 })}
         page={page}
         pageSize={pageSize}
         summary={
@@ -196,6 +192,7 @@ export function DriverRecordsPanel({
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
                   {drivers.filter((driver) => driver.identityStatus === 'verified').length}
                 </p>
+                <Text tone="muted">On this page</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-violet-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
@@ -205,6 +202,7 @@ export function DriverRecordsPanel({
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
                   {drivers.filter((driver) => driver.guarantorStatus === 'active').length}
                 </p>
+                <Text tone="muted">On this page</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-sky-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
@@ -214,6 +212,7 @@ export function DriverRecordsPanel({
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
                   {drivers.filter((driver) => driver.mobileAccessStatus === 'linked').length}
                 </p>
+                <Text tone="muted">On this page</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
@@ -221,18 +220,20 @@ export function DriverRecordsPanel({
               <div className="space-y-1 px-5 py-4">
                 <Text tone="muted">Showing</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {filteredDrivers.length}
+                  {drivers.length}
                 </p>
+                <Text tone="muted">Current page rows</Text>
               </div>
             </div>
           </div>
         }
         title="Driver registry"
         toolbar={
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+          <form action={pathname} className="flex flex-col gap-4 xl:flex-row xl:items-end">
             <div className="min-w-0 flex-[1.5] space-y-2">
               <Text tone="muted">Search drivers</Text>
               <Input
+                name="q"
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search by name, phone, email, or fleet"
                 value={searchQuery}
@@ -243,6 +244,7 @@ export function DriverRecordsPanel({
                 helperText="Filter the registry to a single fleet."
                 inputId="driverFleetFilter"
                 label="Fleet filter"
+                name="fleetId"
                 onChange={setFleetId}
                 options={fleetOptions}
                 placeholder="All fleets"
@@ -252,6 +254,7 @@ export function DriverRecordsPanel({
                 helperText="Filter by driver lifecycle status."
                 inputId="driverStatusFilter"
                 label="Status filter"
+                name="status"
                 onChange={setStatus}
                 options={STATUS_OPTIONS}
                 placeholder="All statuses"
@@ -261,27 +264,32 @@ export function DriverRecordsPanel({
                 helperText="Filter by identity workflow state."
                 inputId="driverIdentityFilter"
                 label="Identity filter"
+                name="identityStatus"
                 onChange={setIdentityStatus}
                 options={IDENTITY_OPTIONS}
                 placeholder="All identity states"
                 value={identityStatus}
               />
             </div>
-            <div className="flex items-end">
+            <input name="page" type="hidden" value="1" />
+            <input name="pageSize" type="hidden" value={pageSize} />
+            <div className="flex items-end gap-3">
+              <Button type="submit">Apply filters</Button>
               <Button
-                disabled={!searchQuery && !fleetId && !status && !identityStatus}
                 onClick={() => {
                   setSearchQuery('');
                   setFleetId('');
                   setStatus('');
                   setIdentityStatus('');
+                  router.replace(pathname as Route);
                 }}
-                variant="ghost"
+                type="button"
+                variant="secondary"
               >
                 Clear filters
               </Button>
             </div>
-          </div>
+          </form>
         }
         totalItems={totalDrivers}
       >
@@ -301,7 +309,7 @@ export function DriverRecordsPanel({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedDrivers.map((driver) => (
+            {drivers.map((driver) => (
               <TableRow className="group cursor-pointer hover:bg-slate-50/80" key={driver.id}>
                 <TableCell>
                   <div className="space-y-0.5">

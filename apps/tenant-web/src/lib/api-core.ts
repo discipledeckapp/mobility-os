@@ -1031,12 +1031,26 @@ export async function verifyAndApplyTenantPayment(
 }
 
 export async function listDrivers(
-  input: PaginationParams & { fleetId?: string } = {},
+  input: PaginationParams & {
+    fleetId?: string;
+    q?: string;
+    status?: string;
+    identityStatus?: string;
+  } = {},
   token?: string,
 ): Promise<PaginatedApiResponse<DriverRecord>> {
   const params = new URLSearchParams();
+  if (input.q) {
+    params.set('q', input.q);
+  }
   if (input.fleetId) {
     params.set('fleetId', input.fleetId);
+  }
+  if (input.status) {
+    params.set('status', input.status);
+  }
+  if (input.identityStatus) {
+    params.set('identityStatus', input.identityStatus);
   }
   if (typeof input.page === 'number') {
     params.set('page', String(input.page));

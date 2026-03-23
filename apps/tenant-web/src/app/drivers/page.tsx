@@ -7,7 +7,7 @@ import {
 } from '../../lib/api-core';
 import { DriverRecordsPanel } from './driver-records-panel';
 
-const DRIVER_PAGE_LIMIT = 200;
+const DEFAULT_DRIVER_PAGE_SIZE = 20;
 
 function getFriendlyDriverRegistryErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
@@ -25,34 +25,58 @@ function getFriendlyDriverRegistryErrorMessage(error: unknown): string {
   return message;
 }
 
-export default async function DriversPage() {
+type DriversPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+    fleetId?: string;
+    status?: string;
+    identityStatus?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
+};
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export default async function DriversPage({ searchParams }: DriversPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
   let drivers: DriverRecord[] = [];
   let totalDrivers = 0;
+  let filteredDrivers = 0;
   let fleets: FleetRecord[] = [];
   let errorMessage: string | null = null;
 
+  const page = parsePositiveInteger(resolvedSearchParams.page, 1);
+  const pageSize = Math.min(
+    parsePositiveInteger(resolvedSearchParams.pageSize, DEFAULT_DRIVER_PAGE_SIZE),
+    200,
+  );
+  const q = resolvedSearchParams.q?.trim() ?? '';
+  const fleetId = resolvedSearchParams.fleetId?.trim() ?? '';
+  const status = resolvedSearchParams.status?.trim() ?? '';
+  const identityStatus = resolvedSearchParams.identityStatus?.trim() ?? '';
+
   try {
     const [driversResult, fleetsResult] = await Promise.all([
-      listDrivers({ limit: DRIVER_PAGE_LIMIT }),
+      listDrivers({
+        page,
+        limit: pageSize,
+        ...(q ? { q } : {}),
+        ...(fleetId ? { fleetId } : {}),
+        ...(status ? { status } : {}),
+        ...(identityStatus ? { identityStatus } : {}),
+      }),
       listFleets(),
     ]);
     totalDrivers = driversResult.total;
+    filteredDrivers = driversResult.total;
     fleets = fleetsResult;
-
-    if (driversResult.total > driversResult.data.length) {
-      const totalPages = Math.ceil(driversResult.total / DRIVER_PAGE_LIMIT);
-      const remainingPages = await Promise.all(
-        Array.from({ length: totalPages - 1 }, (_, index) =>
-          listDrivers({ page: index + 2, limit: DRIVER_PAGE_LIMIT }),
-        ),
-      );
-
-      drivers = [
-        ...driversResult.data,
-        ...remainingPages.flatMap((pageResult) => pageResult.data),
-      ];
-    } else {
-      drivers = driversResult.data;
+    drivers = driversResult.data;
+    if (!q && !fleetId && !status && !identityStatus) {
+      filteredDrivers = totalDrivers;
     }
   } catch (error) {
     errorMessage = getFriendlyDriverRegistryErrorMessage(error);
@@ -68,6 +92,13 @@ export default async function DriversPage() {
         drivers={drivers}
         errorMessage={errorMessage}
         fleets={fleets}
+        filteredDrivers={filteredDrivers}
+        initialFleetId={fleetId}
+        initialIdentityStatus={identityStatus}
+        initialPage={page}
+        initialPageSize={pageSize}
+        initialSearchQuery={q}
+        initialStatus={status}
         totalDrivers={totalDrivers}
       />
     </TenantAppShell>

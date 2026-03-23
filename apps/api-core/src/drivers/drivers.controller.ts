@@ -120,6 +120,9 @@ export class DriversController {
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: [DriverResponseDto] })
   @ApiQuery({ name: 'fleetId', required: false })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'identityStatus', required: false })
   list(
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListDriversDto,

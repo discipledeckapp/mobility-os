@@ -204,6 +204,9 @@ function buildRecentActivity(
 export async function getDashboardData(): Promise<DashboardData> {
   const settle = async <T>(loader: () => Promise<T>): Promise<T> => loader();
   const notes: string[] = [];
+  const appendAvailabilityNote = (surface: string) => {
+    notes.push(`${surface} data is temporarily unavailable. Try refreshing or contact support.`);
+  };
 
   const tenant = await getTenantMe().catch(() => null);
   const locale = getFormattingLocale(tenant?.country);
@@ -246,35 +249,19 @@ export async function getDashboardData(): Promise<DashboardData> {
   const totalDrivers = driversResult.status === 'fulfilled' ? driversResult.value.total : 0;
 
   if (driversResult.status === 'rejected') {
-    const message =
-      driversResult.reason instanceof Error
-        ? driversResult.reason.message
-        : String(driversResult.reason);
-    notes.push(`Driver data is temporarily unavailable: ${message}`);
+    appendAvailabilityNote('Driver');
   }
 
   if (vehiclesResult.status === 'rejected') {
-    const message =
-      vehiclesResult.reason instanceof Error
-        ? vehiclesResult.reason.message
-        : String(vehiclesResult.reason);
-    notes.push(`Vehicle data is temporarily unavailable: ${message}`);
+    appendAvailabilityNote('Vehicle');
   }
 
   if (assignmentsResult.status === 'rejected') {
-    const message =
-      assignmentsResult.reason instanceof Error
-        ? assignmentsResult.reason.message
-        : String(assignmentsResult.reason);
-    notes.push(`Assignment data is temporarily unavailable: ${message}`);
+    appendAvailabilityNote('Assignment');
   }
 
   if (remittancesResult.status === 'rejected') {
-    const message =
-      remittancesResult.reason instanceof Error
-        ? remittancesResult.reason.message
-        : String(remittancesResult.reason);
-    notes.push(`Remittance data is temporarily unavailable: ${message}`);
+    appendAvailabilityNote('Remittance');
   }
 
   const activeDrivers = drivers.filter((driver) => driver.status === 'active').length;

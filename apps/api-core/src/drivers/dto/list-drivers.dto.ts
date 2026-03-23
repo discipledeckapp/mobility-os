@@ -7,4 +7,19 @@ export class ListDriversDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   fleetId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  identityStatus?: string;
 }

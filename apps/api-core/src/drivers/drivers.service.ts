@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { JwtService } from '@nestjs/jwt';
-import type { Driver } from '@prisma/client';
+import { Prisma, type Driver } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
@@ -326,6 +326,9 @@ export class DriversService {
     tenantId: string,
     input: {
       fleetId?: string;
+      q?: string;
+      status?: string;
+      identityStatus?: string;
       page?: number;
       limit?: number;
     } = {},
@@ -341,9 +344,22 @@ export class DriversService {
   > {
     const page = input.page ?? 1;
     const limit = input.limit ?? 50;
-    const where = {
+    const searchQuery = input.q?.trim();
+    const where: Prisma.DriverWhereInput = {
       tenantId,
       ...(input.fleetId ? { fleetId: input.fleetId } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.identityStatus ? { identityStatus: input.identityStatus } : {}),
+      ...(searchQuery
+        ? {
+            OR: [
+              { firstName: { contains: searchQuery, mode: 'insensitive' } },
+              { lastName: { contains: searchQuery, mode: 'insensitive' } },
+              { phone: { contains: searchQuery, mode: 'insensitive' } },
+              { email: { contains: searchQuery, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
     };
     const [drivers, total] = await Promise.all([
       this.prisma.driver.findMany({
@@ -1232,6 +1248,9 @@ export class DriversService {
     try {
       return await this.attachGuarantorSummaries(tenantId, drivers);
     } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
       this.logger.warn(
         `Driver guarantor enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
       );
@@ -1245,6 +1264,9 @@ export class DriversService {
     try {
       return await this.attachDocumentSummaries(tenantId, drivers);
     } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
       this.logger.warn(
         `Driver document enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
       );
@@ -1261,6 +1283,9 @@ export class DriversService {
     try {
       return await this.attachMobileAccessSummaries(tenantId, drivers);
     } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
       this.logger.warn(
         `Driver mobile-access enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
       );
@@ -1278,6 +1303,9 @@ export class DriversService {
     try {
       return await this.attachReadinessSummaries(drivers);
     } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
       this.logger.warn(`Driver readiness enrichment failed: ${this.getErrorMessage(error)}`);
       return drivers.map((driver) => ({
         ...driver,
@@ -1291,6 +1319,19 @@ export class DriversService {
 
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : 'Unknown error';
+  }
+
+  private isRecoverableDriverEnrichmentError(error: unknown): boolean {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return error.code === 'P2021' || error.code === 'P2022';
+    }
+
+    const message = this.getErrorMessage(error).toLowerCase();
+    return (
+      (message.includes('relation') && message.includes('does not exist')) ||
+      (message.includes('column') && message.includes('does not exist')) ||
+      message.includes('unknown column')
+    );
   }
 
   async create(tenantId: string, dto: CreateDriverDto): Promise<Driver> {
