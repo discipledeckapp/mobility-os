@@ -30,6 +30,8 @@ const schema = z.object({
   // validated against a key store (e.g. database or secrets manager), not
   // a single shared secret.
   INTELLIGENCE_API_KEY: z.string().min(16, 'INTELLIGENCE_API_KEY must be at least 16 characters'),
+  INTELLIGENCE_API_KEYS: z.string().optional(),
+  INTELLIGENCE_ALLOWED_CALLERS: z.string().default('api-core'),
 
   // ── Control-plane settings consumption ─────────────────────────────────────
   CONTROL_PLANE_BASE_URL: z.string().url().optional(),

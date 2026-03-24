@@ -3,6 +3,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './src/components/error-boundary';
 import { AuthProvider, useAuth } from './src/contexts/auth-context';
+import { SelfServiceProvider } from './src/contexts/self-service-context';
 import { ToastProvider, useToast } from './src/contexts/toast-context';
 import { RootNavigator } from './src/navigation/root-navigator';
 import {
@@ -69,9 +70,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <ToastProvider>
-          <AppShell />
-        </ToastProvider>
+        <SelfServiceProvider>
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
+        </SelfServiceProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

@@ -64,11 +64,16 @@ export interface AssignmentRecord {
 
 export interface DriverRecord {
   id: string;
+  tenantId?: string;
+  businessEntityId?: string;
+  operatingUnitId?: string;
+  fleetId?: string;
   status: string;
   firstName: string;
   lastName: string;
   phone: string;
   email?: string | null;
+  nationality?: string | null;
   identityStatus: string;
   identityReviewCaseId?: string | null;
   identityReviewStatus?: string | null;
@@ -76,9 +81,70 @@ export interface DriverRecord {
   riskBand?: string | null;
   isWatchlisted?: boolean | null;
   hasApprovedLicence: boolean;
+  hasMobileAccess?: boolean;
+  mobileAccessStatus?: string | null;
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
+  activationReadiness?: string;
+  activationReadinessReasons?: string[];
+  assignmentReadiness?: string;
+  assignmentReadinessReasons?: string[];
+}
+
+export interface DriverSelfServiceDocumentRecord {
+  id: string;
+  documentType: string;
+  status: string;
+  uploadedAt?: string | null;
+  reviewedAt?: string | null;
+  expiresAt?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface DriverSelfServiceTokenExchangeResponse {
+  token: string;
+}
+
+export interface DriverLivenessSessionRecord {
+  providerName: string;
+  sessionId: string;
+  expiresAt?: string;
+  fallbackChain: string[];
+}
+
+export interface DriverIdentityResolutionInput {
+  countryCode?: string;
+  livenessPassed?: boolean;
+  identifiers: Array<{
+    type: string;
+    value: string;
+    countryCode?: string;
+  }>;
+  selfieImageBase64?: string;
+  subjectConsent?: boolean;
+  livenessCheck?: {
+    provider?: string;
+    sessionId?: string;
+    passed?: boolean;
+    confidenceScore?: number;
+  };
+}
+
+export interface DriverIdentityResolutionResult {
+  decision: string;
+  personId?: string;
+  reviewCaseId?: string;
+  providerLookupStatus?: string;
+  providerVerificationStatus?: string;
+  providerName?: string;
+  matchedIdentifierType?: string;
+  isVerifiedMatch?: boolean;
+  verificationConfidence?: number;
+  livenessPassed?: boolean;
+  livenessProviderName?: string;
+  livenessConfidenceScore?: number;
+  livenessReason?: string;
 }
 
 export interface RemittanceRecord {
@@ -307,6 +373,91 @@ export function getSession(): Promise<SessionRecord> {
   return apiFetch<SessionRecord>(API_PATHS.session);
 }
 
+export function exchangeDriverSelfServiceOtp(
+  otpCode: string,
+): Promise<DriverSelfServiceTokenExchangeResponse> {
+  return apiFetch<DriverSelfServiceTokenExchangeResponse>(
+    API_PATHS.selfServiceExchangeOtp,
+    {
+      method: 'POST',
+      body: JSON.stringify({ otpCode }),
+    },
+    false,
+  );
+}
+
+export function getDriverSelfServiceContext(selfServiceToken: string): Promise<DriverRecord> {
+  return apiFetch<DriverRecord>(
+    API_PATHS.selfServiceContext,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+    },
+    false,
+  );
+}
+
+export function listDriverSelfServiceDocuments(
+  selfServiceToken: string,
+): Promise<DriverSelfServiceDocumentRecord[]> {
+  return apiFetch<DriverSelfServiceDocumentRecord[]>(
+    API_PATHS.selfServiceDocuments,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+    },
+    false,
+  );
+}
+
+export function createDriverSelfServiceLivenessSession(
+  selfServiceToken: string,
+  input: { countryCode?: string } = {},
+): Promise<DriverLivenessSessionRecord> {
+  return apiFetch<DriverLivenessSessionRecord>(
+    '/driver-self-service/liveness-sessions',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function resolveDriverSelfServiceIdentity(
+  selfServiceToken: string,
+  input: DriverIdentityResolutionInput,
+): Promise<DriverIdentityResolutionResult> {
+  return apiFetch<DriverIdentityResolutionResult>(
+    '/driver-self-service/identity-resolution',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function uploadDriverSelfServiceDocument(
+  selfServiceToken: string,
+  input: {
+    documentType: string;
+    fileName: string;
+    contentType: string;
+    fileBase64: string;
+    uploadedBy: 'driver_self_service';
+  },
+): Promise<DriverSelfServiceDocumentRecord> {
+  return apiFetch<DriverSelfServiceDocumentRecord>(
+    '/driver-self-service/documents',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
 export function listAssignments(): Promise<AssignmentRecord[]> {
   return apiFetch<AssignmentRecord[]>(API_PATHS.mobileAssignments);
 }
@@ -348,6 +499,10 @@ export function recordRemittance(input: RecordRemittanceInput): Promise<Remittan
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function listRemittanceHistory(): Promise<RemittanceRecord[]> {
+  return apiFetch<RemittanceRecord[]>(API_PATHS.mobileRemittanceHistory);
 }
 
 export async function getStoredRefreshToken() {

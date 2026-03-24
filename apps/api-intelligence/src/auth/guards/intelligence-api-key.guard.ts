@@ -19,18 +19,42 @@ import type { FastifyRequest } from 'fastify';
  */
 @Injectable()
 export class IntelligenceApiKeyGuard implements CanActivate {
-  private readonly expectedKey: string;
+  private readonly expectedKeys: string[];
+  private readonly allowedCallers: Set<string>;
 
   constructor(private readonly configService: ConfigService) {
-    this.expectedKey = this.configService.getOrThrow<string>('INTELLIGENCE_API_KEY');
+    const configuredKeys = this.configService.get<string>('INTELLIGENCE_API_KEYS');
+    this.expectedKeys = (configuredKeys
+      ? configuredKeys.split(',').map((value) => value.trim())
+      : [this.configService.getOrThrow<string>('INTELLIGENCE_API_KEY')])
+      .filter(Boolean);
+
+    this.allowedCallers = new Set(
+      this.configService
+        .get<string>('INTELLIGENCE_ALLOWED_CALLERS', 'api-core')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
   }
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const providedKey = request.headers['x-api-key'];
+    const caller =
+      typeof request.headers['x-caller-service'] === 'string'
+        ? request.headers['x-caller-service']
+        : null;
 
-    if (typeof providedKey !== 'string' || !this.constantTimeEqual(providedKey, this.expectedKey)) {
+    if (
+      typeof providedKey !== 'string' ||
+      !this.expectedKeys.some((expectedKey) => this.constantTimeEqual(providedKey, expectedKey))
+    ) {
       throw new UnauthorizedException('Invalid or missing API key');
+    }
+
+    if (!caller || !this.allowedCallers.has(caller)) {
+      throw new UnauthorizedException('Invalid or missing caller identity');
     }
 
     return true;

@@ -135,7 +135,10 @@ export class IntelligenceClient {
     try {
       response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
         method: 'GET',
-        headers: { 'x-api-key': apiKey },
+        headers: {
+          'x-api-key': apiKey,
+          'x-caller-service': 'api-core',
+        },
       });
     } catch (error) {
       throw new ServiceUnavailableException(
@@ -169,6 +172,7 @@ export class IntelligenceClient {
         headers: {
           'content-type': 'application/json',
           'x-api-key': apiKey,
+          'x-caller-service': 'api-core',
         },
         body: JSON.stringify(body),
       });

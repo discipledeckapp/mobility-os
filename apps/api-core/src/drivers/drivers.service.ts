@@ -1629,10 +1629,6 @@ export class DriversService {
       return Buffer.from(dto.fileBase64.trim(), 'base64');
     }
 
-    if (dto.fileDataUrl?.trim()) {
-      return this.decodeLegacyDataUrl(dto.fileDataUrl).buffer;
-    }
-
     throw new BadRequestException('Document content is required.');
   }
 

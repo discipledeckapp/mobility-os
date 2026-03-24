@@ -28,6 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>mobiris-mobile-ops</string>
+          <string>mobiris</string>
           <string>com.mobiris.mobileops</string>
         </array>
       </dict>

@@ -3,7 +3,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { isNetworkError } from '../../../api';
+import { isNetworkError, listRemittanceHistory, type RemittanceRecord } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { BottomNav } from '../../../components/bottom-nav';
 import { Button } from '../../../components/button';
@@ -20,7 +20,11 @@ import { useAssignments } from '../../../hooks/use-assignments';
 import { getCurrencyLabel } from '../../../lib/currency';
 import type { ScreenProps } from '../../../navigation/types';
 import { enqueueOfflineAction } from '../../../services/offline-queue-service';
-import { convertMajorToMinorUnits, submitRemittance } from '../../../services/remittance-service';
+import {
+  convertMajorToMinorUnits,
+  getCurrencyMultiplier,
+  submitRemittance,
+} from '../../../services/remittance-service';
 import { tokens } from '../../../theme/tokens';
 
 export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'>) {
@@ -35,6 +39,8 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [history, setHistory] = useState<RemittanceRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   const eligibleAssignments = useMemo(
     () => assignments.filter((assignment) => ['active', 'completed'].includes(assignment.status)),
@@ -51,6 +57,23 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     }
   }, [route.params?.assignmentId, selectedAssignmentId]);
 
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const records = await listRemittanceHistory();
+        setHistory(records);
+      } catch {
+        // Keep history best-effort on this screen.
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    loadHistory().catch(() => {
+      setHistoryLoading(false);
+    });
+  }, []);
+
   const selectedAssignment = useMemo(
     () => eligibleAssignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null,
     [eligibleAssignments, selectedAssignmentId],
@@ -58,7 +81,8 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
   const onRefresh = async () => {
     try {
-      await refreshAssignments();
+      const [records] = await Promise.all([listRemittanceHistory().catch(() => history), refreshAssignments()]);
+      setHistory(records);
       showToast('Assignments refreshed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -95,6 +119,8 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
     try {
       await submitRemittance(payload);
+      const records = await listRemittanceHistory().catch(() => history);
+      setHistory(records);
       showToast('The collection has been recorded successfully.', 'success');
       navigation.goBack();
     } catch (error) {
@@ -139,6 +165,44 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         <Text style={styles.muted}>
           Select the assignment this payment belongs to, then record the amount and date.
         </Text>
+      </Card>
+
+      <Card style={styles.section}>
+        <View style={styles.headerRow}>
+          <Text style={styles.sectionTitle}>Recent collections</Text>
+          <Button
+            accessibilityHint="Open the full remittance history for this account"
+            containerStyle={styles.historyButton}
+            label="View full history"
+            variant="secondary"
+            onPress={() => navigation.navigate('RemittanceHistory')}
+          />
+        </View>
+        {historyLoading ? (
+          <>
+            <LoadingSkeleton height={72} />
+            <LoadingSkeleton height={72} />
+          </>
+        ) : history.length === 0 ? (
+          <Text style={styles.muted}>No collections have been recorded from this mobile account yet.</Text>
+        ) : (
+          history.map((record) => (
+            <View key={record.id} style={styles.historyRow}>
+              <View style={styles.optionCopy}>
+                <Text style={styles.optionTitle}>
+                  {currencyLabel} {formatMajorAmount(record.amountMinorUnits, session?.currencyMinorUnit)}
+                </Text>
+                <Text style={styles.muted}>
+                  Due {formatDateOnly(record.dueDate, session?.formattingLocale)}
+                </Text>
+                <Text style={styles.muted}>
+                  Assignment {record.assignmentId.slice(-6).toUpperCase()}
+                </Text>
+              </View>
+              <Badge label={record.status.toUpperCase()} tone={historyTone(record.status)} />
+            </View>
+          ))
+        )}
       </Card>
 
       <Card style={styles.section}>
@@ -269,6 +333,25 @@ function formatDateOnly(value: string, locale?: string | null) {
   }).format(date);
 }
 
+function formatMajorAmount(amountMinorUnits: number, minorUnit?: number | null) {
+  const safeMinorUnit =
+    typeof minorUnit === 'number' && Number.isInteger(minorUnit) && minorUnit >= 0 ? minorUnit : 2;
+  return (amountMinorUnits / getCurrencyMultiplier(safeMinorUnit)).toFixed(safeMinorUnit);
+}
+
+function historyTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'confirmed') {
+    return 'success';
+  }
+  if (status === 'disputed') {
+    return 'danger';
+  }
+  if (status === 'pending') {
+    return 'warning';
+  }
+  return 'neutral';
+}
+
 const styles = StyleSheet.create({
   section: {
     gap: tokens.spacing.sm,
@@ -286,6 +369,15 @@ const styles = StyleSheet.create({
     color: tokens.colors.ink,
     fontSize: 18,
     fontWeight: '700',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  historyButton: {
+    minHeight: 40,
   },
   option: {
     borderWidth: 1,
@@ -308,6 +400,16 @@ const styles = StyleSheet.create({
   optionTitle: {
     color: tokens.colors.ink,
     fontWeight: '700',
+  },
+  historyRow: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    padding: tokens.spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
   },
   dateField: {
     gap: tokens.spacing.xs,

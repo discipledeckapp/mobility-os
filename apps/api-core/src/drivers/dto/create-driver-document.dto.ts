@@ -1,6 +1,6 @@
 import { DocumentScope, getDocumentTypesByScope } from '@mobility-os/domain-config';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsIn, IsNotEmpty, IsString } from 'class-validator';
 
 const DRIVER_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Driver).map(
   (document) => document.slug,
@@ -28,14 +28,6 @@ export class CreateDriverDocumentDto {
   @IsString()
   @IsNotEmpty()
   fileBase64!: string;
-
-  @ApiPropertyOptional({
-    description: 'Deprecated testing-only fallback. Prefer fileBase64 for all new uploads.',
-  })
-  @IsOptional()
-  @IsString()
-  fileDataUrl?: string;
-
   @ApiProperty({
     description:
       "Actor responsible for the upload. Use a concrete operator user ID for operator uploads, or 'driver_self_service' for self-service submissions.",

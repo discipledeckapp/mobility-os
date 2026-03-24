@@ -13,10 +13,12 @@ import { LoadingSkeleton } from '../../../components/loading-skeleton';
 import { Screen } from '../../../components/screen';
 import { ASSIGNMENT_STATUS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
+import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import { useAssignments } from '../../../hooks/use-assignments';
+import { useDriverProfile } from '../../../hooks/use-driver-profile';
 import type { ScreenProps } from '../../../navigation/types';
-import type { AssignmentRecord } from '../../../api';
+import type { AssignmentRecord, DriverRecord } from '../../../api';
 import type { AssignmentFilter } from '../../../services/assignment-service';
 import { tokens } from '../../../theme/tokens';
 
@@ -29,6 +31,7 @@ const FILTER_OPTIONS: Array<{ label: string; value: AssignmentFilter }> = [
 
 export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
   const { session, logout } = useAuth();
+  const { token: selfServiceToken } = useSelfService();
   const { showToast } = useToast();
   const {
     assignments,
@@ -41,6 +44,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
     setFilter,
     refreshAssignments,
   } = useAssignments();
+  const { driver } = useDriverProfile(Boolean(session?.linkedDriverId));
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const canWriteAssignments = useMemo(
@@ -152,6 +156,48 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
             variant="secondary"
             onPress={() => setShowLogoutModal(true)}
           />
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Operational readiness</Text>
+          {driver ? (
+            <>
+              <View style={styles.readinessRow}>
+                <Text style={styles.readinessLabel}>Identity</Text>
+                <Badge
+                  label={formatStatusLabel(driver.identityStatus)}
+                  tone={identityTone(driver.identityStatus)}
+                />
+              </View>
+              <View style={styles.readinessRow}>
+                <Text style={styles.readinessLabel}>Activation</Text>
+                <Badge
+                  label={formatStatusLabel(driver.activationReadiness ?? 'not_ready')}
+                  tone={readinessTone(driver.activationReadiness ?? 'not_ready')}
+                />
+              </View>
+              <View style={styles.readinessRow}>
+                <Text style={styles.readinessLabel}>Assignments</Text>
+                <Badge
+                  label={formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
+                  tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
+                />
+              </View>
+              <Text style={styles.muted}>{readinessSummary(driver)}</Text>
+              {selfServiceToken ? (
+                <Button
+                  accessibilityHint="Open the onboarding readiness checklist for this driver"
+                  label="Open readiness checklist"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('SelfServiceReadiness')}
+                />
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.muted}>
+              Driver readiness will appear here once this account is linked to a driver profile.
+            </Text>
+          )}
         </Card>
 
         <Card style={styles.section}>
@@ -339,6 +385,60 @@ function formatGroupTitle(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function identityTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'verified') {
+    return 'success';
+  }
+  if (status === 'failed') {
+    return 'danger';
+  }
+  if (status === 'review_needed' || status === 'pending_verification') {
+    return 'warning';
+  }
+  return 'neutral';
+}
+
+function readinessTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'ready') {
+    return 'success';
+  }
+  if (status === 'blocked') {
+    return 'danger';
+  }
+  return 'warning';
+}
+
+function readinessSummary(driver: DriverRecord) {
+  if (
+    driver.identityStatus === 'verified' &&
+    driver.hasApprovedLicence &&
+    driver.pendingDocumentCount === 0 &&
+    driver.rejectedDocumentCount === 0 &&
+    driver.expiredDocumentCount === 0 &&
+    driver.assignmentReadiness === 'ready'
+  ) {
+    return 'This account is clear for assignment operations.';
+  }
+
+  if (driver.assignmentReadinessReasons?.length) {
+    return driver.assignmentReadinessReasons[0] ?? 'Additional readiness work is required.';
+  }
+
+  if (!driver.hasApprovedLicence) {
+    return 'A valid approved licence is still required before operations can proceed.';
+  }
+
+  if (driver.identityStatus !== 'verified') {
+    return 'Identity verification is not complete yet.';
+  }
+
+  return 'Refresh your readiness status after completing outstanding onboarding tasks.';
+}
+
 function pickCurrentAssignment(assignments: AssignmentRecord[]): AssignmentRecord | null {
   const prioritized = assignments
     .filter((assignment) => ['active', 'assigned', 'created'].includes(assignment.status))
@@ -383,6 +483,18 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: tokens.spacing.sm,
+  },
+  readinessRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  readinessLabel: {
+    color: tokens.colors.ink,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
   filterRow: {
     gap: tokens.spacing.sm,

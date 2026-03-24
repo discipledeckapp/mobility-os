@@ -9,6 +9,7 @@ import { EmptyState } from '../../../components/empty-state';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
+import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import { useDriverProfile } from '../../../hooks/use-driver-profile';
 import type { ScreenProps } from '../../../navigation/types';
@@ -16,6 +17,7 @@ import { tokens } from '../../../theme/tokens';
 
 export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const { session, refreshSession } = useAuth();
+  const { token: selfServiceToken } = useSelfService();
   const { showToast } = useToast();
   const { driver, loading, refreshing, refreshDriver } = useDriverProfile(
     Boolean(session?.linkedDriverId),
@@ -150,6 +152,14 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                 'Your verification is under review. Contact your fleet manager for the next update.',
               )
             }
+          />
+        ) : null}
+        {selfServiceToken ? (
+          <Button
+            accessibilityHint="Open the saved onboarding checklist for this device"
+            label="Open readiness checklist"
+            variant="secondary"
+            onPress={() => navigation.navigate('SelfServiceReadiness')}
           />
         ) : null}
         <Button

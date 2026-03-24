@@ -66,6 +66,15 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-internal-service-token'],
   });
 
+  app.getHttpAdapter().getInstance().addHook('onSend', (_request, reply, payload, done) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('referrer-policy', 'no-referrer');
+    reply.header('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+    reply.header('cross-origin-resource-policy', 'same-site');
+    done(null, payload);
+  });
+
   // ── Swagger (non-production only) ────────────────────────────────────────────
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()

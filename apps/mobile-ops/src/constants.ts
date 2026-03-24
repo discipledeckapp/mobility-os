@@ -2,6 +2,8 @@ export const STORAGE_KEYS = {
   accessToken: 'mobility_os.mobile_ops.jwt',
   refreshToken: 'mobility_os.mobile_ops.refresh_jwt',
   actionQueue: 'mobility_os.mobile_ops.action_queue',
+  selfServiceToken: 'mobility_os.mobile_ops.self_service_token',
+  selfServiceVerificationDraft: 'mobility_os.mobile_ops.self_service_verification_draft',
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {
@@ -36,9 +38,13 @@ export const API_PATHS = {
   login: '/auth/login',
   refresh: '/auth/refresh',
   session: '/auth/session',
+  selfServiceExchangeOtp: '/driver-self-service/exchange-otp',
+  selfServiceContext: '/driver-self-service/context',
+  selfServiceDocuments: '/driver-self-service/documents/list',
   mobileAssignments: '/mobile-ops/assignments',
   mobileProfile: '/mobile-ops/profile',
   mobileRemittance: '/mobile-ops/remittance',
+  mobileRemittanceHistory: '/mobile-ops/remittance',
   mobileLogs: '/mobile/log',
 } as const;
 
