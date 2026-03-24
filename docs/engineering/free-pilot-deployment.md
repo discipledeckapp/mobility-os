@@ -43,8 +43,15 @@ Required:
   - include SSL, e.g. `postgresql://.../mobility_os?sslmode=require`
 - `JWT_SECRET`
   - at least 32 characters
+- `JWT_REFRESH_SECRET`
+  - at least 32 characters
 - `TENANT_WEB_URL`
   - exact Vercel production URL, e.g. `https://mobiris-tenant-web.vercel.app`
+- `DOCUMENT_STORAGE_PROVIDER=s3`
+- `DOCUMENT_STORAGE_S3_BUCKET`
+- `DOCUMENT_STORAGE_S3_ENDPOINT`
+- `DOCUMENT_STORAGE_S3_ACCESS_KEY_ID`
+- `DOCUMENT_STORAGE_S3_SECRET_ACCESS_KEY`
 
 Recommended:
 
@@ -70,6 +77,9 @@ Optional integration dependencies:
 - `INTERNAL_SERVICE_TOKEN`
 - `INTELLIGENCE_API_URL`
 - `INTELLIGENCE_API_KEY`
+- `DOCUMENT_STORAGE_S3_REGION`
+- `DOCUMENT_STORAGE_S3_PUBLIC_BASE_URL`
+- `DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE`
 
 ### Render: `api-intelligence`
 
@@ -143,6 +153,7 @@ Optional:
 6. Confirm `api-intelligence` deploy succeeds.
 7. Create the `api-core` Render web service from [render.yaml](/Users/seyiadelaju/mobility-os/render.yaml).
 8. Set `api-core` env vars on Render, including the deployed `api-intelligence` URL and shared intelligence API key.
+   If intelligence integration is not being deployed yet, leave both `INTELLIGENCE_API_URL` and `INTELLIGENCE_API_KEY` unset.
 9. Confirm `api-core` deploy succeeds and `/api/v1/auth/login` responds.
 10. Create Vercel project with root directory `apps/tenant-web`.
 11. Set `NEXT_PUBLIC_API_URL` on Vercel to the Render `api-core` URL.

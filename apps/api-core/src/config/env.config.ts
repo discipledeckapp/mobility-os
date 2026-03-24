@@ -53,8 +53,8 @@ const schema = z.object({
   INTELLIGENCE_API_URL: z
     .string()
     .url('INTELLIGENCE_API_URL must be a valid URL')
-    .min(1, 'INTELLIGENCE_API_URL is required'),
-  INTELLIGENCE_API_KEY: z.string().min(1, 'INTELLIGENCE_API_KEY is required'),
+    .optional(),
+  INTELLIGENCE_API_KEY: z.string().min(1, 'INTELLIGENCE_API_KEY is required').optional(),
   DOCUMENT_STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
   DOCUMENT_STORAGE_LOCAL_ROOT: z.string().optional(),
   DOCUMENT_STORAGE_MAX_FILE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
@@ -94,6 +94,14 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
   if (data.NODE_ENV === 'production' && data.DOCUMENT_STORAGE_PROVIDER !== 's3') {
     throw new Error(
       '[api-core] Environment validation failed:\n  DOCUMENT_STORAGE_PROVIDER: production requires s3-backed document storage.',
+    );
+  }
+
+  const hasIntelligenceUrl = Boolean(data.INTELLIGENCE_API_URL);
+  const hasIntelligenceKey = Boolean(data.INTELLIGENCE_API_KEY);
+  if (hasIntelligenceUrl !== hasIntelligenceKey) {
+    throw new Error(
+      '[api-core] Environment validation failed:\n  INTELLIGENCE_API_URL/INTELLIGENCE_API_KEY: both must be set together when intelligence integration is enabled.',
     );
   }
 

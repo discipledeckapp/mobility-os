@@ -49,7 +49,23 @@ services:
       - key: INTELLIGENCE_API_URL
         sync: false
       - key: INTELLIGENCE_API_KEY
-        generateValue: true
+        sync: false
+      - key: DOCUMENT_STORAGE_PROVIDER
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_BUCKET
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_REGION
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_ENDPOINT
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_ACCESS_KEY_ID
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_PUBLIC_BASE_URL
+        sync: false
+      - key: DOCUMENT_STORAGE_S3_FORCE_PATH_STYLE
+        value: true
       - key: ZEPTOMAIL_API_URL
         value: https://api.zeptomail.com/v1.1/email
       - key: ZEPTOMAIL_API_KEY
