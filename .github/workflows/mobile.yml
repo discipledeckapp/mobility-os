@@ -21,6 +21,11 @@ on:
           - development
           - preview
           - production
+      submit_to_testflight:
+        description: Auto-submit the iOS production build to TestFlight
+        required: true
+        default: false
+        type: boolean
 
 env:
   PNPM_VERSION: "9.15.0"
@@ -54,8 +59,24 @@ jobs:
       - name: EAS Build
         working-directory: apps/mobile-ops
         run: |
+          if [ "${{ inputs.submit_to_testflight }}" = "true" ] && [ "${{ inputs.platform }}" != "ios" ]; then
+            echo "TestFlight submit is only supported for iOS builds."
+            exit 1
+          fi
+
+          if [ "${{ inputs.submit_to_testflight }}" = "true" ] && [ "${{ inputs.profile }}" != "production" ]; then
+            echo "TestFlight submit requires the production EAS profile."
+            exit 1
+          fi
+
+          EXTRA_ARGS=""
+          if [ "${{ inputs.submit_to_testflight }}" = "true" ]; then
+            EXTRA_ARGS="--auto-submit"
+          fi
+
           eas build \
             --platform ${{ inputs.platform }} \
             --profile ${{ inputs.profile }} \
             --non-interactive \
-            --no-wait
+            --no-wait \
+            ${EXTRA_ARGS}

@@ -60,6 +60,32 @@ Refresh the native scaffold after Expo config or plugin changes with:
 pnpm --filter mobile-ops prebuild
 ```
 
+## Build And Release
+
+Generate a local Android release APK from the committed native project with:
+
+```bash
+cd apps/mobile-ops/android
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
+./gradlew --no-daemon assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+The APK is written to:
+- `apps/mobile-ops/android/app/build/outputs/apk/release/app-release.apk`
+
+For cloud builds, the `Mobile Build` GitHub workflow supports:
+- Android and iOS EAS builds
+- iOS production builds with `submit_to_testflight=true`, which enables `eas build --auto-submit`
+
+TestFlight releases require:
+- `platform=ios`
+- `profile=production`
+- a valid `EXPO_TOKEN` in GitHub Actions
+- the Apple credentials configured in the Expo project for submit
+
 ## Current API Calls
 
 - `POST /auth/login`
