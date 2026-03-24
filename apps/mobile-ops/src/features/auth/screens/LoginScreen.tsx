@@ -15,7 +15,13 @@ import { formatStatusLabel } from '../../../utils/formatting';
 import { identityTone, readinessTone } from '../../../utils/status';
 
 export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
-  const { loginWithPassword } = useAuth();
+  const {
+    loginWithPassword,
+    loginWithBiometric,
+    biometricAvailable,
+    biometricEnabled,
+    isOfflineSession,
+  } = useAuth();
   const { token, driver } = useSelfService();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -68,6 +74,27 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           value={password}
         />
         <Button label="Sign in" loading={submitting} onPress={onSubmit} />
+        {biometricAvailable && biometricEnabled ? (
+          <Button
+            label="Use biometric sign-in"
+            variant="secondary"
+            onPress={async () => {
+              setSubmitting(true);
+              try {
+                await loginWithBiometric();
+              } catch (error) {
+                Alert.alert(
+                  'Biometric sign-in',
+                  error instanceof Error
+                    ? error.message
+                    : 'Unable to unlock this device session right now.',
+                );
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          />
+        ) : null}
         <Button label="Create organisation" variant="secondary" onPress={() => navigation.navigate('Signup')} />
         <Button
           label="Forgot password"
@@ -107,6 +134,12 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           />
         )}
       </Card>
+      {isOfflineSession ? (
+        <Text style={styles.offlineNote}>
+          You are using a cached offline session. New information and queued actions will sync when
+          internet access is restored.
+        </Text>
+      ) : null}
     </Screen>
   );
 }
@@ -191,6 +224,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
+  },
+  offlineNote: {
+    color: tokens.colors.inkSoft,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
 

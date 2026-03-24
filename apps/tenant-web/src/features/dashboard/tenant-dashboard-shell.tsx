@@ -129,16 +129,6 @@ export function TenantDashboardShell({
   notes,
   isEmpty,
 }: TenantDashboardShellProps) {
-  const badgeToneBySummaryTone = {
-    accent: 'success',
-    neutral: 'neutral',
-    warm: 'warning',
-  } as const;
-  const badgeLabelBySummaryTone = {
-    accent: 'Good',
-    neutral: 'Normal',
-    warm: 'Attention',
-  } as const;
   const badgeToneByStatus = {
     active: 'success',
     available: 'success',
@@ -225,9 +215,6 @@ export function TenantDashboardShell({
                   {item.value}
                 </p>
                 {item.detail ? <p className="text-xs text-slate-400">{item.detail}</p> : null}
-                <Badge tone={badgeToneBySummaryTone[item.tone]}>
-                  {badgeLabelBySummaryTone[item.tone]}
-                </Badge>
               </CardContent>
             </Card>
           );
@@ -272,9 +259,6 @@ export function TenantDashboardShell({
                       {item.value}
                     </p>
                     {item.detail ? <p className="text-xs text-slate-400">{item.detail}</p> : null}
-                    <Badge tone={badgeToneBySummaryTone[item.tone]}>
-                      {badgeLabelBySummaryTone[item.tone]}
-                    </Badge>
                   </div>
                 ))}
               </div>

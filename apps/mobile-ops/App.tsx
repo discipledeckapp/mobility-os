@@ -2,14 +2,14 @@ import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as SystemUI from 'expo-system-ui';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './src/components/error-boundary';
 import { registerPushDevice } from './src/api';
 import { AuthProvider, useAuth } from './src/contexts/auth-context';
 import { SelfServiceProvider } from './src/contexts/self-service-context';
 import { ToastProvider, useToast } from './src/contexts/toast-context';
-import { mobileQueryClient } from './src/lib/query-client';
+import { mobileQueryClient, mobileQueryPersister } from './src/lib/query-client';
 import { RootNavigator } from './src/navigation/root-navigator';
 import {
   flushOfflineQueue,
@@ -133,7 +133,13 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={mobileQueryClient}>
+      <PersistQueryClientProvider
+        client={mobileQueryClient}
+        persistOptions={{
+          persister: mobileQueryPersister,
+          maxAge: 1000 * 60 * 60 * 24,
+        }}
+      >
         <AuthProvider>
           <SelfServiceProvider>
             <ToastProvider>
@@ -141,7 +147,7 @@ export default function App() {
             </ToastProvider>
           </SelfServiceProvider>
         </AuthProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   );
 }

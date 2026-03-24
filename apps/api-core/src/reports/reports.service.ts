@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
+import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { VehiclesService } from '../vehicles/vehicles.service';
 
@@ -13,7 +14,20 @@ export class ReportsService {
     private readonly prisma: PrismaService,
     private readonly driversService: DriversService,
     private readonly vehiclesService: VehiclesService,
+    private readonly vehicleRiskService: VehicleRiskService,
   ) {}
+
+  getVehiclesAtRisk(tenantId: string) {
+    return this.vehicleRiskService.listVehiclesAtRisk(tenantId);
+  }
+
+  getMaintenanceBacklog(tenantId: string) {
+    return this.vehicleRiskService.getMaintenanceBacklogSummary(tenantId);
+  }
+
+  getInspectionCompliance(tenantId: string) {
+    return this.vehicleRiskService.getInspectionComplianceRate(tenantId);
+  }
 
   private getRemittanceRisk(
     input: {

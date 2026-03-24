@@ -27,13 +27,29 @@ describe('AssignmentsService', () => {
     hasApprovedLicence: jest.fn(),
   };
 
+  const vehicleRiskService = {
+    getVehicleRisk: jest.fn(),
+  };
+
   let service: AssignmentsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     driversService.hasApprovedLicence.mockResolvedValue(true);
+    vehicleRiskService.getVehicleRisk.mockResolvedValue({
+      vehicleId: 'vehicle_1',
+      score: 100,
+      riskLevel: 'GREEN',
+      reasons: [],
+      isAssignmentLocked: false,
+      evaluatedAt: new Date(),
+    });
     prisma.tenant.findUnique.mockResolvedValue({ country: 'NG' });
-    service = new AssignmentsService(prisma as never, driversService as never);
+    service = new AssignmentsService(
+      prisma as never,
+      driversService as never,
+      vehicleRiskService as never,
+    );
   });
 
   it('creates an assignment in assigned status and reserves the vehicle', async () => {

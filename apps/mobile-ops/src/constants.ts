@@ -1,10 +1,14 @@
 export const STORAGE_KEYS = {
   accessToken: 'mobility_os.mobile_ops.jwt',
   refreshToken: 'mobility_os.mobile_ops.refresh_jwt',
+  cachedSession: 'mobility_os.mobile_ops.cached_session',
+  lastLoginIdentifier: 'mobility_os.mobile_ops.last_login_identifier',
+  biometricLoginEnabled: 'mobility_os.mobile_ops.biometric_login_enabled',
   actionQueue: 'mobility_os.mobile_ops.action_queue',
   selfServiceToken: 'mobility_os.mobile_ops.self_service_token',
   selfServiceVerificationDraft: 'mobility_os.mobile_ops.self_service_verification_draft',
   pendingTenantPayment: 'mobility_os.mobile_ops.pending_tenant_payment',
+  queryCache: 'mobility_os.mobile_ops.query_cache',
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {

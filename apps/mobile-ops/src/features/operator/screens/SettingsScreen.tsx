@@ -31,7 +31,14 @@ import { tokens } from '../../../theme/tokens';
 import { useState } from 'react';
 
 export function SettingsScreen() {
-  const { session, logout, refreshSession } = useAuth();
+  const {
+    session,
+    logout,
+    refreshSession,
+    biometricAvailable,
+    biometricEnabled,
+    setBiometricEnabled,
+  } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('FLEET_MANAGER');
@@ -269,6 +276,40 @@ export function SettingsScreen() {
         <Text style={styles.meta}>Role: {session?.role ?? 'Unknown role'}</Text>
         <Text style={styles.meta}>Email: {session?.email}</Text>
         <Button label="Sign out" variant="secondary" onPress={() => void logout()} />
+      </Card>
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Device access</Text>
+        <Text style={styles.meta}>
+          Keep the last successful session available offline and optionally protect device access
+          with biometrics.
+        </Text>
+        <PreferenceRow
+          label={
+            biometricAvailable
+              ? 'Enable biometric sign-in'
+              : 'Biometric sign-in unavailable on this device'
+          }
+          value={biometricEnabled}
+          onValueChange={(value) => {
+            void setBiometricEnabled(value)
+              .then(() => {
+                Alert.alert(
+                  'Device access',
+                  value
+                    ? 'Biometric sign-in has been enabled for cached offline access.'
+                    : 'Biometric sign-in has been turned off.',
+                );
+              })
+              .catch((error) => {
+                Alert.alert(
+                  'Device access',
+                  error instanceof Error
+                    ? error.message
+                    : 'Unable to update biometric sign-in.',
+                );
+              });
+          }}
+        />
       </Card>
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Profile</Text>

@@ -64,4 +64,25 @@ export class ReportsController {
       getAssignedVehicleIds(ctx),
     );
   }
+
+  @Get('vehicles-at-risk')
+  @RequirePermissions(Permission.VehiclesRead, Permission.MaintenanceRead)
+  @UseGuards(PermissionsGuard)
+  getVehiclesAtRisk(@CurrentTenant() ctx: TenantContext) {
+    return this.reportsService.getVehiclesAtRisk(ctx.tenantId);
+  }
+
+  @Get('maintenance-backlog')
+  @RequirePermissions(Permission.MaintenanceRead)
+  @UseGuards(PermissionsGuard)
+  getMaintenanceBacklog(@CurrentTenant() ctx: TenantContext) {
+    return this.reportsService.getMaintenanceBacklog(ctx.tenantId);
+  }
+
+  @Get('inspection-compliance')
+  @RequirePermissions(Permission.InspectionsRead)
+  @UseGuards(PermissionsGuard)
+  getInspectionCompliance(@CurrentTenant() ctx: TenantContext) {
+    return this.reportsService.getInspectionCompliance(ctx.tenantId);
+  }
 }

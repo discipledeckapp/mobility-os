@@ -17,6 +17,9 @@ import { HealthModule } from './health/health.module';
 import { InternalProvisioningModule } from './internal-provisioning/internal-provisioning.module';
 import { InternalTenantsModule } from './internal-tenants/internal-tenants.module';
 import { MobileOpsModule } from './mobile-ops/mobile-ops.module';
+import { AuditModule } from './audit/audit.module';
+import { InspectionsModule } from './inspections/inspections.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OperatingUnitsModule } from './operating-units/operating-units.module';
 import { OperationalWalletsModule } from './operational-wallets/operational-wallets.module';
@@ -27,6 +30,7 @@ import { TeamModule } from './team/team.module';
 import { TenantBillingModule } from './tenant-billing/tenant-billing.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { VehicleCatalogModule } from './vehicle-catalog/vehicle-catalog.module';
+import { VehicleRiskModule } from './vehicle-risk/vehicle-risk.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 
 function createLoggerModule() {
@@ -118,6 +122,7 @@ function createLoggerModule() {
     // ── Assets ────────────────────────────────────────────────────────────────
     VehiclesModule,
     VehicleCatalogModule,
+    VehicleRiskModule,
     MobileOpsModule,
     ReportsModule,
     TenantBillingModule,
@@ -139,12 +144,12 @@ function createLoggerModule() {
 
     // ── Ancillary ─────────────────────────────────────────────────────────────
     // ValuationsModule,
-    // InspectionsModule,
-    // MaintenanceModule,
+    InspectionsModule,
+    MaintenanceModule,
     // DocumentsModule,
 
     // ── Cross-cutting ─────────────────────────────────────────────────────────
-    // AuditModule,
+    AuditModule,
     // CountryConfigModule,
   ],
   providers: [ThrottlerGuard],

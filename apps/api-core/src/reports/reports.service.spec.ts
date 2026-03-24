@@ -34,6 +34,12 @@ describe('ReportsService', () => {
     findOneDetailed: jest.fn(),
   };
 
+  const vehicleRiskService = {
+    listVehiclesAtRisk: jest.fn(),
+    getMaintenanceBacklogSummary: jest.fn(),
+    getInspectionComplianceRate: jest.fn(),
+  };
+
   let service: ReportsService;
 
   beforeEach(() => {
@@ -42,6 +48,7 @@ describe('ReportsService', () => {
       prisma as never,
       driversService as never,
       vehiclesService as never,
+      vehicleRiskService as never,
     );
   });
 

@@ -17,7 +17,7 @@ Multi-tenant B2B SaaS platform for transport operators. Three planes:
     api-intelligence/  NestJS — person graph + identity resolution
     tenant-web/        Next.js — tenant-facing console
     control-plane-web/ Next.js — platform operator console (staff-only)
-    mobile-ops/        React Native (Expo) — field operations app
+    mobile-ops/        React Native (Expo) — dual-mode operator + driver app (see ADR-013)
   packages/            Shared TypeScript packages (canonical location)
     tenancy-domain/    TenantContext, TenantId, lifecycle types
     billing-domain/    Money, BillingCycle, invoice/subscription types
@@ -35,7 +35,8 @@ Multi-tenant B2B SaaS platform for transport operators. Three planes:
 3. **Cross-tenant intelligence** is surfaced as risk signals only — never raw records from other tenants.
 4. **No country-specific logic in core code.** Nigeria (or any country) appears only as a config profile in `packages/domain-config/countries/`. Core domain code must be country-agnostic.
 5. All DB schemas are prefixed by plane: `cp_*` (control plane), `ow_*` (operational wallets), `intel_*` (intelligence).
-6. `packages/` is the canonical package location.
+6. `packages/` is the canonical package location. `apps/packages/` is a legacy structure to be migrated.
+7. **mobile-ops is a dual-mode app** — operator screens use `TenantAuthGuard` against `api-core`; driver screens use `MobileAuthGuard`. Role-aware navigation is determined by the JWT role claim at login. Do not add driver-only guards to operator screens or vice versa. See ADR-013.
 
 ## Tech Stack
 
@@ -73,6 +74,7 @@ Key ADRs:
 - ADR-010 — the tenant → business entity → operating unit → fleet hierarchy
 - ADR-011 — two environments only (prod + nonprod)
 - ADR-012 — RPO/RTO targets
+- ADR-013 — mobile-first operator architecture (mobile-ops as dual operator+driver client)
 
 ## What Claude Should Not Do
 

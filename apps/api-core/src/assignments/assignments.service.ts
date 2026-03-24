@@ -14,6 +14,7 @@ import { buildCsv, parseCsv } from '../common/csv-utils';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
+import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
 import type { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
 
@@ -29,6 +30,7 @@ export class AssignmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly driversService: DriversService,
+    private readonly vehicleRiskService: VehicleRiskService,
   ) {}
 
   private async resolveTenantCurrency(tenantId: string): Promise<string> {
@@ -206,6 +208,13 @@ export class AssignmentsService {
       throw new BadRequestException(
         `Vehicle '${dto.vehicleId}' must be one of [${allowedVehicleStatuses.join(', ')}] ` +
           `for this assignment transition (current: '${vehicle.status}')`,
+      );
+    }
+
+    const risk = await this.vehicleRiskService.getVehicleRisk(tenantId, vehicle.id);
+    if (risk.isAssignmentLocked) {
+      throw new BadRequestException(
+        `Vehicle '${dto.vehicleId}' is locked for assignment until inspection and maintenance issues are resolved.`,
       );
     }
 

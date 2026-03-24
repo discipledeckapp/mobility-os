@@ -426,6 +426,11 @@ model Vehicle {
   maintenanceSchedules VehicleMaintenanceSchedule[]
   maintenanceEvents VehicleMaintenanceEvent[]
   incidents VehicleIncident[]
+  inspectionRuns Inspection[]
+  maintenanceScheduleRules MaintenanceScheduleRule[]
+  maintenanceRecords MaintenanceRecord[]
+  workOrders WorkOrder[]
+  riskAssessments VehicleRiskAssessment[]
 
   @@index([tenantId])
   @@index([fleetId])
@@ -557,6 +562,313 @@ model VehicleValuation {
   @@index([vehicleId])
   @@index([vehicleId, valuationKind, isCurrent])
   @@map("vehicle_valuations")
+}
+
+model OperationalAuditLog {
+  id          String @id @default(cuid())
+  tenantId    String
+  actorId     String?
+  entityType  String
+  entityId    String
+  action      String
+  beforeState Json?
+  afterState  Json?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, entityType, entityId, createdAt])
+  @@index([tenantId, actorId, createdAt])
+  @@map("operational_audit_logs")
+}
+
+model InspectionChecklistTemplate {
+  id                  String @id @default(cuid())
+  tenantId            String
+  name                String
+  inspectionType      String
+  isActive            Boolean @default(true)
+  requiresReview      Boolean @default(true)
+  defaultPassingScore Int @default(80)
+  createdByUserId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  items       InspectionChecklistItem[]
+  inspections Inspection[]
+
+  @@index([tenantId, inspectionType, isActive])
+  @@map("inspection_checklist_templates")
+}
+
+model InspectionChecklistItem {
+  id                 String @id @default(cuid())
+  tenantId           String
+  templateId         String
+  label              String
+  description        String?
+  sortOrder          Int @default(0)
+  weight             Int @default(1)
+  isRequired         Boolean @default(true)
+  requiredMediaKinds Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  template InspectionChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  results  InspectionResult[]
+
+  @@index([tenantId, templateId, sortOrder])
+  @@map("inspection_checklist_items")
+}
+
+model Inspection {
+  id              String @id @default(cuid())
+  tenantId        String
+  vehicleId       String
+  templateId      String
+  driverId        String?
+  assignmentId    String?
+  inspectionType  String
+  status          String @default("draft")
+  reviewDecision  String?
+  reviewComments  String?
+  createdByUserId String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  odometerKm      Int?
+  gpsLatitude     Float?
+  gpsLongitude    Float?
+  summary         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  template   InspectionChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  results    InspectionResult[]
+  media      InspectionMedia[]
+  reviews    InspectionReview[]
+  scorecards InspectionScore[]
+  triggers   MaintenanceTrigger[]
+  records    MaintenanceRecord[]
+
+  @@index([tenantId, vehicleId, createdAt])
+  @@index([tenantId, status, inspectionType])
+  @@map("inspections")
+}
+
+model InspectionResult {
+  id              String @id @default(cuid())
+  tenantId        String
+  inspectionId    String
+  checklistItemId String
+  result          String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  inspection    Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checklistItem InspectionChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Restrict)
+  media         InspectionMedia[]
+
+  @@index([tenantId, inspectionId])
+  @@index([tenantId, checklistItemId])
+  @@map("inspection_results")
+}
+
+model InspectionMedia {
+  id                 String @id @default(cuid())
+  tenantId           String
+  inspectionId       String
+  inspectionResultId String?
+  mediaType          String
+  viewpoint          String?
+  storageKey         String?
+  storageUrl         String?
+  capturedAt         DateTime @default(now())
+  aiAnalysis         Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  inspection       Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionResult InspectionResult? @relation(fields: [inspectionResultId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, inspectionId])
+  @@index([tenantId, inspectionResultId])
+  @@map("inspection_media")
+}
+
+model InspectionReview {
+  id             String @id @default(cuid())
+  tenantId       String
+  inspectionId   String
+  reviewerUserId String
+  decision       String
+  comments       String?
+  createdAt      DateTime @default(now())
+
+  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, inspectionId, createdAt])
+  @@map("inspection_reviews")
+}
+
+model InspectionScore {
+  id               String @id @default(cuid())
+  tenantId         String
+  inspectionId     String
+  score            Int
+  riskLevel        String
+  failedItemCount  Int @default(0)
+  warningItemCount Int @default(0)
+  calculatedAt     DateTime @default(now())
+
+  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, inspectionId, calculatedAt])
+  @@map("inspection_scores")
+}
+
+model MaintenanceVendor {
+  id          String @id @default(cuid())
+  tenantId    String
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  status      String @default("approved")
+  rating      Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workOrders WorkOrder[]
+
+  @@index([tenantId, status])
+  @@map("maintenance_vendors")
+}
+
+model MaintenanceScheduleRule {
+  id                String @id @default(cuid())
+  tenantId          String
+  vehicleId         String
+  name              String
+  scheduleType      String
+  intervalDays      Int?
+  intervalKm        Int?
+  nextDueAt         DateTime?
+  nextDueOdometerKm Int?
+  isActive          Boolean @default(true)
+  source            String @default("default")
+  createdByUserId   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, isActive])
+  @@map("maintenance_schedule_rules")
+}
+
+model MaintenanceTrigger {
+  id          String @id @default(cuid())
+  tenantId    String
+  vehicleId   String
+  inspectionId String?
+  triggerType String
+  severity    String
+  summary     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  inspection Inspection? @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  records    MaintenanceRecord[]
+
+  @@index([tenantId, vehicleId, createdAt])
+  @@map("maintenance_triggers")
+}
+
+model MaintenanceRecord {
+  id              String @id @default(cuid())
+  tenantId        String
+  vehicleId       String
+  inspectionId    String?
+  triggerId       String?
+  recordType      String
+  status          String @default("open")
+  openedAt        DateTime @default(now())
+  closedAt        DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  inspection Inspection? @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  trigger    MaintenanceTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+  workOrders WorkOrder[]
+
+  @@index([tenantId, vehicleId, status])
+  @@map("maintenance_records")
+}
+
+model WorkOrder {
+  id                  String @id @default(cuid())
+  tenantId            String
+  vehicleId           String
+  maintenanceRecordId String
+  vendorId            String?
+  issueDescription    String
+  priority            String
+  status              String @default("pending")
+  assignedAt          DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  rejectedAt          DateTime?
+  createdByUserId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  vehicle           Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  maintenanceRecord MaintenanceRecord @relation(fields: [maintenanceRecordId], references: [id], onDelete: Cascade)
+  vendor            MaintenanceVendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  costs             MaintenanceCost[]
+
+  @@index([tenantId, vehicleId, status])
+  @@index([tenantId, vendorId, createdAt])
+  @@map("work_orders")
+}
+
+model MaintenanceCost {
+  id                    String @id @default(cuid())
+  tenantId              String
+  workOrderId           String
+  partsCostMinorUnits   Int @default(0)
+  labourCostMinorUnits  Int @default(0)
+  totalCostMinorUnits   Int
+  currency              String
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, workOrderId])
+  @@map("maintenance_costs")
+}
+
+model VehicleRiskAssessment {
+  id                 String @id @default(cuid())
+  tenantId           String
+  vehicleId          String
+  score              Int
+  riskLevel          String
+  reasons            Json
+  isAssignmentLocked Boolean @default(false)
+  evaluatedAt        DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, evaluatedAt])
+  @@map("vehicle_risk_assessments")
 }
 
 // ── Assignments ───────────────────────────────────────────────────────────────
