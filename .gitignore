@@ -10,3 +10,5 @@ coverage/
 .turbo/
 .vercel/output
 .vercel/.env*
+apps/mobile-ops/google-play-service-account.json
+docs/playstore/key/*.json
