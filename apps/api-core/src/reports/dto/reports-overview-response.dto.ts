@@ -50,6 +50,26 @@ export class RemittanceProjectionSummaryDto {
   atRiskAssignmentCount!: number;
 }
 
+export class OwnershipProgressSummaryDto {
+  @ApiProperty()
+  currency!: string;
+
+  @ApiProperty()
+  activeHirePurchaseUnits!: number;
+
+  @ApiProperty()
+  targetValueMinorUnits!: number;
+
+  @ApiProperty()
+  remittedValueMinorUnits!: number;
+
+  @ApiProperty()
+  outstandingValueMinorUnits!: number;
+
+  @ApiProperty()
+  completionRatio!: number;
+}
+
 export class ReportsOverviewResponseDto {
   @ApiProperty({ type: WalletSummaryDto })
   wallet!: WalletSummaryDto;
@@ -65,4 +85,7 @@ export class ReportsOverviewResponseDto {
 
   @ApiProperty({ type: RemittanceProjectionSummaryDto })
   remittanceProjection!: RemittanceProjectionSummaryDto;
+
+  @ApiProperty({ type: OwnershipProgressSummaryDto })
+  ownershipProgress!: OwnershipProgressSummaryDto;
 }

@@ -13,6 +13,7 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
+import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AssignmentsService } from './assignments.service';
@@ -42,7 +43,7 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListAssignmentsDto,
   ): Promise<PaginatedResponse<AssignmentResponseDto>> {
-    return this.service.list(ctx.tenantId, query);
+    return this.service.list(ctx.tenantId, applyFleetScope(query, ctx));
   }
 
   @Get(':id')
@@ -53,7 +54,10 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<AssignmentResponseDto> {
-    return this.service.findOne(ctx.tenantId, id);
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertFleetAccess(ctx, assignment.fleetId);
+      return assignment;
+    });
   }
 
   @Post()
@@ -64,6 +68,9 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Body() dto: CreateAssignmentDto,
   ): Promise<AssignmentResponseDto> {
+    if (dto.fleetId) {
+      assertFleetAccess(ctx, dto.fleetId);
+    }
     return this.service.create(ctx.tenantId, dto);
   }
 
@@ -76,7 +83,10 @@ export class AssignmentsController {
     @Param('id') id: string,
     @Body() dto: UpdateAssignmentRemittancePlanDto,
   ): Promise<AssignmentResponseDto> {
-    return this.service.updateRemittancePlan(ctx.tenantId, id, dto);
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertFleetAccess(ctx, assignment.fleetId);
+      return this.service.updateRemittancePlan(ctx.tenantId, id, dto);
+    });
   }
 
   @Post(':id/start')
@@ -87,7 +97,10 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<AssignmentResponseDto> {
-    return this.service.start(ctx.tenantId, id);
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertFleetAccess(ctx, assignment.fleetId);
+      return this.service.start(ctx.tenantId, id);
+    });
   }
 
   @Post(':id/complete')
@@ -99,7 +112,10 @@ export class AssignmentsController {
     @Param('id') id: string,
     @Body('notes') notes?: string,
   ): Promise<AssignmentResponseDto> {
-    return this.service.end(ctx.tenantId, id, 'completed', notes);
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertFleetAccess(ctx, assignment.fleetId);
+      return this.service.end(ctx.tenantId, id, 'completed', notes);
+    });
   }
 
   @Post(':id/cancel')
@@ -111,6 +127,9 @@ export class AssignmentsController {
     @Param('id') id: string,
     @Body('notes') notes?: string,
   ): Promise<AssignmentResponseDto> {
-    return this.service.end(ctx.tenantId, id, 'cancelled', notes);
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertFleetAccess(ctx, assignment.fleetId);
+      return this.service.end(ctx.tenantId, id, 'cancelled', notes);
+    });
   }
 }

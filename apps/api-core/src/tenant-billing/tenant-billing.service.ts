@@ -13,6 +13,7 @@ import type {
   TenantPaymentCheckoutDto,
 } from './dto/tenant-billing-response.dto';
 import type { VerifyTenantPaymentDto } from './dto/verify-tenant-payment.dto';
+import type { TenantBillingPlanDto } from './dto/tenant-billing-response.dto';
 
 @Injectable()
 export class TenantBillingService {
@@ -47,6 +48,7 @@ export class TenantBillingService {
         planName: subscription.planName,
         planTier: subscription.planTier,
         currency: subscription.currency,
+        features: subscription.features,
         status: subscription.status,
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
@@ -162,6 +164,24 @@ export class TenantBillingService {
       currency: result.currency,
       ...(result.invoiceId ? { invoiceId: result.invoiceId } : {}),
     };
+  }
+
+  async listPlans(): Promise<TenantBillingPlanDto[]> {
+    const plans = await this.controlPlaneBillingClient.listPlans();
+    return plans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      tier: plan.tier,
+      billingInterval: plan.billingInterval,
+      basePriceMinorUnits: plan.basePriceMinorUnits,
+      currency: plan.currency,
+      isActive: plan.isActive,
+      features: plan.features,
+    }));
+  }
+
+  async changePlan(tenantId: string, planId: string) {
+    return this.controlPlaneBillingClient.changePlan(tenantId, planId);
   }
 
   private buildReturnUrl(

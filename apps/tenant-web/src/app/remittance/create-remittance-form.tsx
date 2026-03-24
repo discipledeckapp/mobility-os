@@ -11,8 +11,10 @@ import {
   CardTitle,
   Input,
   Label,
+  SearchableSelect,
   Text,
 } from '@mobility-os/ui';
+import type { SearchableSelectOption } from '@mobility-os/ui';
 import type { AssignmentRecord, DriverRecord, FleetRecord, VehicleRecord } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { FleetSelectField } from '../../features/shared/fleet-select-field';
@@ -67,6 +69,16 @@ export function CreateRemittanceForm({
     () => fleetAssignments.find((assignment) => assignment.id === assignmentId) ?? null,
     [assignmentId, fleetAssignments],
   );
+  const assignmentOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      fleetAssignments.map((assignment) => ({
+        value: assignment.id,
+        label: `${driverLabels.get(assignment.driverId) ?? assignment.driverId} · ${
+          vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId
+        }`,
+      })),
+    [driverLabels, fleetAssignments, vehicleLabels],
+  );
   const suggestedDueDate = useMemo(
     () =>
       selectedAssignment
@@ -120,16 +132,24 @@ export function CreateRemittanceForm({
             value={fleetId}
           />
 
+          <SearchableSelect
+            disabled={!fleetId}
+            emptyText={
+              fleetId
+                ? 'No active assignments are available in the selected fleet.'
+                : 'Select a fleet first.'
+            }
+            helperText="Search by driver or vehicle. Only assignments that can accept collections are listed."
+            inputId="assignmentId"
+            label="Assignment"
+            name="assignmentId"
+            onChange={setAssignmentId}
+            options={assignmentOptions}
+            placeholder="Select assignment"
+            required
+            value={assignmentId}
+          />
           <div className="space-y-2">
-            <Label htmlFor="assignmentId">Assignment ID</Label>
-            <Input
-              id="assignmentId"
-              name="assignmentId"
-              onChange={(event) => setAssignmentId(event.target.value)}
-              placeholder="asn_123"
-              required
-              value={assignmentId}
-            />
             {fleetAssignments.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {fleetAssignments.slice(0, 4).map((assignment) => (

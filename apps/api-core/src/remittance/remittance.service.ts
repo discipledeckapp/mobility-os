@@ -34,6 +34,8 @@ export class RemittanceService {
     filters: {
       assignmentId?: string;
       driverId?: string;
+      fleetId?: string;
+      fleetIds?: string[];
       status?: string;
       page?: number;
       limit?: number;
@@ -45,6 +47,11 @@ export class RemittanceService {
       tenantId,
       ...(filters.assignmentId ? { assignmentId: filters.assignmentId } : {}),
       ...(filters.driverId ? { driverId: filters.driverId } : {}),
+      ...(filters.fleetId
+        ? { fleetId: filters.fleetId }
+        : filters.fleetIds?.length
+          ? { fleetId: { in: filters.fleetIds } }
+          : {}),
       ...(filters.status ? { status: filters.status } : {}),
     };
     const [data, total] = await Promise.all([

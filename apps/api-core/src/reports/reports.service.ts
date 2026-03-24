@@ -57,7 +57,9 @@ export class ReportsService {
     return { status: 'on_track', reason: null };
   }
 
-  async getOverview(tenantId: string) {
+  async getOverview(tenantId: string, fleetIds: string[] = []) {
+    const fleetScope =
+      fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {};
     const [wallets, walletEntries, remittances, driverStatusCounts, activeAssignments, driversPage, vehicles] = await Promise.all([
       this.prisma.operationalWallet.findMany({
         where: { tenantId },
@@ -87,12 +89,16 @@ export class ReportsService {
       }),
       this.prisma.driver.groupBy({
         by: ['status'],
-        where: { tenantId },
+        where: {
+          tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        },
         _count: { _all: true },
       }),
       this.prisma.assignment.findMany({
         where: {
           tenantId,
+          ...fleetScope,
           status: { in: ['assigned', 'active'] },
           remittanceAmountMinorUnits: { not: null },
           remittanceCurrency: { not: null },
@@ -108,11 +114,18 @@ export class ReportsService {
           remittanceFrequency: true,
           remittanceStartDate: true,
           remittanceCollectionDay: true,
+          remittanceModel: true,
         },
       }),
-      this.driversService.list(tenantId, { limit: 200 }),
+      this.driversService.list(tenantId, {
+        limit: 200,
+        ...(fleetIds.length > 0 ? { fleetIds } : {}),
+      }),
       this.prisma.vehicle.findMany({
-        where: { tenantId },
+        where: {
+          tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        },
         select: { id: true, status: true },
       }),
     ]);
@@ -159,6 +172,51 @@ export class ReportsService {
     let expectedThisWeekMinorUnits = 0;
     let atRiskMinorUnits = 0;
     let atRiskAssignmentCount = 0;
+    const hirePurchaseAssignments = activeAssignments.filter(
+      (assignment) => assignment.remittanceModel === 'hire_purchase',
+    );
+    const hirePurchaseVehicleIds = hirePurchaseAssignments.map((assignment) => assignment.vehicleId);
+    const hirePurchaseAssignmentIds = hirePurchaseAssignments.map((assignment) => assignment.id);
+    const [currentValuations, confirmedHirePurchaseRemittances] = await Promise.all([
+      hirePurchaseVehicleIds.length
+        ? this.prisma.vehicleValuation.findMany({
+            where: {
+              tenantId,
+              vehicleId: { in: hirePurchaseVehicleIds },
+              isCurrent: true,
+            },
+            orderBy: [{ valuationDate: 'desc' }, { createdAt: 'desc' }],
+          })
+        : Promise.resolve([]),
+      hirePurchaseAssignmentIds.length
+        ? this.prisma.remittance.findMany({
+            where: {
+              tenantId,
+              assignmentId: { in: hirePurchaseAssignmentIds },
+              status: 'confirmed',
+            },
+            select: {
+              assignmentId: true,
+              amountMinorUnits: true,
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+    const valuationByVehicleId = new Map<string, (typeof currentValuations)[number]>();
+    for (const valuation of currentValuations) {
+      if (!valuationByVehicleId.has(valuation.vehicleId)) {
+        valuationByVehicleId.set(valuation.vehicleId, valuation);
+      }
+    }
+    const remittedByAssignmentId = new Map<string, number>();
+    for (const remittance of confirmedHirePurchaseRemittances) {
+      remittedByAssignmentId.set(
+        remittance.assignmentId,
+        (remittedByAssignmentId.get(remittance.assignmentId) ?? 0) + remittance.amountMinorUnits,
+      );
+    }
+    let ownershipTargetValueMinorUnits = 0;
+    let ownershipRemittedValueMinorUnits = 0;
 
     for (const assignment of activeAssignments) {
       const nextDueDate = computeNextRemittanceDueDate({
@@ -192,6 +250,17 @@ export class ReportsService {
           atRiskAssignmentCount += 1;
         }
       }
+
+      if (assignment.remittanceModel === 'hire_purchase') {
+        const targetValuation = valuationByVehicleId.get(assignment.vehicleId);
+        if (targetValuation) {
+          ownershipTargetValueMinorUnits += targetValuation.amountMinorUnits;
+          ownershipRemittedValueMinorUnits += Math.min(
+            remittedByAssignmentId.get(assignment.id) ?? 0,
+            targetValuation.amountMinorUnits,
+          );
+        }
+      }
     }
 
     return {
@@ -215,18 +284,43 @@ export class ReportsService {
         atRiskMinorUnits,
         atRiskAssignmentCount,
       },
+      ownershipProgress: {
+        currency: walletCurrency,
+        activeHirePurchaseUnits: hirePurchaseAssignments.length,
+        targetValueMinorUnits: ownershipTargetValueMinorUnits,
+        remittedValueMinorUnits: ownershipRemittedValueMinorUnits,
+        outstandingValueMinorUnits: Math.max(
+          ownershipTargetValueMinorUnits - ownershipRemittedValueMinorUnits,
+          0,
+        ),
+        completionRatio:
+          ownershipTargetValueMinorUnits > 0
+            ? Number(
+                (ownershipRemittedValueMinorUnits / ownershipTargetValueMinorUnits).toFixed(4),
+              )
+            : 0,
+      },
     };
   }
 
-  async getOperationalReadiness(tenantId: string) {
+  async getOperationalReadiness(tenantId: string, fleetIds: string[] = []) {
     const [driversPage, vehicles, latestAssignments, approvedLicences, openAssignments] = await Promise.all([
-      this.driversService.list(tenantId, { limit: 200 }),
+      this.driversService.list(tenantId, {
+        limit: 200,
+        ...(fleetIds.length > 0 ? { fleetIds } : {}),
+      }),
       this.prisma.vehicle.findMany({
-        where: { tenantId },
+        where: {
+          tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.assignment.findMany({
-        where: { tenantId },
+        where: {
+          tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        },
         orderBy: { startedAt: 'desc' },
         select: { driverId: true, startedAt: true },
       }),
@@ -242,6 +336,7 @@ export class ReportsService {
       this.prisma.assignment.findMany({
         where: {
           tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
           status: { in: ['assigned', 'active'] },
         },
         orderBy: { startedAt: 'desc' },
@@ -310,6 +405,25 @@ export class ReportsService {
       };
     });
 
+    const confirmedRemittances = await this.prisma.remittance.findMany({
+      where: {
+        tenantId,
+        ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        status: 'confirmed',
+      },
+      select: {
+        assignmentId: true,
+        amountMinorUnits: true,
+      },
+    });
+    const remittedByAssignmentId = new Map<string, number>();
+    for (const remittance of confirmedRemittances) {
+      remittedByAssignmentId.set(
+        remittance.assignmentId,
+        (remittedByAssignmentId.get(remittance.assignmentId) ?? 0) + remittance.amountMinorUnits,
+      );
+    }
+
     const vehicleItems = await Promise.all(
       vehicles.map(async (vehicle) => {
         const detail = await this.vehiclesService.findOneDetailed(tenantId, vehicle.id);
@@ -326,6 +440,22 @@ export class ReportsService {
               vehicleStatus: detail.status,
             })
           : null;
+        const ownershipTargetMinorUnits =
+          plannedAssignment?.remittanceModel === 'hire_purchase'
+            ? currentValuation?.amountMinorUnits ?? null
+            : null;
+        const ownershipRemittedMinorUnits =
+          plannedAssignment?.remittanceModel === 'hire_purchase'
+            ? remittedByAssignmentId.get(plannedAssignment.id) ?? 0
+            : null;
+        const ownershipOutstandingMinorUnits =
+          ownershipTargetMinorUnits !== null && ownershipRemittedMinorUnits !== null
+            ? Math.max(ownershipTargetMinorUnits - ownershipRemittedMinorUnits, 0)
+            : null;
+        const ownershipCompletionRatio =
+          ownershipTargetMinorUnits && ownershipRemittedMinorUnits !== null
+            ? Number((ownershipRemittedMinorUnits / ownershipTargetMinorUnits).toFixed(4))
+            : null;
         return {
           id: detail.id,
           primaryLabel: detail.tenantVehicleCode || detail.systemVehicleCode,
@@ -333,6 +463,10 @@ export class ReportsService {
           status: detail.status,
           currentValuationMinorUnits: currentValuation?.amountMinorUnits ?? null,
           currentValuationCurrency: currentValuation?.currency ?? null,
+          ownershipTargetMinorUnits,
+          ownershipRemittedMinorUnits,
+          ownershipOutstandingMinorUnits,
+          ownershipCompletionRatio,
           maintenanceSummary: detail.maintenanceSummary,
           lifecycleStage: detail.status,
           remittanceRiskStatus: remittanceRisk?.status ?? null,
@@ -347,15 +481,25 @@ export class ReportsService {
     };
   }
 
-  async getLicenceExpiryReport(tenantId: string) {
+  async getLicenceExpiryReport(tenantId: string, fleetIds: string[] = []) {
     const [drivers, documents] = await Promise.all([
       this.prisma.driver.findMany({
-        where: { tenantId },
+        where: {
+          tenantId,
+          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+        },
         select: { id: true, firstName: true, lastName: true, fleetId: true },
       }),
       this.prisma.driverDocument.findMany({
         where: {
           tenantId,
+          ...(fleetIds.length > 0
+            ? {
+                driver: {
+                  fleetId: { in: fleetIds },
+                },
+              }
+            : {}),
           documentType: 'drivers-license',
           status: 'approved',
           expiresAt: { not: null },

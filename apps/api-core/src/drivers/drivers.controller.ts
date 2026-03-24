@@ -26,6 +26,7 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
+import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from './drivers.service';
@@ -128,7 +129,7 @@ export class DriversController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListDriversDto,
   ): Promise<PaginatedResponse<DriverResponseDto>> {
-    return this.service.list(ctx.tenantId, query).then((result) => ({
+    return this.service.list(ctx.tenantId, applyFleetScope(query, ctx)).then((result) => ({
       ...result,
       data: result.data.map((driver) => this.toResponse(driver)),
     }));
@@ -261,7 +262,10 @@ export class DriversController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<DriverResponseDto> {
-    return this.service.findOne(ctx.tenantId, id).then((driver) => this.toResponse(driver));
+    return this.service.findOne(ctx.tenantId, id).then((driver) => {
+      assertFleetAccess(ctx, driver.fleetId);
+      return this.toResponse(driver);
+    });
   }
 
   @Get(':id/identity-summary')
@@ -353,6 +357,7 @@ export class DriversController {
     @CurrentTenant() ctx: TenantContext,
     @Body() dto: CreateDriverDto,
   ): Promise<DriverResponseDto> {
+    assertFleetAccess(ctx, dto.fleetId);
     return this.service.create(ctx.tenantId, dto).then((driver) => this.toResponse(driver));
   }
 
@@ -365,9 +370,12 @@ export class DriversController {
     @Param('id') id: string,
     @Body('status') status: string,
   ): Promise<DriverResponseDto> {
-    return this.service
-      .updateStatus(ctx.tenantId, id, status)
-      .then((driver) => this.toResponse(driver));
+    return this.service.findOne(ctx.tenantId, id).then((driver) => {
+      assertFleetAccess(ctx, driver.fleetId);
+      return this.service
+        .updateStatus(ctx.tenantId, id, status)
+        .then((updatedDriver) => this.toResponse(updatedDriver));
+    });
   }
 
   @Post(':id/identity/liveness-sessions')

@@ -1,4 +1,4 @@
-import { type Permission, type TenantRole, rolePermissions } from '@mobility-os/authz-model';
+import { type Permission, type TenantRole, getGrantedPermissions } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
 import {
   type CanActivate,
@@ -32,8 +32,11 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('Your role could not be determined for this action.');
     }
 
-    const grantedPermissions = rolePermissions[role as TenantRole];
-    if (!grantedPermissions) {
+    const grantedPermissions = getGrantedPermissions(
+      role as TenantRole,
+      request.tenantContext?.customPermissions ?? [],
+    );
+    if (grantedPermissions.size === 0) {
       throw new ForbiddenException('Your role is not allowed to perform this action.');
     }
 

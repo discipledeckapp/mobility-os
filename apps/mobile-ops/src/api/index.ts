@@ -63,6 +63,8 @@ export interface SessionRecord {
   guarantorMaxActiveDrivers?: number;
   notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
+  assignedFleetIds?: string[];
+  customPermissions?: string[];
   linkedDriverId?: string | null;
   linkedDriverStatus?: string | null;
   linkedDriverIdentityStatus?: string | null;
@@ -364,6 +366,8 @@ export interface TeamMemberRecord {
   email: string;
   phone: string | null;
   role: string;
+  assignedFleetIds: string[];
+  customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
   createdAt: string;
@@ -374,6 +378,13 @@ export interface InviteTeamMemberInput {
   email: string;
   role: string;
   phone?: string;
+  assignedFleetIds?: string[];
+  customPermissions?: string[];
+}
+
+export interface UpdateTeamMemberAccessInput {
+  assignedFleetIds?: string[];
+  customPermissions?: string[];
 }
 
 export interface TenantBillingInvoiceRecord {
@@ -396,6 +407,7 @@ export interface TenantBillingSummaryRecord {
     planName: string;
     planTier: string;
     currency: string;
+    features: Record<string, unknown>;
     status: string;
     currentPeriodStart: string;
     currentPeriodEnd: string;
@@ -421,6 +433,17 @@ export interface TenantBillingSummaryRecord {
   };
   customerEmail: string;
   customerName: string;
+}
+
+export interface TenantBillingPlanRecord {
+  id: string;
+  name: string;
+  tier: string;
+  billingInterval: string;
+  basePriceMinorUnits: number;
+  currency: string;
+  isActive: boolean;
+  features: Record<string, unknown>;
 }
 
 export interface TenantPaymentCheckoutRecord {
@@ -564,6 +587,7 @@ export interface CreateAssignmentInput {
   vehicleId: string;
   fleetId?: string;
   notes?: string;
+  remittanceModel?: 'fixed' | 'hire_purchase';
   remittanceAmountMinorUnits: number;
   remittanceFrequency?: 'daily' | 'weekly';
   remittanceCurrency?: string;
@@ -1272,6 +1296,16 @@ export function inviteTeamMember(input: InviteTeamMemberInput): Promise<TeamMemb
   });
 }
 
+export function updateTeamMemberAccess(
+  userId: string,
+  input: UpdateTeamMemberAccessInput,
+): Promise<TeamMemberRecord> {
+  return apiFetch<TeamMemberRecord>(`${API_PATHS.team}/${encodeURIComponent(userId)}/access`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function deactivateTeamMember(userId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`${API_PATHS.team}/${userId}`, {
     method: 'DELETE',
@@ -1286,6 +1320,19 @@ export function resendTeamInvite(userId: string): Promise<{ message: string }> {
 
 export function getTenantBillingSummary(): Promise<TenantBillingSummaryRecord> {
   return apiFetch<TenantBillingSummaryRecord>(`${API_PATHS.tenantBilling}/summary`);
+}
+
+export function listTenantBillingPlans(): Promise<TenantBillingPlanRecord[]> {
+  return apiFetch<TenantBillingPlanRecord[]>(`${API_PATHS.tenantBilling}/plans`);
+}
+
+export function changeTenantBillingPlan(planId: string): Promise<TenantBillingSummaryRecord> {
+  return apiFetch<TenantBillingSummaryRecord>(
+    `${API_PATHS.tenantBilling}/subscription/change-plan/${encodeURIComponent(planId)}`,
+    {
+      method: 'POST',
+    },
+  );
 }
 
 export function initializeWalletTopUp(input: {

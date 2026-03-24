@@ -10,6 +10,7 @@ import { Prisma, type Vehicle, type VehicleValuation } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import type { CreateVehicleDto } from './dto/create-vehicle.dto';
 import type { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
@@ -41,17 +42,24 @@ type VehicleDetail = Vehicle & {
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
+  ) {}
 
   async list(
     tenantId: string,
-    input: { fleetId?: string; page?: number; limit?: number } = {},
+    input: { fleetId?: string; fleetIds?: string[]; page?: number; limit?: number } = {},
   ): Promise<PaginatedResponse<Vehicle>> {
     const page = input.page ?? 1;
     const limit = input.limit ?? 50;
     const where = {
       tenantId,
-      ...(input.fleetId ? { fleetId: input.fleetId } : {}),
+      ...(input.fleetId
+        ? { fleetId: input.fleetId }
+        : input.fleetIds?.length
+          ? { fleetId: { in: input.fleetIds } }
+          : {}),
     };
     const [data, total] = await Promise.all([
       this.prisma.vehicle.findMany({
@@ -180,6 +188,13 @@ export class VehiclesService {
 
   async create(tenantId: string, dto: CreateVehicleDto): Promise<Vehicle> {
     getVehicleType(dto.vehicleType);
+    const currentVehicleCount = await this.prisma.vehicle.count({
+      where: { tenantId },
+    });
+    await this.subscriptionEntitlementsService.enforceVehicleCapacity(
+      tenantId,
+      currentVehicleCount,
+    );
 
     this.assertValuationInputConsistency(dto);
 

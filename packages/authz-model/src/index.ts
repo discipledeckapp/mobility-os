@@ -247,6 +247,19 @@ export function hasPermission(role: PlatformRole | TenantRole, permission: Permi
   return rolePermissions[role]?.has(permission) ?? false;
 }
 
+export function getGrantedPermissions(
+  role: PlatformRole | TenantRole,
+  customPermissions: readonly string[] = [],
+): ReadonlySet<string> {
+  const granted = new Set<string>(rolePermissions[role] ?? []);
+  for (const permission of customPermissions) {
+    if (typeof permission === 'string' && permission.trim()) {
+      granted.add(permission.trim());
+    }
+  }
+  return granted;
+}
+
 export function isPlatformRole(role: string): role is PlatformRole {
   return Object.values(PlatformRole).includes(role as PlatformRole);
 }

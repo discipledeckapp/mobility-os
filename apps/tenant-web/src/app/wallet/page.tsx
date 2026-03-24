@@ -15,12 +15,14 @@ import {
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
+  type TenantBillingPlanRecord,
   type TenantBillingSummaryRecord,
   type WalletBalanceRecord,
   type WalletEntryRecord,
   getOperationalWalletBalance,
   getTenantApiContext,
   getTenantBillingSummary,
+  listTenantBillingPlans,
   getTenantMe,
   getTenantSession,
   listOperationalWalletEntries,
@@ -60,6 +62,7 @@ export default async function WalletPage() {
   let balance: WalletBalanceRecord | null = null;
   let entries: WalletEntryRecord[] = [];
   let billingSummary: TenantBillingSummaryRecord | null = null;
+  let plans: TenantBillingPlanRecord[] = [];
   let contextError: string | null = null;
   let balanceError: string | null = null;
   let entriesError: string | null = null;
@@ -78,10 +81,11 @@ export default async function WalletPage() {
       contextError =
         'The current tenant session does not include a business-entity scope for wallet access.';
     } else {
-      const [balanceResult, entriesResult, billingResult] = await Promise.allSettled([
+      const [balanceResult, entriesResult, billingResult, plansResult] = await Promise.allSettled([
         getOperationalWalletBalance(businessEntityId),
         listOperationalWalletEntries(businessEntityId),
         getTenantBillingSummary(),
+        listTenantBillingPlans(),
       ]);
 
       if (balanceResult.status === 'fulfilled') {
@@ -109,6 +113,10 @@ export default async function WalletPage() {
           billingResult.reason instanceof Error
             ? billingResult.reason.message
             : 'Unable to load subscription and verification wallet context.';
+      }
+
+      if (plansResult.status === 'fulfilled') {
+        plans = plansResult.value;
       }
     }
   } catch (error) {
@@ -186,7 +194,11 @@ export default async function WalletPage() {
                 </Card>
               </div>
 
-              <PaymentActionPanel currencyMinorUnit={currencyMinorUnit} summary={billingSummary} />
+              <PaymentActionPanel
+                currencyMinorUnit={currencyMinorUnit}
+                plans={plans}
+                summary={billingSummary}
+              />
 
               <Card className="border-white/70 bg-white/95 shadow-none">
                 <CardHeader>

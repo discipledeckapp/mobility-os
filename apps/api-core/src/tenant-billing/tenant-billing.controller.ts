@@ -1,6 +1,6 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
@@ -13,6 +13,7 @@ import { InitializeTenantInvoicePaymentDto } from './dto/initialize-tenant-invoi
 import { InitializeTenantWalletTopUpDto } from './dto/initialize-tenant-wallet-top-up.dto';
 import {
   TenantBillingSummaryDto,
+  TenantBillingPlanDto,
   TenantPaymentApplicationDto,
   TenantPaymentCheckoutDto,
 } from './dto/tenant-billing-response.dto';
@@ -33,6 +34,26 @@ export class TenantBillingController {
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: TenantBillingSummaryDto })
   getSummary(@CurrentTenant() ctx: TenantContext): Promise<TenantBillingSummaryDto> {
+    return this.tenantBillingService.getSummary(ctx.tenantId, ctx.userId);
+  }
+
+  @Get('plans')
+  @RequirePermissions(Permission.TenantsRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [TenantBillingPlanDto] })
+  listPlans(): Promise<TenantBillingPlanDto[]> {
+    return this.tenantBillingService.listPlans();
+  }
+
+  @Post('subscription/change-plan/:planId')
+  @RequirePermissions(Permission.TenantsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: TenantBillingSummaryDto })
+  async changePlan(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('planId') planId: string,
+  ): Promise<TenantBillingSummaryDto> {
+    await this.tenantBillingService.changePlan(ctx.tenantId, planId);
     return this.tenantBillingService.getSummary(ctx.tenantId, ctx.userId);
   }
 

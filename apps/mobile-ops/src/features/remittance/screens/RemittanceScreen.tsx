@@ -35,6 +35,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(
     route.params?.assignmentId ?? '',
   );
+  const [assignmentQuery, setAssignmentQuery] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState(new Date());
   const [notes, setNotes] = useState('');
@@ -47,6 +48,17 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     () => assignments.filter((assignment) => ['active', 'completed'].includes(assignment.status)),
     [assignments],
   );
+  const filteredAssignments = useMemo(() => {
+    const query = assignmentQuery.trim().toLowerCase();
+    if (!query) {
+      return eligibleAssignments;
+    }
+    return eligibleAssignments.filter((assignment) =>
+      `${assignment.id} ${assignment.status} ${assignment.driverId} ${assignment.vehicleId}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [assignmentQuery, eligibleAssignments]);
   const currencyLabel = useMemo(
     () => getCurrencyLabel(session?.defaultCurrency, session?.formattingLocale),
     [session?.defaultCurrency, session?.formattingLocale],
@@ -243,20 +255,30 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Assignment</Text>
+        <Input
+          accessibilityHint="Search assignments by ID"
+          label="Search assignment"
+          onChangeText={setAssignmentQuery}
+          value={assignmentQuery}
+        />
         {loading ? (
           <>
             <LoadingSkeleton height={72} />
             <LoadingSkeleton height={72} />
           </>
-        ) : eligibleAssignments.length === 0 ? (
+        ) : filteredAssignments.length === 0 ? (
           <EmptyState
             actionLabel="Refresh assignments"
-            message="No active or completed assignments are ready for remittance recording yet."
+            message={
+              eligibleAssignments.length === 0
+                ? 'No active or completed assignments are ready for remittance recording yet.'
+                : 'No assignments match your current search.'
+            }
             title="No assignments available"
             onAction={() => void onRefresh()}
           />
         ) : (
-          eligibleAssignments.map((assignment) => (
+          filteredAssignments.map((assignment) => (
             <Pressable
               key={assignment.id}
               accessibilityHint="Select this assignment for remittance"

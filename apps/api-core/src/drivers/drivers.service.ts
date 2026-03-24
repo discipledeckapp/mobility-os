@@ -24,6 +24,7 @@ import { PrismaService } from '../database/prisma.service';
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
+import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
 import type { CreateDriverDocumentDto } from './dto/create-driver-document.dto';
@@ -187,6 +188,7 @@ export class DriversService {
     private readonly jwtService: JwtService,
     private readonly authEmailService: AuthEmailService,
     private readonly documentStorageService: DocumentStorageService,
+    private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
@@ -335,6 +337,7 @@ export class DriversService {
     tenantId: string,
     input: {
       fleetId?: string;
+      fleetIds?: string[];
       q?: string;
       status?: string;
       identityStatus?: string;
@@ -356,7 +359,11 @@ export class DriversService {
     const searchQuery = input.q?.trim();
     const where: Prisma.DriverWhereInput = {
       tenantId,
-      ...(input.fleetId ? { fleetId: input.fleetId } : {}),
+      ...(input.fleetId
+        ? { fleetId: input.fleetId }
+        : input.fleetIds?.length
+          ? { fleetId: { in: input.fleetIds } }
+          : {}),
       ...(input.status ? { status: input.status } : {}),
       ...(input.identityStatus ? { identityStatus: input.identityStatus } : {}),
       ...(searchQuery
@@ -1380,6 +1387,11 @@ export class DriversService {
         `A driver with phone '${normalizedPhone}' already exists in this tenant`,
       );
     }
+
+    const currentDriverCount = await this.prisma.driver.count({
+      where: { tenantId },
+    });
+    await this.subscriptionEntitlementsService.enforceDriverCapacity(tenantId, currentDriverCount);
 
     return this.prisma.driver.create({
       data: {

@@ -18,6 +18,7 @@ import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { InviteTeamMemberDto } from './dto/invite-team-member.dto';
 import { TeamMemberResponseDto } from './dto/team-member-response.dto';
+import { UpdateTeamMemberAccessDto } from './dto/update-team-member-access.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TeamService } from './team.service';
 
@@ -43,6 +44,17 @@ export class TeamController {
     @Body() dto: InviteTeamMemberDto,
   ): Promise<TeamMemberResponseDto> {
     return this.teamService.inviteMember(ctx.tenantId, dto);
+  }
+
+  @Post(':userId/access')
+  @RequirePermissions(Permission.TenantsWrite)
+  @ApiOkResponse({ type: TeamMemberResponseDto })
+  updateAccess(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateTeamMemberAccessDto,
+  ): Promise<TeamMemberResponseDto> {
+    return this.teamService.updateAccess(ctx.tenantId, userId, dto);
   }
 
   @Delete(':userId')

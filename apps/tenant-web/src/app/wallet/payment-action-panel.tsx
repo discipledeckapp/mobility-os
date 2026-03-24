@@ -15,18 +15,22 @@ import { type ChangeEvent, useActionState, useState } from 'react';
 import { SelectField } from '../../features/shared/select-field';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
 import {
+  changePlanAction,
   type WalletCheckoutActionState,
   initializeOutstandingInvoiceCheckoutAction,
   initializeVerificationWalletTopUpAction,
 } from './actions';
+import type { TenantBillingPlanRecord } from '../../lib/api-core';
 
 const initialState: WalletCheckoutActionState = {};
 
 export function PaymentActionPanel({
   summary,
+  plans,
   currencyMinorUnit,
 }: {
   summary: TenantBillingSummaryRecord;
+  plans: TenantBillingPlanRecord[];
   currencyMinorUnit: number;
 }) {
   const [provider, setProvider] = useState<'paystack' | 'flutterwave'>('paystack');
@@ -39,12 +43,13 @@ export function PaymentActionPanel({
     initializeOutstandingInvoiceCheckoutAction,
     initialState,
   );
+  const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
 
   const factor = 10 ** currencyMinorUnit;
   const amountMinorUnits = amountInput ? Math.round(Number(amountInput) * factor) : 0;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 xl:grid-cols-3">
       <Card className="border-slate-200/80">
         <CardHeader>
           <CardTitle>Fund verification wallet</CardTitle>
@@ -95,6 +100,54 @@ export function PaymentActionPanel({
             </Button>
             {walletState.error ? <Text className="text-rose-700">{walletState.error}</Text> : null}
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200/80">
+        <CardHeader>
+          <CardTitle>Company plan</CardTitle>
+          <CardDescription>
+            Review plan limits and upgrade the company subscription when you need more vehicles,
+            more operators, or verification features.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/80 p-4">
+            <p className="text-sm font-semibold text-slate-900">{summary.subscription.planName}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {summary.subscription.trialEndsAt
+                ? `Free trial ends ${new Date(summary.subscription.trialEndsAt).toLocaleDateString()}`
+                : `${summary.subscription.status.replace(/_/g, ' ')} plan`}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {plans.map((plan) => {
+              const isCurrent = plan.id === summary.subscription.planId;
+              return (
+                <form
+                  action={planAction}
+                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-white p-4"
+                  key={plan.id}
+                >
+                  <input name="planId" type="hidden" value={plan.id} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{plan.name}</p>
+                      <p className="text-sm text-slate-500">
+                        {plan.currency} {(plan.basePriceMinorUnits / 100).toLocaleString()} /{' '}
+                        {plan.billingInterval}
+                      </p>
+                    </div>
+                    <Button disabled={planPending || isCurrent} type="submit" variant="secondary">
+                      {isCurrent ? 'Current plan' : 'Switch plan'}
+                    </Button>
+                  </div>
+                </form>
+              );
+            })}
+          </div>
+          {planState.error ? <Text className="text-rose-700">{planState.error}</Text> : null}
+          {planState.success ? <Text className="text-emerald-700">{planState.success}</Text> : null}
         </CardContent>
       </Card>
 

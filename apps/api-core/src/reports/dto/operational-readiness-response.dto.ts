@@ -63,6 +63,18 @@ export class VehicleReadinessReportItemDto {
   @ApiProperty({ required: false })
   currentValuationCurrency?: string | null;
 
+  @ApiProperty({ required: false })
+  ownershipTargetMinorUnits?: number | null;
+
+  @ApiProperty({ required: false })
+  ownershipRemittedMinorUnits?: number | null;
+
+  @ApiProperty({ required: false })
+  ownershipOutstandingMinorUnits?: number | null;
+
+  @ApiProperty({ required: false })
+  ownershipCompletionRatio?: number | null;
+
   @ApiProperty()
   maintenanceSummary!: string;
 

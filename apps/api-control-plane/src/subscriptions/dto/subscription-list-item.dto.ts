@@ -23,6 +23,9 @@ export class SubscriptionListItemDto {
   basePriceMinorUnits!: number;
 
   @ApiProperty()
+  features!: unknown;
+
+  @ApiProperty()
   status!: string;
 
   @ApiProperty()

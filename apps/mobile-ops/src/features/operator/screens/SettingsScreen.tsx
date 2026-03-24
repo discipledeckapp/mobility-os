@@ -4,13 +4,18 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, StyleSheet, Switch, Text } from 'react-native';
 import {
   deactivateTeamMember,
+  changeTenantBillingPlan,
   getNotificationPreferences,
+  getTenantBillingSummary,
   getTenantMe,
+  listFleets,
+  listTenantBillingPlans,
   inviteTeamMember,
   listTeamMembers,
   listUserNotifications,
   resendTeamInvite,
   syncRemittanceReminders,
+  updateTeamMemberAccess,
   updateNotificationPreferences,
   updateProfile,
   updateTenantSettings,
@@ -29,6 +34,8 @@ export function SettingsScreen() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('FLEET_MANAGER');
   const [phone, setPhone] = useState('');
+  const [selectedFleetIds, setSelectedFleetIds] = useState<string[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [profileName, setProfileName] = useState(session?.name ?? '');
   const [profilePhone, setProfilePhone] = useState(session?.phone ?? '');
   const [preferredLanguage, setPreferredLanguage] = useState<'en' | 'fr'>(
@@ -50,6 +57,18 @@ export function SettingsScreen() {
     queryKey: ['operator-settings', 'tenant'],
     queryFn: getTenantMe,
   });
+  const fleetsQuery = useQuery({
+    queryKey: ['operator-settings', 'fleets'],
+    queryFn: () => listFleets(),
+  });
+  const plansQuery = useQuery({
+    queryKey: ['operator-settings', 'plans'],
+    queryFn: listTenantBillingPlans,
+  });
+  const billingQuery = useQuery({
+    queryKey: ['operator-settings', 'billing-summary'],
+    queryFn: getTenantBillingSummary,
+  });
   const notificationsQuery = useQuery({
     queryKey: ['operator-settings', 'notifications'],
     queryFn: listUserNotifications,
@@ -59,16 +78,50 @@ export function SettingsScreen() {
     queryFn: getNotificationPreferences,
   });
   const inviteMutation = useMutation({
-    mutationFn: () => inviteTeamMember({ name, email, role, phone: phone.trim() || undefined }),
+    mutationFn: () =>
+      inviteTeamMember({
+        name,
+        email,
+        role,
+        phone: phone.trim() || undefined,
+        assignedFleetIds: selectedFleetIds,
+        customPermissions: selectedPermissions,
+      }),
     onSuccess: async () => {
       setName('');
       setEmail('');
       setPhone('');
+      setSelectedFleetIds([]);
+      setSelectedPermissions([]);
       await teamQuery.refetch();
       Alert.alert('Team', 'Team member invited successfully.');
     },
     onError: (error) => {
       Alert.alert('Team', error instanceof Error ? error.message : 'Unable to invite this team member.');
+    },
+  });
+  const accessMutation = useMutation({
+    mutationFn: (input: { userId: string; assignedFleetIds: string[]; customPermissions: string[] }) =>
+      updateTeamMemberAccess(input.userId, {
+        assignedFleetIds: input.assignedFleetIds,
+        customPermissions: input.customPermissions,
+      }),
+    onSuccess: async () => {
+      await teamQuery.refetch();
+      Alert.alert('Team', 'Access updated.');
+    },
+    onError: (error) => {
+      Alert.alert('Team', error instanceof Error ? error.message : 'Unable to update access.');
+    },
+  });
+  const planMutation = useMutation({
+    mutationFn: (planId: string) => changeTenantBillingPlan(planId),
+    onSuccess: async () => {
+      await Promise.all([plansQuery.refetch(), tenantQuery.refetch()]);
+      Alert.alert('Subscription', 'Company plan updated.');
+    },
+    onError: (error) => {
+      Alert.alert('Subscription', error instanceof Error ? error.message : 'Unable to change plan.');
     },
   });
   const deactivateMutation = useMutation({
@@ -153,6 +206,9 @@ export function SettingsScreen() {
       Alert.alert('Notifications', error instanceof Error ? error.message : 'Unable to update this preference.');
     }
   };
+
+  const toggleSelection = (current: string[], value: string) =>
+    current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
 
   return (
     <Screen>
@@ -245,7 +301,48 @@ export function SettingsScreen() {
         <Input label="Email" onChangeText={setEmail} value={email} />
         <Input label="Role" helperText="FLEET_MANAGER, FINANCE_OFFICER, FIELD_OFFICER, READ_ONLY" onChangeText={setRole} value={role} />
         <Input label="Phone" onChangeText={setPhone} value={phone} />
+        <Text style={styles.meta}>Visible fleets</Text>
+        {(fleetsQuery.data ?? []).map((fleet) => (
+          <Button
+            key={fleet.id}
+            label={`${selectedFleetIds.includes(fleet.id) ? 'Remove' : 'Allow'} ${fleet.name}`}
+            variant="secondary"
+            onPress={() => setSelectedFleetIds((current) => toggleSelection(current, fleet.id))}
+          />
+        ))}
+        <Text style={styles.meta}>Extra access</Text>
+        {[
+          ['drivers:write', 'Manage drivers'],
+          ['vehicles:write', 'Manage vehicles'],
+          ['assignments:write', 'Manage assignments'],
+          ['remittance:approve', 'Approve remittance'],
+          ['operational_wallets:write', 'Manage company wallet'],
+        ].map(([value, label]) => (
+          <Button
+            key={value}
+            label={`${selectedPermissions.includes(value) ? 'Remove' : 'Grant'} ${label}`}
+            variant="secondary"
+            onPress={() => setSelectedPermissions((current) => toggleSelection(current, value))}
+          />
+        ))}
         <Button label="Invite team member" loading={inviteMutation.isPending} onPress={() => inviteMutation.mutate()} />
+      </Card>
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Company plan</Text>
+        {(plansQuery.data ?? []).map((plan) => (
+          <Card key={plan.id} style={styles.innerCard}>
+            <Text style={styles.memberName}>{plan.name}</Text>
+            <Text style={styles.meta}>
+              {plan.currency} {plan.basePriceMinorUnits / 100} / {plan.billingInterval}
+            </Text>
+            <Button
+              label={plan.id === billingQuery.data?.subscription.planId ? 'Current plan' : 'Switch plan'}
+              variant="secondary"
+              disabled={planMutation.isPending || plan.id === billingQuery.data?.subscription.planId}
+              onPress={() => planMutation.mutate(plan.id)}
+            />
+          </Card>
+        ))}
       </Card>
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Team</Text>
@@ -254,9 +351,24 @@ export function SettingsScreen() {
             <Text style={styles.memberName}>{member.name}</Text>
             <Text style={styles.meta}>{member.email}</Text>
             <Text style={styles.meta}>{member.role}</Text>
+            <Text style={styles.meta}>
+              {member.assignedFleetIds.length === 0 ? 'All company fleets' : `${member.assignedFleetIds.length} fleets`}
+            </Text>
             <Text style={styles.meta}>{member.isActive ? 'Active' : 'Inactive'}</Text>
             {member.role !== 'TENANT_OWNER' && member.isActive ? (
               <>
+                <Button
+                  label="Grant all fleet access"
+                  variant="secondary"
+                  loading={accessMutation.isPending}
+                  onPress={() =>
+                    accessMutation.mutate({
+                      userId: member.id,
+                      assignedFleetIds: [],
+                      customPermissions: member.customPermissions,
+                    })
+                  }
+                />
                 <Button
                   label="Resend invite"
                   variant="secondary"

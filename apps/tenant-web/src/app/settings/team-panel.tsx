@@ -20,12 +20,13 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { useActionState, useState } from 'react';
-import type { TeamMemberRecord } from '../../lib/api-core';
+import type { FleetRecord, TeamMemberRecord } from '../../lib/api-core';
 import {
   type TeamActionState,
   deactivateTeamMemberAction,
   inviteTeamMemberAction,
   resendTeamInviteAction,
+  updateTeamMemberAccessAction,
 } from './actions';
 
 const ROLE_OPTIONS = [
@@ -47,12 +48,23 @@ function roleTone(role: string): 'success' | 'warning' | 'neutral' | 'danger' {
 }
 
 const initialState: TeamActionState = {};
+const CUSTOM_PERMISSION_OPTIONS = [
+  { value: 'drivers:write', label: 'Manage drivers' },
+  { value: 'vehicles:write', label: 'Manage vehicles' },
+  { value: 'assignments:write', label: 'Manage assignments' },
+  { value: 'remittance:approve', label: 'Approve remittance' },
+  { value: 'operational_wallets:write', label: 'Manage company wallet' },
+  { value: 'maintenance:write', label: 'Manage maintenance' },
+  { value: 'documents:write', label: 'Review documents' },
+] as const;
 
 export function TeamPanel({
   members,
+  fleets,
   canManage,
 }: {
   members: TeamMemberRecord[];
+  fleets: FleetRecord[];
   canManage: boolean;
 }) {
   const [inviteState, inviteAction, invitePending] = useActionState(inviteTeamMemberAction, initialState);
@@ -62,6 +74,10 @@ export function TeamPanel({
   );
   const [resendState, resendAction, resendPending] = useActionState(
     resendTeamInviteAction,
+    initialState,
+  );
+  const [accessState, accessAction, accessPending] = useActionState(
+    updateTeamMemberAccessAction,
     initialState,
   );
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -117,6 +133,52 @@ export function TeamPanel({
                 <Input id="invitePhone" name="phone" placeholder="+2348012345678" type="tel" />
               </div>
             </div>
+            <details className="rounded-lg border border-slate-200 bg-white p-3">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                Fleet scope and extra access
+              </summary>
+              <div className="mt-3 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Visible fleets
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {fleets.map((fleet) => (
+                      <label
+                        key={fleet.id}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                      >
+                        <input name="assignedFleetIds" type="checkbox" value={fleet.id} />
+                        <span>{fleet.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Leave all unchecked to allow access across all fleets for this company.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Extra access
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {CUSTOM_PERMISSION_OPTIONS.map((permission) => (
+                      <label
+                        key={permission.value}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                      >
+                        <input
+                          name="customPermissions"
+                          type="checkbox"
+                          value={permission.value}
+                        />
+                        <span>{permission.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
             {inviteState.error ? <Text tone="danger">{inviteState.error}</Text> : null}
             {inviteState.success ? (
               <Text tone="success">{inviteState.success}</Text>
@@ -135,6 +197,8 @@ export function TeamPanel({
         ) : null}
         {resendState.error ? <Text tone="danger">{resendState.error}</Text> : null}
         {resendState.success ? <Text tone="success">{resendState.success}</Text> : null}
+        {accessState.error ? <Text tone="danger">{accessState.error}</Text> : null}
+        {accessState.success ? <Text tone="success">{accessState.success}</Text> : null}
 
         <TableViewport>
           <Table>
@@ -143,6 +207,7 @@ export function TeamPanel({
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Fleet scope</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && <TableHead />}
               </TableRow>
@@ -155,6 +220,11 @@ export function TeamPanel({
                   <TableCell>
                     <Badge tone={roleTone(member.role)}>{roleLabel(member.role)}</Badge>
                   </TableCell>
+                  <TableCell className="text-slate-500">
+                    {member.assignedFleetIds.length === 0
+                      ? 'All company fleets'
+                      : `${member.assignedFleetIds.length} fleet${member.assignedFleetIds.length === 1 ? '' : 's'}`}
+                  </TableCell>
                   <TableCell>
                     {member.isActive ? (
                       <Badge tone="success">Active</Badge>
@@ -166,6 +236,59 @@ export function TeamPanel({
                     <TableCell>
                       {member.isActive && member.role !== 'TENANT_OWNER' ? (
                         <div className="flex flex-wrap gap-2">
+                          <details className="min-w-[18rem] rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                              Manage access
+                            </summary>
+                            <form action={accessAction} className="mt-3 space-y-3">
+                              <input name="userId" type="hidden" value={member.id} />
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                  Fleet scope
+                                </p>
+                                <div className="grid gap-2">
+                                  {fleets.map((fleet) => (
+                                    <label
+                                      key={`${member.id}-${fleet.id}`}
+                                      className="flex items-center gap-2 text-sm text-slate-700"
+                                    >
+                                      <input
+                                        defaultChecked={member.assignedFleetIds.includes(fleet.id)}
+                                        name="assignedFleetIds"
+                                        type="checkbox"
+                                        value={fleet.id}
+                                      />
+                                      <span>{fleet.name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                  Extra access
+                                </p>
+                                <div className="grid gap-2">
+                                  {CUSTOM_PERMISSION_OPTIONS.map((permission) => (
+                                    <label
+                                      key={`${member.id}-${permission.value}`}
+                                      className="flex items-center gap-2 text-sm text-slate-700"
+                                    >
+                                      <input
+                                        defaultChecked={member.customPermissions.includes(permission.value)}
+                                        name="customPermissions"
+                                        type="checkbox"
+                                        value={permission.value}
+                                      />
+                                      <span>{permission.label}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              <Button disabled={accessPending} type="submit" variant="secondary">
+                                Save access
+                              </Button>
+                            </form>
+                          </details>
                           <form action={resendAction}>
                             <input name="userId" type="hidden" value={member.id} />
                             <Button disabled={resendPending} type="submit" variant="secondary">
@@ -186,7 +309,7 @@ export function TeamPanel({
               ))}
               {members.length === 0 && (
                 <TableRow>
-                  <TableCell className="py-8 text-center text-slate-400" colSpan={canManage ? 5 : 4}>
+                  <TableCell className="py-8 text-center text-slate-400" colSpan={canManage ? 6 : 5}>
                     No team members found.
                   </TableCell>
                 </TableRow>

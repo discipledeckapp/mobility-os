@@ -30,8 +30,18 @@ export class SubscriptionsInternalController {
     return this.subscriptionsService.getTenantSubscriptionSummary(tenantId);
   }
 
+  @Get('plans')
+  listPlans() {
+    return this.subscriptionsService.listActivePlans();
+  }
+
   @Post('bootstrap')
   bootstrap(@Body() dto: BootstrapSubscriptionDto) {
     return this.subscriptionsService.ensureBootstrapSubscription(dto);
+  }
+
+  @Post('tenant/:tenantId/change-plan/:planId')
+  changePlan(@Param('tenantId') tenantId: string, @Param('planId') planId: string) {
+    return this.subscriptionsService.changePlan(tenantId, planId);
   }
 }

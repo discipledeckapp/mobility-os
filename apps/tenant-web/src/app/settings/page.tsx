@@ -3,6 +3,7 @@ import {
   getNotificationPreferences,
   getTenantMe,
   getTenantSession,
+  listFleets,
   listTeamMembers,
   listUserNotifications,
 } from '../../lib/api-core';
@@ -10,10 +11,11 @@ import { SettingsPanel } from './settings-panel';
 import { TeamPanel } from './team-panel';
 
 export default async function SettingsPage() {
-  const [tenant, session, members, notificationPreferences, notifications] = await Promise.all([
+  const [tenant, session, members, fleets, notificationPreferences, notifications] = await Promise.all([
     getTenantMe(),
     getTenantSession(),
     listTeamMembers().catch(() => []),
+    listFleets().catch(() => []),
     getNotificationPreferences().catch(() => null),
     listUserNotifications().catch(() => []),
   ]);
@@ -33,7 +35,7 @@ export default async function SettingsPage() {
           session={session}
           tenant={tenant}
         />
-        <TeamPanel canManage={canManage} members={members} />
+        <TeamPanel canManage={canManage} fleets={fleets} members={members} />
       </div>
     </TenantAppShell>
   );

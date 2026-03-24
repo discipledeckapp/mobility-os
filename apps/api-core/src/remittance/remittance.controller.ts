@@ -13,6 +13,7 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
+import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ListRemittanceDto } from './dto/list-remittance.dto';
@@ -40,7 +41,7 @@ export class RemittanceController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListRemittanceDto,
   ): Promise<PaginatedResponse<RemittanceResponseDto>> {
-    return this.service.list(ctx.tenantId, query);
+    return this.service.list(ctx.tenantId, applyFleetScope(query, ctx));
   }
 
   @Get(':id')
@@ -51,7 +52,10 @@ export class RemittanceController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<RemittanceResponseDto> {
-    return this.service.findOne(ctx.tenantId, id);
+    return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertFleetAccess(ctx, record.fleetId);
+      return record;
+    });
   }
 
   @Post()
@@ -74,7 +78,10 @@ export class RemittanceController {
     @Param('id') id: string,
     @Body('paidDate') paidDate: string,
   ): Promise<RemittanceResponseDto> {
-    return this.service.confirm(ctx.tenantId, id, paidDate);
+    return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertFleetAccess(ctx, record.fleetId);
+      return this.service.confirm(ctx.tenantId, id, paidDate);
+    });
   }
 
   @Post(':id/dispute')
@@ -86,7 +93,10 @@ export class RemittanceController {
     @Param('id') id: string,
     @Body('notes') notes: string,
   ): Promise<RemittanceResponseDto> {
-    return this.service.dispute(ctx.tenantId, id, notes);
+    return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertFleetAccess(ctx, record.fleetId);
+      return this.service.dispute(ctx.tenantId, id, notes);
+    });
   }
 
   @Post(':id/waive')
@@ -98,6 +108,9 @@ export class RemittanceController {
     @Param('id') id: string,
     @Body('notes') notes: string,
   ): Promise<RemittanceResponseDto> {
-    return this.service.waive(ctx.tenantId, id, notes, ctx.role);
+    return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertFleetAccess(ctx, record.fleetId);
+      return this.service.waive(ctx.tenantId, id, notes, ctx.role);
+    });
   }
 }

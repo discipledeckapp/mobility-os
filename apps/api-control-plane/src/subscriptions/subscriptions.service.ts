@@ -28,6 +28,7 @@ export class SubscriptionsService {
             tier: true,
             currency: true,
             basePriceMinorUnits: true,
+            features: true,
           },
         },
       },
@@ -42,6 +43,7 @@ export class SubscriptionsService {
       planTier: subscription.plan.tier,
       currency: subscription.plan.currency,
       basePriceMinorUnits: subscription.plan.basePriceMinorUnits,
+      features: subscription.plan.features,
       status: subscription.status,
       currentPeriodStart: subscription.currentPeriodStart,
       currentPeriodEnd: subscription.currentPeriodEnd,
@@ -50,6 +52,10 @@ export class SubscriptionsService {
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
     }));
+  }
+
+  async listActivePlans() {
+    return this.plansService.listPlans(true);
   }
 
   async getTenantSubscriptionSummary(tenantId: string): Promise<SubscriptionListItemDto> {
@@ -62,6 +68,7 @@ export class SubscriptionsService {
             tier: true,
             currency: true,
             basePriceMinorUnits: true,
+            features: true,
           },
         },
       },
@@ -79,6 +86,7 @@ export class SubscriptionsService {
       planTier: subscription.plan.tier,
       currency: subscription.plan.currency,
       basePriceMinorUnits: subscription.plan.basePriceMinorUnits,
+      features: subscription.plan.features,
       status: subscription.status,
       currentPeriodStart: subscription.currentPeriodStart,
       currentPeriodEnd: subscription.currentPeriodEnd,

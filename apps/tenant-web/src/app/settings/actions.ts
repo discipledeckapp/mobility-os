@@ -7,6 +7,7 @@ import {
   resendTeamInvite,
   syncRemittanceReminders,
   inviteTeamMember,
+  updateTeamMemberAccess,
   updateNotificationPreferences,
   updateTenantProfile,
   updateTenantSettings,
@@ -169,18 +170,65 @@ export async function inviteTeamMemberAction(
   const email = String(formData.get('email') ?? '').trim();
   const role = String(formData.get('role') ?? '').trim();
   const phone = String(formData.get('phone') ?? '').trim();
+  const assignedFleetIds = formData
+    .getAll('assignedFleetIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const customPermissions = formData
+    .getAll('customPermissions')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
 
   if (!name || !email || !role) {
     return { error: 'Name, email, and role are required.' };
   }
 
   try {
-    await inviteTeamMember({ name, email, role, ...(phone ? { phone } : {}) });
+    await inviteTeamMember({
+      name,
+      email,
+      role,
+      ...(phone ? { phone } : {}),
+      ...(assignedFleetIds.length > 0 ? { assignedFleetIds } : {}),
+      ...(customPermissions.length > 0 ? { customPermissions } : {}),
+    });
     revalidatePath('/settings');
     return { success: `Invite sent to ${email}. They will receive an email to set their password.` };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to send invite.',
+    };
+  }
+}
+
+export async function updateTeamMemberAccessAction(
+  _previousState: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const userId = String(formData.get('userId') ?? '').trim();
+  const assignedFleetIds = formData
+    .getAll('assignedFleetIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const customPermissions = formData
+    .getAll('customPermissions')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (!userId) {
+    return { error: 'User ID is required.' };
+  }
+
+  try {
+    await updateTeamMemberAccess(userId, {
+      assignedFleetIds,
+      customPermissions,
+    });
+    revalidatePath('/settings');
+    return { success: 'Access updated.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to update team member access.',
     };
   }
 }

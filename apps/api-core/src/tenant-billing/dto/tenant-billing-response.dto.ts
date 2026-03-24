@@ -17,6 +17,9 @@ export class TenantBillingSubscriptionDto {
   currency!: string;
 
   @ApiProperty()
+  features!: Record<string, unknown>;
+
+  @ApiProperty()
   status!: string;
 
   @ApiProperty()
@@ -30,6 +33,32 @@ export class TenantBillingSubscriptionDto {
 
   @ApiPropertyOptional()
   trialEndsAt?: string | null;
+}
+
+export class TenantBillingPlanDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  tier!: string;
+
+  @ApiProperty()
+  billingInterval!: string;
+
+  @ApiProperty()
+  basePriceMinorUnits!: number;
+
+  @ApiProperty()
+  currency!: string;
+
+  @ApiProperty()
+  isActive!: boolean;
+
+  @ApiProperty()
+  features!: Record<string, unknown>;
 }
 
 export class TenantBillingInvoiceDto {

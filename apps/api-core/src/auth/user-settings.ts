@@ -23,6 +23,8 @@ export type NotificationPreferenceMap = Record<NotificationTopic, NotificationCh
 export interface UserSettings {
   preferredLanguage: SupportedLanguage;
   notificationPreferences: NotificationPreferenceMap;
+  assignedFleetIds: string[];
+  customPermissions: string[];
 }
 
 function buildDefaultTopicPreference(
@@ -86,6 +88,8 @@ export function readUserSettings(
     return {
       preferredLanguage: defaults.preferredLanguage,
       notificationPreferences: defaultNotificationPreferences,
+      assignedFleetIds: [],
+      customPermissions: [],
     };
   }
 
@@ -133,6 +137,16 @@ export function readUserSettings(
   return {
     preferredLanguage,
     notificationPreferences: mergedPreferences,
+    assignedFleetIds: Array.isArray(candidate.assignedFleetIds)
+      ? candidate.assignedFleetIds.filter(
+          (value): value is string => typeof value === 'string' && value.trim().length > 0,
+        )
+      : [],
+    customPermissions: Array.isArray(candidate.customPermissions)
+      ? candidate.customPermissions.filter(
+          (value): value is string => typeof value === 'string' && value.trim().length > 0,
+        )
+      : [],
   };
 }
 
@@ -157,5 +171,13 @@ export function writeUserSettings(
       : {}),
     preferredLanguage: nextSettings.preferredLanguage ?? current.preferredLanguage,
     notificationPreferences: mergedPreferences,
+    assignedFleetIds:
+      'assignedFleetIds' in nextSettings && Array.isArray(nextSettings.assignedFleetIds)
+        ? nextSettings.assignedFleetIds
+        : current.assignedFleetIds,
+    customPermissions:
+      'customPermissions' in nextSettings && Array.isArray(nextSettings.customPermissions)
+        ? nextSettings.customPermissions
+        : current.customPermissions,
   };
 }

@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, RefreshControl, StyleSheet, Text } from 'react-native';
 import {
+  changeTenantBillingPlan,
   getTenantBillingSummary,
+  listTenantBillingPlans,
   initializeInvoicePayment,
   initializeWalletTopUp,
   verifyAndApplyTenantPayment,
@@ -31,6 +33,10 @@ export function WalletScreen() {
   const billingQuery = useQuery({
     queryKey: ['operator-wallet', 'billing-summary'],
     queryFn: getTenantBillingSummary,
+  });
+  const plansQuery = useQuery({
+    queryKey: ['operator-wallet', 'plans'],
+    queryFn: listTenantBillingPlans,
   });
   const [pendingPayment, setPendingPayment] = useState<PendingTenantPaymentRecord | null>(null);
 
@@ -71,6 +77,17 @@ export function WalletScreen() {
         'Verify payment',
         error instanceof Error ? error.message : 'Unable to verify the provider payment yet.',
       );
+    },
+  });
+  const changePlanMutation = useMutation({
+    mutationFn: (planId: string) => changeTenantBillingPlan(planId),
+    onSuccess: async () => {
+      await refreshBilling();
+      await plansQuery.refetch();
+      showToast('Company plan updated.', 'success');
+    },
+    onError: (error) => {
+      Alert.alert('Company plan', error instanceof Error ? error.message : 'Unable to change plan.');
     },
   });
 
@@ -130,6 +147,32 @@ export function WalletScreen() {
             <Text style={styles.meta}>Subscription: {formatStatusLabel(billingQuery.data.subscription.status)}</Text>
             <Button label="Top up wallet via Paystack" onPress={() => void topUp()} />
           </Card>
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Company plan</Text>
+            <Text style={styles.meta}>
+              Current plan: {billingQuery.data.subscription.planName}
+            </Text>
+            {billingQuery.data.subscription.trialEndsAt ? (
+              <Text style={styles.meta}>
+                Trial ends: {formatDateOnly(billingQuery.data.subscription.trialEndsAt, session?.formattingLocale)}
+              </Text>
+            ) : null}
+            {(plansQuery.data ?? []).map((plan) => (
+              <Card key={plan.id} style={styles.innerCard}>
+                <Text style={styles.memberName}>{plan.name}</Text>
+                <Text style={styles.meta}>
+                  {plan.currency} {formatMajorAmount(plan.basePriceMinorUnits, session?.currencyMinorUnit ?? 2, session?.formattingLocale)} / {plan.billingInterval}
+                </Text>
+                <Button
+                  label={plan.id === billingQuery.data.subscription.planId ? 'Current plan' : 'Switch to this plan'}
+                  variant="secondary"
+                  loading={changePlanMutation.isPending}
+                  disabled={plan.id === billingQuery.data.subscription.planId}
+                  onPress={() => changePlanMutation.mutate(plan.id)}
+                />
+              </Card>
+            ))}
+          </Card>
           {pendingPayment ? (
             <Card style={styles.section}>
               <Text style={styles.sectionTitle}>Pending payment verification</Text>
@@ -179,6 +222,8 @@ const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
+  innerCard: { gap: tokens.spacing.xs },
+  memberName: { color: tokens.colors.ink, fontSize: 16, fontWeight: '700' },
   copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
   balance: { color: tokens.colors.ink, fontSize: 30, fontWeight: '800' },
   meta: { color: tokens.colors.inkSoft, lineHeight: 20 },

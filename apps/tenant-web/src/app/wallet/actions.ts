@@ -2,12 +2,14 @@
 
 import { redirect } from 'next/navigation';
 import {
+  changeTenantBillingPlan,
   initializeTenantInvoiceCheckout,
   initializeTenantWalletTopUpCheckout,
 } from '../../lib/api-core';
 
 export interface WalletCheckoutActionState {
   error?: string;
+  success?: string;
 }
 
 function getTrimmedValue(formData: FormData, key: string): string {
@@ -65,6 +67,26 @@ export async function initializeOutstandingInvoiceCheckoutAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
+    };
+  }
+}
+
+export async function changePlanAction(
+  _prevState: WalletCheckoutActionState,
+  formData: FormData,
+): Promise<WalletCheckoutActionState> {
+  const planId = getTrimmedValue(formData, 'planId');
+
+  if (!planId) {
+    return { error: 'Plan ID is required.' };
+  }
+
+  try {
+    await changeTenantBillingPlan(planId);
+    return { success: 'Plan updated successfully. Refresh to view the new billing status.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to change plan right now.',
     };
   }
 }

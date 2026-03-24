@@ -9,6 +9,7 @@ export interface TenantSubscriptionSummary {
   planName: string;
   planTier: string;
   currency: string;
+  features: Record<string, unknown>;
   status: string;
   currentPeriodStart: string;
   currentPeriodEnd: string;
@@ -16,6 +17,18 @@ export interface TenantSubscriptionSummary {
   trialEndsAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TenantPlanSummary {
+  id: string;
+  name: string;
+  tier: string;
+  billingInterval: string;
+  basePriceMinorUnits: number;
+  currency: string;
+  isActive: boolean;
+  features: Record<string, unknown>;
+  customTerms?: Record<string, unknown> | null;
 }
 
 export interface TenantInvoiceSummary {
@@ -78,6 +91,16 @@ export class ControlPlaneBillingClient {
 
   async getSubscription(tenantId: string): Promise<TenantSubscriptionSummary> {
     return this.request(`/internal/subscriptions/tenant/${tenantId}`);
+  }
+
+  async listPlans(): Promise<TenantPlanSummary[]> {
+    return this.request('/internal/subscriptions/plans');
+  }
+
+  async changePlan(tenantId: string, planId: string): Promise<TenantSubscriptionSummary> {
+    return this.request(`/internal/subscriptions/tenant/${tenantId}/change-plan/${planId}`, {
+      method: 'POST',
+    });
   }
 
   async listInvoices(

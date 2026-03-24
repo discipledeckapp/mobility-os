@@ -19,6 +19,12 @@ export class TeamMemberResponseDto {
   @ApiProperty()
   role!: string;
 
+  @ApiProperty({ type: [String] })
+  assignedFleetIds!: string[];
+
+  @ApiProperty({ type: [String] })
+  customPermissions!: string[];
+
   @ApiProperty()
   isActive!: boolean;
 

@@ -24,7 +24,10 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
   });
   const [selectedDriverId, setSelectedDriverId] = React.useState('');
   const [selectedVehicleId, setSelectedVehicleId] = React.useState('');
+  const [driverQuery, setDriverQuery] = React.useState('');
+  const [vehicleQuery, setVehicleQuery] = React.useState('');
   const [notes, setNotes] = React.useState('');
+  const [remittanceModel, setRemittanceModel] = React.useState<'fixed' | 'hire_purchase'>('fixed');
   const [remittanceAmountMinorUnits, setRemittanceAmountMinorUnits] = React.useState('');
   const [remittanceCurrency, setRemittanceCurrency] = React.useState('NGN');
   const [remittanceFrequency, setRemittanceFrequency] = React.useState<'daily' | 'weekly'>('daily');
@@ -38,6 +41,7 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       createOperatorAssignment({
         driverId: selectedDriverId,
         vehicleId: selectedVehicleId,
+        remittanceModel,
         remittanceAmountMinorUnits: Number(remittanceAmountMinorUnits),
         remittanceCurrency: remittanceCurrency.trim().toUpperCase(),
         remittanceFrequency,
@@ -77,6 +81,28 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
       : {}),
   });
+  const filteredDrivers = React.useMemo(() => {
+    const allDrivers = driversQuery.data?.data ?? [];
+    const query = driverQuery.trim().toLowerCase();
+    if (!query) {
+      return allDrivers;
+    }
+    return allDrivers.filter((driver) =>
+      `${driver.firstName} ${driver.lastName} ${driver.phone ?? ''}`.toLowerCase().includes(query),
+    );
+  }, [driverQuery, driversQuery.data?.data]);
+  const filteredVehicles = React.useMemo(() => {
+    const allVehicles = (vehiclesQuery.data?.data ?? []).filter((vehicle) => vehicle.status === 'available');
+    const query = vehicleQuery.trim().toLowerCase();
+    if (!query) {
+      return allVehicles;
+    }
+    return allVehicles.filter((vehicle) =>
+      `${vehicle.tenantVehicleCode || ''} ${vehicle.systemVehicleCode || ''} ${vehicle.plate || ''}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [vehicleQuery, vehiclesQuery.data?.data]);
 
   return (
     <Screen>
@@ -87,12 +113,13 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Driver</Text>
+        <Input label="Search driver" onChangeText={setDriverQuery} value={driverQuery} />
         {driversQuery.isLoading ? (
           <LoadingSkeleton height={140} />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.choiceRow}>
-              {driversQuery.data?.data.map((driver) => (
+              {filteredDrivers.map((driver) => (
                 <Text
                   key={driver.id}
                   style={[styles.choiceChip, selectedDriverId === driver.id ? styles.choiceChipActive : null]}
@@ -108,12 +135,13 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Vehicle</Text>
+        <Input label="Search vehicle" onChangeText={setVehicleQuery} value={vehicleQuery} />
         {vehiclesQuery.isLoading ? (
           <LoadingSkeleton height={140} />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.choiceRow}>
-              {vehiclesQuery.data?.data.map((vehicle) => (
+              {filteredVehicles.map((vehicle) => (
                 <Text
                   key={vehicle.id}
                   style={[styles.choiceChip, selectedVehicleId === vehicle.id ? styles.choiceChipActive : null]}
@@ -135,6 +163,28 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
           onChangeText={setRemittanceAmountMinorUnits}
           value={remittanceAmountMinorUnits}
         />
+        <Input
+          label="Contract model"
+          editable={false}
+          value={remittanceModel === 'hire_purchase' ? 'Hire purchase' : 'Fixed remittance'}
+        />
+        <View style={styles.choiceRow}>
+          <Text
+            style={[styles.choiceChip, remittanceModel === 'fixed' ? styles.choiceChipActive : null]}
+            onPress={() => setRemittanceModel('fixed')}
+          >
+            Fixed
+          </Text>
+          <Text
+            style={[
+              styles.choiceChip,
+              remittanceModel === 'hire_purchase' ? styles.choiceChipActive : null,
+            ]}
+            onPress={() => setRemittanceModel('hire_purchase')}
+          >
+            Hire purchase
+          </Text>
+        </View>
         <Input label="Currency" autoCapitalize="characters" onChangeText={setRemittanceCurrency} value={remittanceCurrency} />
         <Input
           label="Schedule"

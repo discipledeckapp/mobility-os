@@ -1,5 +1,5 @@
 import type { TenantRole } from '@mobility-os/authz-model';
-import { rolePermissions } from '@mobility-os/authz-model';
+import { getGrantedPermissions } from '@mobility-os/authz-model';
 import {
   getCountryConfig,
   getFormattingLocale,
@@ -157,7 +157,19 @@ export class AuthService {
     operatingUnitId?: string | null;
     role: string;
     driverId?: string | null;
+    settings?: Prisma.JsonValue | null;
   }) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: { country: true },
+    });
+    const organisationDefaultLanguage = getDefaultLanguageForCountry(tenant?.country);
+    const userSettings = readUserSettings(user.settings, {
+      preferredLanguage: organisationDefaultLanguage,
+      role: user.role,
+      hasLinkedDriver: Boolean(user.driverId),
+    });
+
     const accessToken = await this.jwtService.signAsync(
       {
         sub: user.id,
@@ -165,6 +177,8 @@ export class AuthService {
         businessEntityId: user.businessEntityId,
         role: user.role,
         mobileRole: deriveMobileRole(user),
+        assignedFleetIds: userSettings.assignedFleetIds,
+        customPermissions: userSettings.customPermissions,
         ...(user.operatingUnitId ? { operatingUnitId: user.operatingUnitId } : {}),
       },
       {
@@ -433,7 +447,11 @@ export class AuthService {
       preferredLanguage: userSettings.preferredLanguage,
       guarantorMaxActiveDrivers: organisationSettings.operations.guarantorMaxActiveDrivers,
       notificationPreferences: userSettings.notificationPreferences,
-      permissions: Array.from(rolePermissions[user.role as TenantRole] ?? new Set()),
+      permissions: Array.from(
+        getGrantedPermissions(user.role as TenantRole, userSettings.customPermissions),
+      ),
+      assignedFleetIds: userSettings.assignedFleetIds,
+      customPermissions: userSettings.customPermissions,
       linkedDriverId: linkedDriver?.id ?? null,
       linkedDriverStatus: linkedDriver?.status ?? null,
       linkedDriverIdentityStatus: linkedDriver?.identityStatus ?? null,

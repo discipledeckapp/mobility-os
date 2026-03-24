@@ -31,6 +31,15 @@ export class CreateAssignmentDto {
   remittanceAmountMinorUnits!: number;
 
   @ApiPropertyOptional({
+    description: 'Remittance contract model for this assignment.',
+    example: 'fixed',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['fixed', 'hire_purchase'])
+  remittanceModel?: string;
+
+  @ApiPropertyOptional({
     description: 'Collection frequency for the assignment remittance plan.',
     example: 'daily',
   })

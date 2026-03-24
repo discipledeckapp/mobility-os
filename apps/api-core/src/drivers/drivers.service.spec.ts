@@ -56,6 +56,10 @@ describe('DriversService', () => {
     readFile: jest.fn(),
     deleteFile: jest.fn(),
   };
+  const subscriptionEntitlementsService = {
+    enforceDriverCapacity: jest.fn(),
+    enforceVehicleCapacity: jest.fn(),
+  };
 
   let service: DriversService;
 
@@ -79,12 +83,14 @@ describe('DriversService', () => {
     intelligenceClient.queryPersonRolePresence.mockResolvedValue({
       isDriver: false,
     });
+    subscriptionEntitlementsService.enforceDriverCapacity.mockResolvedValue(undefined);
     service = new DriversService(
       prisma as never,
       intelligenceClient as never,
       jwtService as never,
       authEmailService as never,
       documentStorageService as never,
+      subscriptionEntitlementsService as never,
     );
   });
 

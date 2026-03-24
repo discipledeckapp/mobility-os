@@ -65,6 +65,10 @@ export async function createAssignmentAction(
     formData,
     'remittanceCurrency' as keyof CreateAssignmentInput,
   );
+  const remittanceModel = getTrimmedValue(
+    formData,
+    'remittanceModel' as keyof CreateAssignmentInput,
+  );
   const remittanceStartDate = getTrimmedValue(
     formData,
     'remittanceStartDate' as keyof CreateAssignmentInput,
@@ -82,6 +86,8 @@ export async function createAssignmentAction(
 
   payload.remittanceFrequency =
     remittanceFrequency === 'weekly' ? 'weekly' : 'daily';
+  payload.remittanceModel =
+    remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'fixed';
   if (remittanceCurrency) {
     payload.remittanceCurrency = remittanceCurrency.toUpperCase();
   }

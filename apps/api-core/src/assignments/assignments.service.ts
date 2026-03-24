@@ -51,12 +51,15 @@ export class AssignmentsService {
     tenantCurrency: string,
     input: {
       remittanceAmountMinorUnits?: number | null;
+      remittanceModel?: string | null;
       remittanceFrequency?: string | null;
       remittanceCurrency?: string | null;
       remittanceStartDate?: string | null;
       remittanceCollectionDay?: number | null;
     },
   ) {
+    const remittanceModel =
+      input.remittanceModel?.trim().toLowerCase() === 'hire_purchase' ? 'hire_purchase' : 'fixed';
     const remittanceFrequency = normalizeRemittanceFrequency(input.remittanceFrequency ?? 'daily');
     if (!remittanceFrequency) {
       throw new BadRequestException('remittanceFrequency must be daily or weekly.');
@@ -86,7 +89,7 @@ export class AssignmentsService {
     }
 
     return {
-      remittanceModel: 'fixed',
+      remittanceModel,
       remittanceFrequency,
       remittanceAmountMinorUnits: input.remittanceAmountMinorUnits,
       remittanceCurrency,
@@ -102,6 +105,7 @@ export class AssignmentsService {
       driverId?: string;
       vehicleId?: string;
       fleetId?: string;
+      fleetIds?: string[];
       page?: number;
       limit?: number;
     } = {},
@@ -112,7 +116,11 @@ export class AssignmentsService {
       tenantId,
       ...(filters.driverId ? { driverId: filters.driverId } : {}),
       ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
-      ...(filters.fleetId ? { fleetId: filters.fleetId } : {}),
+      ...(filters.fleetId
+        ? { fleetId: filters.fleetId }
+        : filters.fleetIds?.length
+          ? { fleetId: { in: filters.fleetIds } }
+          : {}),
     };
     const [data, total] = await Promise.all([
       this.prisma.assignment.findMany({

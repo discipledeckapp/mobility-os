@@ -11,8 +11,10 @@ import {
   CardTitle,
   Input,
   Label,
+  SearchableSelect,
   Text,
 } from '@mobility-os/ui';
+import type { SearchableSelectOption } from '@mobility-os/ui';
 import type { DriverRecord, FleetRecord, VehicleRecord } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { FleetSelectField } from '../../features/shared/fleet-select-field';
@@ -60,6 +62,22 @@ export function CreateAssignmentForm({
     () => activeDrivers.find((driver) => driver.id === driverId) ?? null,
     [activeDrivers, driverId],
   );
+  const driverOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      fleetDrivers.map((driver) => ({
+        value: driver.id,
+        label: `${driver.firstName} ${driver.lastName} · ${driver.phone}`,
+      })),
+    [fleetDrivers],
+  );
+  const vehicleOptions = useMemo<SearchableSelectOption[]>(
+    () =>
+      fleetVehicles.map((vehicle) => ({
+        value: vehicle.id,
+        label: `${getVehiclePrimaryLabel(vehicle)}${vehicle.plate ? ` · ${vehicle.plate}` : ''}`,
+      })),
+    [fleetVehicles],
+  );
 
   useEffect(() => {
     if (driverId && !fleetDrivers.some((driver) => driver.id === driverId)) {
@@ -93,16 +111,24 @@ export function CreateAssignmentForm({
             value={fleetId}
           />
 
+          <SearchableSelect
+            disabled={!fleetId}
+            emptyText={
+              fleetId
+                ? 'No active drivers are available in the selected fleet.'
+                : 'Select a fleet first.'
+            }
+            helperText="Search by driver name or phone. Only active drivers in the selected fleet are available."
+            inputId="driverId"
+            label="Driver"
+            name="driverId"
+            onChange={setDriverId}
+            options={driverOptions}
+            placeholder="Select driver"
+            required
+            value={driverId}
+          />
           <div className="space-y-2">
-            <Label htmlFor="driverId">Driver ID</Label>
-            <Input
-              id="driverId"
-              name="driverId"
-              onChange={(event) => setDriverId(event.target.value)}
-              placeholder="drv_123"
-              required
-              value={driverId}
-            />
             {fleetDrivers.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {fleetDrivers.slice(0, 4).map((driver) => (
@@ -132,16 +158,24 @@ export function CreateAssignmentForm({
             ) : null}
           </div>
 
+          <SearchableSelect
+            disabled={!fleetId}
+            emptyText={
+              fleetId
+                ? 'No available vehicles are in the selected fleet.'
+                : 'Select a fleet first.'
+            }
+            helperText="Search by vehicle code or plate. Vehicles already assigned are excluded."
+            inputId="vehicleId"
+            label="Vehicle"
+            name="vehicleId"
+            onChange={setVehicleId}
+            options={vehicleOptions}
+            placeholder="Select vehicle"
+            required
+            value={vehicleId}
+          />
           <div className="space-y-2">
-            <Label htmlFor="vehicleId">Vehicle ID</Label>
-            <Input
-              id="vehicleId"
-              name="vehicleId"
-              onChange={(event) => setVehicleId(event.target.value)}
-              placeholder="veh_123"
-              required
-              value={vehicleId}
-            />
             {fleetVehicles.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {fleetVehicles.slice(0, 4).map((vehicle) => (
@@ -164,6 +198,22 @@ export function CreateAssignmentForm({
                   : 'Select a fleet to see available vehicles.'}
               </Text>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remittanceModel">Remittance model</Label>
+            <select
+              className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
+              id="remittanceModel"
+              name="remittanceModel"
+              defaultValue="fixed"
+            >
+              <option value="fixed">Fixed remittance</option>
+              <option value="hire_purchase">Hire purchase</option>
+            </select>
+            <Text tone="muted">
+              Choose hire purchase when collections are contributing toward eventual vehicle ownership based on reported vehicle valuation.
+            </Text>
           </div>
 
           <div className="space-y-2 md:col-span-2">

@@ -30,6 +30,8 @@ export interface TenantApiContext {
   businessEntityId?: string | undefined;
   role?: string | undefined;
   operatingUnitId?: string | undefined;
+  assignedFleetIds?: string[] | undefined;
+  customPermissions?: string[] | undefined;
 }
 
 export interface TenantRecord {
@@ -532,6 +534,7 @@ export interface CreateAssignmentInput {
   driverId: string;
   vehicleId: string;
   notes?: string;
+  remittanceModel?: 'fixed' | 'hire_purchase';
   remittanceAmountMinorUnits: number;
   remittanceFrequency?: 'daily' | 'weekly';
   remittanceCurrency?: string;
@@ -624,11 +627,23 @@ export interface TenantBillingSubscriptionRecord {
   planName: string;
   planTier: string;
   currency: string;
+  features: Record<string, unknown>;
   status: string;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
   trialEndsAt?: string | null;
+}
+
+export interface TenantBillingPlanRecord {
+  id: string;
+  name: string;
+  tier: string;
+  billingInterval: string;
+  basePriceMinorUnits: number;
+  currency: string;
+  isActive: boolean;
+  features: Record<string, unknown>;
 }
 
 export interface TenantBillingInvoiceRecord {
@@ -1137,6 +1152,27 @@ export async function getTenantBillingSummary(token?: string): Promise<TenantBil
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function listTenantBillingPlans(token?: string): Promise<TenantBillingPlanRecord[]> {
+  return apiCoreFetch<TenantBillingPlanRecord[]>('/tenant-billing/plans', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function changeTenantBillingPlan(
+  planId: string,
+  token?: string,
+): Promise<TenantBillingSummaryRecord> {
+  return apiCoreFetch<TenantBillingSummaryRecord>(
+    `/tenant-billing/subscription/change-plan/${encodeURIComponent(planId)}`,
+    {
+      method: 'POST',
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function initializeTenantWalletTopUpCheckout(
@@ -1951,6 +1987,8 @@ export interface TeamMemberRecord {
   email: string;
   phone: string | null;
   role: string;
+  assignedFleetIds: string[];
+  customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
   createdAt: string;
@@ -1961,6 +1999,13 @@ export interface InviteTeamMemberInput {
   email: string;
   role: string;
   phone?: string;
+  assignedFleetIds?: string[];
+  customPermissions?: string[];
+}
+
+export interface UpdateTeamMemberAccessInput {
+  assignedFleetIds?: string[];
+  customPermissions?: string[];
 }
 
 export async function listTeamMembers(token?: string): Promise<TeamMemberRecord[]> {
@@ -1975,6 +2020,19 @@ export async function inviteTeamMember(
   token?: string,
 ): Promise<TeamMemberRecord> {
   return apiCoreFetch<TeamMemberRecord>('/team/invite', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateTeamMemberAccess(
+  userId: string,
+  input: UpdateTeamMemberAccessInput,
+  token?: string,
+): Promise<TeamMemberRecord> {
+  return apiCoreFetch<TeamMemberRecord>(`/team/${encodeURIComponent(userId)}/access`, {
     method: 'POST',
     body: JSON.stringify(input),
     cache: 'no-store',

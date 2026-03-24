@@ -7,6 +7,7 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
+import { getAssignedFleetIds } from '../auth/tenant-access';
 import {
   LicenceExpiryReportItemDto,
   OperationalReadinessResponseDto,
@@ -27,7 +28,7 @@ export class ReportsController {
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: ReportsOverviewResponseDto })
   getOverview(@CurrentTenant() ctx: TenantContext) {
-    return this.reportsService.getOverview(ctx.tenantId);
+    return this.reportsService.getOverview(ctx.tenantId, getAssignedFleetIds(ctx));
   }
 
   @Get('operational-readiness')
@@ -35,7 +36,7 @@ export class ReportsController {
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: OperationalReadinessResponseDto })
   getOperationalReadiness(@CurrentTenant() ctx: TenantContext) {
-    return this.reportsService.getOperationalReadiness(ctx.tenantId);
+    return this.reportsService.getOperationalReadiness(ctx.tenantId, getAssignedFleetIds(ctx));
   }
 
   @Get('licence-expiry')
@@ -43,6 +44,6 @@ export class ReportsController {
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: [LicenceExpiryReportItemDto] })
   getLicenceExpiry(@CurrentTenant() ctx: TenantContext): Promise<LicenceExpiryReportItemDto[]> {
-    return this.reportsService.getLicenceExpiryReport(ctx.tenantId);
+    return this.reportsService.getLicenceExpiryReport(ctx.tenantId, getAssignedFleetIds(ctx));
   }
 }

@@ -65,6 +65,10 @@ export interface TenantContext {
   role: string;
   /** Present when the user is scoped to a specific operating unit. */
   operatingUnitId?: OperatingUnitId;
+  /** Optional fleet-level access scope for users limited to selected fleets. */
+  assignedFleetIds?: FleetId[];
+  /** Optional per-user permission overrides merged with the base role grants. */
+  customPermissions?: string[];
 }
 
 /**
@@ -96,6 +100,18 @@ export function tenantContextFromJwt(payload: Record<string, unknown>): TenantCo
   const { operatingUnitId } = payload as Record<string, unknown>;
   if (typeof operatingUnitId === 'string') {
     ctx.operatingUnitId = asOperatingUnitId(operatingUnitId);
+  }
+
+  const { assignedFleetIds, customPermissions } = payload as Record<string, unknown>;
+  if (Array.isArray(assignedFleetIds)) {
+    ctx.assignedFleetIds = assignedFleetIds
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => asFleetId(value));
+  }
+  if (Array.isArray(customPermissions)) {
+    ctx.customPermissions = customPermissions.filter(
+      (value): value is string => typeof value === 'string' && value.trim().length > 0,
+    );
   }
 
   return ctx;

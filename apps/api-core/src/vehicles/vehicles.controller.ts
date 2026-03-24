@@ -13,6 +13,7 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
+import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -42,7 +43,7 @@ export class VehiclesController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListVehiclesDto,
   ): Promise<PaginatedResponse<VehicleResponseDto>> {
-    return this.service.list(ctx.tenantId, query);
+    return this.service.list(ctx.tenantId, applyFleetScope(query, ctx));
   }
 
   @Get('code-suggestion')
@@ -54,6 +55,7 @@ export class VehiclesController {
     @CurrentTenant() ctx: TenantContext,
     @Query('fleetId') fleetId: string,
   ): Promise<VehicleCodeSuggestionResponseDto> {
+    assertFleetAccess(ctx, fleetId);
     return this.service.suggestTenantVehicleCode(ctx.tenantId, fleetId);
   }
 
@@ -65,7 +67,10 @@ export class VehiclesController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<VehicleDetailResponseDto> {
-    return this.service.findOneDetailed(ctx.tenantId, id);
+    return this.service.findOneDetailed(ctx.tenantId, id).then((vehicle) => {
+      assertFleetAccess(ctx, vehicle.fleetId);
+      return vehicle;
+    });
   }
 
   @Post()
@@ -76,6 +81,7 @@ export class VehiclesController {
     @CurrentTenant() ctx: TenantContext,
     @Body() dto: CreateVehicleDto,
   ): Promise<VehicleResponseDto> {
+    assertFleetAccess(ctx, dto.fleetId);
     return this.service.create(ctx.tenantId, dto);
   }
 
@@ -88,7 +94,10 @@ export class VehiclesController {
     @Param('id') id: string,
     @Body() dto: UpdateVehicleDto,
   ): Promise<VehicleResponseDto> {
-    return this.service.update(ctx.tenantId, id, dto);
+    return this.service.findOne(ctx.tenantId, id).then((vehicle) => {
+      assertFleetAccess(ctx, vehicle.fleetId);
+      return this.service.update(ctx.tenantId, id, dto);
+    });
   }
 
   @Patch(':id/status')
@@ -100,6 +109,9 @@ export class VehiclesController {
     @Param('id') id: string,
     @Body('status') status: string,
   ): Promise<VehicleResponseDto> {
-    return this.service.updateStatus(ctx.tenantId, id, status);
+    return this.service.findOne(ctx.tenantId, id).then((vehicle) => {
+      assertFleetAccess(ctx, vehicle.fleetId);
+      return this.service.updateStatus(ctx.tenantId, id, status);
+    });
   }
 }

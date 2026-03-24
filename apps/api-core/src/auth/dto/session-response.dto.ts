@@ -62,6 +62,12 @@ export class AuthSessionResponseDto {
   @ApiProperty({ type: [String] })
   permissions!: string[];
 
+  @ApiProperty({ type: [String] })
+  assignedFleetIds!: string[];
+
+  @ApiProperty({ type: [String] })
+  customPermissions!: string[];
+
   @ApiPropertyOptional()
   linkedDriverId?: string | null;
 
