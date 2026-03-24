@@ -2,13 +2,20 @@
   "expo": {
     "name": "Mobiris Mobile Ops",
     "slug": "mobiris-mobile-ops",
-    "scheme": ["mobiris-mobile-ops", "mobiris"],
+    "scheme": [
+      "mobiris-mobile-ops",
+      "mobiris"
+    ],
     "version": "1.0.0",
     "icon": "../../docs/ux/mobiris-brand/icons/png/icon-1024.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
-    "plugins": ["expo-secure-store"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-secure-store"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mobiris.mobileops"
@@ -22,9 +29,12 @@
       "package": "com.mobiris.mobileops"
     },
     "extra": {
-      "apiUrl": "http://localhost:3001/api/v1",
+      "apiUrl": "https://api.mobiris.ng/api/v1",
       "enableOfflineQueue": true,
-      "enableCrashReporting": false
+      "enableCrashReporting": false,
+      "eas": {
+        "projectId": "83ea2b51-d020-415e-a1f7-ceac04c41d87"
+      }
     }
   }
 }
