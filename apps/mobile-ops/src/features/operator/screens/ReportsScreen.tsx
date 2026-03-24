@@ -1,17 +1,19 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { RefreshControl, StyleSheet, Text } from 'react-native';
+import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { getLicenceExpiryReport, getOperationalReadinessReport } from '../../../api';
 import { Badge } from '../../../components/badge';
+import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
 import { Screen } from '../../../components/screen';
+import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 import { formatDateOnly, formatStatusLabel } from '../../../utils/formatting';
 import { readinessTone } from '../../../utils/status';
 
-export function ReportsScreen() {
+export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
   const readinessQuery = useQuery({
     queryKey: ['operator-reports', 'readiness'],
     queryFn: getOperationalReadinessReport,
@@ -22,6 +24,10 @@ export function ReportsScreen() {
   });
 
   const refreshing = readinessQuery.isRefetching || expiryQuery.isRefetching;
+  const readyDrivers =
+    readinessQuery.data?.drivers.filter((driver) => driver.activationReadiness === 'ready').length ?? 0;
+  const queuedDrivers =
+    readinessQuery.data?.drivers.filter((driver) => driver.activationReadiness !== 'ready').length ?? 0;
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([readinessQuery.refetch(), expiryQuery.refetch()])} />}>
@@ -32,14 +38,35 @@ export function ReportsScreen() {
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Operational readiness</Text>
+        <View style={styles.summaryRow}>
+          <Badge label={`${readyDrivers} ready`} tone="success" />
+          <Badge label={`${queuedDrivers} in readiness queue`} tone={queuedDrivers > 0 ? 'warning' : 'neutral'} />
+        </View>
         {readinessQuery.isLoading ? (
           <LoadingSkeleton height={120} />
         ) : (
           readinessQuery.data?.drivers.slice(0, 5).map((driver) => (
             <Card key={driver.id} style={styles.innerCard}>
               <Text style={styles.itemTitle}>{driver.fullName}</Text>
-              <Badge label={formatStatusLabel(driver.assignmentReadiness)} tone={readinessTone(driver.assignmentReadiness)} />
+              <View style={styles.summaryRow}>
+                <Badge
+                  label={`Activation ${formatStatusLabel(driver.activationReadiness)}`}
+                  tone={readinessTone(driver.activationReadiness)}
+                />
+                <Badge
+                  label={`Assignments ${formatStatusLabel(driver.assignmentReadiness)}`}
+                  tone={readinessTone(driver.assignmentReadiness)}
+                />
+              </View>
               <Text style={styles.meta}>Licence expiry: {driver.approvedLicenceExpiresAt ? formatDateOnly(driver.approvedLicenceExpiresAt) : 'Not on file'}</Text>
+              {driver.activationReadinessReasons[0] ? (
+                <Text style={styles.meta}>{driver.activationReadinessReasons[0]}</Text>
+              ) : null}
+              <Button
+                label={driver.activationReadiness === 'ready' ? 'Review and activate driver' : 'Resolve readiness blockers'}
+                variant="secondary"
+                onPress={() => navigation.navigate('OperatorDriverDetail', { driverId: driver.id })}
+              />
             </Card>
           ))
         )}
@@ -66,6 +93,7 @@ export function ReportsScreen() {
 const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   innerCard: { gap: tokens.spacing.xs },
+  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
   copy: { color: tokens.colors.inkSoft, lineHeight: 20 },

@@ -48,6 +48,13 @@ export function DriverDetailScreen({ route }: ScreenProps<'OperatorDriverDetail'
   }
 
   const driver = driverQuery.data;
+  const canActivate = driver.activationReadiness === 'ready' && driver.status !== 'active';
+  const activationPrimaryActionLabel =
+    driver.status === 'active'
+      ? 'Driver already active'
+      : canActivate
+        ? 'Activate driver'
+        : 'Resolve readiness blockers first';
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={driverQuery.isRefetching} onRefresh={() => void driverQuery.refetch()} />}>
@@ -74,26 +81,40 @@ export function DriverDetailScreen({ route }: ScreenProps<'OperatorDriverDetail'
         <Text style={styles.meta}>Pending docs: {driver.pendingDocumentCount}</Text>
         <Text style={styles.meta}>Rejected docs: {driver.rejectedDocumentCount}</Text>
         <Text style={styles.meta}>Expired docs: {driver.expiredDocumentCount}</Text>
+        <Text style={styles.meta}>
+          Activation readiness: {formatStatusLabel(driver.activationReadiness ?? 'not_ready')}
+        </Text>
+        {driver.activationReadinessReasons?.length ? (
+          <View style={styles.reasonBlock}>
+            {driver.activationReadinessReasons.map((reason) => (
+              <Text key={reason} style={styles.reasonText}>• {reason}</Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.meta}>No activation blockers are currently reported.</Text>
+        )}
         <Button
           label="Send self-service link"
           loading={linkMutation.isPending}
           onPress={() => linkMutation.mutate()}
         />
         <Button
-          label="Set active"
-          variant="secondary"
+          label={activationPrimaryActionLabel}
+          disabled={!canActivate}
           loading={statusMutation.isPending}
           onPress={() => statusMutation.mutate('active')}
         />
         <Button
-          label="Set suspended"
+          label={driver.status === 'suspended' ? 'Driver already suspended' : 'Suspend driver'}
           variant="secondary"
+          disabled={driver.status === 'suspended'}
           loading={statusMutation.isPending}
           onPress={() => statusMutation.mutate('suspended')}
         />
         <Button
-          label="Set inactive"
+          label={driver.status === 'inactive' ? 'Driver already inactive' : 'Move back to inactive'}
           variant="secondary"
+          disabled={driver.status === 'inactive'}
           loading={statusMutation.isPending}
           onPress={() => statusMutation.mutate('inactive')}
         />
@@ -108,6 +129,8 @@ const styles = StyleSheet.create({
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
   meta: { color: tokens.colors.inkSoft, lineHeight: 20 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
+  reasonBlock: { gap: tokens.spacing.xs },
+  reasonText: { color: tokens.colors.inkSoft, lineHeight: 20 },
 });
 
 export default DriverDetailScreen;
