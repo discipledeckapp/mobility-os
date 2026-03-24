@@ -26,6 +26,11 @@ on:
         required: true
         default: false
         type: boolean
+      submit_to_play:
+        description: Auto-submit the Android production build to Google Play internal testing
+        required: true
+        default: false
+        type: boolean
 
 env:
   PNPM_VERSION: "9.15.0"
@@ -56,6 +61,19 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Configure Google Play service account
+        if: ${{ inputs.submit_to_play }}
+        working-directory: apps/mobile-ops
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        run: |
+          if [ -z "${GOOGLE_PLAY_SERVICE_ACCOUNT_KEY}" ]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_KEY secret is required for Google Play submissions."
+            exit 1
+          fi
+
+          printf '%s' "${GOOGLE_PLAY_SERVICE_ACCOUNT_KEY}" > google-play-service-account.json
+
       - name: EAS Build
         working-directory: apps/mobile-ops
         run: |
@@ -69,8 +87,22 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.submit_to_play }}" = "true" ] && [ "${{ inputs.platform }}" != "android" ]; then
+            echo "Google Play submit is only supported for Android builds."
+            exit 1
+          fi
+
+          if [ "${{ inputs.submit_to_play }}" = "true" ] && [ "${{ inputs.profile }}" != "production" ]; then
+            echo "Google Play submit requires the production EAS profile."
+            exit 1
+          fi
+
           EXTRA_ARGS=""
           if [ "${{ inputs.submit_to_testflight }}" = "true" ]; then
+            EXTRA_ARGS="--auto-submit"
+          fi
+
+          if [ "${{ inputs.submit_to_play }}" = "true" ]; then
             EXTRA_ARGS="--auto-submit"
           fi
 

@@ -79,12 +79,23 @@ The APK is written to:
 For cloud builds, the `Mobile Build` GitHub workflow supports:
 - Android and iOS EAS builds
 - iOS production builds with `submit_to_testflight=true`, which enables `eas build --auto-submit`
+- Android production builds with `submit_to_play=true`, which enables `eas build --auto-submit` to the Google Play `internal` track
 
 TestFlight releases require:
 - `platform=ios`
 - `profile=production`
 - a valid `EXPO_TOKEN` in GitHub Actions
 - the Apple credentials configured in the Expo project for submit
+
+Google Play internal testing releases require:
+- `platform=android`
+- `profile=production`
+- `submit_to_play=true`
+- a `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY` GitHub secret containing the raw JSON for a Play Console service account key
+- the `com.mobiris.mobileops` app to exist in Google Play Console before API submissions
+- tester emails to be added in Play Console under the internal testing track
+
+The production Android submit profile is configured to target the `internal` testing track by default.
 
 ## Current API Calls
 
