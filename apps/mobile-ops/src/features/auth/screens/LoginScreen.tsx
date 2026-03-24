@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../components/button';
+import { Badge } from '../../../components/badge';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
@@ -10,6 +11,8 @@ import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { formatStatusLabel } from '../../../utils/formatting';
+import { identityTone, readinessTone } from '../../../utils/status';
 
 export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
   const { loginWithPassword } = useAuth();
@@ -65,6 +68,12 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           value={password}
         />
         <Button label="Sign in" loading={submitting} onPress={onSubmit} />
+        <Button label="Create organisation" variant="secondary" onPress={() => navigation.navigate('Signup')} />
+        <Button
+          label="Forgot password"
+          variant="secondary"
+          onPress={() => navigation.navigate('ForgotPassword')}
+        />
         {token && driver ? (
           <Card style={styles.resumeCard}>
             <Text style={styles.resumeTitle}>Saved driver verification</Text>
@@ -72,21 +81,11 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
               {driver.firstName} {driver.lastName}
             </Text>
             <View style={styles.badgeRow}>
-              <View style={[styles.badge, styles.badgeNeutral]}>
-                <Text style={styles.badgeLabel}>{formatStatusLabel(driver.identityStatus)}</Text>
-              </View>
-              <View
-                style={[
-                  styles.badge,
-                  driver.assignmentReadiness === 'ready'
-                    ? styles.badgeSuccess
-                    : styles.badgeWarning,
-                ]}
-              >
-                <Text style={styles.badgeLabel}>
-                  {formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
-                </Text>
-              </View>
+              <Badge label={formatStatusLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
+              <Badge
+                label={formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
+                tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
+              />
             </View>
             <Text style={styles.resumeMeta}>{resumeSummary(driver)}</Text>
             <Button
@@ -110,10 +109,6 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
       </Card>
     </Screen>
   );
-}
-
-function formatStatusLabel(status: string) {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function resumeSummary(driver: {
@@ -196,25 +191,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  badgeNeutral: {
-    backgroundColor: '#E2E8F0',
-  },
-  badgeWarning: {
-    backgroundColor: '#FEF3C7',
-  },
-  badgeSuccess: {
-    backgroundColor: '#DCFCE7',
-  },
-  badgeLabel: {
-    color: tokens.colors.ink,
-    fontSize: 12,
-    fontWeight: '700',
   },
 });
 

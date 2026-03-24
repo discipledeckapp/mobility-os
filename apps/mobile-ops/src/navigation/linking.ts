@@ -8,10 +8,34 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
   config: {
     screens: {
       Login: 'login',
+      Signup: 'signup',
+      SignupOtp: 'signup/verify',
+      ForgotPassword: 'forgot-password',
+      ResetPassword: 'reset-password',
       SelfServiceOtp: 'self-service/otp',
       SelfServiceVerification: 'self-service/verify',
       SelfServiceReadiness: 'self-service/readiness',
       SelfServiceResume: 'self-service/:token?',
+      OperatorDashboard: 'operator/dashboard',
+      OperatorDrivers: 'operator/drivers',
+      OperatorDriverDetail: 'operator/drivers/:driverId',
+      OperatorAssignments: 'operator/assignments',
+      OperatorAssignmentCreate: 'operator/assignments/new',
+      OperatorRemittance: 'operator/remittance',
+      OperatorRemittanceDetail: 'operator/remittance/:remittanceId',
+      OperatorVehicles: 'operator/vehicles',
+      OperatorVehicleCreate: 'operator/vehicles/new',
+      OperatorVehicleDetail: 'operator/vehicles/:vehicleId',
+      OperatorBusinessEntities: 'operator/business-entities',
+      OperatorBusinessEntityDetail: 'operator/business-entities/:businessEntityId?',
+      OperatorOperatingUnits: 'operator/operating-units/:businessEntityId?',
+      OperatorOperatingUnitDetail: 'operator/operating-units/detail/:operatingUnitId?',
+      OperatorFleets: 'operator/fleets/:operatingUnitId?',
+      OperatorFleetDetail: 'operator/fleets/detail/:fleetId?',
+      OperatorReports: 'operator/reports',
+      OperatorWallet: 'operator/wallet',
+      OperatorSettings: 'operator/settings',
+      OperatorMore: 'operator/more',
       Home: '',
       AssignmentDetail: 'assignment/:assignmentId',
       RemittanceHistory: 'remittance/history',
@@ -55,4 +79,8 @@ export function buildSelfServiceVerificationDeepLink() {
 
 export function buildSelfServiceReadinessDeepLink() {
   return 'mobiris://self-service/readiness';
+}
+
+export function buildOperatorDashboardDeepLink() {
+  return 'mobiris://operator/dashboard';
 }

@@ -5,6 +5,7 @@ import type { Fleet } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { CreateFleetDto } from './dto/create-fleet.dto';
+import type { UpdateFleetDto } from './dto/update-fleet.dto';
 
 @Injectable()
 export class FleetsService {
@@ -54,6 +55,35 @@ export class FleetsService {
         name: dto.name,
         businessModel: dto.businessModel,
         status: dto.status ?? 'active',
+      },
+    });
+  }
+
+  async update(tenantId: string, id: string, dto: UpdateFleetDto): Promise<Fleet> {
+    await this.findOne(tenantId, id);
+
+    if (dto.businessModel) {
+      getBusinessModel(dto.businessModel);
+    }
+
+    if (dto.operatingUnitId) {
+      const unit = await this.prisma.operatingUnit.findUnique({
+        where: { id: dto.operatingUnitId },
+      });
+
+      if (!unit) {
+        throw new NotFoundException(`OperatingUnit '${dto.operatingUnitId}' not found`);
+      }
+
+      assertTenantOwnership(asTenantId(unit.tenantId), asTenantId(tenantId));
+    }
+
+    return this.prisma.fleet.update({
+      where: { id },
+      data: {
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.operatingUnitId ? { operatingUnitId: dto.operatingUnitId } : {}),
+        ...(dto.businessModel ? { businessModel: dto.businessModel } : {}),
       },
     });
   }

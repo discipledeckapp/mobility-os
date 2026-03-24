@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   actionQueue: 'mobility_os.mobile_ops.action_queue',
   selfServiceToken: 'mobility_os.mobile_ops.self_service_token',
   selfServiceVerificationDraft: 'mobility_os.mobile_ops.self_service_verification_draft',
+  pendingTenantPayment: 'mobility_os.mobile_ops.pending_tenant_payment',
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {
@@ -38,6 +39,10 @@ export const API_PATHS = {
   login: '/auth/login',
   refresh: '/auth/refresh',
   session: '/auth/session',
+  signupRegister: '/signup/register',
+  signupVerifyOtp: '/signup/verify-otp',
+  passwordResetRequest: '/auth/password-reset/request',
+  passwordResetConfirm: '/auth/password-reset/confirm',
   selfServiceExchangeOtp: '/driver-self-service/exchange-otp',
   selfServiceContext: '/driver-self-service/context',
   selfServiceDocuments: '/driver-self-service/documents/list',
@@ -45,6 +50,19 @@ export const API_PATHS = {
   mobileProfile: '/mobile-ops/profile',
   mobileRemittance: '/mobile-ops/remittance',
   mobileRemittanceHistory: '/mobile-ops/remittance',
+  drivers: '/drivers',
+  assignments: '/assignments',
+  remittance: '/remittance',
+  vehicles: '/vehicles',
+  fleets: '/fleets',
+  businessEntities: '/business-entities',
+  operatingUnits: '/operating-units',
+  team: '/team',
+  tenantBilling: '/tenant-billing',
+  reportsOverview: '/reports/overview',
+  reportsOperationalReadiness: '/reports/operational-readiness',
+  reportsLicenceExpiry: '/reports/licence-expiry',
+  operationalWallets: '/operational-wallets',
   mobileLogs: '/mobile/log',
 } as const;
 

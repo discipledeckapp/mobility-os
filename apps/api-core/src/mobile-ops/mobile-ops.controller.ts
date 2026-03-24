@@ -138,6 +138,21 @@ export class MobileOpsController {
     return this.remittanceService.record(ctx.tenantId, dto);
   }
 
+  @Get('remittance')
+  @RequirePermissions(Permission.RemittanceRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [RemittanceResponseDto] })
+  async listRemittanceHistory(
+    @CurrentTenant() ctx: TenantContext,
+  ): Promise<RemittanceResponseDto[]> {
+    const driver = await this.getLinkedDriver(ctx);
+    const result = await this.remittanceService.list(ctx.tenantId, {
+      driverId: driver.id,
+      limit: 20,
+    });
+    return result.data;
+  }
+
   private async getLinkedDriver(ctx: TenantContext) {
     const session = await this.authService.getSession(ctx.userId, ctx.tenantId);
     if (!session.linkedDriverId) {

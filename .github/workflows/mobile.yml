@@ -112,3 +112,8 @@ jobs:
             --non-interactive \
             --no-wait \
             ${EXTRA_ARGS}
+
+      - name: Cleanup Google Play service account
+        if: ${{ always() && inputs.submit_to_play }}
+        working-directory: apps/mobile-ops
+        run: rm -f google-play-service-account.json

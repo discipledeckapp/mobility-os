@@ -12,6 +12,36 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface RegisterOrganisationInput {
+  orgName: string;
+  slug: string;
+  country: string;
+  businessModel: string;
+  adminName: string;
+  adminEmail: string;
+  adminPhone?: string;
+  adminPassword: string;
+}
+
+export interface RegisterOrganisationResponse {
+  userId: string;
+  tenantId: string;
+  tenantSlug: string;
+  message: string;
+}
+
+export interface VerifySignupOtpResponse {
+  verified: boolean;
+  tenantSlug: string;
+}
+
 export interface SessionRecord {
   userId: string;
   tenantId: string;
@@ -60,6 +90,22 @@ export interface AssignmentRecord {
     year: number;
     plate?: string | null;
   };
+}
+
+export interface OperatorAssignmentRecord {
+  id: string;
+  tenantId: string;
+  fleetId: string;
+  businessEntityId: string;
+  operatingUnitId: string;
+  driverId: string;
+  vehicleId: string;
+  status: string;
+  startedAt: string;
+  endedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DriverRecord {
@@ -148,6 +194,9 @@ export interface DriverIdentityResolutionResult {
 }
 
 export interface RemittanceRecord {
+  fleetId?: string;
+  businessEntityId?: string;
+  operatingUnitId?: string;
   id: string;
   assignmentId: string;
   driverId: string;
@@ -162,11 +211,284 @@ export interface RemittanceRecord {
   updatedAt: string;
 }
 
+export interface VehicleRecord {
+  id: string;
+  tenantId: string;
+  fleetId: string;
+  systemVehicleCode: string;
+  tenantVehicleCode: string;
+  businessEntityId: string;
+  operatingUnitId: string;
+  status: string;
+  vehicleType: string;
+  make: string;
+  model: string;
+  trim?: string | null;
+  year: number;
+  plate?: string | null;
+  color?: string | null;
+  vin?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FleetRecord {
+  id: string;
+  tenantId: string;
+  operatingUnitId: string;
+  name: string;
+  businessModel: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessEntityRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  country: string;
+  businessModel: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OperatingUnitRecord {
+  id: string;
+  tenantId: string;
+  businessEntityId: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBusinessEntityInput {
+  name: string;
+  country: string;
+  businessModel: string;
+}
+
+export interface UpdateBusinessEntityInput {
+  name?: string;
+  country?: string;
+  businessModel?: string;
+}
+
+export interface CreateOperatingUnitInput {
+  businessEntityId: string;
+  name: string;
+}
+
+export interface UpdateOperatingUnitInput {
+  businessEntityId?: string;
+  name?: string;
+}
+
+export interface CreateFleetInput {
+  operatingUnitId: string;
+  name: string;
+  businessModel: string;
+}
+
+export interface UpdateFleetInput {
+  operatingUnitId?: string;
+  name?: string;
+  businessModel?: string;
+}
+
+export interface TeamMemberRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  isActive: boolean;
+  isEmailVerified: boolean;
+  createdAt: string;
+}
+
+export interface InviteTeamMemberInput {
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+}
+
+export interface TenantBillingInvoiceRecord {
+  id: string;
+  subscriptionId: string;
+  status: string;
+  amountDueMinorUnits: number;
+  amountPaidMinorUnits: number;
+  currency: string;
+  periodStart: string;
+  periodEnd: string;
+  dueAt?: string | null;
+  paidAt?: string | null;
+}
+
+export interface TenantBillingSummaryRecord {
+  subscription: {
+    id: string;
+    planId: string;
+    planName: string;
+    planTier: string;
+    currency: string;
+    status: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    trialEndsAt?: string | null;
+  };
+  invoices: TenantBillingInvoiceRecord[];
+  outstandingInvoice?: TenantBillingInvoiceRecord | null;
+  verificationWallet: {
+    walletId: string;
+    currency: string;
+    balanceMinorUnits: number;
+    entries: Array<{
+      id: string;
+      type: string;
+      amountMinorUnits: number;
+      currency: string;
+      referenceId?: string | null;
+      referenceType?: string | null;
+      description?: string | null;
+      createdAt: string;
+    }>;
+  };
+  customerEmail: string;
+  customerName: string;
+}
+
+export interface TenantPaymentCheckoutRecord {
+  provider: string;
+  reference: string;
+  checkoutUrl: string;
+  accessCode?: string;
+  purpose: string;
+}
+
+export interface VerifyAndApplyTenantPaymentInput {
+  provider: string;
+  purpose: string;
+  reference: string;
+  invoiceId?: string;
+}
+
+export interface TenantPaymentApplicationRecord {
+  provider: string;
+  reference: string;
+  purpose: string;
+  status: string;
+  amountMinorUnits: number;
+  currency: string;
+  invoiceId?: string;
+}
+
+export interface CreateVehicleInput {
+  fleetId: string;
+  tenantVehicleCode?: string;
+  vehicleType: string;
+  make: string;
+  model: string;
+  trim?: string;
+  year: number;
+  plate?: string;
+  color?: string;
+  vin?: string;
+  acquisitionCostMinorUnits?: number;
+  acquisitionDate?: string;
+  currentEstimatedValueMinorUnits?: number;
+  valuationSource?: string;
+}
+
+export interface UpdateVehicleInput {
+  tenantVehicleCode?: string;
+  plate?: string;
+  vin?: string;
+  color?: string;
+  year?: number;
+  acquisitionCostMinorUnits?: number;
+  acquisitionDate?: string;
+  currentEstimatedValueMinorUnits?: number;
+  valuationSource?: string;
+}
+
+export interface ReportsOverviewRecord {
+  wallet: {
+    currency: string;
+    totalBalanceMinorUnits: number;
+    totalInflowMinorUnits: number;
+    totalOutflowMinorUnits: number;
+  };
+  dailyRemittanceTrend: Array<{ label: string; amountMinorUnits: number }>;
+  weeklyRemittanceTrend: Array<{ label: string; amountMinorUnits: number }>;
+  driverActivity: {
+    active: number;
+    inactive: number;
+  };
+}
+
+export interface DriverReadinessReportItem {
+  id: string;
+  fullName: string;
+  fleetId: string;
+  activationReadiness: string;
+  activationReadinessReasons: string[];
+  assignmentReadiness: string;
+  approvedLicenceExpiresAt?: string | null;
+  lastAssignmentDate?: string | null;
+  riskBand?: string | null;
+}
+
+export interface VehicleReadinessReportItem {
+  id: string;
+  primaryLabel: string;
+  fleetId: string;
+  status: string;
+  currentValuationMinorUnits?: number | null;
+  currentValuationCurrency?: string | null;
+  maintenanceSummary: string;
+  lifecycleStage: string;
+}
+
+export interface OperationalReadinessReport {
+  drivers: DriverReadinessReportItem[];
+  vehicles: VehicleReadinessReportItem[];
+}
+
+export interface LicenceExpiryReportItem {
+  driverId: string;
+  fullName: string;
+  fleetId: string;
+  expiresAt: string;
+  daysUntilExpiry: number;
+}
+
+export interface WalletBalanceRecord {
+  walletId: string;
+  businessEntityId: string;
+  currency: string;
+  balanceMinorUnits: number;
+  updatedAt: string;
+}
+
 export interface RecordRemittanceInput {
   assignmentId: string;
   amountMinorUnits: number;
   currency: string;
   dueDate: string;
+  notes?: string;
+}
+
+export interface CreateAssignmentInput {
+  driverId: string;
+  vehicleId: string;
+  fleetId?: string;
   notes?: string;
 }
 
@@ -319,6 +641,20 @@ async function apiFetch<T>(
   }
 }
 
+function buildQuery(path: string, params: Record<string, string | number | undefined | null>) {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    search.set(key, String(value));
+  }
+
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 export function isUnauthorizedError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
@@ -330,6 +666,58 @@ export function isNetworkError(error: unknown): boolean {
 export function login(input: LoginInput): Promise<LoginResponse> {
   return apiFetch<LoginResponse>(
     API_PATHS.login,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
+export function registerOrganisation(
+  input: RegisterOrganisationInput,
+): Promise<RegisterOrganisationResponse> {
+  return apiFetch<RegisterOrganisationResponse>(
+    API_PATHS.signupRegister,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
+export function verifySignupOtp(input: {
+  email: string;
+  code: string;
+}): Promise<VerifySignupOtpResponse> {
+  return apiFetch<VerifySignupOtpResponse>(
+    API_PATHS.signupVerifyOtp,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
+export function requestPasswordReset(input: { email: string }): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    API_PATHS.passwordResetRequest,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
+export function resetPassword(input: {
+  token: string;
+  newPassword: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    API_PATHS.passwordResetConfirm,
     {
       method: 'POST',
       body: JSON.stringify(input),
@@ -462,6 +850,27 @@ export function listAssignments(): Promise<AssignmentRecord[]> {
   return apiFetch<AssignmentRecord[]>(API_PATHS.mobileAssignments);
 }
 
+export function listOperatorAssignments(input: {
+  page?: number;
+  limit?: number;
+  driverId?: string;
+  vehicleId?: string;
+  fleetId?: string;
+} = {}): Promise<PaginatedResponse<OperatorAssignmentRecord>> {
+  return apiFetch<PaginatedResponse<OperatorAssignmentRecord>>(
+    buildQuery(API_PATHS.assignments, input),
+  );
+}
+
+export function createOperatorAssignment(
+  input: CreateAssignmentInput,
+): Promise<OperatorAssignmentRecord> {
+  return apiFetch<OperatorAssignmentRecord>(API_PATHS.assignments, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function getAssignment(assignmentId: string): Promise<AssignmentRecord> {
   return apiFetch<AssignmentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}`);
 }
@@ -494,6 +903,32 @@ export function getDriverProfile(): Promise<DriverRecord> {
   return apiFetch<DriverRecord>(API_PATHS.mobileProfile);
 }
 
+export function listDrivers(input: {
+  page?: number;
+  limit?: number;
+  q?: string;
+  status?: string;
+  identityStatus?: string;
+  fleetId?: string;
+} = {}): Promise<PaginatedResponse<DriverRecord>> {
+  return apiFetch<PaginatedResponse<DriverRecord>>(buildQuery(API_PATHS.drivers, input));
+}
+
+export function getDriver(driverId: string): Promise<DriverRecord> {
+  return apiFetch<DriverRecord>(`${API_PATHS.drivers}/${driverId}`);
+}
+
+export function sendDriverSelfServiceLink(driverId: string): Promise<{
+  delivery: 'email';
+  verificationUrl: string;
+  destination: string;
+}> {
+  return apiFetch(`${API_PATHS.drivers}/${driverId}/self-service-links`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export function recordRemittance(input: RecordRemittanceInput): Promise<RemittanceRecord> {
   return apiFetch<RemittanceRecord>(API_PATHS.mobileRemittance, {
     method: 'POST',
@@ -503,6 +938,238 @@ export function recordRemittance(input: RecordRemittanceInput): Promise<Remittan
 
 export function listRemittanceHistory(): Promise<RemittanceRecord[]> {
   return apiFetch<RemittanceRecord[]>(API_PATHS.mobileRemittanceHistory);
+}
+
+export function listOperatorRemittance(input: {
+  page?: number;
+  limit?: number;
+  assignmentId?: string;
+  driverId?: string;
+  status?: string;
+} = {}): Promise<PaginatedResponse<RemittanceRecord>> {
+  return apiFetch<PaginatedResponse<RemittanceRecord>>(buildQuery(API_PATHS.remittance, input));
+}
+
+export function getRemittance(remittanceId: string): Promise<RemittanceRecord> {
+  return apiFetch<RemittanceRecord>(`${API_PATHS.remittance}/${remittanceId}`);
+}
+
+export function confirmRemittance(
+  remittanceId: string,
+  paidDate: string,
+): Promise<RemittanceRecord> {
+  return apiFetch<RemittanceRecord>(`${API_PATHS.remittance}/${remittanceId}/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ paidDate }),
+  });
+}
+
+export function disputeRemittance(remittanceId: string, notes: string): Promise<RemittanceRecord> {
+  return apiFetch<RemittanceRecord>(`${API_PATHS.remittance}/${remittanceId}/dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function waiveRemittance(remittanceId: string, notes: string): Promise<RemittanceRecord> {
+  return apiFetch<RemittanceRecord>(`${API_PATHS.remittance}/${remittanceId}/waive`, {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function listVehicles(input: {
+  page?: number;
+  limit?: number;
+  fleetId?: string;
+} = {}): Promise<PaginatedResponse<VehicleRecord>> {
+  return apiFetch<PaginatedResponse<VehicleRecord>>(buildQuery(API_PATHS.vehicles, input));
+}
+
+export function getReportsOverview(): Promise<ReportsOverviewRecord> {
+  return apiFetch<ReportsOverviewRecord>(API_PATHS.reportsOverview);
+}
+
+export function getOperationalReadinessReport(): Promise<OperationalReadinessReport> {
+  return apiFetch<OperationalReadinessReport>(API_PATHS.reportsOperationalReadiness);
+}
+
+export function getLicenceExpiryReport(): Promise<LicenceExpiryReportItem[]> {
+  return apiFetch<LicenceExpiryReportItem[]>(API_PATHS.reportsLicenceExpiry);
+}
+
+export function getOperationalWalletBalance(
+  businessEntityId: string,
+): Promise<WalletBalanceRecord> {
+  return apiFetch<WalletBalanceRecord>(
+    `${API_PATHS.operationalWallets}/${businessEntityId}/balance`,
+  );
+}
+
+export function listFleets(input: { operatingUnitId?: string } = {}): Promise<FleetRecord[]> {
+  return apiFetch<FleetRecord[]>(buildQuery(API_PATHS.fleets, input));
+}
+
+export function getFleet(fleetId: string): Promise<FleetRecord> {
+  return apiFetch<FleetRecord>(`${API_PATHS.fleets}/${encodeURIComponent(fleetId)}`);
+}
+
+export function createFleet(input: CreateFleetInput): Promise<FleetRecord> {
+  return apiFetch<FleetRecord>(API_PATHS.fleets, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateFleet(fleetId: string, input: UpdateFleetInput): Promise<FleetRecord> {
+  return apiFetch<FleetRecord>(`${API_PATHS.fleets}/${encodeURIComponent(fleetId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function listBusinessEntities(): Promise<BusinessEntityRecord[]> {
+  return apiFetch<BusinessEntityRecord[]>(API_PATHS.businessEntities);
+}
+
+export function getBusinessEntity(businessEntityId: string): Promise<BusinessEntityRecord> {
+  return apiFetch<BusinessEntityRecord>(
+    `${API_PATHS.businessEntities}/${encodeURIComponent(businessEntityId)}`,
+  );
+}
+
+export function createBusinessEntity(input: CreateBusinessEntityInput): Promise<BusinessEntityRecord> {
+  return apiFetch<BusinessEntityRecord>(API_PATHS.businessEntities, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateBusinessEntity(
+  businessEntityId: string,
+  input: UpdateBusinessEntityInput,
+): Promise<BusinessEntityRecord> {
+  return apiFetch<BusinessEntityRecord>(
+    `${API_PATHS.businessEntities}/${encodeURIComponent(businessEntityId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function listOperatingUnits(
+  input: { businessEntityId?: string } = {},
+): Promise<OperatingUnitRecord[]> {
+  return apiFetch<OperatingUnitRecord[]>(buildQuery(API_PATHS.operatingUnits, input));
+}
+
+export function getOperatingUnit(operatingUnitId: string): Promise<OperatingUnitRecord> {
+  return apiFetch<OperatingUnitRecord>(
+    `${API_PATHS.operatingUnits}/${encodeURIComponent(operatingUnitId)}`,
+  );
+}
+
+export function createOperatingUnit(input: CreateOperatingUnitInput): Promise<OperatingUnitRecord> {
+  return apiFetch<OperatingUnitRecord>(API_PATHS.operatingUnits, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOperatingUnit(
+  operatingUnitId: string,
+  input: UpdateOperatingUnitInput,
+): Promise<OperatingUnitRecord> {
+  return apiFetch<OperatingUnitRecord>(
+    `${API_PATHS.operatingUnits}/${encodeURIComponent(operatingUnitId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function getVehicle(vehicleId: string): Promise<VehicleRecord> {
+  return apiFetch<VehicleRecord>(`${API_PATHS.vehicles}/${vehicleId}`);
+}
+
+export function createVehicle(input: CreateVehicleInput): Promise<VehicleRecord> {
+  return apiFetch<VehicleRecord>(API_PATHS.vehicles, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateVehicle(vehicleId: string, input: UpdateVehicleInput): Promise<VehicleRecord> {
+  return apiFetch<VehicleRecord>(`${API_PATHS.vehicles}/${vehicleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateVehicleStatus(vehicleId: string, status: string): Promise<VehicleRecord> {
+  return apiFetch<VehicleRecord>(`${API_PATHS.vehicles}/${vehicleId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function updateDriverStatus(driverId: string, status: string): Promise<DriverRecord> {
+  return apiFetch<DriverRecord>(`${API_PATHS.drivers}/${driverId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function listTeamMembers(): Promise<TeamMemberRecord[]> {
+  return apiFetch<TeamMemberRecord[]>(API_PATHS.team);
+}
+
+export function inviteTeamMember(input: InviteTeamMemberInput): Promise<TeamMemberRecord> {
+  return apiFetch<TeamMemberRecord>(`${API_PATHS.team}/invite`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deactivateTeamMember(userId: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`${API_PATHS.team}/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getTenantBillingSummary(): Promise<TenantBillingSummaryRecord> {
+  return apiFetch<TenantBillingSummaryRecord>(`${API_PATHS.tenantBilling}/summary`);
+}
+
+export function initializeWalletTopUp(input: {
+  provider: 'paystack' | 'flutterwave';
+  amountMinorUnits: number;
+}): Promise<TenantPaymentCheckoutRecord> {
+  return apiFetch<TenantPaymentCheckoutRecord>(`${API_PATHS.tenantBilling}/wallet-top-ups/checkout`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function initializeInvoicePayment(input: {
+  provider: 'paystack' | 'flutterwave';
+  invoiceId: string;
+}): Promise<TenantPaymentCheckoutRecord> {
+  return apiFetch<TenantPaymentCheckoutRecord>(`${API_PATHS.tenantBilling}/invoice-checkouts`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function verifyAndApplyTenantPayment(
+  input: VerifyAndApplyTenantPaymentInput,
+): Promise<TenantPaymentApplicationRecord> {
+  return apiFetch<TenantPaymentApplicationRecord>(`${API_PATHS.tenantBilling}/payments/verify-and-apply`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getStoredRefreshToken() {
