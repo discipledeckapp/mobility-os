@@ -49,6 +49,9 @@ export class VehicleResponseDto {
   @ApiPropertyOptional({ description: 'VIN / chassis number' })
   vin?: string | null;
 
+  @ApiPropertyOptional()
+  odometerKm?: number | null;
+
   @ApiProperty()
   createdAt!: Date;
 

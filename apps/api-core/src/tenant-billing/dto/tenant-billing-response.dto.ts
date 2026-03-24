@@ -133,6 +133,32 @@ export class TenantBillingPlatformWalletDto {
   entries!: TenantBillingPlatformWalletEntryDto[];
 }
 
+export class TenantBillingUsageDto {
+  @ApiProperty()
+  driverCount!: number;
+
+  @ApiProperty()
+  vehicleCount!: number;
+
+  @ApiProperty()
+  operatorSeatCount!: number;
+
+  @ApiPropertyOptional()
+  driverCap?: number | null;
+
+  @ApiPropertyOptional()
+  vehicleCap?: number | null;
+
+  @ApiPropertyOptional()
+  seatCap?: number | null;
+
+  @ApiProperty()
+  openInvoiceCount!: number;
+
+  @ApiProperty()
+  verificationLedgerEntryCount!: number;
+}
+
 export class TenantBillingSummaryDto {
   @ApiProperty({ type: TenantBillingSubscriptionDto })
   subscription!: TenantBillingSubscriptionDto;
@@ -145,6 +171,9 @@ export class TenantBillingSummaryDto {
 
   @ApiProperty({ type: TenantBillingPlatformWalletDto })
   verificationWallet!: TenantBillingPlatformWalletDto;
+
+  @ApiProperty({ type: TenantBillingUsageDto })
+  usage!: TenantBillingUsageDto;
 
   @ApiProperty()
   customerEmail!: string;

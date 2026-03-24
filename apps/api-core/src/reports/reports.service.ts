@@ -57,7 +57,31 @@ export class ReportsService {
     return { status: 'on_track', reason: null };
   }
 
-  async getOverview(tenantId: string, fleetIds: string[] = [], vehicleIds: string[] = []) {
+  async getOverview(
+    tenantId: string,
+    fleetIds: string[] = [],
+    vehicleIds: string[] = [],
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
+    const walletEntryDateFilter =
+      dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000Z`) } : {}),
+              ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999Z`) } : {}),
+            },
+          }
+        : {};
+    const remittanceDateFilter =
+      dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000Z`) } : {}),
+              ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999Z`) } : {}),
+            },
+          }
+        : {};
     const scopedDriverIds =
       vehicleIds.length > 0 ? await this.getDriverIdsFromVehicleScope(tenantId, vehicleIds) : [];
     const scopedDriverFilter =
@@ -80,6 +104,7 @@ export class ReportsService {
           wallet: {
             tenantId,
           },
+          ...walletEntryDateFilter,
         },
         select: {
           walletId: true,
@@ -90,7 +115,11 @@ export class ReportsService {
         },
       }),
       this.prisma.remittance.findMany({
-        where: { tenantId, ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}) },
+        where: {
+          tenantId,
+          ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
+          ...remittanceDateFilter,
+        },
         select: {
           amountMinorUnits: true,
           createdAt: true,
@@ -210,6 +239,7 @@ export class ReportsService {
               tenantId,
               assignmentId: { in: hirePurchaseAssignmentIds },
               status: 'confirmed',
+              ...remittanceDateFilter,
             },
             select: {
               assignmentId: true,

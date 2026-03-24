@@ -10,6 +10,23 @@ export interface LoginActionState {
   error?: string;
 }
 
+function normalizeLoginError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Unable to log in right now. Please try again.';
+  }
+
+  const message = error.message.toLowerCase();
+  if (
+    message.includes('invalid platform credentials') ||
+    message.includes('status 401') ||
+    message.includes('unauthorized')
+  ) {
+    return 'The email or password is incorrect.';
+  }
+
+  return 'Unable to log in right now. Please try again.';
+}
+
 function getTrimmedValue(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
@@ -37,7 +54,7 @@ export async function loginAction(
     });
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Unable to log in at this time.',
+      error: normalizeLoginError(error),
     };
   }
 

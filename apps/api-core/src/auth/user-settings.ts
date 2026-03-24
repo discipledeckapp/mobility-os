@@ -6,8 +6,15 @@ export const NOTIFICATION_TOPICS = [
   'remittance_overdue',
   'remittance_reconciled',
   'late_remittance_risk',
+  'maintenance_due',
+  'maintenance_overdue',
+  'vehicle_incident_reported',
   'compliance_risk',
   'self_service_invite',
+  'billing_updates',
+  'trial_guidance',
+  'product_updates',
+  'marketing_updates',
 ] as const;
 
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
@@ -24,6 +31,7 @@ export interface UserSettings {
   preferredLanguage: SupportedLanguage;
   notificationPreferences: NotificationPreferenceMap;
   assignedFleetIds: string[];
+  assignedVehicleIds: string[];
   customPermissions: string[];
 }
 
@@ -45,6 +53,22 @@ function buildDefaultTopicPreference(
   }
 
   if (topic === 'self_service_invite') {
+    return {
+      email: true,
+      inApp: isOperatorRole,
+      push: false,
+    };
+  }
+
+  if (topic === 'marketing_updates') {
+    return {
+      email: false,
+      inApp: false,
+      push: false,
+    };
+  }
+
+  if (topic === 'product_updates' || topic === 'trial_guidance') {
     return {
       email: true,
       inApp: isOperatorRole,
@@ -89,6 +113,7 @@ export function readUserSettings(
       preferredLanguage: defaults.preferredLanguage,
       notificationPreferences: defaultNotificationPreferences,
       assignedFleetIds: [],
+      assignedVehicleIds: [],
       customPermissions: [],
     };
   }
@@ -142,6 +167,11 @@ export function readUserSettings(
           (value): value is string => typeof value === 'string' && value.trim().length > 0,
         )
       : [],
+    assignedVehicleIds: Array.isArray(candidate.assignedVehicleIds)
+      ? candidate.assignedVehicleIds.filter(
+          (value): value is string => typeof value === 'string' && value.trim().length > 0,
+        )
+      : [],
     customPermissions: Array.isArray(candidate.customPermissions)
       ? candidate.customPermissions.filter(
           (value): value is string => typeof value === 'string' && value.trim().length > 0,
@@ -175,6 +205,10 @@ export function writeUserSettings(
       'assignedFleetIds' in nextSettings && Array.isArray(nextSettings.assignedFleetIds)
         ? nextSettings.assignedFleetIds
         : current.assignedFleetIds,
+    assignedVehicleIds:
+      'assignedVehicleIds' in nextSettings && Array.isArray(nextSettings.assignedVehicleIds)
+        ? nextSettings.assignedVehicleIds
+        : current.assignedVehicleIds,
     customPermissions:
       'customPermissions' in nextSettings && Array.isArray(nextSettings.customPermissions)
         ? nextSettings.customPermissions

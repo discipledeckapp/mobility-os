@@ -95,6 +95,10 @@ export interface NotificationPreferencesRecord {
   maintenance_overdue: NotificationChannelPreferenceRecord;
   vehicle_incident_reported: NotificationChannelPreferenceRecord;
   self_service_invite: NotificationChannelPreferenceRecord;
+  billing_updates: NotificationChannelPreferenceRecord;
+  trial_guidance: NotificationChannelPreferenceRecord;
+  product_updates: NotificationChannelPreferenceRecord;
+  marketing_updates: NotificationChannelPreferenceRecord;
 }
 
 export interface UserNotificationRecord {
@@ -820,11 +824,23 @@ export interface TenantVerificationWalletRecord {
   entries: TenantVerificationWalletEntryRecord[];
 }
 
+export interface TenantBillingUsageRecord {
+  driverCount: number;
+  vehicleCount: number;
+  operatorSeatCount: number;
+  driverCap?: number | null;
+  vehicleCap?: number | null;
+  seatCap?: number | null;
+  openInvoiceCount: number;
+  verificationLedgerEntryCount: number;
+}
+
 export interface TenantBillingSummaryRecord {
   subscription: TenantBillingSubscriptionRecord;
   invoices: TenantBillingInvoiceRecord[];
   outstandingInvoice?: TenantBillingInvoiceRecord | null;
   verificationWallet: TenantVerificationWalletRecord;
+  usage: TenantBillingUsageRecord;
   customerEmail: string;
   customerName: string;
 }
@@ -1249,6 +1265,17 @@ export async function updateTenantSettings(
 
 export async function listUserNotifications(token?: string): Promise<UserNotificationRecord[]> {
   return apiCoreFetch<UserNotificationRecord[]>('/notifications', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function markUserNotificationRead(
+  notificationId: string,
+  token?: string,
+): Promise<UserNotificationRecord> {
+  return apiCoreFetch<UserNotificationRecord>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });

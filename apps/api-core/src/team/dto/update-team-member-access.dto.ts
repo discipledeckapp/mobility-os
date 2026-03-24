@@ -12,5 +12,11 @@ export class UpdateTeamMemberAccessDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  assignedVehicleIds?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   customPermissions?: string[];
 }

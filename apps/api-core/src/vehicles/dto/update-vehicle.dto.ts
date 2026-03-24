@@ -56,4 +56,10 @@ export class UpdateVehicleDto {
   @IsString()
   @Length(1, 80)
   valuationSource?: string;
+
+  @ApiPropertyOptional({ example: 128900 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  odometerKm?: number;
 }

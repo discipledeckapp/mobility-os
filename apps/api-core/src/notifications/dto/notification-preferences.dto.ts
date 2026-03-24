@@ -38,4 +38,16 @@ export class NotificationPreferencesDto {
 
   @ApiProperty({ type: NotificationChannelPreferenceDto })
   self_service_invite!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  billing_updates!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  trial_guidance!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  product_updates!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  marketing_updates!: NotificationChannelPreferenceDto;
 }

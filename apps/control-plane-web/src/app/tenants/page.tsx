@@ -53,7 +53,7 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
     <ControlPlaneShell
       description="Review organisation status, plan posture, and governance state across the platform."
       eyebrow="Organisation governance"
-      title="Tenants"
+      title="Organisations"
     >
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -80,15 +80,15 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
             </Button>
           </form>
           <Link href="/tenants/new">
-            <Button>Provision tenant</Button>
+            <Button>Provision organisation</Button>
           </Link>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Tenant registry</CardTitle>
+            <CardTitle>Organisation registry</CardTitle>
             <CardDescription>
-              Open a tenant to review lifecycle state, invoices, subscription posture, and feature
+              Open an organisation to review lifecycle state, invoices, subscription posture, and feature
               overrides.
             </CardDescription>
             <Text tone="muted">
@@ -142,7 +142,7 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
               </Table>
             </TableViewport>
             {filteredTenants.length === 0 ? (
-              <Text className="pt-4">No tenants match the current filters.</Text>
+              <Text className="pt-4">No organisations match the current filters.</Text>
             ) : null}
           </CardContent>
         </Card>

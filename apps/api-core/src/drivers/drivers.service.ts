@@ -675,11 +675,18 @@ export class DriversService {
     ]);
 
     const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/driver-self-service?token=${encodeURIComponent(token)}`;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: driver.tenantId },
+      select: { name: true, country: true, metadata: true },
+    });
 
     await this.authEmailService.sendDriverSelfServiceVerificationEmail({
       email: driver.email,
       name: `${driver.firstName} ${driver.lastName}`,
       driverName: `${driver.firstName} ${driver.lastName}`,
+      organisationName: tenant
+        ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name)
+        : null,
       verificationUrl,
       otpCode,
     });
@@ -715,11 +722,18 @@ export class DriversService {
     ]);
 
     const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/guarantor-self-service?token=${encodeURIComponent(token)}`;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: driver.tenantId },
+      select: { name: true, country: true, metadata: true },
+    });
 
     await this.authEmailService.sendGuarantorSelfServiceVerificationEmail({
       email: guarantor.email,
       guarantorName: guarantor.name,
       driverName: `${driver.firstName} ${driver.lastName}`,
+      organisationName: tenant
+        ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name)
+        : null,
       verificationUrl,
       otpCode,
     });

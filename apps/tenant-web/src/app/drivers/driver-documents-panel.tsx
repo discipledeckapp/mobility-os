@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -33,6 +33,7 @@ import {
   type ReviewDriverDocumentActionState,
   type UploadDriverDocumentActionState,
 } from './actions';
+import { ConfirmSubmitButton } from '../../features/shared/confirm-submit-button';
 
 const initialState: UploadDriverDocumentActionState = {};
 const reviewInitialState: ReviewDriverDocumentActionState = {};
@@ -78,6 +79,8 @@ function DriverDocumentRow({
     reviewDriverDocumentAction,
     reviewInitialState,
   );
+  const [reviewIntent, setReviewIntent] = useState<'approved' | 'rejected'>('approved');
+  const rejectFormRef = useRef<HTMLFormElement | null>(null);
   const documentConfig = getDocumentType(document.documentType);
 
   return (
@@ -116,9 +119,10 @@ function DriverDocumentRow({
         )}
       </TableCell>
       <TableCell>
-        <form action={reviewAction} className="space-y-3">
+        <form action={reviewAction} className="space-y-3" ref={rejectFormRef}>
           <input name="driverId" type="hidden" value={driverId} />
           <input name="documentId" type="hidden" value={document.id} />
+          <input name="status" type="hidden" value={reviewIntent} />
           {documentConfig.hasExpiry ? (
             <Input
               defaultValue={document.expiresAt?.slice(0, 10) ?? ''}
@@ -130,28 +134,22 @@ function DriverDocumentRow({
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={isReviewPending}
-              name="status"
+              onClick={() => setReviewIntent('approved')}
               size="md"
               type="submit"
-              value="approved"
             >
               Approve
             </Button>
-            <Button
+            <ConfirmSubmitButton
+              confirmDescription="Rejecting this document will send the driver back to upload a corrected replacement."
+              confirmTitle="Reject this document?"
               disabled={isReviewPending}
-              name="status"
-              onClick={(event) => {
-                if (!window.confirm('Reject this document? The driver will need to upload a corrected replacement.')) {
-                  event.preventDefault();
-                }
-              }}
-              size="md"
-              type="submit"
-              value="rejected"
+              formRef={rejectFormRef}
+              label="Reject"
+              confirmLabel="Reject document"
+              onConfirm={() => setReviewIntent('rejected')}
               variant="ghost"
-            >
-              Reject
-            </Button>
+            />
           </div>
           {reviewState.error ? <Text tone="danger">{reviewState.error}</Text> : null}
           {reviewState.success ? <Text tone="success">{reviewState.success}</Text> : null}

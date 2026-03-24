@@ -209,25 +209,47 @@ const SettingsIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
-const navigationItems = [
-  { href: '/', label: 'Dashboard', Icon: DashboardIcon },
-  { href: '/drivers', label: 'Drivers', Icon: DriversIcon },
-  { href: '/vehicles', label: 'Vehicles', Icon: VehiclesIcon },
-  { href: '/maintenance' as Route, label: 'Maintenance', Icon: VehiclesIcon },
-  { href: '/business-entities', label: 'Business entities', Icon: BusinessEntitiesIcon },
-  { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
-  { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
-  { href: '/remittance', label: 'Remittance', Icon: RemittanceIcon },
-  { href: '/wallet', label: 'Wallet', Icon: WalletIcon },
-  { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
-  { href: '/settings', label: 'Settings', Icon: SettingsIcon },
- ] as const satisfies ReadonlyArray<{ href: Route; label: string; Icon: NavIcon }>;
-
 type NavLinksProps = {
   variant?: 'sidebar' | 'mobile';
+  collapsed?: boolean;
 };
 
-export function NavLinks({ variant = 'sidebar' }: NavLinksProps) {
+const navigationSections = [
+  {
+    label: 'Overview',
+    items: [{ href: '/', label: 'Dashboard', Icon: DashboardIcon }],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: '/drivers', label: 'Drivers', Icon: DriversIcon },
+      { href: '/vehicles', label: 'Vehicles', Icon: VehiclesIcon },
+      { href: '/maintenance' as Route, label: 'Maintenance', Icon: VehiclesIcon },
+      { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
+      { href: '/remittance', label: 'Remittance', Icon: RemittanceIcon },
+    ],
+  },
+  {
+    label: 'Structure',
+    items: [
+      { href: '/business-entities', label: 'Business entities', Icon: BusinessEntitiesIcon },
+      { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [
+      { href: '/wallet', label: 'Subscription', Icon: WalletIcon },
+      { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
+      { href: '/settings', label: 'Settings', Icon: SettingsIcon },
+    ],
+  },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  items: ReadonlyArray<{ href: Route; label: string; Icon: NavIcon }>;
+}>;
+
+export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksProps) {
   const pathname = usePathname();
   const isMobile = variant === 'mobile';
 
@@ -236,27 +258,37 @@ export function NavLinks({ variant = 'sidebar' }: NavLinksProps) {
       aria-label="Tenant navigation"
       className={isMobile ? 'flex gap-2 overflow-x-auto pb-1' : 'space-y-0.5'}
     >
-      {navigationItems.map(({ href, label, Icon }) => {
-        const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-        return (
-          <Link
-            className={`flex items-center gap-2.5 rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
-              isActive
-                ? isMobile
-                  ? 'shrink-0 bg-[var(--mobiris-primary)] text-white shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]'
-                  : 'bg-[var(--mobiris-primary)] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)]'
-                : isMobile
-                  ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
-                  : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
-            }`}
-            href={href as Route}
-            key={href}
-          >
-            <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />
-            {label}
-          </Link>
-        );
-      })}
+      {navigationSections.map((section) => (
+        <div className={isMobile ? 'contents' : 'space-y-1'} key={section.label}>
+          {!isMobile && !collapsed ? (
+            <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-100/25 first:pt-0">
+              {section.label}
+            </p>
+          ) : null}
+          {section.items.map(({ href, label, Icon }) => {
+            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            return (
+              <Link
+                className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
+                  isActive
+                    ? isMobile
+                      ? 'shrink-0 bg-[var(--mobiris-primary)] text-white shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]'
+                      : 'bg-[var(--mobiris-primary)] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)]'
+                    : isMobile
+                      ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
+                      : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
+                }`}
+                href={href as Route}
+                key={href}
+                title={collapsed && !isMobile ? label : undefined}
+              >
+                <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />
+                {!collapsed || isMobile ? label : null}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

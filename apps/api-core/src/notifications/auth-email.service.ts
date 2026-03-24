@@ -12,6 +12,15 @@ interface BrandContext {
   websiteUrl: string;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 // Inline SVG logo mark — matches the console brand square
 const LOGO_MARK_SVG = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;"><rect width="32" height="32" rx="8" fill="#2563eb"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" fill="#ffffff" letter-spacing="-0.5">M</text></svg>`;
 
@@ -289,10 +298,12 @@ export class AuthEmailService {
     email: string;
     name: string;
     driverName: string;
+    organisationName?: string | null;
     verificationUrl: string;
     otpCode?: string;
   }): Promise<void> {
     const brand = this.getBrandContext();
+    const organisationName = input.organisationName?.trim() || 'your organisation';
     const otpBlock = input.otpCode
       ? `
         <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
@@ -303,17 +314,19 @@ export class AuthEmailService {
       : '';
 
     const html = renderAuthEmailShell(
-      'Complete your Mobiris driver verification',
+      `Complete your verification for ${escapeHtml(organisationName)}`,
       'Driver Verification',
-      'Your organisation has requested a self-service identity verification step. Open the secure link below to complete your live selfie and identity submission.',
+      `${escapeHtml(organisationName)} has requested a self-service identity verification step. Open the secure link below to complete your live selfie and identity submission.`,
       `
         <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px;">
-          <div style="font-size:13px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.08em;">Driver</div>
+          <div style="font-size:13px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.08em;">Organisation</div>
+          <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(organisationName)}</div>
+          <div style="margin-top:14px;font-size:13px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.08em;">Driver</div>
           <div style="margin-top:10px;font-size:22px;font-weight:700;color:#0f172a;">${input.driverName}</div>
           <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Use the secure link below on the device that will capture the live selfie.</div>
         </div>
         ${otpBlock}
-        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.name}, if you were not expecting this request, ignore this email and contact your organisation operator.</p>
+        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.name}, if anything here is unclear, contact ${escapeHtml(organisationName)} before proceeding. If you were not expecting this request, ignore this email and contact the organisation team.</p>
       `,
       'Start self-service verification',
       input.verificationUrl,
@@ -322,7 +335,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: 'Complete your Mobiris driver verification',
+      subject: `${organisationName}: complete your driver verification`,
       htmlBody: html,
     });
   }
@@ -331,10 +344,12 @@ export class AuthEmailService {
     email: string;
     guarantorName: string;
     driverName: string;
+    organisationName?: string | null;
     verificationUrl: string;
     otpCode?: string;
   }): Promise<void> {
     const brand = this.getBrandContext();
+    const organisationName = input.organisationName?.trim() || 'the organisation';
     const otpBlock = input.otpCode
       ? `
         <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
@@ -345,17 +360,19 @@ export class AuthEmailService {
       : '';
 
     const html = renderAuthEmailShell(
-      'Guarantor verification — Mobiris',
+      `${escapeHtml(organisationName)} guarantor verification`,
       'Guarantor Verification',
-      `You have been named as a guarantor for ${input.driverName}. Please complete your identity verification to confirm your role.`,
+      `You have been named as a guarantor for ${input.driverName} by ${escapeHtml(organisationName)}. Please complete your identity verification to confirm your role.`,
       `
         <div style="border:1px solid #fde68a;border-radius:16px;background:#fffbeb;padding:20px;">
-          <div style="font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Driver you are guaranteeing</div>
+          <div style="font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Organisation</div>
+          <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(organisationName)}</div>
+          <div style="margin-top:14px;font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Driver you are guaranteeing</div>
           <div style="margin-top:10px;font-size:22px;font-weight:700;color:#0f172a;">${input.driverName}</div>
           <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Use the secure link below on the device that will capture the live selfie. Once complete, the operator will be notified.</div>
         </div>
         ${otpBlock}
-        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.guarantorName}, if you were not expecting this request, please ignore this email or contact the operator directly.</p>
+        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.guarantorName}, if you were not expecting this request, please ignore this email or contact ${escapeHtml(organisationName)} directly.</p>
       `,
       'Start guarantor verification',
       input.verificationUrl,
@@ -364,7 +381,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.guarantorName }],
-      subject: `Guarantor verification request — ${input.driverName}`,
+      subject: `${organisationName}: guarantor verification for ${input.driverName}`,
       htmlBody: html,
     });
   }

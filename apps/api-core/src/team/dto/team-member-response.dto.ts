@@ -23,6 +23,9 @@ export class TeamMemberResponseDto {
   assignedFleetIds!: string[];
 
   @ApiProperty({ type: [String] })
+  assignedVehicleIds!: string[];
+
+  @ApiProperty({ type: [String] })
   customPermissions!: string[];
 
   @ApiProperty()

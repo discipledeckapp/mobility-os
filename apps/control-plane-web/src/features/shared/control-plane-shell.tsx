@@ -1,6 +1,7 @@
 import { AppShell, Content, ContentSection, Header, Heading, Sidebar, Text } from '@mobility-os/ui';
-import { logoutAction } from '../../app/(auth)/login/actions';
 import { NavLinks, ResponsiveNavLinks } from './nav-links';
+import { GlobalSearch } from './global-search';
+import { LogoutButton } from './logout-button';
 
 interface ControlPlaneShellProps {
   eyebrow: string;
@@ -52,30 +53,7 @@ export function ControlPlaneShell({
 
           <div className="mt-auto">
             <div className="mb-3 border-t border-white/8" />
-            <form action={logoutAction}>
-              <button
-                className="flex w-full items-center gap-2.5 rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium text-blue-50/50 transition-all hover:bg-white/8 hover:text-white"
-                type="submit"
-              >
-                <svg
-                  aria-hidden="true"
-                  fill="none"
-                  focusable="false"
-                  height="15"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.6"
-                  viewBox="0 0 16 16"
-                  width="15"
-                >
-                  <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3" />
-                  <path d="M10.5 11L14 8l-3.5-3" />
-                  <path d="M14 8H6" />
-                </svg>
-                Log out
-              </button>
-            </form>
+            <LogoutButton className="flex w-full items-center gap-2.5 rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium text-blue-50/50 transition-all hover:bg-white/8 hover:text-white" />
           </div>
         </Sidebar>
 
@@ -91,6 +69,9 @@ export function ControlPlaneShell({
                 </Heading>
                 <Text tone="muted">{description}</Text>
               </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <GlobalSearch />
+              </div>
             </div>
           </Header>
 
@@ -98,14 +79,13 @@ export function ControlPlaneShell({
             <div className="mb-3">
               <ResponsiveNavLinks variant="mobile" />
             </div>
-            <form action={logoutAction}>
-              <button
+            <div className="flex items-center gap-3">
+              <GlobalSearch />
+              <LogoutButton
                 className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-                type="submit"
-              >
-                Log out
-              </button>
-            </form>
+                mobile
+              />
+            </div>
           </div>
 
           <Content>

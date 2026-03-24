@@ -74,6 +74,12 @@ export class CreateVehicleDto {
   @Length(1, 50)
   vin?: string;
 
+  @ApiPropertyOptional({ description: 'Latest known odometer reading in kilometres', example: 125430 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  odometerKm?: number;
+
   @ApiPropertyOptional({
     description: 'Acquisition cost in minor currency units when known',
     example: 245000000,

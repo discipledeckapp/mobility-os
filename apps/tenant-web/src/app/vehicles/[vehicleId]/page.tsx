@@ -37,6 +37,17 @@ function getCurrentValuation(
   );
 }
 
+function formatDate(value?: string | null, locale = 'en-US'): string {
+  if (!value) {
+    return 'Not scheduled';
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: value.includes('T') ? 'short' : undefined,
+  }).format(new Date(value));
+}
+
 export default async function VehicleDetailsPage({
   params,
 }: {
@@ -172,6 +183,18 @@ export default async function VehicleDetailsPage({
                 <Text tone="muted">Business entity</Text>
                 <Text>{vehicle.businessEntityName}</Text>
               </div>
+              <div className="space-y-1">
+                <Text tone="muted">Odometer</Text>
+                <Text>
+                  {vehicle.odometerKm !== null && vehicle.odometerKm !== undefined
+                    ? `${vehicle.odometerKm.toLocaleString(locale)} km`
+                    : 'Not recorded'}
+                </Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Maintenance status</Text>
+                <Text>{vehicle.maintenanceSummary}</Text>
+              </div>
             </CardContent>
           </Card>
 
@@ -232,6 +255,63 @@ export default async function VehicleDetailsPage({
                 <Text tone="muted">Valuation source</Text>
                 <Text>{estimate?.source ?? acquisition?.source ?? 'Not recorded'}</Text>
               </div>
+              <div className="space-y-1">
+                <Text tone="muted">Current recommendation</Text>
+                <Badge tone={vehicle.economics.profitMinorUnits >= 0 ? 'success' : 'warning'}>
+                  {vehicle.economics.recommendation.replaceAll('_', ' ')}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-lime-200 bg-lime-50/45">
+            <CardHeader>
+              <CardTitle>Economics and ownership insight</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Text tone="muted">Confirmed revenue</Text>
+                <Heading size="h3">
+                  {formatMoney(
+                    vehicle.economics.confirmedRevenueMinorUnits,
+                    vehicle.economics.valuationCurrency ?? acquisition?.currency ?? estimate?.currency ?? null,
+                    locale,
+                  )}
+                </Heading>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Tracked expenses</Text>
+                <Heading size="h3">
+                  {formatMoney(
+                    vehicle.economics.trackedExpenseMinorUnits,
+                    vehicle.economics.valuationCurrency ?? acquisition?.currency ?? estimate?.currency ?? null,
+                    locale,
+                  )}
+                </Heading>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Profit / loss</Text>
+                <Heading size="h3">
+                  {formatMoney(
+                    vehicle.economics.profitMinorUnits,
+                    vehicle.economics.valuationCurrency ?? acquisition?.currency ?? estimate?.currency ?? null,
+                    locale,
+                  )}
+                </Heading>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Estimated current value</Text>
+                <Heading size="h3">
+                  {vehicle.economics.currentEstimatedValueMinorUnits !== null &&
+                  vehicle.economics.currentEstimatedValueMinorUnits !== undefined
+                    ? formatMoney(
+                        vehicle.economics.currentEstimatedValueMinorUnits,
+                        vehicle.economics.valuationCurrency ?? estimate?.currency ?? acquisition?.currency ?? null,
+                        locale,
+                      )
+                    : 'Not recorded'}
+                </Heading>
+              </div>
             </CardContent>
           </Card>
 
@@ -255,8 +335,131 @@ export default async function VehicleDetailsPage({
             <CardHeader>
               <CardTitle>Maintenance summary</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Text tone="muted">{vehicle.maintenanceSummary}</Text>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-1">
+                  <Text tone="muted">Due now</Text>
+                  <Heading size="h3">{vehicle.maintenanceDue.dueCount}</Heading>
+                </div>
+                <div className="space-y-1">
+                  <Text tone="muted">Overdue</Text>
+                  <Heading size="h3">{vehicle.maintenanceDue.overdueCount}</Heading>
+                </div>
+                <div className="space-y-1">
+                  <Text tone="muted">Next due</Text>
+                  <Text>{formatDate(vehicle.maintenanceDue.nextDueAt, locale)}</Text>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Active schedules</Text>
+                {vehicle.maintenanceSchedules.length === 0 ? (
+                  <Text tone="muted">No preventive maintenance schedule has been configured yet.</Text>
+                ) : (
+                  <div className="space-y-2">
+                    {vehicle.maintenanceSchedules.map((schedule) => (
+                      <div
+                        key={schedule.id}
+                        className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-white px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <Heading size="h3">{schedule.scheduleType.replaceAll('_', ' ')}</Heading>
+                          <Badge tone={schedule.isActive ? 'success' : 'warning'}>
+                            {schedule.isActive ? 'active' : 'paused'}
+                          </Badge>
+                        </div>
+                        <Text tone="muted">
+                          Next due {formatDate(schedule.nextDueAt, locale)}
+                          {schedule.nextDueOdometerKm ? ` or ${schedule.nextDueOdometerKm.toLocaleString(locale)} km` : ''}
+                        </Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Maintenance activity timeline</Text>
+                {vehicle.maintenanceEvents.length === 0 ? (
+                  <Text tone="muted">No maintenance activity has been logged yet.</Text>
+                ) : (
+                  <div className="space-y-2">
+                    {vehicle.maintenanceEvents.slice(0, 6).map((event) => (
+                      <div
+                        key={event.id}
+                        className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-white px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <Heading size="h3">{event.title}</Heading>
+                          <Badge tone={event.status === 'completed' ? 'success' : 'warning'}>
+                            {event.status}
+                          </Badge>
+                        </div>
+                        <Text tone="muted">
+                          {formatDate(event.completedAt ?? event.scheduledFor, locale)}
+                          {event.costMinorUnits ? ` • ${formatMoney(event.costMinorUnits, event.currency ?? null, locale)}` : ''}
+                        </Text>
+                        {event.description ? <Text tone="muted">{event.description}</Text> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Inspection history</Text>
+                {vehicle.inspections.length === 0 ? (
+                  <Text tone="muted">No inspections have been logged yet.</Text>
+                ) : (
+                  <div className="space-y-2">
+                    {vehicle.inspections.slice(0, 6).map((inspection) => (
+                      <div
+                        key={inspection.id}
+                        className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-white px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <Heading size="h3">{inspection.inspectionType.replaceAll('_', ' ')}</Heading>
+                          <Badge tone={inspection.status === 'passed' ? 'success' : 'warning'}>
+                            {inspection.status}
+                          </Badge>
+                        </div>
+                        <Text tone="muted">
+                          {formatDate(inspection.inspectionDate, locale)}
+                          {inspection.odometerKm ? ` • ${inspection.odometerKm.toLocaleString(locale)} km` : ''}
+                        </Text>
+                        <Text tone="muted">{inspection.summary}</Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Incident log</Text>
+                {vehicle.incidents.length === 0 ? (
+                  <Text tone="muted">No incidents have been recorded for this vehicle.</Text>
+                ) : (
+                  <div className="space-y-2">
+                    {vehicle.incidents.slice(0, 6).map((incident) => (
+                      <div
+                        key={incident.id}
+                        className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-white px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <Heading size="h3">{incident.title}</Heading>
+                          <Badge tone={incident.status === 'resolved' ? 'success' : 'warning'}>
+                            {incident.status}
+                          </Badge>
+                        </div>
+                        <Text tone="muted">
+                          {formatDate(incident.occurredAt, locale)}
+                          {incident.estimatedCostMinorUnits
+                            ? ` • ${formatMoney(incident.estimatedCostMinorUnits, incident.currency ?? null, locale)}`
+                            : ''}
+                        </Text>
+                        {incident.description ? <Text tone="muted">{incident.description}</Text> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

@@ -520,6 +520,10 @@ function notificationTopicLabel(topic: string) {
     maintenance_overdue: 'Overdue maintenance alerts',
     vehicle_incident_reported: 'Vehicle incident alerts',
     self_service_invite: 'Driver verification invites',
+    billing_updates: 'Billing and renewal updates',
+    trial_guidance: 'Trial onboarding and ending reminders',
+    product_updates: 'Product improvements and feature announcements',
+    marketing_updates: 'Campaigns, offers, and optional marketing updates',
   };
   return labels[topic] ?? topic.replace(/_/g, ' ');
 }

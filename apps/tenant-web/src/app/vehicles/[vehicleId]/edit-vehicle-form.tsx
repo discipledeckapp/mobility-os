@@ -79,6 +79,18 @@ export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="odometerKm">Current odometer (km)</Label>
+            <Input
+              defaultValue={vehicle.odometerKm?.toString() ?? ''}
+              id="odometerKm"
+              min="0"
+              name="odometerKm"
+              step="1"
+              type="number"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="acquisitionCost">Acquisition cost</Label>
             <Input
               defaultValue={formatMajorUnits(acquisition?.amountMinorUnits)}

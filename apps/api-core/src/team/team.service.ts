@@ -55,6 +55,7 @@ export class TeamService {
       phone: user.phone ?? null,
       role: user.role,
       assignedFleetIds: settings.assignedFleetIds,
+      assignedVehicleIds: settings.assignedVehicleIds,
       customPermissions: settings.customPermissions,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
@@ -95,6 +96,7 @@ export class TeamService {
       null,
       {
         assignedFleetIds: dto.assignedFleetIds?.filter(Boolean) ?? [],
+        assignedVehicleIds: dto.assignedVehicleIds?.filter(Boolean) ?? [],
         customPermissions: dto.customPermissions?.filter(Boolean) ?? [],
       },
       {
@@ -147,8 +149,26 @@ export class TeamService {
           })
         : 0;
 
+    const validVehicleCount =
+      dto.assignedVehicleIds && dto.assignedVehicleIds.length > 0
+        ? await this.prisma.vehicle.count({
+            where: {
+              tenantId,
+              id: { in: dto.assignedVehicleIds },
+            },
+          })
+        : 0;
+
     if (dto.assignedFleetIds && dto.assignedFleetIds.length > 0 && invalidFleetIds !== dto.assignedFleetIds.length) {
       throw new ConflictException('One or more selected fleets do not belong to this organisation.');
+    }
+
+    if (
+      dto.assignedVehicleIds &&
+      dto.assignedVehicleIds.length > 0 &&
+      validVehicleCount !== dto.assignedVehicleIds.length
+    ) {
+      throw new ConflictException('One or more selected vehicles do not belong to this organisation.');
     }
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -159,6 +179,9 @@ export class TeamService {
       user.settings,
       {
         ...(dto.assignedFleetIds ? { assignedFleetIds: dto.assignedFleetIds.filter(Boolean) } : {}),
+        ...(dto.assignedVehicleIds
+          ? { assignedVehicleIds: dto.assignedVehicleIds.filter(Boolean) }
+          : {}),
         ...(dto.customPermissions ? { customPermissions: dto.customPermissions.filter(Boolean) } : {}),
       },
       {

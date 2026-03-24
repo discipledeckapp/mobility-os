@@ -1,13 +1,14 @@
 'use client';
 
-import { useActionState } from 'react';
-import { Button, Text } from '@mobility-os/ui';
+import { useActionState, useRef } from 'react';
+import { Text } from '@mobility-os/ui';
 import {
   cancelAssignmentAction,
   completeAssignmentAction,
   startAssignmentAction,
   type AssignmentResolutionActionState,
 } from './actions';
+import { ConfirmSubmitButton } from '../../features/shared/confirm-submit-button';
 
 const initialState: AssignmentResolutionActionState = {};
 
@@ -30,6 +31,9 @@ export function AssignmentRowActions({
     cancelAssignmentAction,
     initialState,
   );
+  const startFormRef = useRef<HTMLFormElement | null>(null);
+  const completeFormRef = useRef<HTMLFormElement | null>(null);
+  const cancelFormRef = useRef<HTMLFormElement | null>(null);
 
   if (!['created', 'assigned', 'active'].includes(status)) {
     return <Text tone="muted">No actions</Text>;
@@ -56,47 +60,42 @@ export function AssignmentRowActions({
         {status !== 'active' ? (
           <form
             action={startFormAction}
-            onSubmit={(event) => {
-              if (!window.confirm('Start this assignment now?')) {
-                event.preventDefault();
-              }
-            }}
+            ref={startFormRef}
           >
             <input name="assignmentId" type="hidden" value={assignmentId} />
-            <Button disabled={isBusy} size="sm" variant="secondary">
-              {isStarting ? 'Starting...' : 'Start'}
-            </Button>
+            <ConfirmSubmitButton
+              confirmDescription="This will move the assignment into an active operational state."
+              confirmTitle="Start this assignment?"
+              disabled={isBusy}
+              formRef={startFormRef}
+              label={isStarting ? 'Starting...' : 'Start'}
+            />
           </form>
         ) : null}
 
         {status === 'active' ? (
-        <form
-          action={completeFormAction}
-          onSubmit={(event) => {
-            if (!window.confirm('Complete this assignment now?')) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <input name="assignmentId" type="hidden" value={assignmentId} />
-          <Button disabled={isBusy} size="sm" variant="secondary">
-            {isCompleting ? 'Completing...' : 'Complete'}
-          </Button>
-        </form>
+          <form action={completeFormAction} ref={completeFormRef}>
+            <input name="assignmentId" type="hidden" value={assignmentId} />
+            <ConfirmSubmitButton
+              confirmDescription="This will stop future operational activity and close the assignment."
+              confirmTitle="Complete this assignment?"
+              disabled={isBusy}
+              formRef={completeFormRef}
+              label={isCompleting ? 'Completing...' : 'Complete'}
+            />
+          </form>
         ) : null}
 
-        <form
-          action={cancelFormAction}
-          onSubmit={(event) => {
-            if (!window.confirm('Cancel this assignment?')) {
-              event.preventDefault();
-            }
-          }}
-        >
+        <form action={cancelFormAction} ref={cancelFormRef}>
           <input name="assignmentId" type="hidden" value={assignmentId} />
-          <Button disabled={isBusy} size="sm" variant="ghost">
-            {isCancelling ? 'Cancelling...' : 'Cancel'}
-          </Button>
+          <ConfirmSubmitButton
+            confirmDescription="Cancellation removes this assignment from the operational pipeline."
+            confirmTitle="Cancel this assignment?"
+            disabled={isBusy}
+            formRef={cancelFormRef}
+            label={isCancelling ? 'Cancelling...' : 'Cancel'}
+            variant="ghost"
+          />
         </form>
       </div>
 

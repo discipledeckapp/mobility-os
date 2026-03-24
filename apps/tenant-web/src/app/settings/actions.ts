@@ -113,6 +113,10 @@ const NOTIFICATION_TOPICS = [
   'maintenance_overdue',
   'vehicle_incident_reported',
   'self_service_invite',
+  'billing_updates',
+  'trial_guidance',
+  'product_updates',
+  'marketing_updates',
 ] as const;
 
 const NOTIFICATION_CHANNELS = ['email', 'inApp', 'push'] as const;

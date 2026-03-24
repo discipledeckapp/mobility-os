@@ -66,6 +66,36 @@ export const BUSINESS_MODELS: Readonly<Record<string, BusinessModelConfig>> = {
     operatorOwnsVehicle: true,
     hasRemittanceTarget: true,
   },
+  'revenue-share': {
+    slug: 'revenue-share',
+    name: 'Revenue Share',
+    description:
+      'Operator and driver share trip revenue based on an agreed split. Remittance remains tied ' +
+      'to the operator share rather than a flat fixed amount.',
+    driverOwnsVehicle: false,
+    operatorOwnsVehicle: true,
+    hasRemittanceTarget: true,
+  },
+  'managed-service': {
+    slug: 'managed-service',
+    name: 'Managed Service',
+    description:
+      'Vehicles are run for a corporate or institutional contract with agreed service levels, ' +
+      'scheduled routes, and operator-managed collections.',
+    driverOwnsVehicle: false,
+    operatorOwnsVehicle: true,
+    hasRemittanceTarget: true,
+  },
+  'owner-managed-fleet': {
+    slug: 'owner-managed-fleet',
+    name: 'Owner Managed Fleet',
+    description:
+      'Vehicle owners place assets under operational management while the organisation handles ' +
+      'compliance, assignments, and revenue administration.',
+    driverOwnsVehicle: true,
+    operatorOwnsVehicle: false,
+    hasRemittanceTarget: true,
+  },
 } as const;
 
 // ── Lookup utilities ──────────────────────────────────────────────────────────

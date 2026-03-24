@@ -73,4 +73,28 @@ export class UpdateNotificationPreferencesDto {
   @ValidateNested()
   @Type(() => UpdateNotificationChannelPreferenceDto)
   self_service_invite?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  billing_updates?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  trial_guidance?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  product_updates?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  marketing_updates?: UpdateNotificationChannelPreferenceDto;
 }

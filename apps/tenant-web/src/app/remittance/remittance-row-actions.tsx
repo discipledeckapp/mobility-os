@@ -1,13 +1,14 @@
 'use client';
 
-import { useActionState } from 'react';
-import { Button, Input, Text } from '@mobility-os/ui';
+import { useActionState, useRef } from 'react';
+import { Input, Text } from '@mobility-os/ui';
 import {
   confirmRemittanceAction,
   disputeRemittanceAction,
   waiveRemittanceAction,
   type RemittanceResolutionActionState,
 } from './actions';
+import { ConfirmSubmitButton } from '../../features/shared/confirm-submit-button';
 
 const initialState: RemittanceResolutionActionState = {};
 
@@ -30,6 +31,9 @@ export function RemittanceRowActions({
     waiveRemittanceAction,
     initialState,
   );
+  const confirmFormRef = useRef<HTMLFormElement | null>(null);
+  const disputeFormRef = useRef<HTMLFormElement | null>(null);
+  const waiveFormRef = useRef<HTMLFormElement | null>(null);
 
   if (status !== 'pending') {
     return <Text tone="muted">No actions</Text>;
@@ -50,56 +54,43 @@ export function RemittanceRowActions({
 
   return (
     <div className="space-y-3">
-      <form action={confirmFormAction} className="space-y-2">
+      <form action={confirmFormAction} className="space-y-2" ref={confirmFormRef}>
         <input name="confirmIntent" type="hidden" value="confirm" />
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="paidDate" type="date" />
-        <Button
+        <ConfirmSubmitButton
+          confirmDescription="This will mark the remittance as reconciled for the selected payment date."
+          confirmTitle="Confirm this remittance?"
           disabled={isBusy}
-          onClick={(event) => {
-            if (!window.confirm('Confirm this remittance?')) {
-              event.preventDefault();
-            }
-          }}
-          size="sm"
-          variant="secondary"
-        >
-          {isConfirming ? 'Confirming...' : 'Confirm'}
-        </Button>
+          formRef={confirmFormRef}
+          label={isConfirming ? 'Confirming...' : 'Confirm'}
+        />
       </form>
 
-      <form action={disputeFormAction} className="space-y-2">
+      <form action={disputeFormAction} className="space-y-2" ref={disputeFormRef}>
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="notes" placeholder="Dispute reason" />
-        <Button
+        <ConfirmSubmitButton
+          confirmDescription="The driver and finance team will see this remittance as disputed until it is resolved."
+          confirmTitle="Submit this remittance dispute?"
           disabled={isBusy}
-          onClick={(event) => {
-            if (!window.confirm('Submit this remittance dispute?')) {
-              event.preventDefault();
-            }
-          }}
-          size="sm"
+          formRef={disputeFormRef}
+          label={isDisputing ? 'Submitting...' : 'Dispute'}
           variant="ghost"
-        >
-          {isDisputing ? 'Submitting...' : 'Dispute'}
-        </Button>
+        />
       </form>
 
-      <form action={waiveFormAction} className="space-y-2">
+      <form action={waiveFormAction} className="space-y-2" ref={waiveFormRef}>
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="notes" placeholder="Waiver reason" />
-        <Button
+        <ConfirmSubmitButton
+          confirmDescription="Waiving this remittance will remove it from the collection expectation."
+          confirmTitle="Waive this remittance?"
           disabled={isBusy}
-          onClick={(event) => {
-            if (!window.confirm('Waive this remittance?')) {
-              event.preventDefault();
-            }
-          }}
-          size="sm"
+          formRef={waiveFormRef}
+          label={isWaiving ? 'Submitting...' : 'Waive'}
           variant="ghost"
-        >
-          {isWaiving ? 'Submitting...' : 'Waive'}
-        </Button>
+        />
       </form>
 
       {feedback ? <Text tone={feedbackTone}>{feedback}</Text> : null}

@@ -7,6 +7,12 @@ export function getAssignedFleetIds(ctx: TenantContext): string[] {
     : [];
 }
 
+export function getAssignedVehicleIds(ctx: TenantContext): string[] {
+  return Array.isArray(ctx.assignedVehicleIds)
+    ? ctx.assignedVehicleIds.filter((value) => value.trim().length > 0).map((value) => value)
+    : [];
+}
+
 export function applyFleetScope<T extends object>(
   input: T,
   ctx: TenantContext,
@@ -31,6 +37,30 @@ export function applyFleetScope<T extends object>(
   };
 }
 
+export function applyVehicleScope<T extends object>(
+  input: T,
+  ctx: TenantContext,
+): T & { vehicleId?: string; vehicleIds?: string[] } {
+  const assignedVehicleIds = getAssignedVehicleIds(ctx);
+  if (assignedVehicleIds.length === 0) {
+    return input;
+  }
+
+  const vehicleIdCandidate = (input as { vehicleId?: unknown }).vehicleId;
+  const vehicleId = typeof vehicleIdCandidate === 'string' ? vehicleIdCandidate : undefined;
+  if (vehicleId) {
+    if (!assignedVehicleIds.includes(vehicleId)) {
+      throw new ForbiddenException('You do not have access to the selected vehicle.');
+    }
+    return input;
+  }
+
+  return {
+    ...input,
+    vehicleIds: assignedVehicleIds,
+  };
+}
+
 export function assertFleetAccess(ctx: TenantContext, fleetId: string): void {
   const assignedFleetIds = getAssignedFleetIds(ctx);
   if (assignedFleetIds.length === 0) {
@@ -39,5 +69,16 @@ export function assertFleetAccess(ctx: TenantContext, fleetId: string): void {
 
   if (!assignedFleetIds.includes(fleetId)) {
     throw new ForbiddenException('You do not have access to this fleet.');
+  }
+}
+
+export function assertVehicleAccess(ctx: TenantContext, vehicleId: string): void {
+  const assignedVehicleIds = getAssignedVehicleIds(ctx);
+  if (assignedVehicleIds.length === 0) {
+    return;
+  }
+
+  if (!assignedVehicleIds.includes(vehicleId)) {
+    throw new ForbiddenException('You do not have access to this vehicle.');
   }
 }

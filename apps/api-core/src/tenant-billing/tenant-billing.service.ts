@@ -15,6 +15,11 @@ import type {
 import type { VerifyTenantPaymentDto } from './dto/verify-tenant-payment.dto';
 import type { TenantBillingPlanDto } from './dto/tenant-billing-response.dto';
 
+function readNumericFeature(features: Record<string, unknown>, key: string): number | null {
+  const value = features[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 @Injectable()
 export class TenantBillingService {
   constructor(
@@ -24,7 +29,7 @@ export class TenantBillingService {
   ) {}
 
   async getSummary(tenantId: string, userId: string): Promise<TenantBillingSummaryDto> {
-    const [subscription, invoices, balance, entries, user] = await Promise.all([
+    const [subscription, invoices, balance, entries, user, driverCount, vehicleCount, operatorSeatCount] = await Promise.all([
       this.controlPlaneBillingClient.getSubscription(tenantId),
       this.controlPlaneBillingClient.listInvoices(tenantId),
       this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId),
@@ -33,6 +38,9 @@ export class TenantBillingService {
         where: { id: userId, tenantId, isActive: true },
         select: { email: true, name: true },
       }),
+      this.prisma.driver.count({ where: { tenantId } }),
+      this.prisma.vehicle.count({ where: { tenantId } }),
+      this.prisma.user.count({ where: { tenantId, isActive: true } }),
     ]);
 
     if (!user) {
@@ -40,6 +48,14 @@ export class TenantBillingService {
     }
 
     const outstandingInvoice = invoices.find((invoice) => invoice.status === 'open') ?? null;
+
+    const driverCap =
+      readNumericFeature(subscription.features, 'driverCap') ??
+      readNumericFeature(subscription.features, 'seatLimit');
+    const vehicleCap =
+      readNumericFeature(subscription.features, 'vehicleCap') ??
+      readNumericFeature(subscription.features, 'fleetCap');
+    const seatCap = readNumericFeature(subscription.features, 'seatLimit');
 
     return {
       subscription: {
@@ -95,6 +111,16 @@ export class TenantBillingService {
           description: entry.description ?? null,
           createdAt: entry.createdAt,
         })),
+      },
+      usage: {
+        driverCount,
+        vehicleCount,
+        operatorSeatCount,
+        driverCap,
+        vehicleCap,
+        seatCap,
+        openInvoiceCount: invoices.filter((invoice) => invoice.status === 'open').length,
+        verificationLedgerEntryCount: entries.length,
       },
       customerEmail: user.email,
       customerName: user.name,

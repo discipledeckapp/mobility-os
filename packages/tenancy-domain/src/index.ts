@@ -17,11 +17,13 @@ export type OperatingUnitId = string & { readonly __brand: 'OperatingUnitId' };
 
 /** Opaque identifier for a fleet within an operating unit. */
 export type FleetId = string & { readonly __brand: 'FleetId' };
+export type VehicleId = string & { readonly __brand: 'VehicleId' };
 
 export const asTenantId = (id: string): TenantId => id as TenantId;
 export const asBusinessEntityId = (id: string): BusinessEntityId => id as BusinessEntityId;
 export const asOperatingUnitId = (id: string): OperatingUnitId => id as OperatingUnitId;
 export const asFleetId = (id: string): FleetId => id as FleetId;
+export const asVehicleId = (id: string): VehicleId => id as VehicleId;
 
 // ── Tenant lifecycle ──────────────────────────────────────────────────────────
 
@@ -67,6 +69,8 @@ export interface TenantContext {
   operatingUnitId?: OperatingUnitId;
   /** Optional fleet-level access scope for users limited to selected fleets. */
   assignedFleetIds?: FleetId[];
+  /** Optional vehicle-level access scope for users limited to selected vehicles. */
+  assignedVehicleIds?: VehicleId[];
   /** Optional per-user permission overrides merged with the base role grants. */
   customPermissions?: string[];
 }
@@ -102,11 +106,16 @@ export function tenantContextFromJwt(payload: Record<string, unknown>): TenantCo
     ctx.operatingUnitId = asOperatingUnitId(operatingUnitId);
   }
 
-  const { assignedFleetIds, customPermissions } = payload as Record<string, unknown>;
+  const { assignedFleetIds, assignedVehicleIds, customPermissions } = payload as Record<string, unknown>;
   if (Array.isArray(assignedFleetIds)) {
     ctx.assignedFleetIds = assignedFleetIds
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
       .map((value) => asFleetId(value));
+  }
+  if (Array.isArray(assignedVehicleIds)) {
+    ctx.assignedVehicleIds = assignedVehicleIds
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => asVehicleId(value));
   }
   if (Array.isArray(customPermissions)) {
     ctx.customPermissions = customPermissions.filter(

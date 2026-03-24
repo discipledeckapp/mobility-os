@@ -128,29 +128,32 @@ export default async function WalletPage() {
 
   return (
     <TenantAppShell
-      description="Track the organisation wallet balance and recent ledger activity for the active operating business."
-      eyebrow="Finance"
-      title="Wallet"
+      description="Manage plan status, billing exposure, verification credits, and usage caps for your organisation."
+      eyebrow="Subscription"
+      title="Subscription"
     >
       <Card>
         <CardHeader>
-          <CardTitle>Subscription and verification wallet</CardTitle>
+          <CardTitle>Subscription overview</CardTitle>
           <CardDescription>
-            Review your current plan, outstanding subscription billing, and the platform wallet used
-            for verification charges.
+            Review your current plan, invoices, usage posture, and the verification wallet used for
+            identity charges.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {billingError ? (
-            <Text>{billingError}</Text>
+            <Text>
+              Subscription data is not available right now. If this persists, redeploy the control
+              plane so the latest internal subscription routes are available.
+            </Text>
           ) : !billingSummary ? (
-            <Text>Subscription and verification wallet context is not available yet.</Text>
+            <Text>Subscription context is not available yet.</Text>
           ) : (
             <>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <Card className="border-white/70 bg-white/95 shadow-none">
                   <CardContent className="p-4">
-                    <Text tone="muted">Plan</Text>
+                    <Text tone="muted">Current plan</Text>
                     <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
                       {billingSummary.subscription.planName}
                     </p>
@@ -178,6 +181,13 @@ export default async function WalletPage() {
                         {billingSummary.subscription.status}
                       </Badge>
                     </div>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {billingSummary.subscription.cancelAtPeriodEnd
+                        ? 'Cancels at period close'
+                        : billingSummary.subscription.trialEndsAt
+                          ? `Trial ends ${formatDate(billingSummary.subscription.trialEndsAt, locale)}`
+                          : `Renews ${formatDate(billingSummary.subscription.currentPeriodEnd, locale)}`}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card className="border-white/70 bg-[var(--mobiris-primary-tint)] shadow-none">
@@ -190,9 +200,78 @@ export default async function WalletPage() {
                         locale,
                       )}
                     </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {billingSummary.usage.verificationLedgerEntryCount} wallet ledger entries
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-white/70 bg-white/95 shadow-none">
+                  <CardContent className="p-4">
+                    <Text tone="muted">Open invoices</Text>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                      {billingSummary.usage.openInvoiceCount}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {billingSummary.outstandingInvoice
+                        ? `${formatMoney(
+                            billingSummary.outstandingInvoice.amountDueMinorUnits -
+                              billingSummary.outstandingInvoice.amountPaidMinorUnits,
+                            billingSummary.outstandingInvoice.currency,
+                            locale,
+                          )} currently outstanding`
+                        : 'No overdue subscription invoice right now'}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="border-white/70 bg-white/95 shadow-none">
+                <CardHeader>
+                  <CardTitle>Usage and plan capacity</CardTitle>
+                  <CardDescription>
+                    Track your current company usage against the limits included in this
+                    subscription.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                    <Text tone="muted">Drivers</Text>
+                    <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                      {billingSummary.usage.driverCount}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Cap:{' '}
+                      {billingSummary.usage.driverCap == null
+                        ? 'Unlimited'
+                        : billingSummary.usage.driverCap}
+                    </p>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                    <Text tone="muted">Vehicles</Text>
+                    <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                      {billingSummary.usage.vehicleCount}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Cap:{' '}
+                      {billingSummary.usage.vehicleCap == null
+                        ? 'Unlimited'
+                        : billingSummary.usage.vehicleCap}
+                    </p>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                    <Text tone="muted">Operator seats</Text>
+                    <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                      {billingSummary.usage.operatorSeatCount}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Cap:{' '}
+                      {billingSummary.usage.seatCap == null
+                        ? 'Unlimited'
+                        : billingSummary.usage.seatCap}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
               <PaymentActionPanel
                 currencyMinorUnit={currencyMinorUnit}
@@ -202,10 +281,72 @@ export default async function WalletPage() {
 
               <Card className="border-white/70 bg-white/95 shadow-none">
                 <CardHeader>
+                  <CardTitle>Subscription invoices</CardTitle>
+                  <CardDescription>
+                    Review billing periods, due dates, and payment status for this organisation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {billingSummary.invoices.length === 0 ? (
+                    <Text>No subscription invoices have been generated yet.</Text>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Amount due</TableHead>
+                          <TableHead>Amount paid</TableHead>
+                          <TableHead>Period</TableHead>
+                          <TableHead>Due</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {billingSummary.invoices.map((invoice) => (
+                          <TableRow key={invoice.id}>
+                            <TableCell>
+                              <Badge
+                                tone={
+                                  invoice.status === 'paid'
+                                    ? 'success'
+                                    : invoice.status === 'open'
+                                      ? 'warning'
+                                      : 'neutral'
+                                }
+                              >
+                                {invoice.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {formatMoney(invoice.amountDueMinorUnits, invoice.currency, locale)}
+                            </TableCell>
+                            <TableCell>
+                              {formatMoney(invoice.amountPaidMinorUnits, invoice.currency, locale)}
+                            </TableCell>
+                            <TableCell>
+                              {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
+                                new Date(invoice.periodStart),
+                              )}{' '}
+                              to{' '}
+                              {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
+                                new Date(invoice.periodEnd),
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {invoice.dueAt ? formatDate(invoice.dueAt, locale) : 'Not scheduled'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/70 bg-white/95 shadow-none">
+                <CardHeader>
                   <CardTitle>Verification wallet ledger</CardTitle>
                   <CardDescription>
-                    Recent platform wallet movements used for SaaS billing and verification
-                    recovery.
+                    Recent platform wallet movements used for verification charges and recovery.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

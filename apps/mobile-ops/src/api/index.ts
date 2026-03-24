@@ -95,6 +95,10 @@ export interface NotificationPreferencesRecord {
   maintenance_overdue: NotificationChannelPreferenceRecord;
   vehicle_incident_reported: NotificationChannelPreferenceRecord;
   self_service_invite: NotificationChannelPreferenceRecord;
+  billing_updates: NotificationChannelPreferenceRecord;
+  trial_guidance: NotificationChannelPreferenceRecord;
+  product_updates: NotificationChannelPreferenceRecord;
+  marketing_updates: NotificationChannelPreferenceRecord;
 }
 
 export interface UserNotificationRecord {

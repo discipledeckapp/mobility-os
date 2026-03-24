@@ -75,8 +75,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     recipientName: string;
     title: string;
     body: string;
-    actionUrl?: string | null;
+    organisationName?: string | null | undefined;
+    actionUrl?: string | null | undefined;
   }) {
+    const organisationName = input.organisationName?.trim();
     const actionMarkup = input.actionUrl
       ? `<p style="margin-top:20px;"><a href="${input.actionUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">Open Mobiris</a></p>`
       : '';
@@ -84,11 +86,11 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     return `
       <div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:28px;">
-          <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#2563eb;">Mobiris notification</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#2563eb;">${organisationName ? `${organisationName} via Mobiris` : 'Mobiris notification'}</div>
           <h1 style="margin:12px 0 0;font-size:24px;line-height:1.2;">${input.title}</h1>
           <p style="margin:16px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hello ${input.recipientName}, ${input.body}</p>
           ${actionMarkup}
-          <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">Need help? Contact ${this.getSupportEmail()}.</p>
+          <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">${organisationName ? `If you need clarification, contact ${organisationName}. ` : ''}Need help? Contact ${this.getSupportEmail()}.</p>
         </div>
       </div>
     `.trim();
@@ -203,7 +205,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   async createNotificationForUser(
     user: NotificationRecipient,
     payload: NotificationPayload,
-    options: { tenantCountry?: string | null; dedupeWithinHours?: number } = {},
+    options: { tenantCountry?: string | null; dedupeWithinHours?: number; organisationName?: string | null } = {},
   ): Promise<UserNotification | null> {
     const preferences = this.getUserPreferences(user, options.tenantCountry);
     const topicPreferences = preferences[payload.topic];
@@ -249,16 +251,20 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
                 recipientName: user.name,
                 title: payload.title,
                 body: payload.body,
+                organisationName: options.organisationName,
                 actionUrl: payload.actionUrl,
               }
             : {
                 recipientName: user.name,
                 title: payload.title,
                 body: payload.body,
+                organisationName: options.organisationName,
               };
         await this.mailer.sendEmail({
           to: [{ address: user.email, name: user.name }],
-          subject: payload.title,
+          subject: options.organisationName
+            ? `${options.organisationName}: ${payload.title}`
+            : payload.title,
           htmlBody: this.buildNotificationEmailHtml(emailShellInput),
         });
       } catch (error) {
@@ -449,6 +455,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     name: string;
     title: string;
     body: string;
+    organisationName?: string | null;
     actionUrl?: string | null;
   }) {
     try {
@@ -458,16 +465,20 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
               recipientName: input.name,
               title: input.title,
               body: input.body,
+              organisationName: input.organisationName,
               actionUrl: input.actionUrl,
             }
           : {
               recipientName: input.name,
               title: input.title,
               body: input.body,
+              organisationName: input.organisationName,
             };
       await this.mailer.sendEmail({
         to: [{ address: input.email, name: input.name }],
-        subject: input.title,
+        subject: input.organisationName
+          ? `${input.organisationName}: ${input.title}`
+          : input.title,
         htmlBody: this.buildNotificationEmailHtml(emailShellInput),
       });
     } catch (error) {
@@ -559,7 +570,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
               dueDate: remittance.dueDate,
             },
           },
-          { tenantCountry: tenant.country },
+          { tenantCountry: tenant.country, organisationName: companyName },
         );
         if (notification) {
           created += 1;
@@ -572,6 +583,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           name: driverFullName,
           title,
           body,
+          organisationName: companyName,
           actionUrl,
         });
       }
@@ -721,7 +733,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
               nextDueOdometerKm: schedule.nextDueOdometerKm ?? null,
             },
           },
-          { tenantCountry: tenant.country, dedupeWithinHours: 24 },
+          { tenantCountry: tenant.country, dedupeWithinHours: 24, organisationName: companyName },
         );
         if (notification) {
           created += 1;
@@ -738,6 +750,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           name: `${driver.firstName} ${driver.lastName}`.trim(),
           title,
           body,
+          organisationName: companyName,
           actionUrl: `/vehicles/${schedule.vehicleId}`,
         });
       }
@@ -769,6 +782,13 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
       fleetId: input.fleetId,
       vehicleId: input.vehicleId,
     });
+    const company = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { country: true, metadata: true, name: true },
+    });
+    const organisationName = company
+      ? (readOrganisationSettings(company.metadata, company.country).branding.displayName ?? company.name)
+      : null;
     let created = 0;
 
     for (const recipient of recipients) {
@@ -785,7 +805,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
             driverId: input.driverId ?? null,
           },
         },
-        { tenantCountry: tenant.country, dedupeWithinHours: 6 },
+        { tenantCountry: tenant.country, dedupeWithinHours: 6, organisationName },
       );
       if (notification) {
         created += 1;

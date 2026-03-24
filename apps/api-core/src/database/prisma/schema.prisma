@@ -411,6 +411,7 @@ model Vehicle {
   color       String?
   // VIN / chassis number — optional at enrollment, required before assignment.
   vin         String?
+  odometerKm  Int?
 
   // Denormalized for fast lookups.
   operatingUnitId  String
@@ -421,6 +422,10 @@ model Vehicle {
 
   fleet      Fleet             @relation(fields: [fleetId], references: [id], onDelete: Restrict)
   valuations VehicleValuation[]
+  inspections VehicleInspection[]
+  maintenanceSchedules VehicleMaintenanceSchedule[]
+  maintenanceEvents VehicleMaintenanceEvent[]
+  incidents VehicleIncident[]
 
   @@index([tenantId])
   @@index([fleetId])
@@ -428,6 +433,104 @@ model Vehicle {
   @@unique([tenantId, plate])
   @@unique([tenantId, vin])
   @@map("vehicles")
+}
+
+model VehicleInspection {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  vehicleId           String
+  createdByUserId     String?
+  inspectionType      String
+  status              String   @default("passed")
+  inspectionDate      DateTime @default(now())
+  odometerKm          Int?
+  issuesFoundCount    Int      @default(0)
+  reportSource        String   @default("in_app")
+  summary             String
+  reportUrl           String?
+  nextInspectionDueAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, inspectionDate])
+  @@map("vehicle_inspections")
+}
+
+model VehicleMaintenanceSchedule {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  vehicleId          String
+  createdByUserId    String?
+  isActive           Boolean  @default(true)
+  scheduleType       String
+  intervalDays       Int?
+  intervalKm         Int?
+  nextDueAt          DateTime?
+  nextDueOdometerKm  Int?
+  source             String   @default("default")
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, isActive])
+  @@map("vehicle_maintenance_schedules")
+}
+
+model VehicleMaintenanceEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  vehicleId       String
+  createdByUserId String?
+  category        String
+  title           String
+  description     String?
+  status          String   @default("scheduled")
+  scheduledFor    DateTime?
+  completedAt     DateTime?
+  odometerKm      Int?
+  costMinorUnits  Int?
+  currency        String?
+  vendor          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, status])
+  @@index([tenantId, vehicleId, scheduledFor])
+  @@map("vehicle_maintenance_events")
+}
+
+model VehicleIncident {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  vehicleId              String
+  driverId               String?
+  reportedByUserId       String?
+  occurredAt             DateTime
+  category               String
+  severity               String
+  title                  String
+  description            String?
+  status                 String   @default("reported")
+  estimatedCostMinorUnits Int?
+  currency               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, occurredAt])
+  @@index([tenantId, vehicleId, status])
+  @@map("vehicle_incidents")
 }
 
 // Vehicle valuation events. This keeps current create/edit support small while
