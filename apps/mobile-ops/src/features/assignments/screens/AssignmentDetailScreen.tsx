@@ -3,7 +3,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { type AssignmentRecord, isNetworkError } from '../../../api';
+import { reportAssignmentIncident, type AssignmentRecord, isNetworkError } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -40,9 +40,15 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
   const [submitting, setSubmitting] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showRemittanceSheet, setShowRemittanceSheet] = useState(false);
+  const [showIncidentSheet, setShowIncidentSheet] = useState(false);
   const [remittanceAmount, setRemittanceAmount] = useState('');
   const [remittanceDate, setRemittanceDate] = useState(new Date());
   const [showRemittanceDatePicker, setShowRemittanceDatePicker] = useState(false);
+  const [incidentTitle, setIncidentTitle] = useState('');
+  const [incidentDescription, setIncidentDescription] = useState('');
+  const [incidentCategory, setIncidentCategory] = useState('collision');
+  const [incidentSeverity, setIncidentSeverity] = useState('minor');
+  const [incidentEstimatedCost, setIncidentEstimatedCost] = useState('');
 
   const canWriteAssignments = useMemo(
     () => session?.permissions.includes('assignments:write') ?? false,
@@ -200,6 +206,48 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
     }
   };
 
+  const onSubmitIncident = async () => {
+    if (!assignment) {
+      return;
+    }
+
+    if (!incidentTitle.trim()) {
+      showToast('Incident title is required.', 'error');
+      return;
+    }
+
+    const estimatedCostMinorUnits =
+      incidentEstimatedCost.trim().length > 0
+        ? convertMajorToMinorUnits(incidentEstimatedCost, session?.currencyMinorUnit)
+        : undefined;
+    if (incidentEstimatedCost.trim().length > 0 && estimatedCostMinorUnits === null) {
+      showToast('Estimated repair cost must be a valid amount.', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await reportAssignmentIncident(assignment.id, {
+        category: incidentCategory,
+        severity: incidentSeverity,
+        title: incidentTitle.trim(),
+        description: incidentDescription.trim() || undefined,
+        occurredAt: new Date().toISOString(),
+        estimatedCostMinorUnits: estimatedCostMinorUnits ?? undefined,
+        currency: currencyCode || undefined,
+      });
+      setShowIncidentSheet(false);
+      setIncidentTitle('');
+      setIncidentDescription('');
+      setIncidentEstimatedCost('');
+      showToast('Incident reported successfully.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to report the incident.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading || !assignment) {
     return (
       <Screen>
@@ -212,6 +260,18 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
           <LoadingSkeleton height={48} />
           <LoadingSkeleton height={48} />
           <LoadingSkeleton height={48} />
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Vehicle issues</Text>
+          <Text style={styles.muted}>
+            Report collisions, damage, or unexpected incidents so the organisation can respond before operations or remittance are affected.
+          </Text>
+          <Button
+            label="Report vehicle incident"
+            variant="secondary"
+            onPress={() => setShowIncidentSheet(true)}
+          />
         </Card>
       </Screen>
     );
@@ -413,6 +473,52 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                 onChange={onRemittanceDateChange}
               />
             ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        presentationStyle="pageSheet"
+        transparent
+        visible={showIncidentSheet}
+        onRequestClose={() => setShowIncidentSheet(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheetCard}>
+            <Text style={styles.sheetTitle}>Vehicle incident</Text>
+            <Text style={styles.muted}>
+              Report the issue now so the company can assess safety, maintenance, and financial impact.
+            </Text>
+            <Input label="Title" onChangeText={setIncidentTitle} value={incidentTitle} />
+            <Input
+              helperText="collision, theft, vandalism, breakdown"
+              label="Category"
+              onChangeText={setIncidentCategory}
+              value={incidentCategory}
+            />
+            <Input
+              helperText="minor, major, critical"
+              label="Severity"
+              onChangeText={setIncidentSeverity}
+              value={incidentSeverity}
+            />
+            <Input
+              keyboardType="decimal-pad"
+              label="Estimated repair cost"
+              onChangeText={setIncidentEstimatedCost}
+              value={incidentEstimatedCost}
+            />
+            <Input
+              label="Description"
+              multiline
+              onChangeText={setIncidentDescription}
+              value={incidentDescription}
+            />
+            <View style={styles.sheetActions}>
+              <Button label="Close" variant="secondary" onPress={() => setShowIncidentSheet(false)} />
+              <Button label="Submit" loading={submitting} onPress={() => void onSubmitIncident()} />
+            </View>
           </View>
         </View>
       </Modal>

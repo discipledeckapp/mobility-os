@@ -9,11 +9,13 @@ import {
   getTenantBillingSummary,
   getTenantMe,
   listFleets,
+  listVehicles,
   listTenantBillingPlans,
   inviteTeamMember,
   listTeamMembers,
   listUserNotifications,
   resendTeamInvite,
+  syncMaintenanceReminders,
   syncRemittanceReminders,
   updateTeamMemberAccess,
   updateNotificationPreferences,
@@ -35,6 +37,7 @@ export function SettingsScreen() {
   const [role, setRole] = useState('FLEET_MANAGER');
   const [phone, setPhone] = useState('');
   const [selectedFleetIds, setSelectedFleetIds] = useState<string[]>([]);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [profileName, setProfileName] = useState(session?.name ?? '');
   const [profilePhone, setProfilePhone] = useState(session?.phone ?? '');
@@ -61,6 +64,10 @@ export function SettingsScreen() {
     queryKey: ['operator-settings', 'fleets'],
     queryFn: () => listFleets(),
   });
+  const vehiclesQuery = useQuery({
+    queryKey: ['operator-settings', 'vehicles'],
+    queryFn: () => listVehicles({ limit: 200 }),
+  });
   const plansQuery = useQuery({
     queryKey: ['operator-settings', 'plans'],
     queryFn: listTenantBillingPlans,
@@ -85,6 +92,7 @@ export function SettingsScreen() {
         role,
         phone: phone.trim() || undefined,
         assignedFleetIds: selectedFleetIds,
+        assignedVehicleIds: selectedVehicleIds,
         customPermissions: selectedPermissions,
       }),
     onSuccess: async () => {
@@ -92,6 +100,7 @@ export function SettingsScreen() {
       setEmail('');
       setPhone('');
       setSelectedFleetIds([]);
+      setSelectedVehicleIds([]);
       setSelectedPermissions([]);
       await teamQuery.refetch();
       Alert.alert('Team', 'Team member invited successfully.');
@@ -101,9 +110,10 @@ export function SettingsScreen() {
     },
   });
   const accessMutation = useMutation({
-    mutationFn: (input: { userId: string; assignedFleetIds: string[]; customPermissions: string[] }) =>
+    mutationFn: (input: { userId: string; assignedFleetIds: string[]; assignedVehicleIds: string[]; customPermissions: string[] }) =>
       updateTeamMemberAccess(input.userId, {
         assignedFleetIds: input.assignedFleetIds,
+        assignedVehicleIds: input.assignedVehicleIds,
         customPermissions: input.customPermissions,
       }),
     onSuccess: async () => {
@@ -184,6 +194,16 @@ export function SettingsScreen() {
       Alert.alert('Remittance reminders', error instanceof Error ? error.message : 'Unable to refresh reminders.');
     },
   });
+  const maintenanceReminderMutation = useMutation({
+    mutationFn: syncMaintenanceReminders,
+    onSuccess: async (result) => {
+      await notificationsQuery.refetch();
+      Alert.alert('Maintenance reminders', `${result.created} reminders refreshed.`);
+    },
+    onError: (error) => {
+      Alert.alert('Maintenance reminders', error instanceof Error ? error.message : 'Unable to refresh reminders.');
+    },
+  });
 
   const updatePreference = async (
     topic: keyof NonNullable<typeof prefsQuery.data>,
@@ -262,6 +282,12 @@ export function SettingsScreen() {
           loading={reminderMutation.isPending}
           onPress={() => reminderMutation.mutate()}
         />
+        <Button
+          label="Refresh maintenance reminders"
+          variant="secondary"
+          loading={maintenanceReminderMutation.isPending}
+          onPress={() => maintenanceReminderMutation.mutate()}
+        />
         {(prefsQuery.data
           ? (Object.entries(prefsQuery.data) as Array<
               [keyof typeof prefsQuery.data, (typeof prefsQuery.data)[keyof typeof prefsQuery.data]]
@@ -269,7 +295,7 @@ export function SettingsScreen() {
           : []
         ).map(([topic, pref]) => (
           <Card key={topic} style={styles.innerCard}>
-            <Text style={styles.memberName}>{topic.replace(/_/g, ' ')}</Text>
+            <Text style={styles.memberName}>{notificationTopicLabel(topic)}</Text>
             <PreferenceRow
               label="Email"
               value={pref.email}
@@ -308,6 +334,15 @@ export function SettingsScreen() {
             label={`${selectedFleetIds.includes(fleet.id) ? 'Remove' : 'Allow'} ${fleet.name}`}
             variant="secondary"
             onPress={() => setSelectedFleetIds((current) => toggleSelection(current, fleet.id))}
+          />
+        ))}
+        <Text style={styles.meta}>Selected vehicles</Text>
+        {(vehiclesQuery.data?.data ?? []).map((vehicle) => (
+          <Button
+            key={vehicle.id}
+            label={`${selectedVehicleIds.includes(vehicle.id) ? 'Remove' : 'Allow'} ${vehicle.tenantVehicleCode || vehicle.systemVehicleCode}`}
+            variant="secondary"
+            onPress={() => setSelectedVehicleIds((current) => toggleSelection(current, vehicle.id))}
           />
         ))}
         <Text style={styles.meta}>Extra access</Text>
@@ -352,7 +387,11 @@ export function SettingsScreen() {
             <Text style={styles.meta}>{member.email}</Text>
             <Text style={styles.meta}>{member.role}</Text>
             <Text style={styles.meta}>
-              {member.assignedFleetIds.length === 0 ? 'All company fleets' : `${member.assignedFleetIds.length} fleets`}
+              {member.assignedVehicleIds.length > 0
+                ? `${member.assignedVehicleIds.length} vehicles`
+                : member.assignedFleetIds.length === 0
+                  ? 'All company fleets'
+                  : `${member.assignedFleetIds.length} fleets`}
             </Text>
             <Text style={styles.meta}>{member.isActive ? 'Active' : 'Inactive'}</Text>
             {member.role !== 'TENANT_OWNER' && member.isActive ? (
@@ -365,6 +404,7 @@ export function SettingsScreen() {
                     accessMutation.mutate({
                       userId: member.id,
                       assignedFleetIds: [],
+                      assignedVehicleIds: [],
                       customPermissions: member.customPermissions,
                     })
                   }
@@ -405,6 +445,21 @@ function PreferenceRow({
       <Switch value={value} onValueChange={onValueChange} />
     </Card>
   );
+}
+
+function notificationTopicLabel(topic: string) {
+  const labels: Record<string, string> = {
+    remittance_due: 'Remittance due reminders',
+    remittance_overdue: 'Overdue remittance follow-up',
+    remittance_reconciled: 'Reconciled remittance updates',
+    late_remittance_risk: 'Late remittance risk signals',
+    compliance_risk: 'Compliance and risk alerts',
+    maintenance_due: 'Maintenance due reminders',
+    maintenance_overdue: 'Overdue maintenance alerts',
+    vehicle_incident_reported: 'Vehicle incident alerts',
+    self_service_invite: 'Driver verification invites',
+  };
+  return labels[topic] ?? topic.replace(/_/g, ' ');
 }
 
 const styles = StyleSheet.create({

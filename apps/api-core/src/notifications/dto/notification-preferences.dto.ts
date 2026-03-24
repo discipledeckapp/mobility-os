@@ -28,5 +28,14 @@ export class NotificationPreferencesDto {
   compliance_risk!: NotificationChannelPreferenceDto;
 
   @ApiProperty({ type: NotificationChannelPreferenceDto })
+  maintenance_due!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  maintenance_overdue!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
+  vehicle_incident_reported!: NotificationChannelPreferenceDto;
+
+  @ApiProperty({ type: NotificationChannelPreferenceDto })
   self_service_invite!: NotificationChannelPreferenceDto;
 }

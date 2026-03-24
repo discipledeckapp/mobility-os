@@ -247,6 +247,54 @@ export default async function ReportsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fleet performance</CardTitle>
+              <CardDescription>Revenue, expense, and maintenance risk by fleet</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {overview.fleetPerformance.slice(0, 5).map((fleet) => (
+                <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4" key={fleet.fleetId}>
+                  <div className="flex items-center justify-between gap-3">
+                    <Text className="font-semibold">{fleet.fleetName}</Text>
+                    <Text>{formatCurrency(fleet.profitMinorUnits, overview.wallet.currency, locale)}</Text>
+                  </div>
+                  <Text className="text-sm text-slate-500">
+                    {fleet.vehicleCount} vehicles • {fleet.activeAssignmentCount} active assignments
+                  </Text>
+                  <Text className="text-sm text-slate-500">
+                    Expenses {formatCurrency(fleet.trackedExpenseMinorUnits, overview.wallet.currency, locale)} • Overdue maintenance {fleet.overdueMaintenanceCount}
+                  </Text>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Fleet manager performance</CardTitle>
+              <CardDescription>Compare assigned scope profitability and risk</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {overview.managerPerformance.slice(0, 5).map((manager) => (
+                <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4" key={manager.userId}>
+                  <div className="flex items-center justify-between gap-3">
+                    <Text className="font-semibold">{manager.name}</Text>
+                    <Text>{formatCurrency(manager.profitMinorUnits, overview.wallet.currency, locale)}</Text>
+                  </div>
+                  <Text className="text-sm text-slate-500">
+                    {manager.vehicleCount} vehicles across {manager.fleetCount} fleets
+                  </Text>
+                  <Text className="text-sm text-slate-500">
+                    At-risk assignments {manager.atRiskAssignmentCount} • Overdue maintenance {manager.overdueMaintenanceCount}
+                  </Text>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </TenantAppShell>
   );

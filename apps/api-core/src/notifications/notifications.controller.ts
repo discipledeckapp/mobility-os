@@ -87,4 +87,13 @@ export class NotificationsController {
   ): Promise<{ created: number }> {
     return this.notificationsService.syncTenantRemittanceReminders(ctx.tenantId);
   }
+
+  @Post('maintenance-reminders/sync')
+  @RequirePermissions(Permission.MaintenanceWrite)
+  @ApiOkResponse()
+  syncMaintenanceReminders(
+    @CurrentTenant() ctx: TenantContext,
+  ): Promise<{ created: number }> {
+    return this.notificationsService.syncTenantMaintenanceReminders(ctx.tenantId);
+  }
 }

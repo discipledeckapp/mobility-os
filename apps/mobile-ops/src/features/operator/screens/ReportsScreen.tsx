@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { getLicenceExpiryReport, getOperationalReadinessReport } from '../../../api';
+import { getLicenceExpiryReport, getOperationalReadinessReport, getReportsOverview } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -22,15 +22,19 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
     queryKey: ['operator-reports', 'licence-expiry'],
     queryFn: getLicenceExpiryReport,
   });
+  const overviewQuery = useQuery({
+    queryKey: ['operator-reports', 'overview'],
+    queryFn: getReportsOverview,
+  });
 
-  const refreshing = readinessQuery.isRefetching || expiryQuery.isRefetching;
+  const refreshing = readinessQuery.isRefetching || expiryQuery.isRefetching || overviewQuery.isRefetching;
   const readyDrivers =
     readinessQuery.data?.drivers.filter((driver) => driver.activationReadiness === 'ready').length ?? 0;
   const queuedDrivers =
     readinessQuery.data?.drivers.filter((driver) => driver.activationReadiness !== 'ready').length ?? 0;
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([readinessQuery.refetch(), expiryQuery.refetch()])} />}>
+    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([readinessQuery.refetch(), expiryQuery.refetch(), overviewQuery.refetch()])} />}>
       <Card style={styles.section}>
         <Text style={styles.title}>Reports</Text>
         <Text style={styles.copy}>Operational readiness and licence expiry signals optimized for mobile review.</Text>
@@ -92,6 +96,30 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
             </Card>
           ))
         )}
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Fleet performance</Text>
+        {(overviewQuery.data?.fleetPerformance ?? []).slice(0, 4).map((fleet) => (
+          <Card key={fleet.fleetId} style={styles.innerCard}>
+            <Text style={styles.itemTitle}>{fleet.fleetName}</Text>
+            <Text style={styles.meta}>Profit: {(overviewQuery.data?.wallet.currency ?? 'NGN')} {fleet.profitMinorUnits / 100}</Text>
+            <Text style={styles.meta}>Vehicles: {fleet.vehicleCount} • Active assignments: {fleet.activeAssignmentCount}</Text>
+            <Text style={styles.meta}>Overdue maintenance: {fleet.overdueMaintenanceCount} • At risk: {fleet.atRiskAssignmentCount}</Text>
+          </Card>
+        ))}
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Fleet manager performance</Text>
+        {(overviewQuery.data?.managerPerformance ?? []).slice(0, 4).map((manager) => (
+          <Card key={manager.userId} style={styles.innerCard}>
+            <Text style={styles.itemTitle}>{manager.name}</Text>
+            <Text style={styles.meta}>Profit: {(overviewQuery.data?.wallet.currency ?? 'NGN')} {manager.profitMinorUnits / 100}</Text>
+            <Text style={styles.meta}>Vehicles: {manager.vehicleCount} • Fleets: {manager.fleetCount}</Text>
+            <Text style={styles.meta}>Overdue maintenance: {manager.overdueMaintenanceCount} • At risk: {manager.atRiskAssignmentCount}</Text>
+          </Card>
+        ))}
       </Card>
     </Screen>
   );

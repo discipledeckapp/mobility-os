@@ -70,6 +70,48 @@ export class OwnershipProgressSummaryDto {
   completionRatio!: number;
 }
 
+export class FleetPerformanceSummaryDto {
+  @ApiProperty()
+  fleetId!: string;
+  @ApiProperty()
+  fleetName!: string;
+  @ApiProperty()
+  vehicleCount!: number;
+  @ApiProperty()
+  activeAssignmentCount!: number;
+  @ApiProperty()
+  confirmedRevenueMinorUnits!: number;
+  @ApiProperty()
+  trackedExpenseMinorUnits!: number;
+  @ApiProperty()
+  profitMinorUnits!: number;
+  @ApiProperty()
+  atRiskAssignmentCount!: number;
+  @ApiProperty()
+  overdueMaintenanceCount!: number;
+}
+
+export class ManagerPerformanceSummaryDto {
+  @ApiProperty()
+  userId!: string;
+  @ApiProperty()
+  name!: string;
+  @ApiProperty()
+  fleetCount!: number;
+  @ApiProperty()
+  vehicleCount!: number;
+  @ApiProperty()
+  confirmedRevenueMinorUnits!: number;
+  @ApiProperty()
+  trackedExpenseMinorUnits!: number;
+  @ApiProperty()
+  profitMinorUnits!: number;
+  @ApiProperty()
+  atRiskAssignmentCount!: number;
+  @ApiProperty()
+  overdueMaintenanceCount!: number;
+}
+
 export class ReportsOverviewResponseDto {
   @ApiProperty({ type: WalletSummaryDto })
   wallet!: WalletSummaryDto;
@@ -88,4 +130,10 @@ export class ReportsOverviewResponseDto {
 
   @ApiProperty({ type: OwnershipProgressSummaryDto })
   ownershipProgress!: OwnershipProgressSummaryDto;
+
+  @ApiProperty({ type: [FleetPerformanceSummaryDto] })
+  fleetPerformance!: FleetPerformanceSummaryDto[];
+
+  @ApiProperty({ type: [ManagerPerformanceSummaryDto] })
+  managerPerformance!: ManagerPerformanceSummaryDto[];
 }

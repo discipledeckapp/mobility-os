@@ -54,5 +54,23 @@ export class UpdateNotificationPreferencesDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => UpdateNotificationChannelPreferenceDto)
+  maintenance_due?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  maintenance_overdue?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
+  vehicle_incident_reported?: UpdateNotificationChannelPreferenceDto;
+
+  @ApiPropertyOptional({ type: UpdateNotificationChannelPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateNotificationChannelPreferenceDto)
   self_service_invite?: UpdateNotificationChannelPreferenceDto;
 }

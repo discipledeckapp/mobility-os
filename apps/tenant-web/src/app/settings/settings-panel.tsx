@@ -15,6 +15,7 @@ import {
 import type { TenantAuthSessionRecord, TenantRecord } from '../../lib/api-core';
 import {
   changePasswordAction,
+  syncMaintenanceRemindersAction,
   syncRemittanceRemindersAction,
   updateProfileAction,
   updateNotificationPreferencesAction,
@@ -32,6 +33,9 @@ const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> =
   remittance_reconciled: 'Reconciled remittance updates',
   late_remittance_risk: 'Late remittance risk signals',
   compliance_risk: 'Compliance and risk alerts',
+  maintenance_due: 'Maintenance due reminders',
+  maintenance_overdue: 'Overdue maintenance alerts',
+  vehicle_incident_reported: 'Vehicle incident alerts',
   self_service_invite: 'Driver verification invites',
 };
 
@@ -134,6 +138,8 @@ export function SettingsPanel({
     syncRemittanceRemindersAction,
     initialState,
   );
+  const [maintenanceReminderState, maintenanceReminderAction, maintenanceReminderPending] =
+    useActionState(syncMaintenanceRemindersAction, initialState);
   const [passwordState, passwordAction, passwordPending] = useActionState(
     changePasswordAction,
     initialState,
@@ -333,15 +339,22 @@ export function SettingsPanel({
                 {notificationPending ? 'Saving…' : 'Save notification settings'}
               </Button>
             </form>
-            <form action={reminderAction}>
-              <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
+              <form action={reminderAction}>
                 <Button disabled={reminderPending} type="submit" variant="secondary">
                   {reminderPending ? 'Refreshing…' : 'Refresh remittance reminders'}
                 </Button>
-              </div>
-            </form>
-              {reminderState.error ? <Text tone="danger">{reminderState.error}</Text> : null}
-              {reminderState.success ? <Text tone="success">{reminderState.success}</Text> : null}
+              </form>
+              <form action={maintenanceReminderAction}>
+                <Button disabled={maintenanceReminderPending} type="submit" variant="secondary">
+                  {maintenanceReminderPending ? 'Refreshing…' : 'Refresh maintenance reminders'}
+                </Button>
+              </form>
+            </div>
+            {reminderState.error ? <Text tone="danger">{reminderState.error}</Text> : null}
+            {reminderState.success ? <Text tone="success">{reminderState.success}</Text> : null}
+            {maintenanceReminderState.error ? <Text tone="danger">{maintenanceReminderState.error}</Text> : null}
+            {maintenanceReminderState.success ? <Text tone="success">{maintenanceReminderState.success}</Text> : null}
 
             <div className="space-y-3">
               <div>

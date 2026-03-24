@@ -14,6 +14,8 @@ import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
 import { DriverResponseDto } from '../drivers/dto/driver-response.dto';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { NotificationsService } from '../notifications/notifications.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { RecordRemittanceDto } from '../remittance/dto/record-remittance.dto';
 import { RemittanceResponseDto } from '../remittance/dto/remittance-response.dto';
@@ -21,6 +23,8 @@ import { RemittanceResponseDto } from '../remittance/dto/remittance-response.dto
 import { RemittanceService } from '../remittance/remittance.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { VehiclesService } from '../vehicles/vehicles.service';
+import { VehicleIncidentResponseDto } from '../vehicles/dto/vehicle-operations.dto';
+import { ReportAssignmentIncidentDto } from './dto/report-assignment-incident.dto';
 import { MobileAssignmentResponseDto } from './dto/mobile-assignment-response.dto';
 
 @ApiTags('MobileOps')
@@ -32,6 +36,7 @@ export class MobileOpsController {
     private readonly authService: AuthService,
     private readonly assignmentsService: AssignmentsService,
     private readonly driversService: DriversService,
+    private readonly notificationsService: NotificationsService,
     private readonly remittanceService: RemittanceService,
     private readonly vehiclesService: VehiclesService,
   ) {}
@@ -112,6 +117,38 @@ export class MobileOpsController {
     this.assertAssignmentOwnership(assignment.driverId, driver.id);
     const updated = await this.assignmentsService.end(ctx.tenantId, id, 'cancelled', notes);
     return this.toMobileAssignment(ctx.tenantId, updated);
+  }
+
+  @Post('assignments/:id/incidents')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: VehicleIncidentResponseDto })
+  async reportIncident(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: ReportAssignmentIncidentDto,
+  ): Promise<VehicleIncidentResponseDto> {
+    const driver = await this.getLinkedDriver(ctx);
+    const assignment = await this.assignmentsService.findOne(ctx.tenantId, id);
+    this.assertAssignmentOwnership(assignment.driverId, driver.id);
+    const incident = await this.vehiclesService.createIncident(ctx.tenantId, assignment.vehicleId, ctx.userId, {
+      ...dto,
+      driverId: driver.id,
+    });
+    await this.notificationsService.notifyVehicleIncidentReported({
+      tenantId: ctx.tenantId,
+      vehicleId: assignment.vehicleId,
+      fleetId: assignment.fleetId,
+      driverId: driver.id,
+      title: incident.title,
+      severity: incident.severity,
+      incidentId: incident.id,
+    });
+    return {
+      ...incident,
+      occurredAt: incident.occurredAt.toISOString(),
+      createdAt: incident.createdAt.toISOString(),
+    };
   }
 
   @Get('profile')

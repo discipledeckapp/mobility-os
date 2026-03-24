@@ -1,8 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
 import * as SystemUI from 'expo-system-ui';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ErrorBoundary } from './src/components/error-boundary';
+import { registerPushDevice } from './src/api';
 import { AuthProvider, useAuth } from './src/contexts/auth-context';
 import { SelfServiceProvider } from './src/contexts/self-service-context';
 import { ToastProvider, useToast } from './src/contexts/toast-context';
@@ -13,6 +16,40 @@ import {
   subscribeToNetworkReconnect,
 } from './src/services/offline-queue-service';
 import { tokens } from './src/theme/tokens';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function registerPushNotificationsForCurrentDevice() {
+  const permission = await Notifications.getPermissionsAsync();
+  let finalStatus = permission.status;
+
+  if (finalStatus !== 'granted') {
+    const request = await Notifications.requestPermissionsAsync();
+    finalStatus = request.status;
+  }
+
+  if (finalStatus !== 'granted') {
+    return null;
+  }
+
+  const projectId =
+    Constants.easConfig?.projectId ??
+    (typeof Constants.expoConfig?.extra?.eas === 'object' &&
+    Constants.expoConfig?.extra?.eas &&
+    'projectId' in Constants.expoConfig.extra.eas
+      ? String(Constants.expoConfig.extra.eas.projectId)
+      : undefined);
+
+  const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+  return token.data;
+}
 
 function AppShell() {
   const { session } = useAuth();
@@ -53,6 +90,31 @@ function AppShell() {
 
     return unsubscribe;
   }, [session, showToast]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    registerPushNotificationsForCurrentDevice()
+      .then((deviceToken) => {
+        if (!deviceToken) {
+          return;
+        }
+        return registerPushDevice({
+          deviceToken,
+          platform:
+            Constants.platform?.ios
+              ? 'ios'
+              : Constants.platform?.android
+                ? 'android'
+                : 'web',
+        });
+      })
+      .catch(() => {
+        // Ignore notification registration failures and keep the app usable.
+      });
+  }, [session]);
 
   return (
     <>

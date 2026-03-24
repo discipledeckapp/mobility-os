@@ -5,6 +5,7 @@ import {
   changeTenantPassword,
   deactivateTeamMember,
   resendTeamInvite,
+  syncMaintenanceReminders,
   syncRemittanceReminders,
   inviteTeamMember,
   updateTeamMemberAccess,
@@ -86,6 +87,9 @@ const NOTIFICATION_TOPICS = [
   'remittance_reconciled',
   'late_remittance_risk',
   'compliance_risk',
+  'maintenance_due',
+  'maintenance_overdue',
+  'vehicle_incident_reported',
   'self_service_invite',
 ] as const;
 
@@ -133,6 +137,21 @@ export async function syncRemittanceRemindersAction(
   }
 }
 
+export async function syncMaintenanceRemindersAction(
+  _previousState: SettingsActionState,
+  _formData: FormData,
+): Promise<SettingsActionState> {
+  try {
+    const result = await syncMaintenanceReminders();
+    revalidatePath('/settings');
+    return { success: `${result.created} maintenance reminders refreshed.` };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to refresh maintenance reminders.',
+    };
+  }
+}
+
 export async function changePasswordAction(
   _previousState: SettingsActionState,
   formData: FormData,
@@ -174,6 +193,10 @@ export async function inviteTeamMemberAction(
     .getAll('assignedFleetIds')
     .map((value) => String(value).trim())
     .filter(Boolean);
+  const assignedVehicleIds = formData
+    .getAll('assignedVehicleIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
   const customPermissions = formData
     .getAll('customPermissions')
     .map((value) => String(value).trim())
@@ -190,6 +213,7 @@ export async function inviteTeamMemberAction(
       role,
       ...(phone ? { phone } : {}),
       ...(assignedFleetIds.length > 0 ? { assignedFleetIds } : {}),
+      ...(assignedVehicleIds.length > 0 ? { assignedVehicleIds } : {}),
       ...(customPermissions.length > 0 ? { customPermissions } : {}),
     });
     revalidatePath('/settings');
@@ -210,6 +234,10 @@ export async function updateTeamMemberAccessAction(
     .getAll('assignedFleetIds')
     .map((value) => String(value).trim())
     .filter(Boolean);
+  const assignedVehicleIds = formData
+    .getAll('assignedVehicleIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
   const customPermissions = formData
     .getAll('customPermissions')
     .map((value) => String(value).trim())
@@ -222,6 +250,7 @@ export async function updateTeamMemberAccessAction(
   try {
     await updateTeamMemberAccess(userId, {
       assignedFleetIds,
+      assignedVehicleIds,
       customPermissions,
     });
     revalidatePath('/settings');

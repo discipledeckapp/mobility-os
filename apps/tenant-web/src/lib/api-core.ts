@@ -79,6 +79,9 @@ export interface NotificationPreferencesRecord {
   remittance_reconciled: NotificationChannelPreferenceRecord;
   late_remittance_risk: NotificationChannelPreferenceRecord;
   compliance_risk: NotificationChannelPreferenceRecord;
+  maintenance_due: NotificationChannelPreferenceRecord;
+  maintenance_overdue: NotificationChannelPreferenceRecord;
+  vehicle_incident_reported: NotificationChannelPreferenceRecord;
   self_service_invite: NotificationChannelPreferenceRecord;
 }
 
@@ -327,6 +330,36 @@ export interface ReportsOverviewRecord {
     atRiskMinorUnits: number;
     atRiskAssignmentCount: number;
   };
+  ownershipProgress: {
+    currency: string;
+    activeHirePurchaseUnits: number;
+    targetValueMinorUnits: number;
+    remittedValueMinorUnits: number;
+    outstandingValueMinorUnits: number;
+    completionRatio: number;
+  };
+  fleetPerformance: Array<{
+    fleetId: string;
+    fleetName: string;
+    vehicleCount: number;
+    activeAssignmentCount: number;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    atRiskAssignmentCount: number;
+    overdueMaintenanceCount: number;
+  }>;
+  managerPerformance: Array<{
+    userId: string;
+    name: string;
+    fleetCount: number;
+    vehicleCount: number;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    atRiskAssignmentCount: number;
+    overdueMaintenanceCount: number;
+  }>;
 }
 
 export interface LicenceExpiryReportRecord {
@@ -430,6 +463,7 @@ export interface VehicleRecord {
   plate?: string | null;
   color?: string | null;
   vin?: string | null;
+  odometerKm?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -445,6 +479,7 @@ export interface CreateVehicleInput {
   plate?: string;
   color?: string;
   vin?: string;
+  odometerKm?: number;
   acquisitionCostMinorUnits?: number;
   acquisitionDate?: string;
   currentEstimatedValueMinorUnits?: number;
@@ -461,6 +496,67 @@ export interface UpdateVehicleInput {
   acquisitionDate?: string;
   currentEstimatedValueMinorUnits?: number;
   valuationSource?: string;
+  odometerKm?: number;
+}
+
+export interface VehicleInspectionRecord {
+  id: string;
+  vehicleId: string;
+  inspectionType: string;
+  status: string;
+  inspectionDate: string;
+  odometerKm?: number | null;
+  issuesFoundCount: number;
+  reportSource: string;
+  summary: string;
+  reportUrl?: string | null;
+  nextInspectionDueAt?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleMaintenanceScheduleRecord {
+  id: string;
+  vehicleId: string;
+  isActive: boolean;
+  scheduleType: string;
+  intervalDays?: number | null;
+  intervalKm?: number | null;
+  nextDueAt?: string | null;
+  nextDueOdometerKm?: number | null;
+  source: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleMaintenanceEventRecord {
+  id: string;
+  vehicleId: string;
+  category: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  scheduledFor?: string | null;
+  completedAt?: string | null;
+  odometerKm?: number | null;
+  costMinorUnits?: number | null;
+  currency?: string | null;
+  vendor?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleIncidentRecord {
+  id: string;
+  vehicleId: string;
+  driverId?: string | null;
+  category: string;
+  severity: string;
+  title: string;
+  description?: string | null;
+  occurredAt: string;
+  status: string;
+  estimatedCostMinorUnits?: number | null;
+  currency?: string | null;
+  createdAt: string;
 }
 
 export interface VehicleValuationRecord {
@@ -496,6 +592,25 @@ export interface VehicleDetailRecord extends VehicleRecord {
     latestAssignmentStartedAt?: string | null;
   };
   maintenanceSummary: string;
+  maintenanceDue: {
+    dueCount: number;
+    overdueCount: number;
+    nextDueAt?: string | null;
+    nextDueOdometerKm?: number | null;
+  };
+  economics: {
+    acquisitionValueMinorUnits?: number | null;
+    currentEstimatedValueMinorUnits?: number | null;
+    valuationCurrency?: string | null;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    recommendation: string;
+  };
+  inspections: VehicleInspectionRecord[];
+  maintenanceSchedules: VehicleMaintenanceScheduleRecord[];
+  maintenanceEvents: VehicleMaintenanceEventRecord[];
+  incidents: VehicleIncidentRecord[];
   latestVinDecode?: {
     id: string;
     decodedMake?: string | null;
@@ -619,6 +734,9 @@ export interface TenantAuthSessionRecord {
   guarantorMaxActiveDrivers?: number;
   notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
+  assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
+  customPermissions?: string[];
 }
 
 export interface TenantBillingSubscriptionRecord {
@@ -1122,6 +1240,14 @@ export async function updateNotificationPreferences(
   return apiCoreFetch<NotificationPreferencesRecord>('/notifications/preferences', {
     method: 'PATCH',
     body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function syncMaintenanceReminders(token?: string): Promise<{ created: number }> {
+  return apiCoreFetch<{ created: number }>('/notifications/maintenance-reminders/sync', {
+    method: 'POST',
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
@@ -1677,6 +1803,143 @@ export async function updateVehicle(
   });
 }
 
+export async function listVehicleInspections(
+  vehicleId: string,
+  token?: string,
+): Promise<VehicleInspectionRecord[]> {
+  return apiCoreFetch<VehicleInspectionRecord[]>(`/vehicles/${vehicleId}/inspections`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createVehicleInspection(
+  vehicleId: string,
+  input: {
+    inspectionType: string;
+    status?: string;
+    inspectionDate?: string;
+    odometerKm?: number;
+    issuesFoundCount?: number;
+    reportSource?: string;
+    summary: string;
+    reportUrl?: string;
+    nextInspectionDueAt?: string;
+  },
+  token?: string,
+): Promise<VehicleInspectionRecord> {
+  return apiCoreFetch<VehicleInspectionRecord>(`/vehicles/${vehicleId}/inspections`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function listVehicleMaintenanceSchedules(
+  vehicleId: string,
+  token?: string,
+): Promise<VehicleMaintenanceScheduleRecord[]> {
+  return apiCoreFetch<VehicleMaintenanceScheduleRecord[]>(
+    `/vehicles/${vehicleId}/maintenance-schedules`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function upsertVehicleMaintenanceSchedule(
+  vehicleId: string,
+  input: {
+    scheduleType: string;
+    intervalDays?: number;
+    intervalKm?: number;
+    nextDueAt?: string;
+    nextDueOdometerKm?: number;
+    source?: string;
+    notes?: string;
+    isActive?: boolean;
+  },
+  token?: string,
+): Promise<VehicleMaintenanceScheduleRecord> {
+  return apiCoreFetch<VehicleMaintenanceScheduleRecord>(
+    `/vehicles/${vehicleId}/maintenance-schedules`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function listVehicleMaintenanceEvents(
+  vehicleId: string,
+  token?: string,
+): Promise<VehicleMaintenanceEventRecord[]> {
+  return apiCoreFetch<VehicleMaintenanceEventRecord[]>(`/vehicles/${vehicleId}/maintenance-events`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createVehicleMaintenanceEvent(
+  vehicleId: string,
+  input: {
+    category: string;
+    title: string;
+    description?: string;
+    status?: string;
+    scheduledFor?: string;
+    completedAt?: string;
+    odometerKm?: number;
+    costMinorUnits?: number;
+    currency?: string;
+    vendor?: string;
+  },
+  token?: string,
+): Promise<VehicleMaintenanceEventRecord> {
+  return apiCoreFetch<VehicleMaintenanceEventRecord>(`/vehicles/${vehicleId}/maintenance-events`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function listVehicleIncidents(
+  vehicleId: string,
+  token?: string,
+): Promise<VehicleIncidentRecord[]> {
+  return apiCoreFetch<VehicleIncidentRecord[]>(`/vehicles/${vehicleId}/incidents`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createVehicleIncident(
+  vehicleId: string,
+  input: {
+    driverId?: string;
+    occurredAt: string;
+    category: string;
+    severity: string;
+    title: string;
+    description?: string;
+    estimatedCostMinorUnits?: number;
+    currency?: string;
+  },
+  token?: string,
+): Promise<VehicleIncidentRecord> {
+  return apiCoreFetch<VehicleIncidentRecord>(`/vehicles/${vehicleId}/incidents`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function listVehicleMakers(token?: string, q?: string): Promise<VehicleMakerRecord[]> {
   const search = q ? `?q=${encodeURIComponent(q)}` : '';
   return apiCoreFetch<VehicleMakerRecord[]>(`/vehicle-catalog/makers${search}`, {
@@ -1988,6 +2251,7 @@ export interface TeamMemberRecord {
   phone: string | null;
   role: string;
   assignedFleetIds: string[];
+  assignedVehicleIds: string[];
   customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
@@ -2000,11 +2264,13 @@ export interface InviteTeamMemberInput {
   role: string;
   phone?: string;
   assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
   customPermissions?: string[];
 }
 
 export interface UpdateTeamMemberAccessInput {
   assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
   customPermissions?: string[];
 }
 

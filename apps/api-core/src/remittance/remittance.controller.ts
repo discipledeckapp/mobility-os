@@ -13,7 +13,12 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
-import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
+import {
+  applyFleetScope,
+  applyVehicleScope,
+  assertFleetAccess,
+  assertVehicleAccess,
+} from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ListRemittanceDto } from './dto/list-remittance.dto';
@@ -41,7 +46,7 @@ export class RemittanceController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListRemittanceDto,
   ): Promise<PaginatedResponse<RemittanceResponseDto>> {
-    return this.service.list(ctx.tenantId, applyFleetScope(query, ctx));
+    return this.service.list(ctx.tenantId, applyVehicleScope(applyFleetScope(query, ctx), ctx));
   }
 
   @Get(':id')
@@ -54,6 +59,7 @@ export class RemittanceController {
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
       assertFleetAccess(ctx, record.fleetId);
+      assertVehicleAccess(ctx, record.vehicleId);
       return record;
     });
   }
@@ -80,6 +86,7 @@ export class RemittanceController {
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
       assertFleetAccess(ctx, record.fleetId);
+      assertVehicleAccess(ctx, record.vehicleId);
       return this.service.confirm(ctx.tenantId, id, paidDate);
     });
   }
@@ -95,6 +102,7 @@ export class RemittanceController {
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
       assertFleetAccess(ctx, record.fleetId);
+      assertVehicleAccess(ctx, record.vehicleId);
       return this.service.dispute(ctx.tenantId, id, notes);
     });
   }
@@ -110,6 +118,7 @@ export class RemittanceController {
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
       assertFleetAccess(ctx, record.fleetId);
+      assertVehicleAccess(ctx, record.vehicleId);
       return this.service.waive(ctx.tenantId, id, notes, ctx.role);
     });
   }

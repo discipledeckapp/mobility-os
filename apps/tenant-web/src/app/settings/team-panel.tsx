@@ -20,7 +20,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { useActionState, useState } from 'react';
-import type { FleetRecord, TeamMemberRecord } from '../../lib/api-core';
+import type { FleetRecord, TeamMemberRecord, VehicleRecord } from '../../lib/api-core';
 import {
   type TeamActionState,
   deactivateTeamMemberAction,
@@ -61,10 +61,12 @@ const CUSTOM_PERMISSION_OPTIONS = [
 export function TeamPanel({
   members,
   fleets,
+  vehicles,
   canManage,
 }: {
   members: TeamMemberRecord[];
   fleets: FleetRecord[];
+  vehicles: VehicleRecord[];
   canManage: boolean;
 }) {
   const [inviteState, inviteAction, invitePending] = useActionState(inviteTeamMemberAction, initialState);
@@ -177,6 +179,25 @@ export function TeamPanel({
                     ))}
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Selected vehicles
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {vehicles.map((vehicle) => (
+                      <label
+                        key={vehicle.id}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                      >
+                        <input name="assignedVehicleIds" type="checkbox" value={vehicle.id} />
+                        <span>{vehicle.tenantVehicleCode || vehicle.systemVehicleCode}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Select vehicles when this team member should manage a cross-fleet subset instead of an entire fleet.
+                  </p>
+                </div>
               </div>
             </details>
             {inviteState.error ? <Text tone="danger">{inviteState.error}</Text> : null}
@@ -221,9 +242,11 @@ export function TeamPanel({
                     <Badge tone={roleTone(member.role)}>{roleLabel(member.role)}</Badge>
                   </TableCell>
                   <TableCell className="text-slate-500">
-                    {member.assignedFleetIds.length === 0
-                      ? 'All company fleets'
-                      : `${member.assignedFleetIds.length} fleet${member.assignedFleetIds.length === 1 ? '' : 's'}`}
+                    {member.assignedVehicleIds.length > 0
+                      ? `${member.assignedVehicleIds.length} vehicle${member.assignedVehicleIds.length === 1 ? '' : 's'}`
+                      : member.assignedFleetIds.length === 0
+                        ? 'All company fleets'
+                        : `${member.assignedFleetIds.length} fleet${member.assignedFleetIds.length === 1 ? '' : 's'}`}
                   </TableCell>
                   <TableCell>
                     {member.isActive ? (
@@ -259,6 +282,27 @@ export function TeamPanel({
                                         value={fleet.id}
                                       />
                                       <span>{fleet.name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                  Selected vehicles
+                                </p>
+                                <div className="grid gap-2">
+                                  {vehicles.map((vehicle) => (
+                                    <label
+                                      key={`${member.id}-${vehicle.id}`}
+                                      className="flex items-center gap-2 text-sm text-slate-700"
+                                    >
+                                      <input
+                                        defaultChecked={member.assignedVehicleIds.includes(vehicle.id)}
+                                        name="assignedVehicleIds"
+                                        type="checkbox"
+                                        value={vehicle.id}
+                                      />
+                                      <span>{vehicle.tenantVehicleCode || vehicle.systemVehicleCode}</span>
                                     </label>
                                   ))}
                                 </div>

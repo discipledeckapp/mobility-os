@@ -64,6 +64,7 @@ export interface SessionRecord {
   notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
   assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
   customPermissions?: string[];
   linkedDriverId?: string | null;
   linkedDriverStatus?: string | null;
@@ -84,6 +85,9 @@ export interface NotificationPreferencesRecord {
   remittance_reconciled: NotificationChannelPreferenceRecord;
   late_remittance_risk: NotificationChannelPreferenceRecord;
   compliance_risk: NotificationChannelPreferenceRecord;
+  maintenance_due: NotificationChannelPreferenceRecord;
+  maintenance_overdue: NotificationChannelPreferenceRecord;
+  vehicle_incident_reported: NotificationChannelPreferenceRecord;
   self_service_invite: NotificationChannelPreferenceRecord;
 }
 
@@ -289,8 +293,92 @@ export interface VehicleRecord {
   plate?: string | null;
   color?: string | null;
   vin?: string | null;
+  odometerKm?: number | null;
+  fleetName?: string;
+  businessEntityName?: string;
+  operatingUnitName?: string;
+  maintenanceSummary?: string;
+  maintenanceDue?: {
+    dueCount: number;
+    overdueCount: number;
+    nextDueAt?: string | null;
+    nextDueOdometerKm?: number | null;
+  };
+  economics?: {
+    acquisitionValueMinorUnits?: number | null;
+    currentEstimatedValueMinorUnits?: number | null;
+    valuationCurrency?: string | null;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    recommendation: string;
+  };
+  inspections?: VehicleInspectionRecord[];
+  maintenanceSchedules?: VehicleMaintenanceScheduleRecord[];
+  maintenanceEvents?: VehicleMaintenanceEventRecord[];
+  incidents?: VehicleIncidentRecord[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VehicleInspectionRecord {
+  id: string;
+  vehicleId: string;
+  inspectionType: string;
+  status: string;
+  inspectionDate: string;
+  odometerKm?: number | null;
+  issuesFoundCount: number;
+  reportSource: string;
+  summary: string;
+  reportUrl?: string | null;
+  nextInspectionDueAt?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleMaintenanceScheduleRecord {
+  id: string;
+  vehicleId: string;
+  isActive: boolean;
+  scheduleType: string;
+  intervalDays?: number | null;
+  intervalKm?: number | null;
+  nextDueAt?: string | null;
+  nextDueOdometerKm?: number | null;
+  source?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleMaintenanceEventRecord {
+  id: string;
+  vehicleId: string;
+  category: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  scheduledFor?: string | null;
+  completedAt?: string | null;
+  odometerKm?: number | null;
+  costMinorUnits?: number | null;
+  currency?: string | null;
+  vendor?: string | null;
+  createdAt: string;
+}
+
+export interface VehicleIncidentRecord {
+  id: string;
+  vehicleId: string;
+  driverId?: string | null;
+  category: string;
+  severity: string;
+  title: string;
+  description?: string | null;
+  occurredAt: string;
+  status: string;
+  estimatedCostMinorUnits?: number | null;
+  currency?: string | null;
+  createdAt: string;
 }
 
 export interface FleetRecord {
@@ -367,6 +455,7 @@ export interface TeamMemberRecord {
   phone: string | null;
   role: string;
   assignedFleetIds: string[];
+  assignedVehicleIds: string[];
   customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
@@ -379,11 +468,13 @@ export interface InviteTeamMemberInput {
   role: string;
   phone?: string;
   assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
   customPermissions?: string[];
 }
 
 export interface UpdateTeamMemberAccessInput {
   assignedFleetIds?: string[];
+  assignedVehicleIds?: string[];
   customPermissions?: string[];
 }
 
@@ -482,6 +573,7 @@ export interface CreateVehicleInput {
   plate?: string;
   color?: string;
   vin?: string;
+  odometerKm?: number;
   acquisitionCostMinorUnits?: number;
   acquisitionDate?: string;
   currentEstimatedValueMinorUnits?: number;
@@ -494,6 +586,7 @@ export interface UpdateVehicleInput {
   vin?: string;
   color?: string;
   year?: number;
+  odometerKm?: number;
   acquisitionCostMinorUnits?: number;
   acquisitionDate?: string;
   currentEstimatedValueMinorUnits?: number;
@@ -521,6 +614,36 @@ export interface ReportsOverviewRecord {
     atRiskMinorUnits: number;
     atRiskAssignmentCount: number;
   };
+  ownershipProgress: {
+    currency: string;
+    activeHirePurchaseUnits: number;
+    targetValueMinorUnits: number;
+    remittedValueMinorUnits: number;
+    outstandingValueMinorUnits: number;
+    completionRatio: number;
+  };
+  fleetPerformance: Array<{
+    fleetId: string;
+    fleetName: string;
+    vehicleCount: number;
+    activeAssignmentCount: number;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    atRiskAssignmentCount: number;
+    overdueMaintenanceCount: number;
+  }>;
+  managerPerformance: Array<{
+    userId: string;
+    name: string;
+    fleetCount: number;
+    vehicleCount: number;
+    confirmedRevenueMinorUnits: number;
+    trackedExpenseMinorUnits: number;
+    profitMinorUnits: number;
+    atRiskAssignmentCount: number;
+    overdueMaintenanceCount: number;
+  }>;
 }
 
 export interface DriverReadinessReportItem {
@@ -924,6 +1047,12 @@ export function syncRemittanceReminders(): Promise<{ created: number }> {
   });
 }
 
+export function syncMaintenanceReminders(): Promise<{ created: number }> {
+  return apiFetch<{ created: number }>(`${API_PATHS.notifications}/maintenance-reminders/sync`, {
+    method: 'POST',
+  });
+}
+
 export function exchangeDriverSelfServiceOtp(
   otpCode: string,
 ): Promise<DriverSelfServiceTokenExchangeResponse> {
@@ -1275,6 +1404,109 @@ export function updateVehicleStatus(vehicleId: string, status: string): Promise<
   return apiFetch<VehicleRecord>(`${API_PATHS.vehicles}/${vehicleId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+export function createVehicleInspection(
+  vehicleId: string,
+  input: {
+    inspectionType: string;
+    status?: string;
+    inspectionDate?: string;
+    odometerKm?: number;
+    issuesFoundCount?: number;
+    reportSource?: string;
+    summary: string;
+    reportUrl?: string;
+    nextInspectionDueAt?: string;
+  },
+): Promise<VehicleInspectionRecord> {
+  return apiFetch<VehicleInspectionRecord>(`${API_PATHS.vehicles}/${vehicleId}/inspections`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function upsertVehicleMaintenanceSchedule(
+  vehicleId: string,
+  input: {
+    scheduleType: string;
+    intervalDays?: number;
+    intervalKm?: number;
+    nextDueAt?: string;
+    nextDueOdometerKm?: number;
+    source?: string;
+    notes?: string;
+    isActive?: boolean;
+  },
+): Promise<VehicleMaintenanceScheduleRecord> {
+  return apiFetch<VehicleMaintenanceScheduleRecord>(
+    `${API_PATHS.vehicles}/${vehicleId}/maintenance-schedules`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function createVehicleMaintenanceEvent(
+  vehicleId: string,
+  input: {
+    category: string;
+    title: string;
+    description?: string;
+    status?: string;
+    scheduledFor?: string;
+    completedAt?: string;
+    odometerKm?: number;
+    costMinorUnits?: number;
+    currency?: string;
+    vendor?: string;
+  },
+): Promise<VehicleMaintenanceEventRecord> {
+  return apiFetch<VehicleMaintenanceEventRecord>(
+    `${API_PATHS.vehicles}/${vehicleId}/maintenance-events`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function createVehicleIncident(
+  vehicleId: string,
+  input: {
+    driverId?: string;
+    occurredAt: string;
+    category: string;
+    severity: string;
+    title: string;
+    description?: string;
+    estimatedCostMinorUnits?: number;
+    currency?: string;
+  },
+): Promise<VehicleIncidentRecord> {
+  return apiFetch<VehicleIncidentRecord>(`${API_PATHS.vehicles}/${vehicleId}/incidents`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function reportAssignmentIncident(
+  assignmentId: string,
+  input: {
+    category: string;
+    severity: string;
+    title: string;
+    description?: string;
+    occurredAt: string;
+    estimatedCostMinorUnits?: number;
+    currency?: string;
+  },
+): Promise<VehicleIncidentRecord> {
+  return apiFetch<VehicleIncidentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/incidents`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 
