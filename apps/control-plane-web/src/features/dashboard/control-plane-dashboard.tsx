@@ -22,6 +22,10 @@ interface ControlPlaneDashboardProps {
 }
 
 export function ControlPlaneDashboard({ summary, featureCards }: ControlPlaneDashboardProps) {
+  const operationalCount = featureCards.filter((card) => card.status === 'Operational').length;
+  const reviewCount = featureCards.filter((card) => card.status === 'Needs review').length;
+  const rolloutCount = featureCards.filter((card) => card.status === 'Controlled rollout').length;
+
   return (
     <ControlPlaneShell
       description="Run platform governance, organisation onboarding, subscription oversight, and wallet control from one internal console."
@@ -37,6 +41,11 @@ export function ControlPlaneDashboard({ summary, featureCards }: ControlPlaneDas
               Review platform readiness across onboarding, subscriptions, rollout controls, and
               wallet governance.
             </CardDescription>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Badge tone="success">{operationalCount} operational</Badge>
+              <Badge tone="warning">{reviewCount} need review</Badge>
+              <Badge tone="neutral">{rolloutCount} controlled rollout</Badge>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -70,9 +79,14 @@ export function ControlPlaneDashboard({ summary, featureCards }: ControlPlaneDas
               direct database access or tenant-side workarounds to complete the core control-plane
               flow.
             </Text>
-            <Link href="/tenants">
-              <Button variant="secondary">Open organisation onboarding</Button>
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/tenants">
+                <Button variant="secondary">Open organisation onboarding</Button>
+              </Link>
+              <Link href="/billing-operations">
+                <Button variant="ghost">Run billing operations</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -81,6 +95,9 @@ export function ControlPlaneDashboard({ summary, featureCards }: ControlPlaneDas
         <CardHeader>
           <Text tone="muted">Governance surfaces</Text>
           <CardTitle>Open the platform areas that already belong in the control plane.</CardTitle>
+          <CardDescription>
+            Use these surfaces for governed platform decisions instead of tenant-side operational workflows.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">

@@ -6,6 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Input,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +17,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { SelectField } from '../../features/shared/select-field';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listTenants } from '../../lib/api-control-plane';
 
@@ -56,14 +58,14 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <form className="flex flex-wrap gap-3" method="get">
-            <input
-              className="min-w-[16rem] rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm"
+            <Input
+              className="min-w-[16rem]"
               defaultValue={params.q ?? ''}
               name="q"
               placeholder="Search organisation name or slug"
             />
-            <select
-              className="rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm"
+            <SelectField
+              className="h-11 rounded-[var(--mobiris-radius-button)] border-[var(--mobiris-border)] px-3.5 shadow-[0_8px_22px_-18px_rgba(15,23,42,0.3)] focus:border-[var(--mobiris-primary-light)] focus:ring-4 focus:ring-[var(--mobiris-primary-tint)]"
               defaultValue={params.status ?? ''}
               name="status"
             >
@@ -72,7 +74,7 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
               <option value="prospect">Prospect</option>
               <option value="suspended">Suspended</option>
               <option value="terminated">Terminated</option>
-            </select>
+            </SelectField>
             <Button type="submit" variant="secondary">
               Apply
             </Button>
@@ -89,6 +91,9 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
               Open a tenant to review lifecycle state, invoices, subscription posture, and feature
               overrides.
             </CardDescription>
+            <Text tone="muted">
+              {filteredTenants.length} of {tenants.length} organisations shown
+            </Text>
           </CardHeader>
           <CardContent>
             <TableViewport>

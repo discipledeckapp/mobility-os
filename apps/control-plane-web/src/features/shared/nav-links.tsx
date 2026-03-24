@@ -19,10 +19,22 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 }
 
 export function NavLinks() {
+  return <ResponsiveNavLinks variant="sidebar" />;
+}
+
+type NavLinksProps = {
+  variant?: 'sidebar' | 'mobile';
+};
+
+export function ResponsiveNavLinks({ variant = 'sidebar' }: NavLinksProps) {
   const pathname = usePathname();
+  const isMobile = variant === 'mobile';
 
   return (
-    <nav aria-label="Control-plane navigation" className="space-y-1">
+    <nav
+      aria-label="Control-plane navigation"
+      className={isMobile ? 'flex gap-2 overflow-x-auto pb-1' : 'space-y-1'}
+    >
       {navigationItems.map((item) => {
         const isActive =
           item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
@@ -30,10 +42,14 @@ export function NavLinks() {
         return (
           <Link
             className={cx(
-              'block rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium transition-all',
+              'rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium transition-all',
               isActive
-                ? 'bg-white/12 text-white shadow-[0_10px_20px_-12px_rgba(15,23,42,0.9)]'
-                : 'text-blue-50/55 hover:bg-white/8 hover:text-white',
+                ? isMobile
+                  ? 'shrink-0 bg-[var(--mobiris-primary)] text-white shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]'
+                  : 'bg-white/12 text-white shadow-[0_10px_20px_-12px_rgba(15,23,42,0.9)]'
+                : isMobile
+                  ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
+                  : 'block text-blue-50/55 hover:bg-white/8 hover:text-white',
             )}
             href={item.href}
             key={item.href}

@@ -221,6 +221,9 @@ export function DriverDocumentsPanel({
               name="documentFile"
               type="file"
             />
+            <Text tone="muted">
+              Upload PDF, JPEG, PNG, or WEBP files up to 10 MB. Document content must match the file type.
+            </Text>
           </div>
           <div className="flex items-end">
             <Button disabled={isPending} type="submit">
@@ -239,63 +242,104 @@ export function DriverDocumentsPanel({
               </Text>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expiry</TableHead>
-                  <TableHead>Reviewer</TableHead>
-                  <TableHead>Preview</TableHead>
-                  {mode === 'operator' ? <TableHead>Actions</TableHead> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((document) =>
-                  mode === 'operator' ? (
-                    <DriverDocumentRow
-                      document={document}
-                      driverId={driverId}
-                      key={document.id}
-                    />
-                  ) : (
-                    <TableRow key={document.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Text tone="strong">{getDocumentType(document.documentType).name}</Text>
-                          <Text tone="muted">Uploaded by {getUploadedByLabel(document.uploadedBy)}</Text>
-                          <Text tone="muted">{document.fileName}</Text>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={getDocumentStatusTone(document.status)}>{document.status}</Badge>
-                      </TableCell>
-                      <TableCell>{formatDocumentDate(document.expiresAt)}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Text>{document.reviewedBy ?? 'Not reviewed yet'}</Text>
-                          <Text tone="muted">{formatDocumentDate(document.reviewedAt)}</Text>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {document.previewUrl ? (
-                          <a
-                            className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
-                            href={document.previewUrl}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            Open document
-                          </a>
-                        ) : (
-                          <Text tone="muted">Preview unavailable</Text>
-                        )}
-                      </TableCell>
+            <>
+              <div className="space-y-3 md:hidden">
+                {documents.map((document) => (
+                  <div
+                    className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-slate-50/70 p-4"
+                    key={document.id}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <Text tone="strong">{getDocumentType(document.documentType).name}</Text>
+                        <Text tone="muted">{document.fileName}</Text>
+                        <Text tone="muted">Uploaded by {getUploadedByLabel(document.uploadedBy)}</Text>
+                      </div>
+                      <Badge tone={getDocumentStatusTone(document.status)}>{document.status}</Badge>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <Text>Expiry: {formatDocumentDate(document.expiresAt)}</Text>
+                      <Text>Reviewer: {document.reviewedBy ?? 'Not reviewed yet'}</Text>
+                      <Text tone="muted">{formatDocumentDate(document.reviewedAt)}</Text>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {document.previewUrl ? (
+                        <a
+                          className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
+                          href={document.previewUrl}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Open document
+                        </a>
+                      ) : (
+                        <Text tone="muted">Preview unavailable</Text>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expiry</TableHead>
+                      <TableHead>Reviewer</TableHead>
+                      <TableHead>Preview</TableHead>
+                      {mode === 'operator' ? <TableHead>Actions</TableHead> : null}
                     </TableRow>
-                  ),
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {documents.map((document) =>
+                      mode === 'operator' ? (
+                        <DriverDocumentRow
+                          document={document}
+                          driverId={driverId}
+                          key={document.id}
+                        />
+                      ) : (
+                        <TableRow key={document.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Text tone="strong">{getDocumentType(document.documentType).name}</Text>
+                              <Text tone="muted">Uploaded by {getUploadedByLabel(document.uploadedBy)}</Text>
+                              <Text tone="muted">{document.fileName}</Text>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={getDocumentStatusTone(document.status)}>{document.status}</Badge>
+                          </TableCell>
+                          <TableCell>{formatDocumentDate(document.expiresAt)}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Text>{document.reviewedBy ?? 'Not reviewed yet'}</Text>
+                              <Text tone="muted">{formatDocumentDate(document.reviewedAt)}</Text>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {document.previewUrl ? (
+                              <a
+                                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
+                                href={document.previewUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                Open document
+                              </a>
+                            ) : (
+                              <Text tone="muted">Preview unavailable</Text>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </div>
       </CardContent>

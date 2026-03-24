@@ -86,6 +86,20 @@ export function TenantAppShell({ eyebrow, title, description, children }: Tenant
             </div>
           </Header>
 
+          <div className="border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+            <div className="mb-3">
+              <NavLinks variant="mobile" />
+            </div>
+            <form action={logoutAction}>
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                type="submit"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
+
           <Content>
             <ContentSection>{children}</ContentSection>
           </Content>

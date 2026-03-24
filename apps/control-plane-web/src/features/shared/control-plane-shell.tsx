@@ -1,6 +1,6 @@
 import { AppShell, Content, ContentSection, Header, Heading, Sidebar, Text } from '@mobility-os/ui';
 import { logoutAction } from '../../app/(auth)/login/actions';
-import { NavLinks } from './nav-links';
+import { NavLinks, ResponsiveNavLinks } from './nav-links';
 
 interface ControlPlaneShellProps {
   eyebrow: string;
@@ -93,6 +93,20 @@ export function ControlPlaneShell({
               </div>
             </div>
           </Header>
+
+          <div className="border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+            <div className="mb-3">
+              <ResponsiveNavLinks variant="mobile" />
+            </div>
+            <form action={logoutAction}>
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                type="submit"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
 
           <Content>
             <ContentSection>{children}</ContentSection>

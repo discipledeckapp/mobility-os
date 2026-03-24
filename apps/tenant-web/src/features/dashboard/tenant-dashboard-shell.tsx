@@ -322,6 +322,16 @@ export function TenantDashboardShell({
             <CardTitle>Work areas</CardTitle>
             <CardDescription>Jump straight into the main operational workflows.</CardDescription>
           </div>
+          <div className="hidden md:flex gap-2">
+            <Link href="/drivers/new">
+              <Button size="sm">Add driver</Button>
+            </Link>
+            <Link href="/vehicles/new">
+              <Button size="sm" variant="secondary">
+                Add vehicle
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -364,6 +374,16 @@ export function TenantDashboardShell({
               </Link>
             ))}
           </div>
+          <div className="mt-4 flex flex-wrap gap-3 md:hidden">
+            <Link href="/drivers/new">
+              <Button size="sm">Add driver</Button>
+            </Link>
+            <Link href="/vehicles/new">
+              <Button size="sm" variant="secondary">
+                Add vehicle
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -388,7 +408,38 @@ export function TenantDashboardShell({
             </div>
           </CardContent>
         </Card>
-      ) : null}
+      ) : (
+        <Card className="border-slate-200 bg-white/90 shadow-[0_4px_20px_-10px_rgba(15,23,42,0.1)]">
+          <CardHeader>
+            <CardTitle>Next recommended moves</CardTitle>
+            <CardDescription>
+              Keep the operational graph healthy by closing the most common setup gaps early.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="strong">Complete driver onboarding</Text>
+                <Text tone="muted">
+                  Review pending documents, identity readiness, and missing mobile access before activation.
+                </Text>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="strong">Keep vehicles assignment-ready</Text>
+                <Text tone="muted">
+                  Check availability status, maintenance posture, and fleet placement before dispatch.
+                </Text>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="strong">Close remittance gaps quickly</Text>
+                <Text tone="muted">
+                  Use the remittance queue and wallet view to clear pending collections before they age out.
+                </Text>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </TenantAppShell>
   );
 }

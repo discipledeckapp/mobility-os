@@ -20,6 +20,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { useActionState, useState } from 'react';
+import { SelectField } from '../../features/shared/select-field';
 import type { StaffMemberRecord } from '../../lib/api-control-plane';
 import {
   type StaffActionState,
@@ -129,8 +130,8 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="staffRole">Role</Label>
-                  <select
-                    className="flex h-10 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mobiris-primary)]"
+                  <SelectField
+                    className="h-11 rounded-[var(--mobiris-radius-button)] border-[var(--mobiris-border)] text-[var(--mobiris-ink)] shadow-[0_8px_22px_-18px_rgba(15,23,42,0.3)] focus:border-[var(--mobiris-primary-light)] focus:ring-4 focus:ring-[var(--mobiris-primary-tint)]"
                     id="staffRole"
                     name="role"
                     required
@@ -141,7 +142,7 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
                         {r.label}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="staffPassword">Initial password</Label>
@@ -178,6 +179,9 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
 
           {deactivateState.error ? (
             <Text className="text-rose-700">{deactivateState.error}</Text>
+          ) : null}
+          {deactivateState.success ? (
+            <Text className="text-emerald-700">{deactivateState.success}</Text>
           ) : null}
 
           <TableViewport>
