@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Tenant } from '@prisma/client';
+import { Prisma, type Tenant } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import type { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { writeOrganisationSettings } from './tenant-settings';
 
 // Tenants are provisioned by api-control-plane, never created here.
 // This service provides read-only access scoped to the calling tenant.
@@ -38,5 +40,26 @@ export class TenantsService {
     }
 
     return tenant;
+  }
+
+  async updateSettings(tenantId: string, dto: UpdateTenantSettingsDto): Promise<Tenant> {
+    const tenant = await this.findById(tenantId);
+    const metadata = writeOrganisationSettings(
+      tenant.metadata,
+      {
+        ...(dto.displayName !== undefined ? { displayName: dto.displayName.trim() } : {}),
+        ...(dto.logoUrl !== undefined ? { logoUrl: dto.logoUrl.trim() } : {}),
+        ...(dto.defaultLanguage !== undefined ? { defaultLanguage: dto.defaultLanguage } : {}),
+        ...(dto.guarantorMaxActiveDrivers !== undefined
+          ? { guarantorMaxActiveDrivers: dto.guarantorMaxActiveDrivers }
+          : {}),
+      },
+      tenant.country,
+    );
+
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { metadata: metadata as Prisma.InputJsonValue },
+    });
   }
 }

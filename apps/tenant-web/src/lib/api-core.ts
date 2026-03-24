@@ -39,6 +39,10 @@ export interface TenantRecord {
   country: string;
   status: string;
   metadata?: Record<string, unknown> | null;
+  displayName?: string | null;
+  logoUrl?: string | null;
+  defaultLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +55,40 @@ export interface TenantLoginInput {
 export interface UpdateTenantProfileInput {
   name: string;
   phone?: string;
+  preferredLanguage?: 'en' | 'fr';
+}
+
+export interface UpdateTenantSettingsInput {
+  displayName?: string;
+  logoUrl?: string;
+  defaultLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
+}
+
+export interface NotificationChannelPreferenceRecord {
+  email: boolean;
+  inApp: boolean;
+  push: boolean;
+}
+
+export interface NotificationPreferencesRecord {
+  remittance_due: NotificationChannelPreferenceRecord;
+  remittance_overdue: NotificationChannelPreferenceRecord;
+  remittance_reconciled: NotificationChannelPreferenceRecord;
+  late_remittance_risk: NotificationChannelPreferenceRecord;
+  compliance_risk: NotificationChannelPreferenceRecord;
+  self_service_invite: NotificationChannelPreferenceRecord;
+}
+
+export interface UserNotificationRecord {
+  id: string;
+  topic: string;
+  title: string;
+  body: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
+  readAt?: string | null;
+  createdAt: string;
 }
 
 export interface ChangeTenantPasswordInput {
@@ -234,6 +272,11 @@ export interface DriverReadinessReportRecord {
   approvedLicenceExpiresAt?: string | null;
   lastAssignmentDate?: string | null;
   riskBand?: string | null;
+  expectedRemittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  nextRemittanceDueDate?: string | null;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
 }
 
 export interface VehicleReadinessReportRecord {
@@ -245,6 +288,8 @@ export interface VehicleReadinessReportRecord {
   currentValuationCurrency?: string | null;
   maintenanceSummary: string;
   lifecycleStage: string;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
 }
 
 export interface OperationalReadinessReportRecord {
@@ -271,6 +316,14 @@ export interface ReportsOverviewRecord {
   driverActivity: {
     active: number;
     inactive: number;
+  };
+  remittanceProjection: {
+    currency: string;
+    activeAssignmentsWithPlans: number;
+    expectedTodayMinorUnits: number;
+    expectedThisWeekMinorUnits: number;
+    atRiskMinorUnits: number;
+    atRiskAssignmentCount: number;
   };
 }
 
@@ -464,6 +517,12 @@ export interface AssignmentRecord {
   startedAt: string;
   endedAt?: string | null;
   notes?: string | null;
+  remittanceModel?: string | null;
+  remittanceFrequency?: string | null;
+  remittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  remittanceStartDate?: string | null;
+  remittanceCollectionDay?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -473,6 +532,19 @@ export interface CreateAssignmentInput {
   driverId: string;
   vehicleId: string;
   notes?: string;
+  remittanceAmountMinorUnits: number;
+  remittanceFrequency?: 'daily' | 'weekly';
+  remittanceCurrency?: string;
+  remittanceStartDate?: string;
+  remittanceCollectionDay?: number;
+}
+
+export interface UpdateAssignmentRemittancePlanInput {
+  remittanceAmountMinorUnits?: number;
+  remittanceFrequency?: 'daily' | 'weekly';
+  remittanceCurrency?: string;
+  remittanceStartDate?: string;
+  remittanceCollectionDay?: number;
 }
 
 export interface RemittanceRecord {
@@ -497,9 +569,9 @@ export interface RemittanceRecord {
 export interface RecordRemittanceInput {
   fleetId?: string;
   assignmentId: string;
-  amountMinorUnits: number;
-  currency: string;
-  dueDate: string;
+  amountMinorUnits?: number;
+  currency?: string;
+  dueDate?: string;
   notes?: string;
 }
 
@@ -537,6 +609,12 @@ export interface TenantAuthSessionRecord {
   defaultCurrency?: string | null;
   currencyMinorUnit?: number | null;
   formattingLocale?: string | null;
+  organisationDisplayName?: string | null;
+  organisationLogoUrl?: string | null;
+  defaultLanguage?: 'en' | 'fr';
+  preferredLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
+  notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
 }
 
@@ -989,6 +1067,54 @@ export async function updateTenantProfile(
   return apiCoreFetch<TenantAuthSessionRecord>('/auth/me', {
     method: 'PATCH',
     body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateTenantSettings(
+  input: UpdateTenantSettingsInput,
+  token?: string,
+): Promise<TenantRecord> {
+  return apiCoreFetch<TenantRecord>('/tenants/me/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function listUserNotifications(token?: string): Promise<UserNotificationRecord[]> {
+  return apiCoreFetch<UserNotificationRecord[]>('/notifications', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function getNotificationPreferences(
+  token?: string,
+): Promise<NotificationPreferencesRecord> {
+  return apiCoreFetch<NotificationPreferencesRecord>('/notifications/preferences', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateNotificationPreferences(
+  input: Partial<NotificationPreferencesRecord>,
+  token?: string,
+): Promise<NotificationPreferencesRecord> {
+  return apiCoreFetch<NotificationPreferencesRecord>('/notifications/preferences', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function syncRemittanceReminders(token?: string): Promise<{ created: number }> {
+  return apiCoreFetch<{ created: number }>('/notifications/remittance-reminders/sync', {
+    method: 'POST',
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
@@ -1660,6 +1786,19 @@ export async function createAssignment(
   });
 }
 
+export async function updateAssignmentRemittancePlan(
+  assignmentId: string,
+  input: UpdateAssignmentRemittancePlanInput,
+  token?: string,
+): Promise<AssignmentRecord> {
+  return apiCoreFetch<AssignmentRecord>(`/assignments/${assignmentId}/remittance-plan`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function startAssignment(
   assignmentId: string,
   token?: string,
@@ -1849,6 +1988,17 @@ export async function deactivateTeamMember(
 ): Promise<{ message: string }> {
   return apiCoreFetch<{ message: string }>(`/team/${userId}`, {
     method: 'DELETE',
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function resendTeamInvite(
+  userId: string,
+  token?: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>(`/team/${userId}/resend-invite`, {
+    method: 'POST',
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });

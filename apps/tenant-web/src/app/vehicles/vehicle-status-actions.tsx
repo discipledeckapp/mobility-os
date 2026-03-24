@@ -83,7 +83,15 @@ export function VehicleStatusActions({
           }
 
           return (
-            <form action={formAction} key={action.nextStatus}>
+            <form
+              action={formAction}
+              key={action.nextStatus}
+              onSubmit={(event) => {
+                if (!window.confirm(`${action.label}?`)) {
+                  event.preventDefault();
+                }
+              }}
+            >
               <input name="vehicleId" type="hidden" value={vehicle.id} />
               <input name="status" type="hidden" value={action.nextStatus} />
               <Button disabled={isPending} size="sm" type="submit" variant="ghost">

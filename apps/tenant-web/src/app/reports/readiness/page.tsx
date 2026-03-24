@@ -13,6 +13,7 @@ import {
   TableRow,
   Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import {
   getLicenceExpiryReport,
@@ -113,7 +114,12 @@ export default async function ReadinessReportPage() {
                   <TableRow key={driver.id}>
                     <TableCell>
                       <div className="space-y-1">
-                        <Text tone="strong">{driver.fullName}</Text>
+                        <Link
+                          className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                          href={`/drivers/${driver.id}`}
+                        >
+                          {driver.fullName}
+                        </Link>
                         {driver.activationReadinessReasons[0] ? (
                           <Text tone="muted">{driver.activationReadinessReasons[0]}</Text>
                         ) : null}
@@ -185,7 +191,14 @@ export default async function ReadinessReportPage() {
               <TableBody>
                 {report.vehicles.map((vehicle) => (
                   <TableRow key={vehicle.id}>
-                    <TableCell>{vehicle.primaryLabel}</TableCell>
+                    <TableCell>
+                      <Link
+                        className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                        href={`/vehicles/${vehicle.id}`}
+                      >
+                        {vehicle.primaryLabel}
+                      </Link>
+                    </TableCell>
                     <TableCell>{fleetNames.get(vehicle.fleetId) ?? vehicle.fleetId}</TableCell>
                     <TableCell>{vehicle.status}</TableCell>
                     <TableCell>

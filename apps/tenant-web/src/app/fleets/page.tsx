@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import {
   Badge,
   Card,
@@ -60,6 +61,15 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
       eyebrow="Structure"
       title="Fleets"
     >
+      <div className="mb-6 flex justify-end">
+        <Link
+          className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+          href={'/fleets/new' as Route}
+        >
+          Add fleet
+        </Link>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <Card>
           <CardHeader>
@@ -140,6 +150,14 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
                         {vehicles.total}
                       </p>
                     </div>
+                  </div>
+                  <div className="pt-2">
+                    <Link
+                      className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                      href={`/fleets/${selectedFleet.id}/edit` as Route}
+                    >
+                      Edit fleet
+                    </Link>
                   </div>
                 </>
               ) : (

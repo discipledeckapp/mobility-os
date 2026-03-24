@@ -1,6 +1,7 @@
 'use client';
 
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { isNetworkError, listRemittanceHistory, type RemittanceRecord } from '../../../api';
@@ -78,6 +79,41 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     () => eligibleAssignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null,
     [eligibleAssignments, selectedAssignmentId],
   );
+  const suggestedAmount = useMemo(() => {
+    if (!selectedAssignment?.remittanceAmountMinorUnits) {
+      return '';
+    }
+    return String(
+      selectedAssignment.remittanceAmountMinorUnits /
+        getCurrencyMultiplier(session?.currencyMinorUnit),
+    );
+  }, [selectedAssignment?.remittanceAmountMinorUnits, session?.currencyMinorUnit]);
+  const suggestedDueDate = useMemo(() => {
+    if (!selectedAssignment) {
+      return null;
+    }
+    return computeNextRemittanceDueDate({
+      remittanceFrequency: selectedAssignment.remittanceFrequency,
+      remittanceAmountMinorUnits: selectedAssignment.remittanceAmountMinorUnits,
+      remittanceCurrency: selectedAssignment.remittanceCurrency,
+      remittanceStartDate: selectedAssignment.remittanceStartDate,
+      ...(selectedAssignment.remittanceCollectionDay !== undefined
+        ? { remittanceCollectionDay: selectedAssignment.remittanceCollectionDay }
+        : {}),
+    });
+  }, [selectedAssignment]);
+
+  useEffect(() => {
+    if (selectedAssignment && suggestedAmount) {
+      setAmount(suggestedAmount);
+    }
+  }, [selectedAssignment, suggestedAmount]);
+
+  useEffect(() => {
+    if (suggestedDueDate) {
+      setDueDate(new Date(`${suggestedDueDate}T00:00:00.000Z`));
+    }
+  }, [suggestedDueDate]);
 
   const onRefresh = async () => {
     try {
@@ -257,9 +293,13 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           label={`Amount (${currencyLabel})`}
           onChangeText={setAmount}
           value={amount}
-          helperText={`The app converts this to minor units using ${
-            session?.currencyMinorUnit ?? 2
-          } decimal place${session?.currencyMinorUnit === 1 ? '' : 's'} before submit.`}
+          helperText={
+            selectedAssignment?.remittanceAmountMinorUnits
+              ? 'This amount is pulled from the assignment remittance plan.'
+              : `The app converts this to minor units using ${
+                  session?.currencyMinorUnit ?? 2
+                } decimal place${session?.currencyMinorUnit === 1 ? '' : 's'} before submit.`
+          }
         />
         <Input
           accessibilityHint="The organisation currency is fixed for remittance"
@@ -283,6 +323,17 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           </Pressable>
           <Text style={styles.helper}>Choose the day the collection was received.</Text>
         </View>
+
+        {selectedAssignment ? (
+          <Text style={styles.helper}>
+              {describeRemittanceSchedule({
+                remittanceFrequency: selectedAssignment.remittanceFrequency,
+                ...(selectedAssignment.remittanceCollectionDay !== undefined
+                  ? { remittanceCollectionDay: selectedAssignment.remittanceCollectionDay }
+                  : {}),
+              })}
+          </Text>
+        ) : null}
 
         <Input
           accessibilityHint="Optional note about this collection"

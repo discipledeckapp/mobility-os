@@ -85,11 +85,16 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
     >
       <Card style={styles.hero}>
         <Text style={styles.kicker}>Operator mode</Text>
-        <Text style={styles.title}>{session?.tenantName ?? 'Mobility OS'}</Text>
+        <Text style={styles.title}>
+          {session?.organisationDisplayName ?? session?.tenantName ?? 'Mobility OS'}
+        </Text>
         <Text style={styles.copy}>
           Run daily operations from your phone. Dispatch, remittance review, driver status, and
           key business health are all available here.
         </Text>
+        {session?.organisationLogoUrl ? (
+          <Text style={styles.meta}>Logo: {session.organisationLogoUrl}</Text>
+        ) : null}
         <Badge label={(session?.role ?? 'operator').replace(/_/g, ' ')} tone="neutral" />
       </Card>
 
@@ -115,12 +120,12 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
           <Text style={styles.metricHint}>Operational wallet headline balance</Text>
         </Card>
         <Card style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Inflow / Outflow</Text>
+          <Text style={styles.metricLabel}>Expected / At risk</Text>
           <Text style={styles.metricValueSmall}>
-            +{overview ? formatMajorAmount(overview.wallet.totalInflowMinorUnits, minorUnit, session?.formattingLocale) : '0.00'}
+            +{overview ? formatMajorAmount(overview.remittanceProjection.expectedThisWeekMinorUnits, minorUnit, session?.formattingLocale) : '0.00'}
           </Text>
           <Text style={styles.metricValueSmall}>
-            -{overview ? formatMajorAmount(overview.wallet.totalOutflowMinorUnits, minorUnit, session?.formattingLocale) : '0.00'}
+            {overview ? formatMajorAmount(overview.remittanceProjection.atRiskMinorUnits, minorUnit, session?.formattingLocale) : '0.00'} at risk
           </Text>
         </Card>
       </View>
@@ -135,6 +140,18 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
           <Button label="Remittance" variant="secondary" onPress={() => navigation.navigate('OperatorRemittance')} />
           <Button label="Reports" variant="secondary" onPress={() => navigation.navigate('OperatorReports')} />
         </View>
+        <View style={styles.actionGrid}>
+          <Button
+            label={`Readiness queue (${queuedDrivers})`}
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorReports')}
+          />
+          <Button
+            label="Maintenance queue"
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorVehicles')}
+          />
+        </View>
       </Card>
     </Screen>
   );
@@ -145,6 +162,7 @@ const styles = StyleSheet.create({
   kicker: { color: tokens.colors.primary, fontWeight: '700', textTransform: 'uppercase' },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
   copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
+  meta: { color: tokens.colors.inkSoft, fontSize: 12, lineHeight: 18 },
   metricGrid: { flexDirection: 'row', gap: tokens.spacing.md },
   metricCard: { flex: 1, gap: tokens.spacing.xs },
   metricLabel: { color: tokens.colors.inkSoft, fontSize: 13, fontWeight: '600' },

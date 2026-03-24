@@ -11,6 +11,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -19,6 +20,8 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
+import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
+import { readUserSettings, writeUserSettings } from './user-settings';
 import { generateOtpCode, generatePasswordResetToken, hashAuthSecret } from './auth-token-utils';
 // biome-ignore lint/style/useImportType: DTO classes are part of the public service contract.
 import { AccountVerificationResponseDto } from './dto/account-verification-response.dto';
@@ -317,11 +320,28 @@ export class AuthService {
       }
     }
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true },
+    });
+    const nextSettings = writeUserSettings(
+      user.settings,
+      {
+        ...(dto.preferredLanguage ? { preferredLanguage: dto.preferredLanguage } : {}),
+      },
+      {
+        preferredLanguage: getDefaultLanguageForCountry(tenant?.country),
+        role: user.role,
+        hasLinkedDriver: Boolean(user.driverId),
+      },
+    );
+
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         name: normalizedName,
         phone: normalizedPhone,
+        settings: nextSettings as Prisma.InputJsonValue,
       },
     });
 
@@ -386,6 +406,12 @@ export class AuthService {
       ? getCountryConfig(tenantCountry).currencyMinorUnit
       : null;
     const formattingLocale = getFormattingLocale(tenantCountry);
+    const organisationSettings = readOrganisationSettings(user.tenant.metadata, tenantCountry);
+    const userSettings = readUserSettings(user.settings, {
+      preferredLanguage: organisationSettings.operations.defaultLanguage,
+      role: user.role,
+      hasLinkedDriver: Boolean(user.driverId),
+    });
 
     return {
       userId: user.id,
@@ -401,6 +427,12 @@ export class AuthService {
       defaultCurrency,
       currencyMinorUnit,
       formattingLocale,
+      organisationDisplayName: organisationSettings.branding.displayName ?? null,
+      organisationLogoUrl: organisationSettings.branding.logoUrl ?? null,
+      defaultLanguage: organisationSettings.operations.defaultLanguage,
+      preferredLanguage: userSettings.preferredLanguage,
+      guarantorMaxActiveDrivers: organisationSettings.operations.guarantorMaxActiveDrivers,
+      notificationPreferences: userSettings.notificationPreferences,
       permissions: Array.from(rolePermissions[user.role as TenantRole] ?? new Set()),
       linkedDriverId: linkedDriver?.id ?? null,
       linkedDriverStatus: linkedDriver?.status ?? null,

@@ -51,9 +51,19 @@ export function RemittanceRowActions({
   return (
     <div className="space-y-3">
       <form action={confirmFormAction} className="space-y-2">
+        <input name="confirmIntent" type="hidden" value="confirm" />
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="paidDate" type="date" />
-        <Button disabled={isBusy} size="sm" variant="secondary">
+        <Button
+          disabled={isBusy}
+          onClick={(event) => {
+            if (!window.confirm('Confirm this remittance?')) {
+              event.preventDefault();
+            }
+          }}
+          size="sm"
+          variant="secondary"
+        >
           {isConfirming ? 'Confirming...' : 'Confirm'}
         </Button>
       </form>
@@ -61,7 +71,16 @@ export function RemittanceRowActions({
       <form action={disputeFormAction} className="space-y-2">
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="notes" placeholder="Dispute reason" />
-        <Button disabled={isBusy} size="sm" variant="ghost">
+        <Button
+          disabled={isBusy}
+          onClick={(event) => {
+            if (!window.confirm('Submit this remittance dispute?')) {
+              event.preventDefault();
+            }
+          }}
+          size="sm"
+          variant="ghost"
+        >
           {isDisputing ? 'Submitting...' : 'Dispute'}
         </Button>
       </form>
@@ -69,7 +88,16 @@ export function RemittanceRowActions({
       <form action={waiveFormAction} className="space-y-2">
         <input name="remittanceId" type="hidden" value={remittanceId} />
         <Input name="notes" placeholder="Waiver reason" />
-        <Button disabled={isBusy} size="sm" variant="ghost">
+        <Button
+          disabled={isBusy}
+          onClick={(event) => {
+            if (!window.confirm('Waive this remittance?')) {
+              event.preventDefault();
+            }
+          }}
+          size="sm"
+          variant="ghost"
+        >
           {isWaiving ? 'Submitting...' : 'Waive'}
         </Button>
       </form>

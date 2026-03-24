@@ -3,7 +3,9 @@ import {
   type AssignmentRecord,
   type DriverRecord,
   type RemittanceRecord,
+  type ReportsOverviewRecord,
   type VehicleRecord,
+  getReportsOverview,
   getTenantMe,
   listAssignments,
   listDrivers,
@@ -218,6 +220,9 @@ export async function getDashboardData(): Promise<DashboardData> {
       settle(() => listAssignments({ limit: 200 })),
       settle(() => listRemittances({ limit: 200 })),
     ]);
+  const overviewResult = await Promise.resolve()
+    .then(() => getReportsOverview())
+    .catch((error) => error as Error);
 
   const results = [driversResult, vehiclesResult, assignmentsResult, remittancesResult];
 
@@ -264,6 +269,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     appendAvailabilityNote('Remittance');
   }
 
+  if (overviewResult instanceof Error) {
+    appendAvailabilityNote('Remittance forecast');
+  }
+
   const activeDrivers = drivers.filter((driver) => driver.status === 'active').length;
   const totalVehicles = vehicles.length;
   const activeAssignments = assignments.filter(
@@ -280,6 +289,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     (remittance) => remittance.status === 'confirmed',
   );
   const availableVehicles = vehicles.filter((vehicle) => vehicle.status === 'available').length;
+  const projection = overviewResult instanceof Error ? null : (overviewResult as ReportsOverviewRecord).remittanceProjection;
 
   return {
     summary: [
@@ -335,6 +345,36 @@ export async function getDashboardData(): Promise<DashboardData> {
         value: formatCurrencyTotals(remittances, locale, 'pending'),
         tone: pendingRemittances.length > 0 ? 'warm' : 'neutral',
         detail: `${pendingRemittances.length} pending`,
+      },
+      {
+        label: 'Expected this week',
+        value: projection
+          ? new Intl.NumberFormat(locale, {
+              style: 'currency',
+              currency: projection.currency,
+              minimumFractionDigits: 2,
+            }).format(projection.expectedThisWeekMinorUnits / 100)
+          : 'Unavailable',
+        tone: projection && projection.expectedThisWeekMinorUnits > 0 ? 'accent' : 'neutral',
+        detail: projection
+          ? `${projection.activeAssignmentsWithPlans} assignments with remittance plans`
+          : 'Projection unavailable',
+      },
+      {
+        label: 'At risk',
+        value: projection
+          ? new Intl.NumberFormat(locale, {
+              style: 'currency',
+              currency: projection.currency,
+              minimumFractionDigits: 2,
+            }).format(projection.atRiskMinorUnits / 100)
+          : 'Unavailable',
+        tone: projection && projection.atRiskMinorUnits > 0 ? 'warm' : 'neutral',
+        detail: projection
+          ? projection.atRiskAssignmentCount > 0
+            ? `${projection.atRiskAssignmentCount} assignments currently at risk`
+            : 'No remittance risk detected'
+          : 'Projection unavailable',
       },
     ],
     recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, remittances),

@@ -1,3 +1,4 @@
+import { computeNextRemittanceDueDate, toIsoDate } from '@mobility-os/domain-config';
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
@@ -14,8 +15,50 @@ export class ReportsService {
     private readonly vehiclesService: VehiclesService,
   ) {}
 
+  private getRemittanceRisk(
+    input: {
+      assignmentStatus: string;
+      driverStatus?: string | null | undefined;
+      assignmentReadiness?: string | null | undefined;
+      vehicleStatus?: string | null | undefined;
+    },
+  ): { status: 'on_track' | 'at_risk'; reason: string | null } {
+    if (['maintenance', 'inspection', 'inactive', 'retired'].includes(input.vehicleStatus ?? '')) {
+      return {
+        status: 'at_risk',
+        reason: `Vehicle status is '${input.vehicleStatus}'.`,
+      };
+    }
+
+    if (input.driverStatus && input.driverStatus !== 'active') {
+      return {
+        status: 'at_risk',
+        reason: `Driver status is '${input.driverStatus}'.`,
+      };
+    }
+
+    if (
+      input.assignmentReadiness &&
+      !['ready', 'assignment_ready'].includes(input.assignmentReadiness)
+    ) {
+      return {
+        status: 'at_risk',
+        reason: 'Driver is not assignment-ready.',
+      };
+    }
+
+    if (!['assigned', 'active'].includes(input.assignmentStatus)) {
+      return {
+        status: 'at_risk',
+        reason: `Assignment status is '${input.assignmentStatus}'.`,
+      };
+    }
+
+    return { status: 'on_track', reason: null };
+  }
+
   async getOverview(tenantId: string) {
-    const [wallets, walletEntries, remittances, driverStatusCounts] = await Promise.all([
+    const [wallets, walletEntries, remittances, driverStatusCounts, activeAssignments, driversPage, vehicles] = await Promise.all([
       this.prisma.operationalWallet.findMany({
         where: { tenantId },
         select: { id: true, currency: true },
@@ -46,6 +89,31 @@ export class ReportsService {
         by: ['status'],
         where: { tenantId },
         _count: { _all: true },
+      }),
+      this.prisma.assignment.findMany({
+        where: {
+          tenantId,
+          status: { in: ['assigned', 'active'] },
+          remittanceAmountMinorUnits: { not: null },
+          remittanceCurrency: { not: null },
+          remittanceFrequency: { not: null },
+        },
+        select: {
+          id: true,
+          status: true,
+          driverId: true,
+          vehicleId: true,
+          remittanceAmountMinorUnits: true,
+          remittanceCurrency: true,
+          remittanceFrequency: true,
+          remittanceStartDate: true,
+          remittanceCollectionDay: true,
+        },
+      }),
+      this.driversService.list(tenantId, { limit: 200 }),
+      this.prisma.vehicle.findMany({
+        where: { tenantId },
+        select: { id: true, status: true },
       }),
     ]);
 
@@ -80,6 +148,52 @@ export class ReportsService {
       return sum + item._count._all;
     }, 0);
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 6);
+    const drivers = driversPage.data;
+    const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
+    const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+    let expectedTodayMinorUnits = 0;
+    let expectedThisWeekMinorUnits = 0;
+    let atRiskMinorUnits = 0;
+    let atRiskAssignmentCount = 0;
+
+    for (const assignment of activeAssignments) {
+      const nextDueDate = computeNextRemittanceDueDate({
+        remittanceFrequency: assignment.remittanceFrequency,
+        remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
+        remittanceCurrency: assignment.remittanceCurrency,
+        remittanceStartDate: assignment.remittanceStartDate,
+        remittanceCollectionDay: assignment.remittanceCollectionDay,
+      });
+
+      if (!nextDueDate || !assignment.remittanceAmountMinorUnits) {
+        continue;
+      }
+
+      const nextDue = new Date(`${nextDueDate}T00:00:00.000Z`);
+      const risk = this.getRemittanceRisk({
+        assignmentStatus: assignment.status,
+        driverStatus: driverMap.get(assignment.driverId)?.status,
+        assignmentReadiness: driverMap.get(assignment.driverId)?.assignmentReadiness ?? null,
+        vehicleStatus: vehicleMap.get(assignment.vehicleId)?.status,
+      });
+
+      if (nextDueDate === toIsoDate(today)) {
+        expectedTodayMinorUnits += assignment.remittanceAmountMinorUnits;
+      }
+
+      if (nextDue >= today && nextDue <= weekEnd) {
+        expectedThisWeekMinorUnits += assignment.remittanceAmountMinorUnits;
+        if (risk.status === 'at_risk') {
+          atRiskMinorUnits += assignment.remittanceAmountMinorUnits;
+          atRiskAssignmentCount += 1;
+        }
+      }
+    }
+
     return {
       wallet: {
         currency: walletCurrency,
@@ -93,11 +207,19 @@ export class ReportsService {
         active,
         inactive,
       },
+      remittanceProjection: {
+        currency: walletCurrency,
+        activeAssignmentsWithPlans: activeAssignments.length,
+        expectedTodayMinorUnits,
+        expectedThisWeekMinorUnits,
+        atRiskMinorUnits,
+        atRiskAssignmentCount,
+      },
     };
   }
 
   async getOperationalReadiness(tenantId: string) {
-    const [driversPage, vehicles, latestAssignments, approvedLicences] = await Promise.all([
+    const [driversPage, vehicles, latestAssignments, approvedLicences, openAssignments] = await Promise.all([
       this.driversService.list(tenantId, { limit: 200 }),
       this.prisma.vehicle.findMany({
         where: { tenantId },
@@ -117,6 +239,13 @@ export class ReportsService {
         orderBy: [{ expiresAt: 'asc' }, { createdAt: 'desc' }],
         select: { driverId: true, expiresAt: true },
       }),
+      this.prisma.assignment.findMany({
+        where: {
+          tenantId,
+          status: { in: ['assigned', 'active'] },
+        },
+        orderBy: { startedAt: 'desc' },
+      }),
     ]);
     const drivers = driversPage.data;
 
@@ -134,22 +263,69 @@ export class ReportsService {
       }
     }
 
-    const driverItems = drivers.map((driver) => ({
-      id: driver.id,
-      fullName: `${driver.firstName} ${driver.lastName}`,
-      fleetId: driver.fleetId,
-      activationReadiness: driver.activationReadiness,
-      activationReadinessReasons: driver.activationReadinessReasons,
-      assignmentReadiness: driver.assignmentReadiness,
-      approvedLicenceExpiresAt: licenceByDriverId.get(driver.id)?.toISOString() ?? null,
-      lastAssignmentDate: lastAssignmentByDriverId.get(driver.id)?.toISOString() ?? null,
-      riskBand: driver.riskBand ?? null,
-    }));
+    const activeAssignmentByDriverId = new Map<string, (typeof openAssignments)[number]>();
+    const activeAssignmentByVehicleId = new Map<string, (typeof openAssignments)[number]>();
+    for (const assignment of openAssignments) {
+      if (!activeAssignmentByDriverId.has(assignment.driverId)) {
+        activeAssignmentByDriverId.set(assignment.driverId, assignment);
+      }
+      if (!activeAssignmentByVehicleId.has(assignment.vehicleId)) {
+        activeAssignmentByVehicleId.set(assignment.vehicleId, assignment);
+      }
+    }
+
+    const driverItems = drivers.map((driver) => {
+      const plannedAssignment = activeAssignmentByDriverId.get(driver.id);
+      const remittanceRisk = plannedAssignment
+        ? this.getRemittanceRisk({
+            assignmentStatus: plannedAssignment.status,
+            driverStatus: driver.status,
+            assignmentReadiness: driver.assignmentReadiness,
+          })
+        : null;
+
+      return {
+        id: driver.id,
+        fullName: `${driver.firstName} ${driver.lastName}`,
+        fleetId: driver.fleetId,
+        activationReadiness: driver.activationReadiness,
+        activationReadinessReasons: driver.activationReadinessReasons,
+        assignmentReadiness: driver.assignmentReadiness,
+        approvedLicenceExpiresAt: licenceByDriverId.get(driver.id)?.toISOString() ?? null,
+        lastAssignmentDate: lastAssignmentByDriverId.get(driver.id)?.toISOString() ?? null,
+        riskBand: driver.riskBand ?? null,
+        expectedRemittanceAmountMinorUnits: plannedAssignment?.remittanceAmountMinorUnits ?? null,
+        remittanceCurrency: plannedAssignment?.remittanceCurrency ?? null,
+        nextRemittanceDueDate: plannedAssignment
+          ? computeNextRemittanceDueDate({
+              remittanceFrequency: plannedAssignment.remittanceFrequency,
+              remittanceAmountMinorUnits: plannedAssignment.remittanceAmountMinorUnits,
+              remittanceCurrency: plannedAssignment.remittanceCurrency,
+              remittanceStartDate: plannedAssignment.remittanceStartDate,
+              remittanceCollectionDay: plannedAssignment.remittanceCollectionDay,
+            })
+          : null,
+        remittanceRiskStatus: remittanceRisk?.status ?? null,
+        remittanceRiskReason: remittanceRisk?.reason ?? null,
+      };
+    });
 
     const vehicleItems = await Promise.all(
       vehicles.map(async (vehicle) => {
         const detail = await this.vehiclesService.findOneDetailed(tenantId, vehicle.id);
         const currentValuation = detail.valuations.find((valuation) => valuation.isCurrent) ?? null;
+        const plannedAssignment = activeAssignmentByVehicleId.get(vehicle.id);
+        const linkedDriver = plannedAssignment
+          ? drivers.find((driver) => driver.id === plannedAssignment.driverId)
+          : null;
+        const remittanceRisk = plannedAssignment
+          ? this.getRemittanceRisk({
+              assignmentStatus: plannedAssignment.status,
+              driverStatus: linkedDriver?.status,
+              assignmentReadiness: linkedDriver?.assignmentReadiness ?? null,
+              vehicleStatus: detail.status,
+            })
+          : null;
         return {
           id: detail.id,
           primaryLabel: detail.tenantVehicleCode || detail.systemVehicleCode,
@@ -159,6 +335,8 @@ export class ReportsService {
           currentValuationCurrency: currentValuation?.currency ?? null,
           maintenanceSummary: detail.maintenanceSummary,
           lifecycleStage: detail.status,
+          remittanceRiskStatus: remittanceRisk?.status ?? null,
+          remittanceRiskReason: remittanceRisk?.reason ?? null,
         };
       }),
     );

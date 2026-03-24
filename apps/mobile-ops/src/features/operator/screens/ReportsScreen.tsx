@@ -59,6 +59,13 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
                 />
               </View>
               <Text style={styles.meta}>Licence expiry: {driver.approvedLicenceExpiresAt ? formatDateOnly(driver.approvedLicenceExpiresAt) : 'Not on file'}</Text>
+              {driver.expectedRemittanceAmountMinorUnits ? (
+                <Text style={styles.meta}>
+                  Expected remittance: {driver.remittanceCurrency ?? 'NGN'} {driver.expectedRemittanceAmountMinorUnits / 100}
+                  {driver.nextRemittanceDueDate ? ` • due ${formatDateOnly(driver.nextRemittanceDueDate)}` : ''}
+                </Text>
+              ) : null}
+              {driver.remittanceRiskReason ? <Text style={styles.meta}>{driver.remittanceRiskReason}</Text> : null}
               {driver.activationReadinessReasons[0] ? (
                 <Text style={styles.meta}>{driver.activationReadinessReasons[0]}</Text>
               ) : null}

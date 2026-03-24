@@ -36,6 +36,24 @@ export class AssignmentResponseDto {
   @ApiPropertyOptional()
   notes?: string | null;
 
+  @ApiPropertyOptional()
+  remittanceModel?: string | null;
+
+  @ApiPropertyOptional()
+  remittanceFrequency?: string | null;
+
+  @ApiPropertyOptional()
+  remittanceAmountMinorUnits?: number | null;
+
+  @ApiPropertyOptional()
+  remittanceCurrency?: string | null;
+
+  @ApiPropertyOptional()
+  remittanceStartDate?: string | null;
+
+  @ApiPropertyOptional()
+  remittanceCollectionDay?: number | null;
+
   @ApiProperty()
   createdAt!: Date;
 

@@ -52,6 +52,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const primeApiAuthReaders = useCallback((nextAccessToken: string | null, nextRefreshToken: string | null) => {
+    configureApiTokenGetter(async () => nextAccessToken);
+    configureApiRefreshTokenGetter(async () => nextRefreshToken);
+  }, []);
+
   const logout = useCallback(async () => {
     clearRefreshTimer();
     setToken(null);
@@ -101,6 +106,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           SecureStore.setItemAsync(STORAGE_KEYS.accessToken, nextTokens.accessToken),
           SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, nextTokens.refreshToken),
         ]);
+        primeApiAuthReaders(nextTokens.accessToken, nextTokens.refreshToken);
         setToken(nextTokens.accessToken);
         setRefreshToken(nextTokens.refreshToken);
         scheduleTokenRefresh(nextTokens.accessToken);
@@ -116,7 +122,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     refreshInFlightRef.current = run;
     return run;
-  }, [refreshToken, scheduleTokenRefresh]);
+  }, [primeApiAuthReaders, refreshToken, scheduleTokenRefresh]);
 
   useEffect(() => {
     tryRefreshTokenRef.current = tryRefreshToken;
@@ -145,13 +151,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         SecureStore.setItemAsync(STORAGE_KEYS.accessToken, result.accessToken),
         SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, result.refreshToken),
       ]);
+      primeApiAuthReaders(result.accessToken, result.refreshToken);
       setToken(result.accessToken);
       setRefreshToken(result.refreshToken);
       scheduleTokenRefresh(result.accessToken);
       const nextSession = await getSession();
       setSession(nextSession);
     },
-    [scheduleTokenRefresh],
+    [primeApiAuthReaders, scheduleTokenRefresh],
   );
 
   useEffect(() => {
@@ -209,6 +216,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       setToken(storedToken);
       setRefreshToken(storedRefreshToken);
+      primeApiAuthReaders(storedToken, storedRefreshToken);
       scheduleTokenRefresh(storedToken);
 
       try {
@@ -236,7 +244,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       clearRefreshTimer();
     };
-  }, [clearRefreshTimer, logout, scheduleTokenRefresh, tryRefreshToken]);
+  }, [clearRefreshTimer, logout, primeApiAuthReaders, scheduleTokenRefresh, tryRefreshToken]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { NotificationsController } from '../notifications/notifications.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ControlPlaneLifecycleClient } from './control-plane-lifecycle.client';
@@ -28,7 +29,7 @@ import { TenantLifecycleGuard } from './guards/tenant-lifecycle.guard';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, NotificationsController],
   providers: [
     AuthService,
     MobileAuthGuard,

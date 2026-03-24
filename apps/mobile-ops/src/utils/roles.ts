@@ -5,6 +5,13 @@ export function isDriverMobileSession(session: SessionRecord | null) {
     return false;
   }
 
+  const normalizedRole = session.role?.toUpperCase();
+  const isOperatorRole = ['ADMIN', 'MANAGER', 'OWNER'].includes(normalizedRole);
+
+  if (isOperatorRole) {
+    return false;
+  }
+
   return (
     session.mobileRole === 'driver' ||
     session.mobileRole === 'field_officer' ||

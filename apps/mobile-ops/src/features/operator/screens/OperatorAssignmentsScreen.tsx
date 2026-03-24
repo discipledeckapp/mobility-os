@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { listOperatorAssignments } from '../../../api';
 import { Badge } from '../../../components/badge';
@@ -47,6 +48,20 @@ export function OperatorAssignmentsScreen({ navigation }: ScreenProps<'OperatorA
             <Text style={styles.meta}>Driver: {assignment.driverId.slice(-8)}</Text>
             <Text style={styles.meta}>Vehicle: {assignment.vehicleId.slice(-8)}</Text>
             <Text style={styles.meta}>Started: {formatDateTime(assignment.startedAt)}</Text>
+            {assignment.remittanceAmountMinorUnits ? (
+              <Text style={styles.meta}>
+                Expected remittance: {assignment.remittanceCurrency ?? 'NGN'} {assignment.remittanceAmountMinorUnits / 100}
+                {' • '}
+                {describeRemittanceSchedule({
+                  remittanceFrequency: assignment.remittanceFrequency,
+                  ...(assignment.remittanceCollectionDay !== undefined
+                    ? { remittanceCollectionDay: assignment.remittanceCollectionDay }
+                    : {}),
+                })}
+              </Text>
+            ) : (
+              <Text style={styles.meta}>No remittance plan configured yet.</Text>
+            )}
           </Card>
         ))
       ) : (

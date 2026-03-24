@@ -45,7 +45,8 @@ import {
 import { DriverResponseDto } from './dto/driver-response.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { LinkDriverUserDto } from './dto/link-driver-user.dto';
-import type { ListDriversDto } from './dto/list-drivers.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { ListDriversDto } from './dto/list-drivers.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ResolveDriverIdentityDto } from './dto/resolve-driver-identity.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.

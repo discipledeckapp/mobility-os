@@ -213,6 +213,7 @@ const navigationItems = [
   { href: '/', label: 'Dashboard', Icon: DashboardIcon },
   { href: '/drivers', label: 'Drivers', Icon: DriversIcon },
   { href: '/vehicles', label: 'Vehicles', Icon: VehiclesIcon },
+  { href: '/maintenance' as Route, label: 'Maintenance', Icon: VehiclesIcon },
   { href: '/business-entities', label: 'Business entities', Icon: BusinessEntitiesIcon },
   { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
   { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
@@ -248,7 +249,7 @@ export function NavLinks({ variant = 'sidebar' }: NavLinksProps) {
                   ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
                   : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
             }`}
-            href={href}
+            href={href as Route}
             key={href}
           >
             <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />

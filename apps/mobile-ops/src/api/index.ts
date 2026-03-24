@@ -56,12 +56,59 @@ export interface SessionRecord {
   defaultCurrency?: string | null;
   currencyMinorUnit?: number | null;
   formattingLocale?: string | null;
+  organisationDisplayName?: string | null;
+  organisationLogoUrl?: string | null;
+  defaultLanguage?: 'en' | 'fr';
+  preferredLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
+  notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
   linkedDriverId?: string | null;
   linkedDriverStatus?: string | null;
   linkedDriverIdentityStatus?: string | null;
   mobileRole?: 'driver' | 'field_officer' | null;
   mobileAccessRevoked?: boolean | null;
+}
+
+export interface NotificationChannelPreferenceRecord {
+  email: boolean;
+  inApp: boolean;
+  push: boolean;
+}
+
+export interface NotificationPreferencesRecord {
+  remittance_due: NotificationChannelPreferenceRecord;
+  remittance_overdue: NotificationChannelPreferenceRecord;
+  remittance_reconciled: NotificationChannelPreferenceRecord;
+  late_remittance_risk: NotificationChannelPreferenceRecord;
+  compliance_risk: NotificationChannelPreferenceRecord;
+  self_service_invite: NotificationChannelPreferenceRecord;
+}
+
+export interface UserNotificationRecord {
+  id: string;
+  topic: string;
+  title: string;
+  body: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export interface TenantRecord {
+  id: string;
+  slug: string;
+  name: string;
+  country: string;
+  status: string;
+  metadata?: Record<string, unknown> | null;
+  displayName?: string | null;
+  logoUrl?: string | null;
+  defaultLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AssignmentRecord {
@@ -76,6 +123,12 @@ export interface AssignmentRecord {
   startedAt: string;
   endedAt?: string | null;
   notes?: string | null;
+  remittanceModel?: string | null;
+  remittanceFrequency?: string | null;
+  remittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  remittanceStartDate?: string | null;
+  remittanceCollectionDay?: number | null;
   createdAt: string;
   updatedAt: string;
   vehicle: {
@@ -104,6 +157,12 @@ export interface OperatorAssignmentRecord {
   startedAt: string;
   endedAt?: string | null;
   notes?: string | null;
+  remittanceModel?: string | null;
+  remittanceFrequency?: string | null;
+  remittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  remittanceStartDate?: string | null;
+  remittanceCollectionDay?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -431,6 +490,14 @@ export interface ReportsOverviewRecord {
     active: number;
     inactive: number;
   };
+  remittanceProjection: {
+    currency: string;
+    activeAssignmentsWithPlans: number;
+    expectedTodayMinorUnits: number;
+    expectedThisWeekMinorUnits: number;
+    atRiskMinorUnits: number;
+    atRiskAssignmentCount: number;
+  };
 }
 
 export interface DriverReadinessReportItem {
@@ -443,6 +510,11 @@ export interface DriverReadinessReportItem {
   approvedLicenceExpiresAt?: string | null;
   lastAssignmentDate?: string | null;
   riskBand?: string | null;
+  expectedRemittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  nextRemittanceDueDate?: string | null;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
 }
 
 export interface VehicleReadinessReportItem {
@@ -454,6 +526,8 @@ export interface VehicleReadinessReportItem {
   currentValuationCurrency?: string | null;
   maintenanceSummary: string;
   lifecycleStage: string;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
 }
 
 export interface OperationalReadinessReport {
@@ -479,9 +553,9 @@ export interface WalletBalanceRecord {
 
 export interface RecordRemittanceInput {
   assignmentId: string;
-  amountMinorUnits: number;
-  currency: string;
-  dueDate: string;
+  amountMinorUnits?: number;
+  currency?: string;
+  dueDate?: string;
   notes?: string;
 }
 
@@ -490,6 +564,11 @@ export interface CreateAssignmentInput {
   vehicleId: string;
   fleetId?: string;
   notes?: string;
+  remittanceAmountMinorUnits: number;
+  remittanceFrequency?: 'daily' | 'weekly';
+  remittanceCurrency?: string;
+  remittanceStartDate?: string;
+  remittanceCollectionDay?: number;
 }
 
 export interface MobileLogInput {
@@ -759,6 +838,66 @@ export function refreshAuthToken(refreshToken?: string): Promise<LoginResponse> 
 
 export function getSession(): Promise<SessionRecord> {
   return apiFetch<SessionRecord>(API_PATHS.session);
+}
+
+export function updateProfile(input: {
+  name: string;
+  phone?: string;
+  preferredLanguage?: 'en' | 'fr';
+}): Promise<SessionRecord> {
+  return apiFetch<SessionRecord>(API_PATHS.profile, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getTenantMe(): Promise<TenantRecord> {
+  return apiFetch<TenantRecord>(`${API_PATHS.tenants}/me`);
+}
+
+export function updateTenantSettings(input: {
+  displayName?: string;
+  logoUrl?: string;
+  defaultLanguage?: 'en' | 'fr';
+  guarantorMaxActiveDrivers?: number;
+}): Promise<TenantRecord> {
+  return apiFetch<TenantRecord>(`${API_PATHS.tenants}/me/settings`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function listUserNotifications(): Promise<UserNotificationRecord[]> {
+  return apiFetch<UserNotificationRecord[]>(API_PATHS.notifications);
+}
+
+export function getNotificationPreferences(): Promise<NotificationPreferencesRecord> {
+  return apiFetch<NotificationPreferencesRecord>(`${API_PATHS.notifications}/preferences`);
+}
+
+export function updateNotificationPreferences(
+  input: Partial<NotificationPreferencesRecord>,
+): Promise<NotificationPreferencesRecord> {
+  return apiFetch<NotificationPreferencesRecord>(`${API_PATHS.notifications}/preferences`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function registerPushDevice(input: {
+  deviceToken: string;
+  platform: 'ios' | 'android' | 'web';
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`${API_PATHS.notifications}/push-devices`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function syncRemittanceReminders(): Promise<{ created: number }> {
+  return apiFetch<{ created: number }>(`${API_PATHS.notifications}/remittance-reminders/sync`, {
+    method: 'POST',
+  });
 }
 
 export function exchangeDriverSelfServiceOtp(
@@ -1136,6 +1275,12 @@ export function inviteTeamMember(input: InviteTeamMemberInput): Promise<TeamMemb
 export function deactivateTeamMember(userId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`${API_PATHS.team}/${userId}`, {
     method: 'DELETE',
+  });
+}
+
+export function resendTeamInvite(userId: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`${API_PATHS.team}/${userId}/resend-invite`, {
+    method: 'POST',
   });
 }
 

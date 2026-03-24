@@ -1,5 +1,6 @@
 'use client';
 
+import { describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -42,6 +43,7 @@ export function CreateAssignmentForm({
   const [fleetId, setFleetId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
+  const [remittanceFrequency, setRemittanceFrequency] = useState<'daily' | 'weekly'>('daily');
   const selectableFleets = useMemo(
     () => fleets.filter((fleet) => fleet.status !== 'inactive'),
     [fleets],
@@ -168,6 +170,78 @@ export function CreateAssignmentForm({
             <Label htmlFor="notes">Notes</Label>
             <Input id="notes" name="notes" placeholder="Morning dispatch rotation" />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remittanceAmountMinorUnits">Expected remittance amount (minor units)</Label>
+            <Input
+              id="remittanceAmountMinorUnits"
+              min="1"
+              name="remittanceAmountMinorUnits"
+              placeholder="250000"
+              required
+              step="1"
+              type="number"
+            />
+            <Text tone="muted">
+              Store the planned collection amount in minor units so projections line up with the wallet ledger.
+            </Text>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remittanceCurrency">Remittance currency</Label>
+            <Input
+              defaultValue="NGN"
+              id="remittanceCurrency"
+              maxLength={3}
+              name="remittanceCurrency"
+              placeholder="NGN"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remittanceFrequency">Remittance schedule</Label>
+            <select
+              className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
+              id="remittanceFrequency"
+              name="remittanceFrequency"
+              onChange={(event) =>
+                setRemittanceFrequency(event.target.value === 'weekly' ? 'weekly' : 'daily')
+              }
+              value={remittanceFrequency}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <Text tone="muted">
+              {describeRemittanceSchedule({ remittanceFrequency, remittanceCollectionDay: 1 })}
+            </Text>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remittanceStartDate">First remittance due date</Label>
+            <Input id="remittanceStartDate" name="remittanceStartDate" required type="date" />
+          </div>
+
+          {remittanceFrequency === 'weekly' ? (
+            <div className="space-y-2">
+              <Label htmlFor="remittanceCollectionDay">Weekly collection day</Label>
+              <select
+                className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                id="remittanceCollectionDay"
+                name="remittanceCollectionDay"
+                required
+              >
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+              </select>
+            </div>
+          ) : null}
 
           <div className="flex items-end">
             <Button

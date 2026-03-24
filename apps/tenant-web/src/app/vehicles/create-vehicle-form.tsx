@@ -53,6 +53,21 @@ const COLOR_OPTIONS: SearchableSelectOption[] = [
   'Yellow',
 ].map((color) => ({ value: color, label: color }));
 
+function HelperDisclosure({
+  children,
+  summary = 'Read help',
+}: {
+  children: React.ReactNode;
+  summary?: string;
+}) {
+  return (
+    <details className="rounded-[var(--mobiris-radius-button)] bg-slate-50 px-3 py-2 text-sm text-slate-500">
+      <summary className="cursor-pointer list-none font-medium text-slate-600">{summary}</summary>
+      <div className="pt-2">{children}</div>
+    </details>
+  );
+}
+
 function toAlphabeticalOptions<T extends { id: string; name: string }>(
   records: T[],
 ): SearchableSelectOption[] {
@@ -521,21 +536,16 @@ export function CreateVehicleForm({
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1 md:col-span-2">
             <Text tone="strong">Identity and ownership</Text>
-            <Text tone="muted">
+            <HelperDisclosure summary="Why choose fleet first?">
               Choose the fleet first. VIN decode can then help prefill the core vehicle identity
               fields.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <SearchableSelect
             disabled={!hasFleetOptions || Boolean(fleetError)}
             emptyText="No fleets are available for this organisation yet. Create a fleet first, then return here to assign the vehicle."
             errorText={fleetError}
-            helperText={
-              selectableFleetOptions.length === 1
-                ? `${selectableFleetOptions[0]?.label ?? 'The only fleet'} has been preselected.`
-                : 'Search and select the fleet this record belongs to.'
-            }
             inputId="fleetId"
             label="Fleet"
             name="fleetId"
@@ -551,6 +561,13 @@ export function CreateVehicleForm({
             required
             value={fleetId}
           />
+          <div className="-mt-2">
+            <HelperDisclosure summary="Fleet selection help">
+              {selectableFleetOptions.length === 1
+                ? `${selectableFleetOptions[0]?.label ?? 'The only fleet'} has been preselected.`
+                : 'Search and select the fleet this record belongs to.'}
+            </HelperDisclosure>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="tenantVehicleCode">Organisation vehicle code</Label>
@@ -564,12 +581,12 @@ export function CreateVehicleForm({
               placeholder="Leave blank to auto-generate, or enter your own code"
               value={tenantVehicleCode}
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Vehicle code help">
               {isLoadingVehicleCodeSuggestion
                 ? 'Generating a safe suggested asset code from the selected fleet...'
                 : (vehicleCodeSuggestionMessage ??
                   'Mobiris will suggest an operator-facing asset code. You can accept it, edit it, or leave the field blank and let the backend generate one on save.')}
-            </Text>
+            </HelperDisclosure>
             <Button
               disabled={!fleetId || isLoadingVehicleCodeSuggestion}
               onClick={() => {
@@ -608,19 +625,19 @@ export function CreateVehicleForm({
             ) : vinDecodeMessage ? (
               <Text tone="success">{vinDecodeMessage}</Text>
             ) : (
-              <Text tone="muted">
+              <HelperDisclosure summary="VIN decode help">
                 Decode VIN to prefill make, model, year, and trim when vPIC returns them. You can
                 still continue manually if VIN is missing or incomplete.
-              </Text>
+              </HelperDisclosure>
             )}
           </div>
 
           <div className="space-y-1 md:col-span-2 pt-2">
             <Text tone="strong">Catalog and profile</Text>
-            <Text tone="muted">
+            <HelperDisclosure summary="Catalog help">
               Use the local Mobiris catalog as the source of truth. If a maker or model is missing,
               add it inline and continue.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
@@ -628,7 +645,6 @@ export function CreateVehicleForm({
               disabled={!hasMakerOptions || Boolean(vehicleCatalogError)}
               emptyText="No makers are available for this organisation yet. Add one manually or import the vehicle catalog first."
               errorText={vehicleCatalogError}
-              helperText={hasMakerOptions ? 'Search the local Mobiris maker catalog.' : null}
               inputId="makerId"
               label="Maker"
               onChange={(value) => {
@@ -652,6 +668,11 @@ export function CreateVehicleForm({
               displayValue={decodedMakerDisplay ?? undefined}
               value={selectedMakerId}
             />
+            {hasMakerOptions ? (
+              <HelperDisclosure summary="Maker help">
+                Search the local Mobiris maker catalog.
+              </HelperDisclosure>
+            ) : null}
             <input
               name="make"
               type="hidden"
@@ -708,13 +729,6 @@ export function CreateVehicleForm({
               disabled={!selectedMakerId || modelsLoading || !hasModelOptions}
               emptyText="No models are available for this maker yet. Add one manually if the import has not covered it."
               errorText={!selectedMakerId ? null : modelsError}
-              helperText={
-                !selectedMakerId
-                  ? 'Select a maker first to load matching models.'
-                  : hasModelOptions
-                    ? 'Search models for the selected maker.'
-                    : null
-              }
               inputId="modelId"
               label="Model"
               onChange={(value) => {
@@ -737,6 +751,13 @@ export function CreateVehicleForm({
               displayValue={decodedModelDisplay ?? undefined}
               value={selectedModelId}
             />
+            <HelperDisclosure summary="Model help">
+              {!selectedMakerId
+                ? 'Select a maker first to load matching models.'
+                : hasModelOptions
+                  ? 'Search models for the selected maker.'
+                  : 'No models are available for the selected maker yet.'}
+            </HelperDisclosure>
             <input
               name="model"
               type="hidden"
@@ -798,10 +819,10 @@ export function CreateVehicleForm({
               placeholder="EX-V6"
               value={trim}
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Trim help">
               Optional. The trim is the sub-variant of the model (e.g. EX-L, XLT, base). VIN decode
               will fill it when available.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
@@ -820,7 +841,6 @@ export function CreateVehicleForm({
           </div>
 
           <SearchableSelect
-            helperText="Vehicle type is tracked independently from the selected maker and model."
             inputId="vehicleType"
             label="Vehicle type"
             name="vehicleType"
@@ -830,6 +850,11 @@ export function CreateVehicleForm({
             required
             value={vehicleType}
           />
+          <div className="-mt-2">
+            <HelperDisclosure summary="Vehicle type help">
+              Vehicle type is tracked independently from the selected maker and model.
+            </HelperDisclosure>
+          </div>
 
           <div className="space-y-2">
             {useCustomColor ? (
@@ -842,14 +867,13 @@ export function CreateVehicleForm({
                   placeholder="Magenta"
                   value={customColor}
                 />
-                <Text tone="muted">
+                <HelperDisclosure summary="Custom color help">
                   This is a one-off vehicle color entry. It will not be added to the shared color
                   dropdown list automatically.
-                </Text>
+                </HelperDisclosure>
               </>
             ) : (
               <SearchableSelect
-                helperText="Search common vehicle colours, or switch to a one-off custom color if the list does not contain it."
                 inputId="color"
                 label="Color"
                 name="color"
@@ -859,6 +883,12 @@ export function CreateVehicleForm({
                 value={color}
               />
             )}
+            {!useCustomColor ? (
+              <HelperDisclosure summary="Color help">
+                Search common vehicle colours, or switch to a one-off custom color if the list
+                does not contain it.
+              </HelperDisclosure>
+            ) : null}
             <div className="flex gap-2">
               <Button
                 onClick={() => {
@@ -884,19 +914,19 @@ export function CreateVehicleForm({
               placeholder="LAG-123-XY"
               value={plate}
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Plate help">
               Optional and secondary. Plate can change over time; Mobiris uses the tenant or system
               vehicle code as the primary identity.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-1 md:col-span-2 pt-2">
             <Text tone="strong">Commercial and secondary information</Text>
-            <Text tone="muted">
+            <HelperDisclosure summary="Commercial fields help">
               Valuation is recorded in the tenant country currency
               {tenantCurrencyCode ? ` (${tenantCurrencyCode})` : ''}. Plate remains optional and
               secondary.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
@@ -913,9 +943,9 @@ export function CreateVehicleForm({
               type="number"
               value={acquisitionCost}
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Acquisition cost help">
               Optional. Enter the acquisition amount in major units for the tenant country currency.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
@@ -952,9 +982,9 @@ export function CreateVehicleForm({
               placeholder="operator-estimate"
               value={valuationSource}
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Valuation source help">
               Optional source label for acquisition and estimated value records.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="flex items-end">

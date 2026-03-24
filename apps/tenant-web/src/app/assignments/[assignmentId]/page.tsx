@@ -20,6 +20,7 @@ import {
 } from '../../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
 import { AssignmentRowActions } from '../assignment-row-actions';
+import { AssignmentRemittancePlanForm } from '../assignment-remittance-plan-form';
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
@@ -120,6 +121,36 @@ export default async function AssignmentDetailPage({
                 <Text tone="muted">Recorded notes</Text>
                 <Text>{assignment.notes ?? 'No operator note recorded.'}</Text>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Remittance plan</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Text tone="muted">
+                Remittance planning defines what should come in from this assignment and drives
+                forecast plus at-risk reporting.
+              </Text>
+              <AssignmentRemittancePlanForm
+                assignmentId={assignment.id}
+                {...(assignment.remittanceAmountMinorUnits !== undefined
+                  ? { remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits }
+                  : {})}
+                {...(assignment.remittanceCollectionDay !== undefined
+                  ? { remittanceCollectionDay: assignment.remittanceCollectionDay }
+                  : {})}
+                {...(assignment.remittanceCurrency !== undefined
+                  ? { remittanceCurrency: assignment.remittanceCurrency }
+                  : {})}
+                {...(assignment.remittanceFrequency !== undefined
+                  ? { remittanceFrequency: assignment.remittanceFrequency }
+                  : {})}
+                {...(assignment.remittanceStartDate !== undefined
+                  ? { remittanceStartDate: assignment.remittanceStartDate }
+                  : {})}
+              />
             </CardContent>
           </Card>
         </div>

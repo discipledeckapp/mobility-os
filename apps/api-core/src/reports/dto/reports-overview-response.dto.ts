@@ -30,6 +30,26 @@ export class DriverActivityDto {
   inactive!: number;
 }
 
+export class RemittanceProjectionSummaryDto {
+  @ApiProperty()
+  currency!: string;
+
+  @ApiProperty()
+  activeAssignmentsWithPlans!: number;
+
+  @ApiProperty()
+  expectedTodayMinorUnits!: number;
+
+  @ApiProperty()
+  expectedThisWeekMinorUnits!: number;
+
+  @ApiProperty()
+  atRiskMinorUnits!: number;
+
+  @ApiProperty()
+  atRiskAssignmentCount!: number;
+}
+
 export class ReportsOverviewResponseDto {
   @ApiProperty({ type: WalletSummaryDto })
   wallet!: WalletSummaryDto;
@@ -42,4 +62,7 @@ export class ReportsOverviewResponseDto {
 
   @ApiProperty({ type: DriverActivityDto })
   driverActivity!: DriverActivityDto;
+
+  @ApiProperty({ type: RemittanceProjectionSummaryDto })
+  remittanceProjection!: RemittanceProjectionSummaryDto;
 }

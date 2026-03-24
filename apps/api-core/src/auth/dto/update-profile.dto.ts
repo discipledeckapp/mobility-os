@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsPhoneNumber, IsString, MinLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiProperty({ example: 'Ada Obi' })
@@ -11,4 +11,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsPhoneNumber()
   phone?: string;
+
+  @ApiPropertyOptional({ enum: ['en', 'fr'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['en', 'fr'])
+  preferredLanguage?: 'en' | 'fr';
 }

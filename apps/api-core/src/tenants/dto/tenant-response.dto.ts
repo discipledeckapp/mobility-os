@@ -19,6 +19,18 @@ export class TenantResponseDto {
   @ApiPropertyOptional({ description: 'Arbitrary platform metadata' })
   metadata?: Record<string, unknown> | null;
 
+  @ApiPropertyOptional()
+  displayName?: string | null;
+
+  @ApiPropertyOptional()
+  logoUrl?: string | null;
+
+  @ApiPropertyOptional()
+  defaultLanguage?: 'en' | 'fr';
+
+  @ApiPropertyOptional()
+  guarantorMaxActiveDrivers?: number;
+
   @ApiProperty()
   createdAt!: Date;
 

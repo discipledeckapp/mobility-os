@@ -27,6 +27,21 @@ export class DriverReadinessReportItemDto {
 
   @ApiProperty({ required: false })
   riskBand?: string | null;
+
+  @ApiProperty({ required: false })
+  expectedRemittanceAmountMinorUnits?: number | null;
+
+  @ApiProperty({ required: false })
+  remittanceCurrency?: string | null;
+
+  @ApiProperty({ required: false })
+  nextRemittanceDueDate?: string | null;
+
+  @ApiProperty({ required: false })
+  remittanceRiskStatus?: string | null;
+
+  @ApiProperty({ required: false })
+  remittanceRiskReason?: string | null;
 }
 
 export class VehicleReadinessReportItemDto {
@@ -53,6 +68,12 @@ export class VehicleReadinessReportItemDto {
 
   @ApiProperty()
   lifecycleStage!: string;
+
+  @ApiProperty({ required: false })
+  remittanceRiskStatus?: string | null;
+
+  @ApiProperty({ required: false })
+  remittanceRiskReason?: string | null;
 }
 
 export class OperationalReadinessResponseDto {

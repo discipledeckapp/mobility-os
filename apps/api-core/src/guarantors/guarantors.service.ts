@@ -10,6 +10,7 @@ import type { Guarantor, GuarantorDriverLink } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { readOrganisationSettings } from '../tenants/tenant-settings';
 import type { CreateGuarantorDto } from './dto/create-guarantor.dto';
 import type { UpdateGuarantorDto } from './dto/update-guarantor.dto';
 
@@ -308,8 +309,17 @@ export class GuarantorsService {
       },
     });
 
-    if (!existingLink && guarantor.activeDriverCount >= 3) {
-      throw new ConflictException('A guarantor cannot be linked to more than 3 active drivers.');
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { metadata: true, country: true },
+    });
+    const guarantorLimit = readOrganisationSettings(tenant?.metadata, tenant?.country)
+      .operations.guarantorMaxActiveDrivers;
+
+    if (!existingLink && guarantor.activeDriverCount >= guarantorLimit) {
+      throw new ConflictException(
+        `A guarantor cannot be linked to more than ${guarantorLimit} active drivers in this organisation.`,
+      );
     }
 
     await this.prisma.guarantorDriverLink.upsert({

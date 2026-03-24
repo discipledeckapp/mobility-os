@@ -21,7 +21,12 @@ import {
 } from '@mobility-os/ui';
 import { useActionState, useState } from 'react';
 import type { TeamMemberRecord } from '../../lib/api-core';
-import { type TeamActionState, deactivateTeamMemberAction, inviteTeamMemberAction } from './actions';
+import {
+  type TeamActionState,
+  deactivateTeamMemberAction,
+  inviteTeamMemberAction,
+  resendTeamInviteAction,
+} from './actions';
 
 const ROLE_OPTIONS = [
   { value: 'FLEET_MANAGER', label: 'Fleet Manager' },
@@ -53,6 +58,10 @@ export function TeamPanel({
   const [inviteState, inviteAction, invitePending] = useActionState(inviteTeamMemberAction, initialState);
   const [deactivateState, deactivateAction, deactivatePending] = useActionState(
     deactivateTeamMemberAction,
+    initialState,
+  );
+  const [resendState, resendAction, resendPending] = useActionState(
+    resendTeamInviteAction,
     initialState,
   );
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -124,6 +133,8 @@ export function TeamPanel({
         {deactivateState.error ? (
           <Text tone="danger">{deactivateState.error}</Text>
         ) : null}
+        {resendState.error ? <Text tone="danger">{resendState.error}</Text> : null}
+        {resendState.success ? <Text tone="success">{resendState.success}</Text> : null}
 
         <TableViewport>
           <Table>
@@ -153,18 +164,22 @@ export function TeamPanel({
                   </TableCell>
                   {canManage && (
                     <TableCell>
-                      {member.isActive && member.role !== 'TENANT_OWNER' && (
-                        <form action={deactivateAction}>
-                          <input name="userId" type="hidden" value={member.id} />
-                          <Button
-                            disabled={deactivatePending}
-                            type="submit"
-                            variant="secondary"
-                          >
-                            Deactivate
-                          </Button>
-                        </form>
-                      )}
+                      {member.isActive && member.role !== 'TENANT_OWNER' ? (
+                        <div className="flex flex-wrap gap-2">
+                          <form action={resendAction}>
+                            <input name="userId" type="hidden" value={member.id} />
+                            <Button disabled={resendPending} type="submit" variant="secondary">
+                              Resend invite
+                            </Button>
+                          </form>
+                          <form action={deactivateAction}>
+                            <input name="userId" type="hidden" value={member.id} />
+                            <Button disabled={deactivatePending} type="submit" variant="secondary">
+                              Deactivate
+                            </Button>
+                          </form>
+                        </div>
+                      ) : null}
                     </TableCell>
                   )}
                 </TableRow>

@@ -58,3 +58,36 @@ export {
   getBusinessModel,
   getAllBusinessModelSlugs,
 } from './business-models/index';
+
+export {
+  type CountryCode,
+  type GenericIdentifierType,
+  type CountryIdentifierOption,
+  type VerificationProviderName,
+  type VerificationProviderOption,
+  type LivenessPolicy,
+  type ProviderLookupOption,
+  type ProviderLookupPolicy,
+  type ProviderEnrichmentPolicy,
+  type CountryIdentityConfig,
+  type CountryIdentityRoutingConfig,
+  type CountryIdentityProfile,
+} from './identity-types/index';
+
+export {
+  type VerificationStatus,
+  type CanonicalPersonIdentityEnrichment,
+  type CanonicalPersonRecord,
+  type TenantDriverProfileRecord,
+  type NigeriaIdentityLookupInput,
+  type NigeriaIdentityLookupResult,
+} from './person-types/index';
+
+export {
+  type AssignmentRemittanceTerms,
+  type RemittanceFrequency,
+  computeNextRemittanceDueDate,
+  describeRemittanceSchedule,
+  normalizeRemittanceFrequency,
+  toIsoDate,
+} from './remittance-planning/index';

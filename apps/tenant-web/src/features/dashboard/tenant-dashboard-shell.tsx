@@ -18,6 +18,8 @@ import type {
 } from './tenant-dashboard-data';
 
 interface TenantDashboardShellProps {
+  organisationDisplayName?: string | null;
+  organisationLogoUrl?: string | null;
   summary: DashboardSummaryItem[];
   remittanceSummary: DashboardSummaryItem[];
   recentActivity: DashboardActivityItem[];
@@ -28,7 +30,7 @@ interface TenantDashboardShellProps {
 
 const summaryHrefs: Record<string, Route> = {
   'Total drivers': '/drivers',
-  'Active drivers': '/drivers',
+  'Active drivers': '/reports/readiness',
   'Total vehicles': '/vehicles',
   'Active assignments': '/assignments',
   'Pending remittances': '/remittance',
@@ -118,6 +120,8 @@ const activityKindColors: Record<string, string> = {
 };
 
 export function TenantDashboardShell({
+  organisationDisplayName,
+  organisationLogoUrl,
   summary,
   remittanceSummary,
   recentActivity,
@@ -155,6 +159,27 @@ export function TenantDashboardShell({
       eyebrow="Operations"
       title="Dashboard"
     >
+      {organisationDisplayName ? (
+        <Card className="mb-6 border-slate-200 bg-white shadow-[0_4px_16px_-8px_rgba(15,23,42,0.12)]">
+          <CardContent className="flex items-center gap-4 px-5 py-4">
+            {organisationLogoUrl ? (
+              <img
+                alt={`${organisationDisplayName} logo`}
+                className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+                src={organisationLogoUrl}
+              />
+            ) : null}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Organisation
+              </p>
+              <p className="text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                {organisationDisplayName}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       {notes.length > 0 ? (
         <div className="mb-6 space-y-3">
           {notes.map((note) => (
@@ -423,18 +448,39 @@ export function TenantDashboardShell({
                 <Text tone="muted">
                   Review pending documents, identity readiness, and missing mobile access before activation.
                 </Text>
+                <div className="mt-3">
+                  <Link href="/reports/readiness">
+                    <Button size="sm" variant="secondary">
+                      Open readiness queue
+                    </Button>
+                  </Link>
+                </div>
               </div>
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="strong">Keep vehicles assignment-ready</Text>
                 <Text tone="muted">
                   Check availability status, maintenance posture, and fleet placement before dispatch.
                 </Text>
+                <div className="mt-3">
+                  <Link href={'/maintenance' as Route}>
+                    <Button size="sm" variant="secondary">
+                      Open maintenance queue
+                    </Button>
+                  </Link>
+                </div>
               </div>
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="strong">Close remittance gaps quickly</Text>
                 <Text tone="muted">
                   Use the remittance queue and wallet view to clear pending collections before they age out.
                 </Text>
+                <div className="mt-3">
+                  <Link href="/wallet">
+                    <Button size="sm" variant="secondary">
+                      Open billing and wallet
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </CardContent>

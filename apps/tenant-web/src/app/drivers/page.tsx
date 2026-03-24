@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { Card, CardContent, Text } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
   listDrivers,
@@ -88,6 +90,24 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
       eyebrow="Operators"
       title="Drivers"
     >
+      <Card className="mb-6">
+        <CardContent className="flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Text tone="strong">Need to activate drivers?</Text>
+            <Text tone="muted">
+              Open the readiness queue to review drivers who are still blocked on identity,
+              documents, or approval before they become assignment-ready.
+            </Text>
+          </div>
+          <Link
+            className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+            href="/reports/readiness"
+          >
+            Open readiness queue
+          </Link>
+        </CardContent>
+      </Card>
+
       <DriverRecordsPanel
         drivers={drivers}
         errorMessage={errorMessage}

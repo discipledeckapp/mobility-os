@@ -54,12 +54,12 @@ export function LoginForm() {
       <div className="space-y-1.5">
         <Label htmlFor="identifier">Email or phone number</Label>
         <Input
-          autoComplete="username email"
+          autoComplete="username"
           id="identifier"
           name="identifier"
-          placeholder="you@organisation.com"
+          placeholder="you@company.com or +2348012345678"
           required
-          type="email"
+          type="text"
         />
       </div>
 

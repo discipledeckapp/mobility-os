@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NotificationPreferencesDto } from '../../notifications/dto/notification-preferences.dto';
 
 export class AuthSessionResponseDto {
   @ApiProperty()
@@ -39,6 +40,24 @@ export class AuthSessionResponseDto {
 
   @ApiPropertyOptional()
   formattingLocale?: string | null;
+
+  @ApiPropertyOptional()
+  organisationDisplayName?: string | null;
+
+  @ApiPropertyOptional()
+  organisationLogoUrl?: string | null;
+
+  @ApiPropertyOptional()
+  defaultLanguage?: 'en' | 'fr';
+
+  @ApiPropertyOptional()
+  preferredLanguage?: 'en' | 'fr';
+
+  @ApiPropertyOptional()
+  guarantorMaxActiveDrivers?: number;
+
+  @ApiPropertyOptional({ type: NotificationPreferencesDto })
+  notificationPreferences?: NotificationPreferencesDto;
 
   @ApiProperty({ type: [String] })
   permissions!: string[];

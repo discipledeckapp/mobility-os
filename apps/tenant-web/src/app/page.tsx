@@ -2,12 +2,21 @@ import { TenantDashboardShell } from '../features/dashboard/tenant-dashboard-she
 import {
   getDashboardData,
 } from '../features/dashboard/tenant-dashboard-data';
+import { getTenantMe, getTenantSession } from '../lib/api-core';
 
 export default async function HomePage() {
-  const dashboardData = await getDashboardData();
+  const [dashboardData, tenant, session] = await Promise.all([
+    getDashboardData(),
+    getTenantMe().catch(() => null),
+    getTenantSession().catch(() => null),
+  ]);
 
   return (
     <TenantDashboardShell
+      organisationDisplayName={
+        tenant?.displayName ?? session?.organisationDisplayName ?? tenant?.name ?? session?.tenantName ?? null
+      }
+      organisationLogoUrl={tenant?.logoUrl ?? session?.organisationLogoUrl ?? null}
       summary={dashboardData.summary}
       remittanceSummary={dashboardData.remittanceSummary}
       recentActivity={dashboardData.recentActivity}

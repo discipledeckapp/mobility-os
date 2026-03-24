@@ -330,14 +330,13 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/seyiadelaju/mobility-os/apps/api-core/src/database/prisma/schema.prisma",
+    "sourceFilePath": "/Users/seyiadelaju/mobility-os/apps/api-core/src/generated/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../.env"
+    "rootEnvPath": null
   },
-  "relativePath": "../../database/prisma",
+  "relativePath": "",
   "clientVersion": "5.22.0",
   "engineVersion": "605197351a3c8bdd595af2d2a9bc3025bca48ea2",
   "datasourceNames": [

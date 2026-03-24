@@ -23,6 +23,21 @@ import {
 
 const initialState: CreateDriverActionState = {};
 
+function HelperDisclosure({
+  children,
+  summary = 'What should I know?',
+}: {
+  children: React.ReactNode;
+  summary?: string;
+}) {
+  return (
+    <details className="rounded-[var(--mobiris-radius-button)] bg-slate-50 px-3 py-2 text-sm text-slate-500">
+      <summary className="cursor-pointer list-none font-medium text-slate-600">{summary}</summary>
+      <div className="pt-2">{children}</div>
+    </details>
+  );
+}
+
 export function CreateDriverForm({
   fleets,
   fleetError,
@@ -82,9 +97,9 @@ export function CreateDriverForm({
               placeholder="08012345678 or +2348012345678"
               required
             />
-            <Text tone="muted">
+            <HelperDisclosure summary="Phone entry help">
               Enter the driver&apos;s phone number with or without the country code.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
@@ -100,18 +115,17 @@ export function CreateDriverForm({
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" placeholder="emeka@example.com" type="email" />
-            <Text tone="muted">
+            <HelperDisclosure summary="When is email needed?">
               An email address is required for the driver to use the Mobiris mobile app for self-service remittance and document uploads.
-            </Text>
+            </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="dateOfBirth">Date of birth</Label>
-            <Input id="dateOfBirth" name="dateOfBirth" placeholder="1990-06-15" />
+            <Input id="dateOfBirth" name="dateOfBirth" type="date" />
           </div>
 
           <SearchableSelect
-            helperText="Driver country defaults to the organisation country, but you can change it here."
             inputId="nationality"
             label="Country"
             name="nationality"
@@ -121,6 +135,12 @@ export function CreateDriverForm({
             required
             value={countryCode}
           />
+          <div className="-mt-2 md:col-span-2">
+            <HelperDisclosure summary="Country selection help">
+              Driver country defaults to the organisation country, but you can change it here when
+              the driver should follow a different country profile.
+            </HelperDisclosure>
+          </div>
 
           <div className="flex items-end">
             <Button disabled={isPending || !hasFleetOptions || !fleetId} type="submit">

@@ -34,6 +34,49 @@ export class SelfSignupService {
     return `${this.config.getOrThrow<string>('TENANT_WEB_URL')}/login`;
   }
 
+  private async ensureControlPlaneSubscription(tenantId: string, currency: string): Promise<void> {
+    const controlPlaneApiUrl = this.config.get<string>('CONTROL_PLANE_API_URL');
+    const internalServiceToken = this.config.get<string>('INTERNAL_SERVICE_TOKEN');
+
+    if (!controlPlaneApiUrl || !internalServiceToken) {
+      this.logger.warn(
+        `Skipping control-plane subscription bootstrap for tenant '${tenantId}' because control-plane integration is not configured.`,
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${controlPlaneApiUrl.replace(/\/$/, '')}/internal/subscriptions/bootstrap`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-service-token': internalServiceToken,
+          },
+          body: JSON.stringify({
+            tenantId,
+            currency,
+            trialDays: 14,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          `Control-plane subscription bootstrap failed for tenant '${tenantId}': ${response.status} ${errorText}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Control-plane subscription bootstrap failed for tenant '${tenantId}': ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      );
+    }
+  }
+
   async registerOrganisation(dto: RegisterOrganisationDto): Promise<RegisterOrganisationResult> {
     // Validate business model (throws if invalid)
     getBusinessModel(dto.businessModel);
@@ -150,6 +193,8 @@ export class SelfSignupService {
       orgName: dto.orgName,
       code,
     });
+
+    await this.ensureControlPlaneSubscription(tenantId, countryConfig.currency);
 
     return {
       userId,

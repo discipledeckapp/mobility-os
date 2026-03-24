@@ -135,6 +135,53 @@ export class SubscriptionsService {
     });
   }
 
+  async ensureBootstrapSubscription(params: {
+    tenantId: string;
+    currency?: string;
+    trialDays?: number;
+  }): Promise<CpSubscription> {
+    const existing = await this.prisma.cpSubscription.findUnique({
+      where: { tenantId: params.tenantId },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    const activePlans = await this.plansService.listPlans(true);
+    const currency = params.currency?.toUpperCase();
+    const plan =
+      activePlans.find((item) => item.currency === currency && item.tier === 'growth') ??
+      activePlans.find((item) => item.currency === currency) ??
+      activePlans.find((item) => item.tier === 'growth') ??
+      activePlans[0];
+
+    if (!plan) {
+      throw new NotFoundException('No active billing plan is available for bootstrap provisioning.');
+    }
+
+    const currentPeriodStart = new Date();
+    const currentPeriodEnd = new Date(currentPeriodStart);
+    if (plan.billingInterval === 'annual') {
+      currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+    } else {
+      currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+    }
+
+    const trialDays = params.trialDays ?? 14;
+    const trialEndsAt =
+      trialDays > 0
+        ? new Date(currentPeriodStart.getTime() + trialDays * 24 * 60 * 60 * 1000)
+        : undefined;
+
+    return this.createSubscription({
+      tenantId: params.tenantId,
+      planId: plan.id,
+      currentPeriodStart: currentPeriodStart.toISOString(),
+      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      ...(trialEndsAt ? { trialEndsAt: trialEndsAt.toISOString() } : {}),
+    });
+  }
+
   async cancelAtPeriodEnd(tenantId: string): Promise<CpSubscription> {
     const sub = await this.getByTenant(tenantId);
 

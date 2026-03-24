@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { listDrivers } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Card } from '../../../components/card';
@@ -18,10 +18,22 @@ import { identityTone, readinessTone } from '../../../utils/status';
 
 export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
   const [query, setQuery] = useState('');
+  const [readinessFilter, setReadinessFilter] = useState<'all' | 'queue' | 'ready'>('all');
   const driversQuery = useQuery({
     queryKey: ['operator-drivers', query],
     queryFn: () => listDrivers({ q: query.trim() || undefined, page: 1, limit: 100 }),
   });
+
+  const filteredDrivers =
+    driversQuery.data?.data.filter((driver) => {
+      if (readinessFilter === 'queue') {
+        return driver.activationReadiness !== 'ready';
+      }
+      if (readinessFilter === 'ready') {
+        return driver.activationReadiness === 'ready';
+      }
+      return true;
+    }) ?? [];
 
   const onRefresh = async () => {
     try {
@@ -38,7 +50,10 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
     >
       <Card style={styles.section}>
         <Text style={styles.title}>Drivers</Text>
-        <Text style={styles.copy}>Search the full tenant driver registry and open any driver record.</Text>
+        <Text style={styles.copy}>
+          Search the full tenant driver registry, jump into the readiness queue, and open any
+          driver record.
+        </Text>
         <Input
           autoCapitalize="none"
           autoCorrect={false}
@@ -47,6 +62,47 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
           placeholder="Name, phone, email, or status"
           value={query}
         />
+        <View style={styles.filterRow}>
+          <Pressable
+            onPress={() => setReadinessFilter('all')}
+            style={[styles.filterChip, readinessFilter === 'all' ? styles.filterChipActive : null]}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                readinessFilter === 'all' ? styles.filterChipTextActive : null,
+              ]}
+            >
+              All drivers
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setReadinessFilter('queue')}
+            style={[styles.filterChip, readinessFilter === 'queue' ? styles.filterChipActive : null]}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                readinessFilter === 'queue' ? styles.filterChipTextActive : null,
+              ]}
+            >
+              Readiness queue
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setReadinessFilter('ready')}
+            style={[styles.filterChip, readinessFilter === 'ready' ? styles.filterChipActive : null]}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                readinessFilter === 'ready' ? styles.filterChipTextActive : null,
+              ]}
+            >
+              Ready
+            </Text>
+          </Pressable>
+        </View>
       </Card>
 
       {driversQuery.isLoading ? (
@@ -54,8 +110,8 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
           <Card><LoadingSkeleton height={88} /></Card>
           <Card><LoadingSkeleton height={88} /></Card>
         </>
-      ) : driversQuery.data?.data.length ? (
-        driversQuery.data.data.map((driver) => (
+      ) : filteredDrivers.length ? (
+        filteredDrivers.map((driver) => (
           <Card key={driver.id} style={styles.driverCard}>
             <View style={styles.rowBetween}>
               <View style={styles.copyBlock}>
@@ -83,7 +139,13 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
       ) : (
         <EmptyState
           actionLabel="Refresh"
-          message="No drivers match the current query."
+          message={
+            readinessFilter === 'queue'
+              ? 'No drivers are currently waiting in the readiness queue.'
+              : readinessFilter === 'ready'
+                ? 'No drivers are marked ready yet.'
+                : 'No drivers match the current query.'
+          }
           title="No drivers found"
           onAction={() => void onRefresh()}
         />
@@ -96,6 +158,20 @@ const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
   copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
+  filterChip: {
+    borderColor: tokens.colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: 8,
+  },
+  filterChipActive: {
+    backgroundColor: tokens.colors.primary,
+    borderColor: tokens.colors.primary,
+  },
+  filterChipText: { color: tokens.colors.inkSoft, fontSize: 13, fontWeight: '600' },
+  filterChipTextActive: { color: '#FFFFFF' },
   driverCard: { gap: tokens.spacing.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', gap: tokens.spacing.sm },
   copyBlock: { flex: 1, gap: 4 },

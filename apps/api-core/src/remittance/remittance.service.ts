@@ -1,5 +1,9 @@
 import { TenantRole } from '@mobility-os/authz-model';
-import { getCountryConfig, isCountrySupported } from '@mobility-os/domain-config';
+import {
+  computeNextRemittanceDueDate,
+  getCountryConfig,
+  isCountrySupported,
+} from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
 import {
   BadRequestException,
@@ -95,12 +99,6 @@ export class RemittanceService {
       ? getCountryConfig(tenant.country).currency
       : null;
 
-    if (expectedCurrency && dto.currency.trim().toUpperCase() !== expectedCurrency.toUpperCase()) {
-      throw new BadRequestException(
-        `Remittance currency must be '${expectedCurrency}' for this organisation.`,
-      );
-    }
-
     const assignment = await this.prisma.assignment.findUnique({
       where: { id: dto.assignmentId },
     });
@@ -137,6 +135,44 @@ export class RemittanceService {
       );
     }
 
+    const plannedCurrency =
+      dto.currency?.trim().toUpperCase() ??
+      assignment.remittanceCurrency?.trim().toUpperCase() ??
+      expectedCurrency;
+
+    if (!plannedCurrency) {
+      throw new BadRequestException('A remittance currency could not be resolved for this record.');
+    }
+
+    if (expectedCurrency && plannedCurrency !== expectedCurrency.toUpperCase()) {
+      throw new BadRequestException(
+        `Remittance currency must be '${expectedCurrency}' for this organisation.`,
+      );
+    }
+
+    const amountMinorUnits = dto.amountMinorUnits ?? assignment.remittanceAmountMinorUnits;
+    if (!amountMinorUnits || amountMinorUnits < 1) {
+      throw new BadRequestException(
+        'This assignment does not have a usable remittance amount yet. Update the assignment remittance plan first.',
+      );
+    }
+
+    const dueDate =
+      dto.dueDate ??
+      computeNextRemittanceDueDate({
+        remittanceFrequency: assignment.remittanceFrequency,
+        remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
+        remittanceCurrency: assignment.remittanceCurrency,
+        remittanceStartDate: assignment.remittanceStartDate,
+        remittanceCollectionDay: assignment.remittanceCollectionDay,
+      });
+
+    if (!dueDate) {
+      throw new BadRequestException(
+        'This assignment does not have a complete remittance schedule yet. Update the assignment remittance plan first.',
+      );
+    }
+
     return this.prisma.remittance.create({
       data: {
         tenantId,
@@ -146,9 +182,9 @@ export class RemittanceService {
         fleetId: assignment.fleetId,
         operatingUnitId: assignment.operatingUnitId,
         businessEntityId: assignment.businessEntityId,
-        amountMinorUnits: dto.amountMinorUnits,
-        currency: dto.currency,
-        dueDate: dto.dueDate,
+        amountMinorUnits,
+        currency: plannedCurrency,
+        dueDate,
         notes: dto.notes ?? null,
         status: 'pending',
       },

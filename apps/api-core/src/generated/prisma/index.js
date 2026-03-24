@@ -331,14 +331,13 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/seyiadelaju/mobility-os/apps/api-core/src/database/prisma/schema.prisma",
+    "sourceFilePath": "/Users/seyiadelaju/mobility-os/apps/api-core/src/generated/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../.env"
+    "rootEnvPath": null
   },
-  "relativePath": "../../database/prisma",
+  "relativePath": "",
   "clientVersion": "5.22.0",
   "engineVersion": "605197351a3c8bdd595af2d2a9bc3025bca48ea2",
   "datasourceNames": [
@@ -364,8 +363,8 @@ const fs = require('fs')
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   const alternativePaths = [
-    "src/generated/prisma",
-    "generated/prisma",
+    "apps/api-core/src/generated/prisma",
+    "api-core/src/generated/prisma",
   ]
   
   const alternativePath = alternativePaths.find((altPath) => {
@@ -394,7 +393,7 @@ Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
-path.join(process.cwd(), "src/generated/prisma/libquery_engine-darwin-arm64.dylib.node")
+path.join(process.cwd(), "apps/api-core/src/generated/prisma/libquery_engine-darwin-arm64.dylib.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "src/generated/prisma/schema.prisma")
+path.join(process.cwd(), "apps/api-core/src/generated/prisma/schema.prisma")

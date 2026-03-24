@@ -1,5 +1,6 @@
 'use client';
 
+import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -61,6 +62,36 @@ export function CreateRemittanceForm({
         (assignment) => !fleetId || assignment.fleetId === fleetId,
       ),
     [activeAssignments, fleetId],
+  );
+  const selectedAssignment = useMemo(
+    () => fleetAssignments.find((assignment) => assignment.id === assignmentId) ?? null,
+    [assignmentId, fleetAssignments],
+  );
+  const suggestedDueDate = useMemo(
+    () =>
+      selectedAssignment
+        ? computeNextRemittanceDueDate({
+            ...(selectedAssignment.remittanceFrequency !== undefined
+              ? { remittanceFrequency: selectedAssignment.remittanceFrequency }
+              : {}),
+            ...(selectedAssignment.remittanceAmountMinorUnits !== undefined
+              ? {
+                  remittanceAmountMinorUnits:
+                    selectedAssignment.remittanceAmountMinorUnits,
+                }
+              : {}),
+            ...(selectedAssignment.remittanceCurrency !== undefined
+              ? { remittanceCurrency: selectedAssignment.remittanceCurrency }
+              : {}),
+            ...(selectedAssignment.remittanceStartDate !== undefined
+              ? { remittanceStartDate: selectedAssignment.remittanceStartDate }
+              : {}),
+            ...(selectedAssignment.remittanceCollectionDay !== undefined
+              ? { remittanceCollectionDay: selectedAssignment.remittanceCollectionDay }
+              : {}),
+          }) ?? ''
+        : '',
+    [selectedAssignment],
   );
 
   useEffect(() => {
@@ -128,26 +159,70 @@ export function CreateRemittanceForm({
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
             <Input
+              key={`${assignmentId || 'none'}-amount`}
               id="amount"
               min="0.01"
               name="amount"
-              placeholder="1500.00"
+              placeholder="2500.00"
               required
               step="0.01"
               type="number"
+              defaultValue={
+                selectedAssignment?.remittanceAmountMinorUnits
+                  ? String(selectedAssignment.remittanceAmountMinorUnits / 100)
+                  : ''
+              }
+              readOnly={Boolean(selectedAssignment?.remittanceAmountMinorUnits)}
             />
-            <Text tone="muted">Enter the amount in the major currency unit (e.g. 1500 for ₦1,500).</Text>
+            <Text tone="muted">
+              {selectedAssignment?.remittanceAmountMinorUnits
+                ? 'This amount is pulled from the assignment remittance plan.'
+                : 'Enter the amount in the major currency unit (e.g. 1500 for ₦1,500).'}
+            </Text>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="currency">Currency</Label>
-            <Input id="currency" maxLength={3} name="currency" placeholder="NGN" required />
-            <Text tone="muted">3-letter ISO code, e.g. NGN, USD, GBP.</Text>
+            <Input
+              key={`${assignmentId || 'none'}-currency`}
+              id="currency"
+              maxLength={3}
+              name="currency"
+              placeholder="NGN"
+              required
+              defaultValue={selectedAssignment?.remittanceCurrency ?? ''}
+              readOnly={Boolean(selectedAssignment?.remittanceCurrency)}
+            />
+            <Text tone="muted">
+              {selectedAssignment?.remittanceCurrency
+                ? 'This currency is locked to the assignment remittance plan.'
+                : '3-letter ISO code, e.g. NGN, USD, GBP.'}
+            </Text>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="dueDate">Due date</Label>
-            <Input id="dueDate" name="dueDate" required type="date" />
+            <Input
+              key={`${assignmentId || 'none'}-dueDate`}
+              id="dueDate"
+              name="dueDate"
+              required
+              type="date"
+              defaultValue={suggestedDueDate}
+              readOnly={Boolean(suggestedDueDate)}
+            />
+            {selectedAssignment ? (
+              <Text tone="muted">
+                {describeRemittanceSchedule({
+                  ...(selectedAssignment.remittanceFrequency !== undefined
+                    ? { remittanceFrequency: selectedAssignment.remittanceFrequency }
+                    : {}),
+                  ...(selectedAssignment.remittanceCollectionDay !== undefined
+                    ? { remittanceCollectionDay: selectedAssignment.remittanceCollectionDay }
+                    : {}),
+                })}
+              </Text>
+            ) : null}
           </div>
 
           <div className="space-y-2 md:col-span-2">

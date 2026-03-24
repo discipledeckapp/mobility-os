@@ -20,19 +20,34 @@ export class RecordRemittanceDto {
   @IsNotEmpty()
   assignmentId!: string;
 
-  @ApiProperty({ description: 'Amount in minor currency units (e.g. kobo)', example: 150000 })
+  @ApiPropertyOptional({
+    description:
+      'Amount in minor currency units (e.g. kobo). When omitted, the assignment remittance plan amount is used.',
+    example: 150000,
+  })
+  @IsOptional()
   @IsInt()
   @Min(1)
-  amountMinorUnits!: number;
+  amountMinorUnits?: number;
 
-  @ApiProperty({ description: 'ISO 4217 currency code', example: 'NGN' })
+  @ApiPropertyOptional({
+    description:
+      'ISO 4217 currency code. When omitted, the assignment remittance currency is used.',
+    example: 'NGN',
+  })
+  @IsOptional()
   @IsString()
   @IsISO4217CurrencyCode()
-  currency!: string;
+  currency?: string;
 
-  @ApiProperty({ description: 'Expected payment date (YYYY-MM-DD)', example: '2026-03-20' })
+  @ApiPropertyOptional({
+    description:
+      'Expected payment date (YYYY-MM-DD). When omitted, the next scheduled due date is derived from the assignment remittance plan.',
+    example: '2026-03-20',
+  })
+  @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'dueDate must be YYYY-MM-DD' })
-  dueDate!: string;
+  dueDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

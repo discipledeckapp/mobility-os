@@ -15,11 +15,25 @@ import {
 import type { TenantAuthSessionRecord, TenantRecord } from '../../lib/api-core';
 import {
   changePasswordAction,
+  syncRemittanceRemindersAction,
   updateProfileAction,
+  updateNotificationPreferencesAction,
+  updateOrganisationSettingsAction,
   type SettingsActionState,
 } from './actions';
-
+import type {
+  NotificationPreferencesRecord,
+  UserNotificationRecord,
+} from '../../lib/api-core';
 const initialState: SettingsActionState = {};
+const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> = {
+  remittance_due: 'Remittance due reminders',
+  remittance_overdue: 'Overdue remittance follow-up',
+  remittance_reconciled: 'Reconciled remittance updates',
+  late_remittance_risk: 'Late remittance risk signals',
+  compliance_risk: 'Compliance and risk alerts',
+  self_service_invite: 'Driver verification invites',
+};
 
 function EyeIcon() {
   return (
@@ -96,12 +110,28 @@ function PasswordInput({
 export function SettingsPanel({
   session,
   tenant,
+  notificationPreferences,
+  notifications,
 }: {
   session: TenantAuthSessionRecord;
   tenant: TenantRecord;
+  notificationPreferences: NotificationPreferencesRecord | null;
+  notifications: UserNotificationRecord[];
 }) {
   const [profileState, profileAction, profilePending] = useActionState(
     updateProfileAction,
+    initialState,
+  );
+  const [organisationState, organisationAction, organisationPending] = useActionState(
+    updateOrganisationSettingsAction,
+    initialState,
+  );
+  const [notificationState, notificationAction, notificationPending] = useActionState(
+    updateNotificationPreferencesAction,
+    initialState,
+  );
+  const [reminderState, reminderAction, reminderPending] = useActionState(
+    syncRemittanceRemindersAction,
     initialState,
   );
   const [passwordState, passwordAction, passwordPending] = useActionState(
@@ -134,6 +164,18 @@ export function SettingsPanel({
                     name="phone"
                     placeholder="+2348012345678"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="preferredLanguage">Preferred language</Label>
+                  <select
+                    className="flex h-10 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mobiris-primary)]"
+                    defaultValue={session.preferredLanguage ?? session.defaultLanguage ?? 'en'}
+                    id="preferredLanguage"
+                    name="preferredLanguage"
+                  >
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                  </select>
                 </div>
               </div>
               {profileState.error ? <Text tone="danger">{profileState.error}</Text> : null}
@@ -181,20 +223,187 @@ export function SettingsPanel({
             </form>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Organisation</CardTitle>
+            <CardDescription>
+              Control how your company name, logo, language defaults, and guarantor limits appear across the workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={organisationAction} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Company display name</Label>
+                  <Input
+                    defaultValue={tenant.displayName ?? tenant.name}
+                    id="displayName"
+                    name="displayName"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="logoUrl">Logo URL</Label>
+                  <Input
+                    defaultValue={tenant.logoUrl ?? ''}
+                    id="logoUrl"
+                    name="logoUrl"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultLanguage">Default language</Label>
+                  <select
+                    className="flex h-10 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mobiris-primary)]"
+                    defaultValue={tenant.defaultLanguage ?? 'en'}
+                    id="defaultLanguage"
+                    name="defaultLanguage"
+                  >
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guarantorMaxActiveDrivers">Max active drivers per guarantor</Label>
+                  <Input
+                    defaultValue={String(tenant.guarantorMaxActiveDrivers ?? 2)}
+                    id="guarantorMaxActiveDrivers"
+                    min="1"
+                    name="guarantorMaxActiveDrivers"
+                    type="number"
+                  />
+                </div>
+              </div>
+              {organisationState.error ? <Text tone="danger">{organisationState.error}</Text> : null}
+              {organisationState.success ? <Text tone="success">{organisationState.success}</Text> : null}
+              <Button disabled={organisationPending} type="submit">
+                {organisationPending ? 'Saving…' : 'Save organisation settings'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>
+              Choose which reminders and alerts reach you by email, in-app inbox, or push.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form action={notificationAction} className="space-y-4">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[32rem] border-separate border-spacing-y-2 text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-500">
+                      <th className="pb-1 pr-4">Alert</th>
+                      <th className="pb-1 pr-4">Email</th>
+                      <th className="pb-1 pr-4">In-app</th>
+                      <th className="pb-1">Push</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notificationPreferences
+                      ? (Object.entries(notificationPreferences) as Array<
+                          [keyof NotificationPreferencesRecord, NotificationPreferencesRecord[keyof NotificationPreferencesRecord]]
+                        >).map(([topic, preference]) => (
+                          <tr key={topic} className="rounded-lg border border-slate-200 bg-slate-50/80">
+                            <td className="rounded-l-lg px-3 py-2 font-medium text-slate-700">
+                              {NOTIFICATION_LABELS[topic]}
+                            </td>
+                            <td className="px-3 py-2">
+                              <input defaultChecked={preference.email} name={`${topic}.email`} type="checkbox" />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input defaultChecked={preference.inApp} name={`${topic}.inApp`} type="checkbox" />
+                            </td>
+                            <td className="rounded-r-lg px-3 py-2">
+                              <input defaultChecked={preference.push} name={`${topic}.push`} type="checkbox" />
+                            </td>
+                          </tr>
+                        ))
+                      : null}
+                  </tbody>
+                </table>
+              </div>
+              {notificationState.error ? <Text tone="danger">{notificationState.error}</Text> : null}
+              {notificationState.success ? <Text tone="success">{notificationState.success}</Text> : null}
+              <Button disabled={notificationPending} type="submit">
+                {notificationPending ? 'Saving…' : 'Save notification settings'}
+              </Button>
+            </form>
+            <form action={reminderAction}>
+              <div className="flex flex-wrap gap-3">
+                <Button disabled={reminderPending} type="submit" variant="secondary">
+                  {reminderPending ? 'Refreshing…' : 'Refresh remittance reminders'}
+                </Button>
+              </div>
+            </form>
+              {reminderState.error ? <Text tone="danger">{reminderState.error}</Text> : null}
+              {reminderState.success ? <Text tone="success">{reminderState.success}</Text> : null}
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--mobiris-ink)]">Recent inbox</p>
+                <p className="text-xs text-slate-500">
+                  Latest organisation and remittance reminders delivered to this account.
+                </p>
+              </div>
+              {notifications.length > 0 ? (
+                <div className="space-y-3">
+                  {notifications.slice(0, 6).map((notification) => (
+                    <div
+                      className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/80 px-4 py-3"
+                      key={notification.id}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-[var(--mobiris-ink)]">{notification.title}</p>
+                          <p className="mt-1 text-sm text-slate-500">{notification.body}</p>
+                        </div>
+                        <Text tone={notification.readAt ? 'muted' : 'success'}>
+                          {notification.readAt ? 'Read' : 'New'}
+                        </Text>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Text tone="muted">No notifications have been delivered to this account yet.</Text>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Organisation</CardTitle>
           <CardDescription>
-            Reference details for the organisation attached to the current session.
+            Current organisation identity and access defaults.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {tenant.logoUrl ? (
+            <div className="flex items-center gap-3">
+              <img
+                alt={`${tenant.displayName ?? tenant.name} logo`}
+                className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+                src={tenant.logoUrl}
+              />
+              <div>
+                <Text tone="muted">Brand preview</Text>
+                <p className="mt-1 text-sm font-semibold text-[var(--mobiris-ink)]">
+                  {tenant.displayName ?? tenant.name}
+                </p>
+              </div>
+            </div>
+          ) : null}
           <div>
             <Text tone="muted">Organisation name</Text>
             <p className="mt-1 text-sm font-semibold text-[var(--mobiris-ink)]">
-              {tenant.name}
+              {tenant.displayName ?? tenant.name}
             </p>
           </div>
           <div>
@@ -210,15 +419,17 @@ export function SettingsPanel({
             </p>
           </div>
           <div>
-            <Text tone="muted">Business model access</Text>
+            <Text tone="muted">Default language</Text>
             <p className="mt-1 text-sm font-semibold text-[var(--mobiris-ink)]">
-              {session.role}
+              {(tenant.defaultLanguage ?? session.defaultLanguage ?? 'en') === 'fr'
+                ? 'Français'
+                : 'English'}
             </p>
           </div>
           <div>
-            <Text tone="muted">Status</Text>
+            <Text tone="muted">Guarantor capacity</Text>
             <p className="mt-1 text-sm font-semibold text-[var(--mobiris-ink)]">
-              {tenant.status}
+              {tenant.guarantorMaxActiveDrivers ?? session.guarantorMaxActiveDrivers ?? 2} active drivers per guarantor
             </p>
           </div>
         </CardContent>

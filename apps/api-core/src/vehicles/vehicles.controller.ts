@@ -18,7 +18,8 @@ import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ListVehiclesDto } from './dto/list-vehicles.dto';
-import type { UpdateVehicleDto } from './dto/update-vehicle.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { VehicleCodeSuggestionResponseDto } from './dto/vehicle-code-suggestion-response.dto';
 import { VehicleDetailResponseDto } from './dto/vehicle-detail-response.dto';
 import { VehicleResponseDto } from './dto/vehicle-response.dto';

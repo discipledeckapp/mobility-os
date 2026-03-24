@@ -17,6 +17,9 @@ describe('AssignmentsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -29,6 +32,7 @@ describe('AssignmentsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     driversService.hasApprovedLicence.mockResolvedValue(true);
+    prisma.tenant.findUnique.mockResolvedValue({ country: 'NG' });
     service = new AssignmentsService(prisma as never, driversService as never);
   });
 
@@ -67,6 +71,7 @@ describe('AssignmentsService', () => {
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       notes: 'Morning dispatch',
+      remittanceAmountMinorUnits: 250000,
     });
 
     expect(prisma.assignment.create).toHaveBeenCalledWith({
@@ -104,6 +109,7 @@ describe('AssignmentsService', () => {
       service.create('tenant_1', {
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
+        remittanceAmountMinorUnits: 250000,
       }),
     ).rejects.toThrow(
       'This driver cannot be assigned yet because no approved driver licence is on file.',
@@ -189,6 +195,7 @@ describe('AssignmentsService', () => {
       service.create('tenant_1', {
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
+        remittanceAmountMinorUnits: 250000,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -206,6 +213,7 @@ describe('AssignmentsService', () => {
       service.create('tenant_1', {
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
+        remittanceAmountMinorUnits: 250000,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
@@ -231,6 +239,7 @@ describe('AssignmentsService', () => {
         fleetId: 'fleet_2',
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
+        remittanceAmountMinorUnits: 250000,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

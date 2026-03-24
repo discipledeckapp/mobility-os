@@ -54,4 +54,14 @@ export class TeamController {
   ): Promise<{ message: string }> {
     return this.teamService.deactivateMember(ctx.tenantId, userId);
   }
+
+  @Post(':userId/resend-invite')
+  @RequirePermissions(Permission.TenantsWrite)
+  @ApiOkResponse()
+  resendInvite(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('userId') userId: string,
+  ): Promise<{ message: string }> {
+    return this.teamService.resendInvite(ctx.tenantId, userId);
+  }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
 import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -24,13 +25,27 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
   const [selectedDriverId, setSelectedDriverId] = React.useState('');
   const [selectedVehicleId, setSelectedVehicleId] = React.useState('');
   const [notes, setNotes] = React.useState('');
+  const [remittanceAmountMinorUnits, setRemittanceAmountMinorUnits] = React.useState('');
+  const [remittanceCurrency, setRemittanceCurrency] = React.useState('NGN');
+  const [remittanceFrequency, setRemittanceFrequency] = React.useState<'daily' | 'weekly'>('daily');
+  const [remittanceStartDate, setRemittanceStartDate] = React.useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [remittanceCollectionDay, setRemittanceCollectionDay] = React.useState('1');
 
   const createMutation = useMutation({
     mutationFn: () =>
       createOperatorAssignment({
         driverId: selectedDriverId,
         vehicleId: selectedVehicleId,
-        notes: notes.trim() || undefined,
+        remittanceAmountMinorUnits: Number(remittanceAmountMinorUnits),
+        remittanceCurrency: remittanceCurrency.trim().toUpperCase(),
+        remittanceFrequency,
+        remittanceStartDate,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(remittanceFrequency === 'weekly'
+          ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
+          : {}),
       }),
     onSuccess: () => {
       Alert.alert('Assignment created', 'The driver has been assigned successfully.');
@@ -46,8 +61,22 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       Alert.alert('Create assignment', 'Select both a driver and a vehicle.');
       return;
     }
+    if (!Number.isFinite(Number(remittanceAmountMinorUnits)) || Number(remittanceAmountMinorUnits) < 1) {
+      Alert.alert('Create assignment', 'Enter a valid remittance amount in minor units.');
+      return;
+    }
     createMutation.mutate();
   };
+
+  const projectedDueDate = computeNextRemittanceDueDate({
+    remittanceFrequency,
+    remittanceAmountMinorUnits: Number(remittanceAmountMinorUnits) || 0,
+    remittanceCurrency,
+    remittanceStartDate,
+    ...(remittanceFrequency === 'weekly'
+      ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
+      : {}),
+  });
 
   return (
     <Screen>
@@ -100,6 +129,49 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
 
       <Card style={styles.section}>
         <Input label="Notes" multiline onChangeText={setNotes} value={notes} />
+        <Input
+          keyboardType="number-pad"
+          label="Expected remittance amount (minor units)"
+          onChangeText={setRemittanceAmountMinorUnits}
+          value={remittanceAmountMinorUnits}
+        />
+        <Input label="Currency" autoCapitalize="characters" onChangeText={setRemittanceCurrency} value={remittanceCurrency} />
+        <Input
+          label="Schedule"
+          editable={false}
+          value={describeRemittanceSchedule({
+            remittanceFrequency,
+            ...(remittanceFrequency === 'weekly'
+              ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
+              : {}),
+          })}
+        />
+        <View style={styles.choiceRow}>
+          <Text
+            style={[styles.choiceChip, remittanceFrequency === 'daily' ? styles.choiceChipActive : null]}
+            onPress={() => setRemittanceFrequency('daily')}
+          >
+            Daily
+          </Text>
+          <Text
+            style={[styles.choiceChip, remittanceFrequency === 'weekly' ? styles.choiceChipActive : null]}
+            onPress={() => setRemittanceFrequency('weekly')}
+          >
+            Weekly
+          </Text>
+        </View>
+        <Input label="First due date" onChangeText={setRemittanceStartDate} value={remittanceStartDate} />
+        {remittanceFrequency === 'weekly' ? (
+          <Input
+            keyboardType="number-pad"
+            label="Weekly collection day (1=Mon ... 7=Sun)"
+            onChangeText={setRemittanceCollectionDay}
+            value={remittanceCollectionDay}
+          />
+        ) : null}
+        {projectedDueDate ? (
+          <Text style={styles.copy}>Next projected remittance due date: {projectedDueDate}</Text>
+        ) : null}
         <Button label="Create assignment" loading={createMutation.isPending} onPress={onSubmit} />
       </Card>
     </Screen>

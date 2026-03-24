@@ -1,4 +1,10 @@
-import { ASSIGNMENT_STATUS_CODES } from '@mobility-os/domain-config';
+import {
+  ASSIGNMENT_STATUS_CODES,
+  getCountryConfig,
+  isCountrySupported,
+  normalizeRemittanceFrequency,
+  toIsoDate,
+} from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Assignment, Prisma } from '@prisma/client';
@@ -8,8 +14,14 @@ import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
+import type { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
 
 const OPEN_ASSIGNMENT_STATUSES = ['created', 'assigned', 'active'] as const;
+type AssignmentResourceInput = {
+  driverId: string;
+  vehicleId: string;
+  fleetId?: string;
+};
 
 @Injectable()
 export class AssignmentsService {
@@ -17,6 +29,72 @@ export class AssignmentsService {
     private readonly prisma: PrismaService,
     private readonly driversService: DriversService,
   ) {}
+
+  private async resolveTenantCurrency(tenantId: string): Promise<string> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException(`Tenant '${tenantId}' not found`);
+    }
+
+    if (isCountrySupported(tenant.country)) {
+      return getCountryConfig(tenant.country).currency;
+    }
+
+    return 'NGN';
+  }
+
+  private normalizeRemittancePlan(
+    tenantCurrency: string,
+    input: {
+      remittanceAmountMinorUnits?: number | null;
+      remittanceFrequency?: string | null;
+      remittanceCurrency?: string | null;
+      remittanceStartDate?: string | null;
+      remittanceCollectionDay?: number | null;
+    },
+  ) {
+    const remittanceFrequency = normalizeRemittanceFrequency(input.remittanceFrequency ?? 'daily');
+    if (!remittanceFrequency) {
+      throw new BadRequestException('remittanceFrequency must be daily or weekly.');
+    }
+
+    if (!input.remittanceAmountMinorUnits || input.remittanceAmountMinorUnits < 1) {
+      throw new BadRequestException('remittanceAmountMinorUnits must be greater than 0.');
+    }
+
+    const remittanceCurrency = (input.remittanceCurrency ?? tenantCurrency).trim().toUpperCase();
+    if (remittanceCurrency !== tenantCurrency.toUpperCase()) {
+      throw new BadRequestException(
+        `Assignment remittance currency must be '${tenantCurrency}' for this organisation.`,
+      );
+    }
+
+    if (remittanceFrequency === 'weekly') {
+      if (
+        !input.remittanceCollectionDay ||
+        input.remittanceCollectionDay < 1 ||
+        input.remittanceCollectionDay > 7
+      ) {
+        throw new BadRequestException(
+          'Weekly remittance plans require remittanceCollectionDay between 1 and 7.',
+        );
+      }
+    }
+
+    return {
+      remittanceModel: 'fixed',
+      remittanceFrequency,
+      remittanceAmountMinorUnits: input.remittanceAmountMinorUnits,
+      remittanceCurrency,
+      remittanceStartDate: input.remittanceStartDate ?? toIsoDate(new Date()),
+      remittanceCollectionDay:
+        remittanceFrequency === 'weekly' ? input.remittanceCollectionDay ?? null : null,
+    };
+  }
 
   async list(
     tenantId: string,
@@ -68,7 +146,7 @@ export class AssignmentsService {
 
   private async loadAssignmentResources(
     tenantId: string,
-    dto: CreateAssignmentDto,
+    dto: AssignmentResourceInput,
     allowedVehicleStatuses: string[] = ['available'],
   ) {
     const [driver, vehicle] = await Promise.all([
@@ -122,7 +200,7 @@ export class AssignmentsService {
   }
 
   private async ensureNoOverlappingAssignments(
-    dto: CreateAssignmentDto,
+    dto: AssignmentResourceInput,
     excludeAssignmentId?: string,
   ): Promise<void> {
     const [driverAssignment, vehicleAssignment] = await Promise.all([
@@ -156,8 +234,10 @@ export class AssignmentsService {
   }
 
   async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment> {
+    const tenantCurrency = await this.resolveTenantCurrency(tenantId);
     const { driver } = await this.loadAssignmentResources(tenantId, dto, ['available']);
     await this.ensureNoOverlappingAssignments(dto);
+    const remittancePlan = this.normalizeRemittancePlan(tenantCurrency, dto);
 
     const [assignment] = await this.prisma.$transaction([
       this.prisma.assignment.create({
@@ -170,6 +250,7 @@ export class AssignmentsService {
           vehicleId: dto.vehicleId,
           status: 'assigned',
           notes: dto.notes ?? null,
+          ...remittancePlan,
         },
       }),
       this.prisma.vehicle.update({
@@ -181,6 +262,30 @@ export class AssignmentsService {
     return assignment;
   }
 
+  async updateRemittancePlan(
+    tenantId: string,
+    id: string,
+    dto: UpdateAssignmentRemittancePlanDto,
+  ): Promise<Assignment> {
+    const assignment = await this.findOne(tenantId, id);
+    const tenantCurrency = await this.resolveTenantCurrency(tenantId);
+
+    const nextPlan = this.normalizeRemittancePlan(tenantCurrency, {
+      remittanceAmountMinorUnits:
+        dto.remittanceAmountMinorUnits ?? assignment.remittanceAmountMinorUnits,
+      remittanceFrequency: dto.remittanceFrequency ?? assignment.remittanceFrequency,
+      remittanceCurrency: dto.remittanceCurrency ?? assignment.remittanceCurrency,
+      remittanceStartDate: dto.remittanceStartDate ?? assignment.remittanceStartDate,
+      remittanceCollectionDay:
+        dto.remittanceCollectionDay ?? assignment.remittanceCollectionDay,
+    });
+
+    return this.prisma.assignment.update({
+      where: { id },
+      data: nextPlan,
+    });
+  }
+
   async start(tenantId: string, id: string): Promise<Assignment> {
     const assignment = await this.findOne(tenantId, id);
 
@@ -190,19 +295,18 @@ export class AssignmentsService {
       );
     }
 
-    const dto: CreateAssignmentDto = {
+    const assignmentRef: AssignmentResourceInput = {
       driverId: assignment.driverId,
       vehicleId: assignment.vehicleId,
-      ...(assignment.notes ? { notes: assignment.notes } : {}),
     };
 
     const { vehicle } = await this.loadAssignmentResources(
       tenantId,
-      dto,
+      assignmentRef,
       assignment.status === 'created' ? ['available'] : ['available', 'assigned'],
     );
 
-    await this.ensureNoOverlappingAssignments(dto, assignment.id);
+    await this.ensureNoOverlappingAssignments(assignmentRef, assignment.id);
 
     const shouldAssignVehicle = assignment.status === 'created';
     const operations: Prisma.PrismaPromise<unknown>[] = [

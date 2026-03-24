@@ -54,7 +54,14 @@ export function AssignmentRowActions({
     <div className="space-y-2">
       <div className="flex gap-2">
         {status !== 'active' ? (
-          <form action={startFormAction}>
+          <form
+            action={startFormAction}
+            onSubmit={(event) => {
+              if (!window.confirm('Start this assignment now?')) {
+                event.preventDefault();
+              }
+            }}
+          >
             <input name="assignmentId" type="hidden" value={assignmentId} />
             <Button disabled={isBusy} size="sm" variant="secondary">
               {isStarting ? 'Starting...' : 'Start'}
@@ -63,7 +70,14 @@ export function AssignmentRowActions({
         ) : null}
 
         {status === 'active' ? (
-        <form action={completeFormAction}>
+        <form
+          action={completeFormAction}
+          onSubmit={(event) => {
+            if (!window.confirm('Complete this assignment now?')) {
+              event.preventDefault();
+            }
+          }}
+        >
           <input name="assignmentId" type="hidden" value={assignmentId} />
           <Button disabled={isBusy} size="sm" variant="secondary">
             {isCompleting ? 'Completing...' : 'Complete'}
@@ -71,7 +85,14 @@ export function AssignmentRowActions({
         </form>
         ) : null}
 
-        <form action={cancelFormAction}>
+        <form
+          action={cancelFormAction}
+          onSubmit={(event) => {
+            if (!window.confirm('Cancel this assignment?')) {
+              event.preventDefault();
+            }
+          }}
+        >
           <input name="assignmentId" type="hidden" value={assignmentId} />
           <Button disabled={isBusy} size="sm" variant="ghost">
             {isCancelling ? 'Cancelling...' : 'Cancel'}

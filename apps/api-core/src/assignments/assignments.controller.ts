@@ -1,6 +1,6 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -17,8 +17,12 @@ import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AssignmentsService } from './assignments.service';
 import { AssignmentResponseDto } from './dto/assignment-response.dto';
-import type { CreateAssignmentDto } from './dto/create-assignment.dto';
-import type { ListAssignmentsDto } from './dto/list-assignments.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { CreateAssignmentDto } from './dto/create-assignment.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { ListAssignmentsDto } from './dto/list-assignments.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
 
 @ApiTags('Assignments')
 @ApiBearerAuth()
@@ -61,6 +65,18 @@ export class AssignmentsController {
     @Body() dto: CreateAssignmentDto,
   ): Promise<AssignmentResponseDto> {
     return this.service.create(ctx.tenantId, dto);
+  }
+
+  @Patch(':id/remittance-plan')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: AssignmentResponseDto })
+  updateRemittancePlan(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateAssignmentRemittancePlanDto,
+  ): Promise<AssignmentResponseDto> {
+    return this.service.updateRemittancePlan(ctx.tenantId, id, dto);
   }
 
   @Post(':id/start')

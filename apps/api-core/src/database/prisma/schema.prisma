@@ -465,19 +465,30 @@ model VehicleValuation {
 //   created | assigned | active | completed (terminal) | cancelled (terminal)
 
 model Assignment {
-  id       String @id @default(cuid())
-  tenantId String
-  fleetId  String
-  driverId String
+  id        String @id @default(cuid())
+  tenantId  String
+  fleetId   String
+  driverId  String
   vehicleId String
   // AssignmentStatus from domain-config ASSIGNMENT_STATUS_CODES.
-  status   String @default("assigned")
+  status    String @default("assigned")
 
   startedAt DateTime @default(now())
   // Null while the assignment is active.
   endedAt   DateTime?
   // Free-text reason for suspension or cancellation.
   notes     String?
+
+  // Planned remittance terms for this assignment. These are nullable so existing
+  // assignments created before remittance planning remain valid.
+  remittanceModel            String?
+  remittanceFrequency        String?
+  remittanceAmountMinorUnits Int?
+  remittanceCurrency         String?
+  // ISO 8601 date (YYYY-MM-DD) representing the first scheduled due date.
+  remittanceStartDate        String?
+  // Monday = 1 ... Sunday = 7. Used when frequency is weekly.
+  remittanceCollectionDay    Int?
 
   // Denormalized for filtering without joins.
   operatingUnitId  String
@@ -611,6 +622,7 @@ model User {
 
   // Hashed password for local auth. Null if using SSO only.
   passwordHash String?
+  settings     Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -620,6 +632,8 @@ model User {
   authOtps AuthOtp[]
   passwordResetTokens PasswordResetToken[]
   refreshTokens AuthRefreshToken[]
+  notifications UserNotification[]
+  pushDevices UserPushDevice[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -627,6 +641,46 @@ model User {
   @@index([tenantId])
   @@index([driverId])
   @@map("users")
+}
+
+model UserNotification {
+  id        String @id @default(cuid())
+  tenantId  String
+  userId    String
+  topic     String
+  title     String
+  body      String
+  actionUrl String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, createdAt])
+  @@index([tenantId, userId, readAt])
+  @@index([topic])
+  @@map("user_notifications")
+}
+
+model UserPushDevice {
+  id            String @id @default(cuid())
+  tenantId      String
+  userId        String
+  deviceToken   String
+  platform      String
+  disabledAt    DateTime?
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceToken])
+  @@index([tenantId, userId])
+  @@index([deviceToken])
+  @@map("user_push_devices")
 }
 
 model AuthRefreshToken {

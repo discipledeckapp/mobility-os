@@ -99,4 +99,18 @@ export class TeamService {
 
     return { message: 'Team member deactivated.' };
   }
+
+  async resendInvite(tenantId: string, userId: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId, driverId: null, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Team member not found.');
+    }
+
+    await this.authService.requestPasswordReset({ identifier: user.email });
+
+    return { message: `Invite reset link sent to ${user.email}.` };
+  }
 }
