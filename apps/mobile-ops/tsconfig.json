@@ -6,7 +6,6 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["react"],
     "paths": {
       "@mobile/*": ["./src/*"],
       "@mobility-os/domain-config": ["../../packages/domain-config/dist/index.d.ts"]

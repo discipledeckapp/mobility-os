@@ -14,7 +14,13 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "image": "sdk-55"
+      },
+      "android": {
+        "image": "sdk-55"
+      }
     }
   },
   "submit": {

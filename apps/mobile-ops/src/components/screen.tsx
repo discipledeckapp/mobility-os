@@ -4,7 +4,7 @@ import { tokens } from '../theme/tokens';
 
 interface ScreenProps extends ScrollViewProps {
   padded?: boolean;
-  footer?: React.ReactNode;
+  footer?: ScrollViewProps['children'];
 }
 
 export function Screen({
