@@ -31,6 +31,24 @@ export class TenantResponseDto {
   @ApiPropertyOptional()
   guarantorMaxActiveDrivers?: number;
 
+  @ApiPropertyOptional()
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+
+  @ApiPropertyOptional()
+  requireIdentityVerificationForActivation?: boolean;
+
+  @ApiPropertyOptional()
+  requireBiometricVerification?: boolean;
+
+  @ApiPropertyOptional()
+  requireGovernmentVerificationLookup?: boolean;
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredDriverDocumentSlugs?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredVehicleDocumentSlugs?: string[];
+
   @ApiProperty()
   createdAt!: Date;
 

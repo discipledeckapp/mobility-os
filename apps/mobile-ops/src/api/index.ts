@@ -61,6 +61,12 @@ export interface SessionRecord {
   defaultLanguage?: 'en' | 'fr';
   preferredLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
   notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
   assignedFleetIds?: string[];
@@ -113,6 +119,12 @@ export interface TenantRecord {
   logoUrl?: string | null;
   defaultLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -201,6 +213,10 @@ export interface DriverRecord {
   activationReadinessReasons?: string[];
   assignmentReadiness?: string;
   assignmentReadinessReasons?: string[];
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
 }
 
 export interface DriverSelfServiceDocumentRecord {
@@ -1007,6 +1023,12 @@ export function updateTenantSettings(input: {
   logoUrl?: string;
   defaultLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
 }): Promise<TenantRecord> {
   return apiFetch<TenantRecord>(`${API_PATHS.tenants}/me/settings`, {
     method: 'PATCH',

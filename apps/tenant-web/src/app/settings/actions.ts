@@ -61,6 +61,22 @@ export async function updateOrganisationSettingsAction(
   const logoUrl = String(formData.get('logoUrl') ?? '').trim();
   const defaultLanguage = String(formData.get('defaultLanguage') ?? '').trim();
   const guarantorMaxActiveDrivers = Number(formData.get('guarantorMaxActiveDrivers') ?? 2);
+  const autoSendDriverSelfServiceLinkOnCreate =
+    formData.get('autoSendDriverSelfServiceLinkOnCreate') === 'on';
+  const requireIdentityVerificationForActivation =
+    formData.get('requireIdentityVerificationForActivation') === 'on';
+  const requireBiometricVerification =
+    formData.get('requireBiometricVerification') === 'on';
+  const requireGovernmentVerificationLookup =
+    formData.get('requireGovernmentVerificationLookup') === 'on';
+  const requiredDriverDocumentSlugs = String(formData.get('requiredDriverDocumentSlugs') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const requiredVehicleDocumentSlugs = String(formData.get('requiredVehicleDocumentSlugs') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   try {
     await updateTenantSettings({
@@ -70,6 +86,12 @@ export async function updateOrganisationSettingsAction(
       ...(Number.isFinite(guarantorMaxActiveDrivers)
         ? { guarantorMaxActiveDrivers }
         : {}),
+      autoSendDriverSelfServiceLinkOnCreate,
+      requireIdentityVerificationForActivation,
+      requireBiometricVerification,
+      requireGovernmentVerificationLookup,
+      ...(requiredDriverDocumentSlugs.length > 0 ? { requiredDriverDocumentSlugs } : {}),
+      ...(requiredVehicleDocumentSlugs.length > 0 ? { requiredVehicleDocumentSlugs } : {}),
     });
     revalidatePath('/settings');
     revalidatePath('/');

@@ -1,6 +1,17 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -18,6 +29,8 @@ import {
   applyVehicleScope,
   assertFleetAccess,
   assertVehicleAccess,
+  getAssignedFleetIds,
+  getAssignedVehicleIds,
 } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -29,6 +42,10 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { ListAssignmentsDto } from './dto/list-assignments.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
+
+type HeaderWritableResponse = {
+  setHeader(name: string, value: string): void;
+};
 
 @ApiTags('Assignments')
 @ApiBearerAuth()
@@ -49,6 +66,51 @@ export class AssignmentsController {
     @Query() query: ListAssignmentsDto,
   ): Promise<PaginatedResponse<AssignmentResponseDto>> {
     return this.service.list(ctx.tenantId, applyVehicleScope(applyFleetScope(query, ctx), ctx));
+  }
+
+  @Get('import-template.csv')
+  @RequirePermissions(Permission.AssignmentsRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: String })
+  async downloadImportTemplate(@Res({ passthrough: true }) res: HeaderWritableResponse) {
+    const csv = [
+      'fleetName,driverPhone,vehicleCode,notes,remittanceModel,remittanceAmountMinorUnits,remittanceCurrency,remittanceFrequency,remittanceStartDate,remittanceCollectionDay',
+      'Lagos Core Fleet,08012345678,AJAH-0001,Daily route,fixed,250000,NGN,daily,2026-03-24,',
+    ].join('\n');
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'content-disposition',
+      'attachment; filename=\"assignment-import-template.csv\"',
+    );
+    return new StreamableFile(Buffer.from(csv, 'utf-8'));
+  }
+
+  @Get('export.csv')
+  @RequirePermissions(Permission.AssignmentsRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: String })
+  async exportAssignments(
+    @CurrentTenant() ctx: TenantContext,
+    @Res({ passthrough: true }) res: HeaderWritableResponse,
+  ) {
+    const csv = await this.service.exportAssignmentsCsv(ctx.tenantId, {
+      ...(getAssignedFleetIds(ctx).length ? { fleetIds: getAssignedFleetIds(ctx) } : {}),
+      ...(getAssignedVehicleIds(ctx).length ? { vehicleIds: getAssignedVehicleIds(ctx) } : {}),
+    });
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader('content-disposition', 'attachment; filename=\"assignments.csv\"');
+    return new StreamableFile(Buffer.from(csv, 'utf-8'));
+  }
+
+  @Post('import')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: Object })
+  importAssignments(
+    @CurrentTenant() ctx: TenantContext,
+    @Body('csvContent') csvContent: string,
+  ) {
+    return this.service.importAssignmentsFromCsv(ctx.tenantId, csvContent);
   }
 
   @Get(':id')

@@ -95,10 +95,19 @@ export function SelfServiceVerificationScreen({
   const requiredDocuments = useMemo(
     () =>
       isCountrySupported(countryCode)
-        ? getRequiredDocuments(getCountryConfig(countryCode).requiredDriverDocumentSlugs)
+        ? getRequiredDocuments(
+            driver?.requiredDriverDocumentSlugs?.length
+              ? driver.requiredDriverDocumentSlugs
+              : getCountryConfig(countryCode).requiredDriverDocumentSlugs,
+          )
         : [],
-    [countryCode],
+    [countryCode, driver?.requiredDriverDocumentSlugs],
   );
+
+  const identityVerificationRequired =
+    driver?.requireIdentityVerificationForActivation ?? true;
+  const biometricVerificationRequired = driver?.requireBiometricVerification ?? true;
+  const governmentLookupRequired = driver?.requireGovernmentVerificationLookup ?? true;
 
   useEffect(() => {
     if (!draftHydrated) {
@@ -213,9 +222,9 @@ export function SelfServiceVerificationScreen({
             }
             return true;
           }) &&
-          selfieBase64,
+          (!biometricVerificationRequired || selfieBase64),
       ),
-    [identifierTypes, identifierValues, selfieBase64, token],
+    [biometricVerificationRequired, identifierTypes, identifierValues, selfieBase64, token],
   );
 
   const identifiersReady = useMemo(
@@ -241,11 +250,12 @@ export function SelfServiceVerificationScreen({
 
   const identitySubmitted = useMemo(
     () =>
+      !identityVerificationRequired ||
       Boolean(identityResult) ||
       ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
         driver?.identityStatus ?? '',
       ),
-    [driver?.identityStatus, identityResult],
+    [driver?.identityStatus, identityResult, identityVerificationRequired],
   );
 
   const documentChecklist = useMemo(
@@ -273,7 +283,10 @@ export function SelfServiceVerificationScreen({
     () => [
       { label: 'Select country', complete: Boolean(countryCode) },
       { label: 'Enter required identifiers', complete: identifiersReady },
-      { label: 'Capture live selfie', complete: Boolean(selfieBase64) },
+      {
+        label: biometricVerificationRequired ? 'Capture live selfie' : 'Capture profile photo',
+        complete: biometricVerificationRequired ? Boolean(selfieBase64) : true,
+      },
       { label: 'Submit identity', complete: identitySubmitted },
       {
         label: 'Upload required documents',
@@ -314,8 +327,12 @@ export function SelfServiceVerificationScreen({
     }
 
     try {
-      const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
-      setLivenessSession(session);
+      if (biometricVerificationRequired) {
+        const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
+        setLivenessSession(session);
+      } else {
+        setLivenessSession(null);
+      }
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
@@ -353,8 +370,19 @@ export function SelfServiceVerificationScreen({
     if (!canSubmitIdentity) {
       Alert.alert(
         'Driver verification',
-        'Complete the required identifiers and capture a live selfie before submitting.',
+        biometricVerificationRequired
+          ? 'Complete the required identifiers and capture a live selfie before submitting.'
+          : 'Complete the required identifiers before submitting.',
       );
+      return;
+    }
+
+    if (!identityVerificationRequired || !governmentLookupRequired) {
+      setIdentityResult({
+        decision: 'manual_review',
+        providerLookupStatus: 'skipped_by_organisation_policy',
+      });
+      showToast('Identity details saved for organisation review.', 'success');
       return;
     }
 
@@ -369,7 +397,7 @@ export function SelfServiceVerificationScreen({
             countryCode,
           }))
           .filter((identifier) => identifier.value.length > 0),
-        selfieImageBase64: selfieBase64,
+        ...(selfieBase64 ? { selfieImageBase64: selfieBase64 } : {}),
         subjectConsent: true,
         livenessPassed: true,
         livenessCheck: livenessSession
@@ -477,7 +505,7 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.kicker}>Driver verification</Text>
         <Text style={styles.title}>Complete identity setup</Text>
         <Text style={styles.copy}>
-          Submit your identity details, capture a live selfie, and upload your onboarding documents from this device.
+          Submit your identity details, capture a profile photo when required, and upload your onboarding documents from this device.
         </Text>
       </Card>
 
@@ -567,9 +595,13 @@ export function SelfServiceVerificationScreen({
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>3. Live selfie</Text>
+        <Text style={styles.sectionTitle}>
+          3. {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}
+        </Text>
         <Text style={styles.copy}>
-          Capture a live selfie to support liveness and identity matching.
+          {biometricVerificationRequired
+            ? 'Capture a live selfie to support liveness and identity matching.'
+            : 'Capture a clear face photo for your organisation record.'}
         </Text>
         {selfiePreviewUri ? (
           <View style={styles.previewCard}>
@@ -577,34 +609,48 @@ export function SelfServiceVerificationScreen({
             <Text style={styles.meta}>{selfiePreviewUri}</Text>
           </View>
         ) : null}
-        {livenessSession ? (
+        {biometricVerificationRequired && livenessSession ? (
           <View style={styles.previewCard}>
-            <Text style={styles.meta}>Provider: {livenessSession.providerName}</Text>
-            <Text style={styles.meta}>Session: {livenessSession.sessionId}</Text>
+            <Text style={styles.meta}>Live verification session prepared.</Text>
           </View>
         ) : null}
-        <Button label={selfiePreviewUri ? 'Retake selfie' : 'Capture selfie'} onPress={() => void onCaptureSelfie()} />
+        <Button
+          label={selfiePreviewUri ? 'Retake photo' : biometricVerificationRequired ? 'Capture selfie' : 'Capture photo'}
+          onPress={() => void onCaptureSelfie()}
+        />
       </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>4. Submit verification</Text>
         <Text style={styles.copy}>
-          Submit once your required identifiers are complete and your live selfie has been captured.
+          {identityVerificationRequired
+            ? 'Submit once your required identifiers are complete and your capture step is done.'
+            : 'Your organisation does not require identity verification before activation. You can continue after document upload.'}
         </Text>
-        <Button
-          label="Submit identity verification"
-          disabled={!canSubmitIdentity}
-          loading={submittingIdentity}
-          onPress={() => void onSubmitIdentity()}
-        />
+        {identityVerificationRequired ? (
+          <Button
+            label={
+              governmentLookupRequired
+                ? 'Submit identity verification'
+                : 'Save identity details for review'
+            }
+            disabled={!canSubmitIdentity}
+            loading={submittingIdentity}
+            onPress={() => void onSubmitIdentity()}
+          />
+        ) : (
+          <Text style={styles.meta}>
+            Identity verification is optional for this organisation. Upload the required
+            documents and open the readiness checklist when you are done.
+          </Text>
+        )}
         {identityResult ? (
           <View style={styles.previewCard}>
             <Badge label={identityResult.decision} tone={identityResult.decision === 'verified' ? 'success' : 'warning'} />
             <Text style={styles.meta}>
-              Provider status: {identityResult.providerVerificationStatus ?? identityResult.providerLookupStatus ?? 'Not returned'}
-            </Text>
-            <Text style={styles.meta}>
-              Confidence: {identityResult.verificationConfidence ?? 'Not returned'}
+              {identityResult.providerLookupStatus === 'skipped_by_organisation_policy'
+                ? 'Your organisation will complete any remaining checks internally.'
+                : 'Identity details submitted successfully.'}
             </Text>
           </View>
         ) : null}

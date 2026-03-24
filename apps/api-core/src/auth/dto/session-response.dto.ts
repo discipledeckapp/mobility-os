@@ -56,6 +56,24 @@ export class AuthSessionResponseDto {
   @ApiPropertyOptional()
   guarantorMaxActiveDrivers?: number;
 
+  @ApiPropertyOptional()
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+
+  @ApiPropertyOptional()
+  requireIdentityVerificationForActivation?: boolean;
+
+  @ApiPropertyOptional()
+  requireBiometricVerification?: boolean;
+
+  @ApiPropertyOptional()
+  requireGovernmentVerificationLookup?: boolean;
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredDriverDocumentSlugs?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredVehicleDocumentSlugs?: string[];
+
   @ApiPropertyOptional({ type: NotificationPreferencesDto })
   notificationPreferences?: NotificationPreferencesDto;
 
@@ -64,6 +82,9 @@ export class AuthSessionResponseDto {
 
   @ApiProperty({ type: [String] })
   assignedFleetIds!: string[];
+
+  @ApiProperty({ type: [String] })
+  assignedVehicleIds!: string[];
 
   @ApiProperty({ type: [String] })
   customPermissions!: string[];

@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import type { OperationalWalletEntry, Remittance } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { buildCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -34,6 +35,8 @@ export class RemittanceService {
     filters: {
       assignmentId?: string;
       driverId?: string;
+      vehicleId?: string;
+      vehicleIds?: string[];
       fleetId?: string;
       fleetIds?: string[];
       status?: string;
@@ -47,6 +50,10 @@ export class RemittanceService {
       tenantId,
       ...(filters.assignmentId ? { assignmentId: filters.assignmentId } : {}),
       ...(filters.driverId ? { driverId: filters.driverId } : {}),
+      ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
+      ...(!filters.vehicleId && filters.vehicleIds?.length
+        ? { vehicleId: { in: filters.vehicleIds } }
+        : {}),
       ...(filters.fleetId
         ? { fleetId: filters.fleetId }
         : filters.fleetIds?.length
@@ -82,6 +89,54 @@ export class RemittanceService {
     assertTenantOwnership(asTenantId(record.tenantId), asTenantId(tenantId));
 
     return record;
+  }
+
+  async exportCsv(
+    tenantId: string,
+    filters: {
+      vehicleIds?: string[];
+      fleetIds?: string[];
+    } = {},
+  ): Promise<string> {
+    const records = await this.prisma.remittance.findMany({
+      where: {
+        tenantId,
+        ...(filters.vehicleIds?.length ? { vehicleId: { in: filters.vehicleIds } } : {}),
+        ...(filters.fleetIds?.length ? { fleetId: { in: filters.fleetIds } } : {}),
+      },
+      orderBy: [{ dueDate: 'desc' }],
+    });
+
+    return buildCsv(
+      [
+        'remittanceId',
+        'assignmentId',
+        'driverId',
+        'vehicleId',
+        'fleetId',
+        'amountMinorUnits',
+        'currency',
+        'status',
+        'dueDate',
+        'paidDate',
+        'notes',
+        'createdAt',
+      ],
+      records.map((record) => [
+        record.id,
+        record.assignmentId,
+        record.driverId,
+        record.vehicleId,
+        record.fleetId,
+        record.amountMinorUnits,
+        record.currency,
+        record.status,
+        record.dueDate,
+        record.paidDate ?? '',
+        record.notes ?? '',
+        record.createdAt.toISOString(),
+      ]),
+    );
   }
 
   private ensurePendingTransition(record: Remittance, action: string): void {

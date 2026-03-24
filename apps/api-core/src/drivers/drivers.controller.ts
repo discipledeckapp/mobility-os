@@ -26,7 +26,11 @@ import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
-import { applyFleetScope, assertFleetAccess } from '../auth/tenant-access';
+import {
+  applyFleetScope,
+  assertFleetAccess,
+  getAssignedFleetIds,
+} from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from './drivers.service';
@@ -133,6 +137,71 @@ export class DriversController {
       ...result,
       data: result.data.map((driver) => this.toResponse(driver)),
     }));
+  }
+
+  @Get('documents/review-queue')
+  @RequirePermissions(Permission.DocumentsRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [DriverDocumentResponseDto] })
+  listDocumentReviewQueue(
+    @CurrentTenant() ctx: TenantContext,
+    @Query('status') status?: 'pending' | 'rejected' | 'expired',
+    @Query('q') q?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.service.listDocumentReviewQueue(ctx.tenantId, {
+      ...(status ? { status } : {}),
+      ...(q ? { q } : {}),
+      ...(typeof page === 'number' ? { page } : {}),
+      ...(typeof limit === 'number' ? { limit } : {}),
+    });
+  }
+
+  @Get('import-template.csv')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: String })
+  async downloadImportTemplate(@Res({ passthrough: true }) res: HeaderWritableResponse) {
+    const csv = [
+      'fleetName,firstName,lastName,phone,email,dateOfBirth,nationality',
+      'Lagos Core Fleet,Seyi,Adelaju,08012345678,seyi@example.com,1992-05-20,NG',
+    ].join('\n');
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader('content-disposition', 'attachment; filename=\"driver-import-template.csv\"');
+    return new StreamableFile(Buffer.from(csv, 'utf-8'));
+  }
+
+  @Get('export.csv')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: String })
+  async exportDrivers(
+    @CurrentTenant() ctx: TenantContext,
+    @Res({ passthrough: true }) res: HeaderWritableResponse,
+  ) {
+    const csv = await this.service.exportDriversCsv(ctx.tenantId, {
+      ...(getAssignedFleetIds(ctx).length ? { fleetIds: getAssignedFleetIds(ctx) } : {}),
+    });
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader('content-disposition', 'attachment; filename=\"drivers.csv\"');
+    return new StreamableFile(Buffer.from(csv, 'utf-8'));
+  }
+
+  @Post('import')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: Object })
+  importDrivers(
+    @CurrentTenant() ctx: TenantContext,
+    @Body('csvContent') csvContent: string,
+    @Body('autoSendSelfServiceLink') autoSendSelfServiceLink?: boolean,
+  ) {
+    return this.service.importDriversFromCsv(ctx.tenantId, csvContent, {
+      ...(typeof autoSendSelfServiceLink === 'boolean'
+        ? { autoSendSelfServiceLink }
+        : {}),
+    });
   }
 
   @Post(':id/self-service-links')

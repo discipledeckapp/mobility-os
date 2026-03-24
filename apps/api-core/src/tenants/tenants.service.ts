@@ -53,6 +53,29 @@ export class TenantsService {
         ...(dto.guarantorMaxActiveDrivers !== undefined
           ? { guarantorMaxActiveDrivers: dto.guarantorMaxActiveDrivers }
           : {}),
+        ...(dto.autoSendDriverSelfServiceLinkOnCreate !== undefined
+          ? { autoSendDriverSelfServiceLinkOnCreate: dto.autoSendDriverSelfServiceLinkOnCreate }
+          : {}),
+        ...(dto.requireIdentityVerificationForActivation !== undefined
+          ? {
+              requireIdentityVerificationForActivation:
+                dto.requireIdentityVerificationForActivation,
+            }
+          : {}),
+        ...(dto.requireBiometricVerification !== undefined
+          ? { requireBiometricVerification: dto.requireBiometricVerification }
+          : {}),
+        ...(dto.requireGovernmentVerificationLookup !== undefined
+          ? {
+              requireGovernmentVerificationLookup: dto.requireGovernmentVerificationLookup,
+            }
+          : {}),
+        ...(dto.requiredDriverDocumentSlugs !== undefined
+          ? { requiredDriverDocumentSlugs: dto.requiredDriverDocumentSlugs }
+          : {}),
+        ...(dto.requiredVehicleDocumentSlugs !== undefined
+          ? { requiredVehicleDocumentSlugs: dto.requiredVehicleDocumentSlugs }
+          : {}),
       },
       tenant.country,
     );

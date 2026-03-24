@@ -52,6 +52,24 @@ export function SettingsScreen() {
   const [guarantorMax, setGuarantorMax] = useState(
     String(session?.guarantorMaxActiveDrivers ?? 2),
   );
+  const [autoSendSelfServiceLink, setAutoSendSelfServiceLink] = useState(
+    session?.autoSendDriverSelfServiceLinkOnCreate ?? true,
+  );
+  const [requireIdentityVerification, setRequireIdentityVerification] = useState(
+    session?.requireIdentityVerificationForActivation ?? true,
+  );
+  const [requireBiometricVerification, setRequireBiometricVerification] = useState(
+    session?.requireBiometricVerification ?? true,
+  );
+  const [requireGovernmentLookup, setRequireGovernmentLookup] = useState(
+    session?.requireGovernmentVerificationLookup ?? true,
+  );
+  const [requiredDriverDocuments, setRequiredDriverDocuments] = useState(
+    (session?.requiredDriverDocumentSlugs ?? ['national-id', 'drivers-license']).join(', '),
+  );
+  const [requiredVehicleDocuments, setRequiredVehicleDocuments] = useState(
+    (session?.requiredVehicleDocumentSlugs ?? ['vehicle-license', 'insurance']).join(', '),
+  );
   const teamQuery = useQuery({
     queryKey: ['operator-team'],
     queryFn: listTeamMembers,
@@ -175,6 +193,18 @@ export function SettingsScreen() {
         logoUrl: logoUrl.trim() || undefined,
         defaultLanguage,
         guarantorMaxActiveDrivers: Number.parseInt(guarantorMax, 10),
+        autoSendDriverSelfServiceLinkOnCreate: autoSendSelfServiceLink,
+        requireIdentityVerificationForActivation: requireIdentityVerification,
+        requireBiometricVerification,
+        requireGovernmentVerificationLookup: requireGovernmentLookup,
+        requiredDriverDocumentSlugs: requiredDriverDocuments
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+        requiredVehicleDocumentSlugs: requiredVehicleDocuments
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
       }),
     onSuccess: async () => {
       await Promise.all([refreshSession(), tenantQuery.refetch()]);
@@ -267,6 +297,38 @@ export function SettingsScreen() {
           keyboardType="number-pad"
           onChangeText={setGuarantorMax}
           value={guarantorMax}
+        />
+        <PreferenceRow
+          label="Send self-verification link when a driver is added"
+          value={autoSendSelfServiceLink}
+          onValueChange={setAutoSendSelfServiceLink}
+        />
+        <PreferenceRow
+          label="Require identity verification before activation"
+          value={requireIdentityVerification}
+          onValueChange={setRequireIdentityVerification}
+        />
+        <PreferenceRow
+          label="Require biometric verification"
+          value={requireBiometricVerification}
+          onValueChange={setRequireBiometricVerification}
+        />
+        <PreferenceRow
+          label="Require government/provider lookup"
+          value={requireGovernmentLookup}
+          onValueChange={setRequireGovernmentLookup}
+        />
+        <Input
+          label="Required driver document slugs"
+          helperText="Comma-separated. Example: national-id, drivers-license"
+          onChangeText={setRequiredDriverDocuments}
+          value={requiredDriverDocuments}
+        />
+        <Input
+          label="Required vehicle document slugs"
+          helperText="Comma-separated. Example: vehicle-license, insurance"
+          onChangeText={setRequiredVehicleDocuments}
+          value={requiredVehicleDocuments}
         />
         <Button
           label="Save organisation settings"

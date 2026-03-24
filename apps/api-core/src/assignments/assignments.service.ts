@@ -9,6 +9,7 @@ import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Assignment, Prisma } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { buildCsv, parseCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -104,6 +105,7 @@ export class AssignmentsService {
     filters: {
       driverId?: string;
       vehicleId?: string;
+      vehicleIds?: string[];
       fleetId?: string;
       fleetIds?: string[];
       page?: number;
@@ -116,6 +118,9 @@ export class AssignmentsService {
       tenantId,
       ...(filters.driverId ? { driverId: filters.driverId } : {}),
       ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
+      ...(!filters.vehicleId && filters.vehicleIds?.length
+        ? { vehicleId: { in: filters.vehicleIds } }
+        : {}),
       ...(filters.fleetId
         ? { fleetId: filters.fleetId }
         : filters.fleetIds?.length
@@ -373,5 +378,168 @@ export class AssignmentsService {
     ]);
 
     return updated;
+  }
+
+  async importAssignmentsFromCsv(
+    tenantId: string,
+    csvContent: string,
+  ): Promise<{ createdCount: number; failedCount: number; errors: string[] }> {
+    const rows = parseCsv(csvContent);
+    if (rows.length === 0) {
+      throw new BadRequestException('The uploaded assignment import file is empty.');
+    }
+
+    const [fleets, drivers, vehicles] = await Promise.all([
+      this.prisma.fleet.findMany({
+        where: { tenantId },
+        select: { id: true, name: true },
+      }),
+      this.prisma.driver.findMany({
+        where: { tenantId },
+        select: { id: true, phone: true },
+      }),
+      this.prisma.vehicle.findMany({
+        where: { tenantId },
+        select: { id: true, tenantVehicleCode: true, plate: true },
+      }),
+    ]);
+
+    const fleetByName = new Map(fleets.map((fleet) => [fleet.name.trim().toLowerCase(), fleet.id]));
+    const driverByPhone = new Map(drivers.map((driver) => [driver.phone.trim(), driver.id]));
+    const vehicleByCode = new Map(
+      vehicles.flatMap((vehicle) => {
+        const entries: Array<[string, string]> = [];
+        if (vehicle.tenantVehicleCode) {
+          entries.push([vehicle.tenantVehicleCode.trim().toLowerCase(), vehicle.id]);
+        }
+        if (vehicle.plate) {
+          entries.push([vehicle.plate.trim().toLowerCase(), vehicle.id]);
+        }
+        return entries;
+      }),
+    );
+
+    let createdCount = 0;
+    const errors: string[] = [];
+
+    for (const [index, row] of rows.entries()) {
+      const fleetId = row.fleetName?.trim()
+        ? fleetByName.get(row.fleetName.trim().toLowerCase())
+        : undefined;
+      const driverId = row.driverPhone?.trim()
+        ? driverByPhone.get(row.driverPhone.trim())
+        : undefined;
+      const vehicleId = row.vehicleCode?.trim()
+        ? vehicleByCode.get(row.vehicleCode.trim().toLowerCase())
+        : undefined;
+
+      if (!driverId || !vehicleId) {
+        errors.push(
+          `Row ${index + 2}: driverPhone and vehicleCode must match existing records.`,
+        );
+        continue;
+      }
+
+      try {
+        const payload = {
+          ...(fleetId ? { fleetId } : {}),
+          driverId,
+          vehicleId,
+          ...(row.notes?.trim() ? { notes: row.notes.trim() } : {}),
+          ...(row.remittanceModel?.trim()
+            ? { remittanceModel: row.remittanceModel.trim() }
+            : {}),
+          remittanceAmountMinorUnits: Number.parseInt(
+            row.remittanceAmountMinorUnits?.trim() || '',
+            10,
+          ),
+          ...(row.remittanceCurrency?.trim()
+            ? { remittanceCurrency: row.remittanceCurrency.trim() }
+            : {}),
+          ...(row.remittanceFrequency?.trim()
+            ? { remittanceFrequency: row.remittanceFrequency.trim() }
+            : {}),
+          ...(row.remittanceStartDate?.trim()
+            ? { remittanceStartDate: row.remittanceStartDate.trim() }
+            : {}),
+          ...(row.remittanceCollectionDay
+            ? { remittanceCollectionDay: Number.parseInt(row.remittanceCollectionDay, 10) }
+            : {}),
+        };
+        await this.create(tenantId, payload);
+        createdCount += 1;
+      } catch (error) {
+        errors.push(
+          `Row ${index + 2}: ${error instanceof Error ? error.message : 'Assignment import failed.'}`,
+        );
+      }
+    }
+
+    return {
+      createdCount,
+      failedCount: errors.length,
+      errors,
+    };
+  }
+
+  async exportAssignmentsCsv(
+    tenantId: string,
+    input: { fleetIds?: string[]; vehicleIds?: string[] } = {},
+  ): Promise<string> {
+    const assignments = (await this.prisma.assignment.findMany({
+      where: {
+        tenantId,
+        ...(input.fleetIds?.length ? { fleetId: { in: input.fleetIds } } : {}),
+        ...(input.vehicleIds?.length ? { vehicleId: { in: input.vehicleIds } } : {}),
+      },
+      include: {
+        driver: { select: { phone: true, firstName: true, lastName: true } },
+        vehicle: { select: { tenantVehicleCode: true, plate: true } },
+        fleet: { select: { name: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    } as never)) as Array<
+      Prisma.AssignmentGetPayload<{}>
+      & {
+        driver: { phone: string; firstName: string; lastName: string };
+        vehicle: { tenantVehicleCode: string; plate: string | null };
+        fleet: { name: string };
+      }
+    >;
+
+    return buildCsv(
+      [
+        'assignmentId',
+        'fleetName',
+        'driverName',
+        'driverPhone',
+        'vehicleCode',
+        'vehiclePlate',
+        'status',
+        'remittanceModel',
+        'remittanceAmountMinorUnits',
+        'remittanceCurrency',
+        'remittanceFrequency',
+        'remittanceStartDate',
+        'remittanceCollectionDay',
+        'createdAt',
+      ],
+      assignments.map((assignment) => [
+        assignment.id,
+        assignment.fleet.name,
+        `${assignment.driver.firstName} ${assignment.driver.lastName}`.trim(),
+        assignment.driver.phone,
+        assignment.vehicle.tenantVehicleCode,
+        assignment.vehicle.plate ?? '',
+        assignment.status,
+        assignment.remittanceModel ?? '',
+        assignment.remittanceAmountMinorUnits ?? '',
+        assignment.remittanceCurrency ?? '',
+        assignment.remittanceFrequency ?? '',
+        assignment.remittanceStartDate ?? '',
+        assignment.remittanceCollectionDay ?? '',
+        assignment.createdAt.toISOString(),
+      ]),
+    );
   }
 }

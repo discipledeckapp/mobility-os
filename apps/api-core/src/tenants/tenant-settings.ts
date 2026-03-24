@@ -1,3 +1,10 @@
+import {
+  DocumentScope,
+  getCountryConfig,
+  getDocumentTypesByScope,
+  isCountrySupported,
+} from '@mobility-os/domain-config';
+
 export type SupportedLanguage = 'en' | 'fr';
 
 export interface OrganisationBrandingSettings {
@@ -8,6 +15,12 @@ export interface OrganisationBrandingSettings {
 export interface OrganisationOperationsSettings {
   defaultLanguage: SupportedLanguage;
   guarantorMaxActiveDrivers: number;
+  autoSendDriverSelfServiceLinkOnCreate: boolean;
+  requireIdentityVerificationForActivation: boolean;
+  requireBiometricVerification: boolean;
+  requireGovernmentVerificationLookup: boolean;
+  requiredDriverDocumentSlugs: string[];
+  requiredVehicleDocumentSlugs: string[];
 }
 
 export interface OrganisationSettings {
@@ -40,6 +53,48 @@ const FRANCOPHONE_COUNTRIES = new Set([
   'TG',
 ]);
 
+const DRIVER_DOCUMENT_SLUGS = new Set(
+  getDocumentTypesByScope(DocumentScope.Driver).map((document) => document.slug),
+);
+const VEHICLE_DOCUMENT_SLUGS = new Set(
+  getDocumentTypesByScope(DocumentScope.Vehicle).map((document) => document.slug),
+);
+
+function getCountryDocumentDefaults(countryCode?: string | null): {
+  requiredDriverDocumentSlugs: string[];
+  requiredVehicleDocumentSlugs: string[];
+} {
+  if (!countryCode || !isCountrySupported(countryCode)) {
+    return {
+      requiredDriverDocumentSlugs: ['national-id', 'drivers-license'],
+      requiredVehicleDocumentSlugs: ['vehicle-license', 'insurance'],
+    };
+  }
+
+  const country = getCountryConfig(countryCode as string);
+  return {
+    requiredDriverDocumentSlugs: country.requiredDriverDocumentSlugs,
+    requiredVehicleDocumentSlugs: country.requiredVehicleDocumentSlugs,
+  };
+}
+
+function normalizeDocumentSlugList(
+  value: unknown,
+  allowedSlugs: Set<string>,
+  fallback: string[],
+): string[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const normalized = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0 && allowedSlugs.has(item));
+
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
+}
+
 export function getDefaultLanguageForCountry(countryCode?: string | null): SupportedLanguage {
   return FRANCOPHONE_COUNTRIES.has((countryCode ?? '').toUpperCase()) ? 'fr' : 'en';
 }
@@ -66,6 +121,7 @@ export function readOrganisationSettings(
     operations.defaultLanguage === 'fr' || operations.defaultLanguage === 'en'
       ? operations.defaultLanguage
       : getDefaultLanguageForCountry(countryCode);
+  const documentDefaults = getCountryDocumentDefaults(countryCode);
   const guarantorLimitCandidate =
     typeof operations.guarantorMaxActiveDrivers === 'number' &&
     Number.isFinite(operations.guarantorMaxActiveDrivers) &&
@@ -87,6 +143,32 @@ export function readOrganisationSettings(
     operations: {
       defaultLanguage: defaultLanguageCandidate,
       guarantorMaxActiveDrivers: guarantorLimitCandidate,
+      autoSendDriverSelfServiceLinkOnCreate:
+        typeof operations.autoSendDriverSelfServiceLinkOnCreate === 'boolean'
+          ? operations.autoSendDriverSelfServiceLinkOnCreate
+          : true,
+      requireIdentityVerificationForActivation:
+        typeof operations.requireIdentityVerificationForActivation === 'boolean'
+          ? operations.requireIdentityVerificationForActivation
+          : true,
+      requireBiometricVerification:
+        typeof operations.requireBiometricVerification === 'boolean'
+          ? operations.requireBiometricVerification
+          : true,
+      requireGovernmentVerificationLookup:
+        typeof operations.requireGovernmentVerificationLookup === 'boolean'
+          ? operations.requireGovernmentVerificationLookup
+          : true,
+      requiredDriverDocumentSlugs: normalizeDocumentSlugList(
+        operations.requiredDriverDocumentSlugs,
+        DRIVER_DOCUMENT_SLUGS,
+        documentDefaults.requiredDriverDocumentSlugs,
+      ),
+      requiredVehicleDocumentSlugs: normalizeDocumentSlugList(
+        operations.requiredVehicleDocumentSlugs,
+        VEHICLE_DOCUMENT_SLUGS,
+        documentDefaults.requiredVehicleDocumentSlugs,
+      ),
     },
   };
 }
@@ -98,6 +180,12 @@ export function writeOrganisationSettings(
     logoUrl: string | null;
     defaultLanguage: SupportedLanguage;
     guarantorMaxActiveDrivers: number;
+    autoSendDriverSelfServiceLinkOnCreate: boolean;
+    requireIdentityVerificationForActivation: boolean;
+    requireBiometricVerification: boolean;
+    requireGovernmentVerificationLookup: boolean;
+    requiredDriverDocumentSlugs: string[];
+    requiredVehicleDocumentSlugs: string[];
   }>,
   countryCode?: string | null,
 ): Record<string, unknown> {
@@ -116,6 +204,21 @@ export function writeOrganisationSettings(
     defaultLanguage: input.defaultLanguage ?? settings.operations.defaultLanguage,
     guarantorMaxActiveDrivers:
       input.guarantorMaxActiveDrivers ?? settings.operations.guarantorMaxActiveDrivers,
+    autoSendDriverSelfServiceLinkOnCreate:
+      input.autoSendDriverSelfServiceLinkOnCreate ??
+      settings.operations.autoSendDriverSelfServiceLinkOnCreate,
+    requireIdentityVerificationForActivation:
+      input.requireIdentityVerificationForActivation ??
+      settings.operations.requireIdentityVerificationForActivation,
+    requireBiometricVerification:
+      input.requireBiometricVerification ?? settings.operations.requireBiometricVerification,
+    requireGovernmentVerificationLookup:
+      input.requireGovernmentVerificationLookup ??
+      settings.operations.requireGovernmentVerificationLookup,
+    requiredDriverDocumentSlugs:
+      input.requiredDriverDocumentSlugs ?? settings.operations.requiredDriverDocumentSlugs,
+    requiredVehicleDocumentSlugs:
+      input.requiredVehicleDocumentSlugs ?? settings.operations.requiredVehicleDocumentSlugs,
   };
 
   return current;

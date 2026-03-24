@@ -1,3 +1,4 @@
+import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
   listFleets,
@@ -9,6 +10,7 @@ import {
   type FleetRecord,
   type VehicleRecord,
 } from '../../lib/api-core';
+import { importAssignmentsCsvAction } from './actions';
 import { AssignmentRecordsPanel } from './assignment-records-panel';
 
 export default async function AssignmentsPage() {
@@ -49,6 +51,15 @@ export default async function AssignmentsPage() {
       eyebrow="Operations"
       title="Assignments"
     >
+      <div className="mb-6">
+        <CsvBulkImportCard
+          description="Import assignment records in bulk using fleet name, driver phone, and vehicle code matches. This can include remittance terms for each assignment."
+          exportHref="/api/download/assignments-export"
+          formAction={importAssignmentsCsvAction}
+          templateHref="/api/download/assignment-import-template"
+          title="Bulk import assignments"
+        />
+      </div>
       <AssignmentRecordsPanel
         assignments={assignments}
         drivers={drivers}

@@ -178,6 +178,7 @@ export class AuthService {
         role: user.role,
         mobileRole: deriveMobileRole(user),
         assignedFleetIds: userSettings.assignedFleetIds,
+        assignedVehicleIds: userSettings.assignedVehicleIds,
         customPermissions: userSettings.customPermissions,
         ...(user.operatingUnitId ? { operatingUnitId: user.operatingUnitId } : {}),
       },
@@ -446,11 +447,21 @@ export class AuthService {
       defaultLanguage: organisationSettings.operations.defaultLanguage,
       preferredLanguage: userSettings.preferredLanguage,
       guarantorMaxActiveDrivers: organisationSettings.operations.guarantorMaxActiveDrivers,
+      autoSendDriverSelfServiceLinkOnCreate:
+        organisationSettings.operations.autoSendDriverSelfServiceLinkOnCreate,
+      requireIdentityVerificationForActivation:
+        organisationSettings.operations.requireIdentityVerificationForActivation,
+      requireBiometricVerification: organisationSettings.operations.requireBiometricVerification,
+      requireGovernmentVerificationLookup:
+        organisationSettings.operations.requireGovernmentVerificationLookup,
+      requiredDriverDocumentSlugs: organisationSettings.operations.requiredDriverDocumentSlugs,
+      requiredVehicleDocumentSlugs: organisationSettings.operations.requiredVehicleDocumentSlugs,
       notificationPreferences: userSettings.notificationPreferences,
       permissions: Array.from(
         getGrantedPermissions(user.role as TenantRole, userSettings.customPermissions),
       ),
       assignedFleetIds: userSettings.assignedFleetIds,
+      assignedVehicleIds: userSettings.assignedVehicleIds,
       customPermissions: userSettings.customPermissions,
       linkedDriverId: linkedDriver?.id ?? null,
       linkedDriverStatus: linkedDriver?.status ?? null,

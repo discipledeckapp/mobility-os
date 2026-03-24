@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -122,9 +123,22 @@ function DonutSummary({
   );
 }
 
-export default async function ReportsPage() {
+type ReportsPageProps = {
+  searchParams?: Promise<{
+    dateFrom?: string;
+    dateTo?: string;
+  }>;
+};
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const dateFrom = resolvedSearchParams.dateFrom?.trim() ?? '';
+  const dateTo = resolvedSearchParams.dateTo?.trim() ?? '';
   const [overview, tenant] = await Promise.all([
-    getReportsOverview(),
+    getReportsOverview({
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    }),
     getTenantMe().catch(() => null),
   ]);
   const locale = getFormattingLocale(tenant?.country);
@@ -136,6 +150,44 @@ export default async function ReportsPage() {
       description="A lightweight operating summary across wallet movements, remittance performance, and driver activity."
     >
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Report range</CardTitle>
+            <CardDescription>Select the reporting window you want to analyse.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="space-y-2">
+                <Text tone="muted">Date from</Text>
+                <input
+                  className="h-11 rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 text-sm text-[var(--mobiris-ink)]"
+                  defaultValue={dateFrom}
+                  name="dateFrom"
+                  type="date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Date to</Text>
+                <input
+                  className="h-11 rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 text-sm text-[var(--mobiris-ink)]"
+                  defaultValue={dateTo}
+                  name="dateTo"
+                  type="date"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit">Apply range</Button>
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-transparent px-4.5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-ink-soft)] transition-all duration-150 hover:bg-[var(--mobiris-primary-tint)] hover:text-[var(--mobiris-primary-dark)]"
+                  href="/reports"
+                >
+                  Reset
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>

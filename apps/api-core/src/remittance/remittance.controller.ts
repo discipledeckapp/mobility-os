@@ -1,6 +1,16 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -18,6 +28,8 @@ import {
   applyVehicleScope,
   assertFleetAccess,
   assertVehicleAccess,
+  getAssignedFleetIds,
+  getAssignedVehicleIds,
 } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -27,6 +39,10 @@ import { RecordRemittanceDto } from './dto/record-remittance.dto';
 import { RemittanceResponseDto } from './dto/remittance-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { RemittanceService } from './remittance.service';
+
+type HeaderWritableResponse = {
+  setHeader(name: string, value: string): void;
+};
 
 @ApiTags('Remittance')
 @ApiBearerAuth()
@@ -47,6 +63,25 @@ export class RemittanceController {
     @Query() query: ListRemittanceDto,
   ): Promise<PaginatedResponse<RemittanceResponseDto>> {
     return this.service.list(ctx.tenantId, applyVehicleScope(applyFleetScope(query, ctx), ctx));
+  }
+
+  @Get('export.csv')
+  @RequirePermissions(Permission.RemittanceRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: String })
+  async exportCsv(
+    @CurrentTenant() ctx: TenantContext,
+    @Res({ passthrough: true }) res: HeaderWritableResponse,
+  ) {
+    const csv = await this.service.exportCsv(ctx.tenantId, {
+      ...(getAssignedVehicleIds(ctx).length
+        ? { vehicleIds: getAssignedVehicleIds(ctx) }
+        : {}),
+      ...(getAssignedFleetIds(ctx).length ? { fleetIds: getAssignedFleetIds(ctx) } : {}),
+    });
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
+    res.setHeader('content-disposition', 'attachment; filename=\"remittance-history.csv\"');
+    return new StreamableFile(Buffer.from(csv, 'utf-8'));
   }
 
   @Get(':id')

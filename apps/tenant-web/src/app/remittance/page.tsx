@@ -145,6 +145,23 @@ export default async function RemittancePage() {
       eyebrow="Collections"
       title="Remittance"
     >
+      <Card className="mb-6">
+        <CardContent className="flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Text tone="strong">Export remittance history</Text>
+            <Text tone="muted">
+              Download the current remittance ledger as CSV for reconciliation, finance review, or external reporting.
+            </Text>
+          </div>
+          <a
+            className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+            href="/api/download/remittance-export"
+          >
+            Export remittance CSV
+          </a>
+        </CardContent>
+      </Card>
+
       <CreateRemittanceForm
         fleetError={fleetError}
         fleets={fleets}

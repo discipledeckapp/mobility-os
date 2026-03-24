@@ -5,6 +5,7 @@ import {
   cancelAssignment,
   completeAssignment,
   createAssignment,
+  importAssignmentsCsv,
   startAssignment,
   type CreateAssignmentInput,
   type UpdateAssignmentRemittancePlanInput,
@@ -26,12 +27,52 @@ export interface AssignmentRemittancePlanActionState {
   success?: string;
 }
 
+export interface AssignmentBulkImportActionState {
+  error?: string;
+  success?: string;
+}
+
 function getTrimmedValue(
   formData: FormData,
   key: keyof CreateAssignmentInput | 'notes' | 'assignmentId',
 ): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
+}
+
+async function getCsvFileContents(formData: FormData): Promise<string> {
+  const file = formData.get('csvFile');
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Choose a CSV file to import.');
+  }
+
+  const content = await file.text();
+  if (!content.trim()) {
+    throw new Error('The uploaded CSV file is empty.');
+  }
+
+  return content;
+}
+
+export async function importAssignmentsCsvAction(
+  _prevState: AssignmentBulkImportActionState,
+  formData: FormData,
+): Promise<AssignmentBulkImportActionState> {
+  try {
+    const csvContent = await getCsvFileContents(formData);
+    const result = await importAssignmentsCsv(csvContent);
+    revalidatePath('/assignments');
+    revalidatePath('/remittance');
+    revalidatePath('/reports');
+    return {
+      success: `Imported ${result.createdCount} assignments. ${result.failedCount} rows failed.`,
+      ...(result.errors.length > 0 ? { error: result.errors.slice(0, 5).join(' ') } : {}),
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to import assignment CSV.',
+    };
+  }
 }
 
 export async function createAssignmentAction(

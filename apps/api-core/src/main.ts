@@ -23,9 +23,17 @@ function getAllowedCorsOrigins(): string[] {
 }
 
 async function bootstrap(): Promise<void> {
+  const configuredMaxDocumentBytes = Number.parseInt(
+    process.env.DOCUMENT_STORAGE_MAX_FILE_BYTES ?? '',
+    10,
+  );
+  const bodyLimit = Number.isFinite(configuredMaxDocumentBytes) && configuredMaxDocumentBytes > 0
+    ? Math.max(configuredMaxDocumentBytes * 2, 20 * 1024 * 1024)
+    : 20 * 1024 * 1024;
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
+      bodyLimit,
       logger: false,
     }),
     {

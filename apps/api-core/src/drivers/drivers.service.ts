@@ -18,6 +18,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, type Driver } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { buildCsv, parseCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -25,6 +26,7 @@ import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
+import { readOrganisationSettings } from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
 import type { CreateDriverDocumentDto } from './dto/create-driver-document.dto';
@@ -71,6 +73,7 @@ type DriverDocumentSummary = {
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
+  approvedDocumentTypes: string[];
 };
 
 type DriverMobileAccessSummary = {
@@ -170,6 +173,13 @@ type DriverDocumentRecord = {
   updatedAt: Date;
 };
 
+type DriverDocumentReviewQueueItem = DriverDocumentRecord & {
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
+};
+
 const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
 
 // TODO: Remove the narrow write casts in this service after the api-core Prisma
@@ -192,6 +202,15 @@ export class DriversService {
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
+
+  private async getOrganisationSettings(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true, metadata: true },
+    });
+
+    return readOrganisationSettings(tenant?.metadata, tenant?.country);
+  }
 
   private get driverDocuments(): {
     findMany(args: {
@@ -401,7 +420,7 @@ export class DriversService {
       driversWithDocuments,
     );
     return {
-      data: await this.attachReadinessSummariesSafely(driversWithMobileAccess),
+      data: await this.attachReadinessSummariesSafely(tenantId, driversWithMobileAccess),
       total,
       page,
       limit,
@@ -449,9 +468,10 @@ export class DriversService {
         pendingDocumentCount: 0,
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
+        approvedDocumentTypes: [],
       },
     ]);
-    const [driverWithReadiness] = await this.attachReadinessSummaries([
+    const [driverWithReadiness] = await this.attachReadinessSummaries(tenantId, [
       driverWithMobileAccess ?? {
         ...enrichedDriver,
         hasGuarantor: false,
@@ -463,6 +483,7 @@ export class DriversService {
         pendingDocumentCount: 0,
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
+        approvedDocumentTypes: [],
       },
     ]);
     return (
@@ -477,6 +498,7 @@ export class DriversService {
         pendingDocumentCount: 0,
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
+        approvedDocumentTypes: [],
         activationReadiness: 'not_ready',
         activationReadinessReasons: [],
         assignmentReadiness: 'not_ready',
@@ -487,9 +509,30 @@ export class DriversService {
 
   async getSelfServiceContext(
     token: string,
-  ): Promise<DriverWithIdentityState & DriverIntelligenceSummary> {
+  ): Promise<
+    DriverWithIdentityState &
+      DriverIntelligenceSummary & {
+        requireIdentityVerificationForActivation?: boolean;
+        requireBiometricVerification?: boolean;
+        requireGovernmentVerificationLookup?: boolean;
+        requiredDriverDocumentSlugs?: string[];
+      }
+  > {
     const payload = await this.verifySelfServiceToken(token);
-    return this.findOne(payload.tenantId, payload.driverId);
+    const [driver, settings] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.getOrganisationSettings(payload.tenantId),
+    ]);
+
+    return {
+      ...driver,
+      requireIdentityVerificationForActivation:
+        settings.operations.requireIdentityVerificationForActivation,
+      requireBiometricVerification: settings.operations.requireBiometricVerification,
+      requireGovernmentVerificationLookup:
+        settings.operations.requireGovernmentVerificationLookup,
+      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+    };
   }
 
   async getMobileAccess(
@@ -812,6 +855,182 @@ export class DriversService {
       where: { tenantId: driver.tenantId, driverId: driver.id },
       orderBy: { createdAt: 'desc' },
     }) as Promise<DriverDocumentRecord[]>;
+  }
+
+  async listDocumentReviewQueue(
+    tenantId: string,
+    input: {
+      status?: 'pending' | 'rejected' | 'expired';
+      q?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<PaginatedResponse<DriverDocumentReviewQueueItem>> {
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 50;
+    const status = input.status ?? 'pending';
+    const searchQuery = input.q?.trim().toLowerCase() ?? '';
+
+    const documents = (await this.driverDocuments.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+    })) as DriverDocumentRecord[];
+    const scopedDocuments = documents.filter((document) => document.status === status);
+    const driverIds = Array.from(new Set(scopedDocuments.map((document) => document.driverId)));
+    const drivers = driverIds.length
+      ? await this.prisma.driver.findMany({
+          where: { tenantId, id: { in: driverIds } },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            status: true,
+            fleetId: true,
+          },
+        })
+      : [];
+    const driverMap = new Map(
+      drivers.map((driver) => [
+        driver.id,
+        {
+          driverName: `${driver.firstName} ${driver.lastName}`.trim(),
+          driverPhone: driver.phone,
+          driverStatus: driver.status,
+          fleetId: driver.fleetId,
+        },
+      ]),
+    );
+
+    const queueItems = scopedDocuments
+      .map((document) => {
+        const driver = driverMap.get(document.driverId);
+        if (!driver) {
+          return null;
+        }
+        return {
+          ...document,
+          ...driver,
+        };
+      })
+      .filter((item): item is DriverDocumentReviewQueueItem => Boolean(item))
+      .filter((item) => {
+        if (!searchQuery) {
+          return true;
+        }
+        return `${item.driverName} ${item.driverPhone} ${item.documentType} ${item.fileName}`
+          .toLowerCase()
+          .includes(searchQuery);
+      });
+
+    const startIndex = (page - 1) * limit;
+    return {
+      data: queueItems.slice(startIndex, startIndex + limit),
+      total: queueItems.length,
+      page,
+      limit,
+    };
+  }
+
+  async importDriversFromCsv(
+    tenantId: string,
+    csvContent: string,
+    options: { autoSendSelfServiceLink?: boolean } = {},
+  ): Promise<{ createdCount: number; failedCount: number; errors: string[] }> {
+    const rows = parseCsv(csvContent);
+    if (rows.length === 0) {
+      throw new BadRequestException('The uploaded driver import file is empty.');
+    }
+
+    const fleets = await this.prisma.fleet.findMany({
+      where: { tenantId },
+      select: { id: true, name: true, status: true },
+    });
+    const fleetByName = new Map(
+      fleets.map((fleet) => [fleet.name.trim().toLowerCase(), fleet]),
+    );
+
+    let createdCount = 0;
+    const errors: string[] = [];
+
+    for (const [index, row] of rows.entries()) {
+      const fleetName = row.fleetName?.trim();
+      const fleet = fleetName ? fleetByName.get(fleetName.toLowerCase()) : null;
+      if (!fleet) {
+        errors.push(`Row ${index + 2}: fleet '${fleetName || 'missing'}' was not found.`);
+        continue;
+      }
+
+      try {
+        await this.create(
+          tenantId,
+          {
+            fleetId: fleet.id,
+            firstName: row.firstName?.trim() ?? '',
+            lastName: row.lastName?.trim() ?? '',
+            phone: row.phone?.trim() ?? '',
+            ...(row.email?.trim() ? { email: row.email.trim() } : {}),
+            ...(row.dateOfBirth?.trim() ? { dateOfBirth: row.dateOfBirth.trim() } : {}),
+            ...(row.nationality?.trim()
+              ? { nationality: row.nationality.trim().toUpperCase() }
+              : {}),
+          },
+          options,
+        );
+        createdCount += 1;
+      } catch (error) {
+        errors.push(`Row ${index + 2}: ${this.getErrorMessage(error)}`);
+      }
+    }
+
+    return {
+      createdCount,
+      failedCount: errors.length,
+      errors,
+    };
+  }
+
+  async exportDriversCsv(
+    tenantId: string,
+    input: { fleetIds?: string[] } = {},
+  ): Promise<string> {
+    const records = await this.prisma.driver.findMany({
+      where: {
+        tenantId,
+        ...(input.fleetIds?.length ? { fleetId: { in: input.fleetIds } } : {}),
+      },
+      include: { fleet: { select: { name: true } } },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+
+    return buildCsv(
+      [
+        'driverId',
+        'fleetName',
+        'firstName',
+        'lastName',
+        'phone',
+        'email',
+        'dateOfBirth',
+        'nationality',
+        'status',
+        'identityStatus',
+        'createdAt',
+      ],
+      records.map((driver) => [
+        driver.id,
+        driver.fleet.name,
+        driver.firstName,
+        driver.lastName,
+        driver.phone,
+        driver.email ?? '',
+        driver.dateOfBirth ?? '',
+        driver.nationality ?? '',
+        driver.status,
+        driver.identityStatus,
+        driver.createdAt.toISOString(),
+      ]),
+    );
   }
 
   async getIdentitySummary(tenantId: string, id: string) {
@@ -1248,6 +1467,7 @@ export class DriversService {
       pendingDocumentCount: 0,
       rejectedDocumentCount: 0,
       expiredDocumentCount: 0,
+      approvedDocumentTypes: [],
     };
   }
 
@@ -1321,9 +1541,9 @@ export class DriversService {
       DriverGuarantorSummary &
       DriverDocumentSummary &
       DriverMobileAccessSummary,
-  >(drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
+  >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
     try {
-      return await this.attachReadinessSummaries(drivers);
+      return await this.attachReadinessSummaries(tenantId, drivers);
     } catch (error) {
       if (!this.isRecoverableDriverEnrichmentError(error)) {
         throw error;
@@ -1356,7 +1576,11 @@ export class DriversService {
     );
   }
 
-  async create(tenantId: string, dto: CreateDriverDto): Promise<Driver> {
+  async create(
+    tenantId: string,
+    dto: CreateDriverDto,
+    options: { autoSendSelfServiceLink?: boolean } = {},
+  ): Promise<Driver> {
     const fleet = await this.prisma.fleet.findUnique({
       where: { id: dto.fleetId },
       include: { operatingUnit: { select: { id: true, businessEntityId: true } } },
@@ -1393,7 +1617,7 @@ export class DriversService {
     });
     await this.subscriptionEntitlementsService.enforceDriverCapacity(tenantId, currentDriverCount);
 
-    return this.prisma.driver.create({
+    const createdDriver = await this.prisma.driver.create({
       data: {
         tenantId,
         fleetId: dto.fleetId,
@@ -1409,6 +1633,23 @@ export class DriversService {
         identityStatus: 'unverified',
       } as never,
     });
+
+    const settings = await this.getOrganisationSettings(tenantId);
+    const shouldAutoSendSelfServiceLink =
+      options.autoSendSelfServiceLink ??
+      settings.operations.autoSendDriverSelfServiceLinkOnCreate;
+
+    if (shouldAutoSendSelfServiceLink && createdDriver.email) {
+      try {
+        await this.sendSelfServiceLink(tenantId, createdDriver.id);
+      } catch (error) {
+        this.logger.warn(
+          `Unable to send self-service link for driver '${createdDriver.id}': ${this.getErrorMessage(error)}`,
+        );
+      }
+    }
+
+    return createdDriver;
   }
 
   async updateStatus(tenantId: string, id: string, newStatus: string): Promise<Driver> {
@@ -1749,10 +1990,17 @@ export class DriversService {
     guarantorPersonId?: string | null;
     hasApprovedLicence: boolean;
     hasMobileAccess: boolean;
+    approvedDocumentTypes?: string[];
+  }, settings: {
+    requireIdentityVerificationForActivation: boolean;
+    requiredDriverDocumentSlugs: string[];
   }): DriverReadinessSummary {
     const reasons: string[] = [];
 
-    if (driver.identityStatus !== 'verified') {
+    if (
+      settings.requireIdentityVerificationForActivation &&
+      driver.identityStatus !== 'verified'
+    ) {
       reasons.push('Identity verification must be completed.');
     }
 
@@ -1766,6 +2014,16 @@ export class DriversService {
 
     if (!driver.hasMobileAccess) {
       reasons.push('Mobile access must be linked before operations begin.');
+    }
+
+    const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
+    const missingRequiredDocuments = settings.requiredDriverDocumentSlugs.filter(
+      (slug) => !approvedDocumentTypes.has(slug),
+    );
+    if (missingRequiredDocuments.length > 0) {
+      reasons.push(
+        `Required driver documents are still missing: ${missingRequiredDocuments.join(', ')}.`,
+      );
     }
 
     const readiness =
@@ -1897,6 +2155,7 @@ export class DriversService {
         pendingDocumentCount: 0,
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
+        approvedDocumentTypes: [],
       });
     }
 
@@ -1909,6 +2168,9 @@ export class DriversService {
         document.status === 'approved'
       ) {
         summary.hasApprovedLicence = true;
+      }
+      if (document.status === 'approved') {
+        summary.approvedDocumentTypes.push(document.documentType);
       }
 
       if (document.status === 'pending') {
@@ -1929,6 +2191,7 @@ export class DriversService {
         pendingDocumentCount: 0,
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
+        approvedDocumentTypes: [],
       }),
     }));
   }
@@ -1982,10 +2245,11 @@ export class DriversService {
       DriverGuarantorSummary &
       DriverDocumentSummary &
       DriverMobileAccessSummary,
-  >(drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
+  >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
+    const settings = await this.getOrganisationSettings(tenantId);
     return drivers.map((driver) => ({
       ...driver,
-      ...this.computeReadiness(driver),
+      ...this.computeReadiness(driver, settings.operations),
     }));
   }
 

@@ -45,6 +45,12 @@ export interface TenantRecord {
   logoUrl?: string | null;
   defaultLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +71,12 @@ export interface UpdateTenantSettingsInput {
   logoUrl?: string;
   defaultLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
 }
 
 export interface NotificationChannelPreferenceRecord {
@@ -202,6 +214,13 @@ export interface DriverDocumentRecord {
   reviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DriverDocumentReviewQueueRecord extends DriverDocumentRecord {
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
 }
 
 export interface DriverGuarantorRecord {
@@ -732,6 +751,12 @@ export interface TenantAuthSessionRecord {
   defaultLanguage?: 'en' | 'fr';
   preferredLanguage?: 'en' | 'fr';
   guarantorMaxActiveDrivers?: number;
+  autoSendDriverSelfServiceLinkOnCreate?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+  requiredVehicleDocumentSlugs?: string[];
   notificationPreferences?: NotificationPreferencesRecord;
   permissions: string[];
   assignedFleetIds?: string[];
@@ -958,7 +983,12 @@ export async function apiCoreFetch<T>(
     throw new Error(message);
   }
 
-  return (await response.json()) as T;
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    return (await response.json()) as T;
+  }
+
+  return (await response.text()) as T;
 }
 
 // ── Self-signup types ─────────────────────────────────────────────────────────
@@ -1435,6 +1465,39 @@ export async function createDriver(
   });
 }
 
+export async function importDriversCsv(
+  csvContent: string,
+  autoSendSelfServiceLink?: boolean,
+  token?: string,
+): Promise<{ createdCount: number; failedCount: number; errors: string[] }> {
+  return apiCoreFetch('/drivers/import', {
+    method: 'POST',
+    body: JSON.stringify({
+      csvContent,
+      ...(typeof autoSendSelfServiceLink === 'boolean'
+        ? { autoSendSelfServiceLink }
+        : {}),
+    }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function listDriverDocumentReviewQueue(
+  input: PaginationParams & { status?: 'pending' | 'rejected' | 'expired'; q?: string } = {},
+  token?: string,
+): Promise<PaginatedApiResponse<DriverDocumentReviewQueueRecord>> {
+  const params = new URLSearchParams();
+  if (input.status) params.set('status', input.status);
+  if (input.q) params.set('q', input.q);
+  if (typeof input.page === 'number') params.set('page', String(input.page));
+  if (typeof input.limit === 'number') params.set('limit', String(input.limit));
+  return apiCoreFetch(`/drivers/documents/review-queue${params.toString() ? `?${params.toString()}` : ''}`, {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function updateDriverStatus(
   driverId: string,
   status: string,
@@ -1577,6 +1640,13 @@ export async function reviewDriverDocument(
   });
 }
 
+export async function downloadDriversCsv(token?: string): Promise<string> {
+  return apiCoreFetch('/drivers/export.csv', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  }).then((value) => String(value));
+}
+
 export async function resolveDriverIdentity(
   driverId: string,
   input: DriverIdentityResolutionInput,
@@ -1621,8 +1691,14 @@ export async function getOperationalReadinessReport(
   });
 }
 
-export async function getReportsOverview(token?: string): Promise<ReportsOverviewRecord> {
-  return apiCoreFetch<ReportsOverviewRecord>('/reports/overview', {
+export async function getReportsOverview(
+  input: { dateFrom?: string; dateTo?: string } = {},
+  token?: string,
+): Promise<ReportsOverviewRecord> {
+  const params = new URLSearchParams();
+  if (input.dateFrom) params.set('dateFrom', input.dateFrom);
+  if (input.dateTo) params.set('dateTo', input.dateTo);
+  return apiCoreFetch<ReportsOverviewRecord>(`/reports/overview${params.toString() ? `?${params.toString()}` : ''}`, {
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
@@ -1788,6 +1864,25 @@ export async function createVehicle(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function importVehiclesCsv(
+  csvContent: string,
+  token?: string,
+): Promise<{ createdCount: number; failedCount: number; errors: string[] }> {
+  return apiCoreFetch('/vehicles/import', {
+    method: 'POST',
+    body: JSON.stringify({ csvContent }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function downloadVehiclesCsv(token?: string): Promise<string> {
+  return apiCoreFetch('/vehicles/export.csv', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  }).then((value) => String(value));
 }
 
 export async function updateVehicle(
@@ -2085,6 +2180,18 @@ export async function createAssignment(
   });
 }
 
+export async function importAssignmentsCsv(
+  csvContent: string,
+  token?: string,
+): Promise<{ createdCount: number; failedCount: number; errors: string[] }> {
+  return apiCoreFetch('/assignments/import', {
+    method: 'POST',
+    body: JSON.stringify({ csvContent }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function updateAssignmentRemittancePlan(
   assignmentId: string,
   input: UpdateAssignmentRemittancePlanInput,
@@ -2168,6 +2275,13 @@ export function listRemittances(
       token: resolvedToken,
     }),
   );
+}
+
+export async function downloadRemittancesCsv(token?: string): Promise<string> {
+  return apiCoreFetch('/remittance/export.csv', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  }).then((value) => String(value));
 }
 
 export async function recordRemittance(

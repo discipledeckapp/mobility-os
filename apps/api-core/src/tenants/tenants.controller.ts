@@ -42,6 +42,15 @@ export class TenantsController {
       logoUrl: settings.branding.logoUrl ?? null,
       defaultLanguage: settings.operations.defaultLanguage,
       guarantorMaxActiveDrivers: settings.operations.guarantorMaxActiveDrivers,
+      autoSendDriverSelfServiceLinkOnCreate:
+        settings.operations.autoSendDriverSelfServiceLinkOnCreate,
+      requireIdentityVerificationForActivation:
+        settings.operations.requireIdentityVerificationForActivation,
+      requireBiometricVerification: settings.operations.requireBiometricVerification,
+      requireGovernmentVerificationLookup:
+        settings.operations.requireGovernmentVerificationLookup,
+      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+      requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };
   }
 
@@ -65,6 +74,15 @@ export class TenantsController {
       logoUrl: settings.branding.logoUrl ?? null,
       defaultLanguage: settings.operations.defaultLanguage,
       guarantorMaxActiveDrivers: settings.operations.guarantorMaxActiveDrivers,
+      autoSendDriverSelfServiceLinkOnCreate:
+        settings.operations.autoSendDriverSelfServiceLinkOnCreate,
+      requireIdentityVerificationForActivation:
+        settings.operations.requireIdentityVerificationForActivation,
+      requireBiometricVerification: settings.operations.requireBiometricVerification,
+      requireGovernmentVerificationLookup:
+        settings.operations.requireGovernmentVerificationLookup,
+      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+      requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };
   }
 }

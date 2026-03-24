@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, Text } from '@mobility-os/ui';
+import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
   listDrivers,
@@ -8,6 +9,7 @@ import {
   type FleetRecord,
 } from '../../lib/api-core';
 import { DriverRecordsPanel } from './driver-records-panel';
+import { importDriversCsvAction } from './actions';
 
 const DEFAULT_DRIVER_PAGE_SIZE = 20;
 
@@ -107,6 +109,32 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
           </Link>
         </CardContent>
       </Card>
+
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <CsvBulkImportCard
+          checkboxLabel="Send self-verification link after importing each driver"
+          checkboxName="autoSendSelfServiceLink"
+          description="Download the import template, populate it with existing driver data, then import it in bulk. Subscription limits are enforced during import."
+          exportHref="/api/download/drivers-export"
+          formAction={importDriversCsvAction}
+          templateHref="/api/download/driver-import-template"
+          title="Bulk import drivers"
+        />
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="space-y-3 py-6">
+            <Text tone="strong">Document review queue</Text>
+            <Text tone="muted">
+              Open the review queue to approve or reject uploaded documents and clear blocked drivers out of readiness.
+            </Text>
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
+              href="/drivers/review-queue"
+            >
+              Open document review queue
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
 
       <DriverRecordsPanel
         drivers={drivers}

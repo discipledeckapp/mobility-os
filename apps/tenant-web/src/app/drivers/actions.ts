@@ -7,6 +7,7 @@ import {
   createOrUpdateDriverGuarantor,
   sendGuarantorSelfServiceLink,
   createDriver,
+  importDriversCsv,
   createDriverLivenessSession,
   createDriverSelfServiceLivenessSession,
   createGuarantorSelfServiceLivenessSession,
@@ -79,6 +80,11 @@ export interface DriverGuarantorActionState {
 }
 
 export interface DriverMobileAccessActionState {
+  error?: string;
+  success?: string;
+}
+
+export interface DriverBulkImportActionState {
   error?: string;
   success?: string;
 }
@@ -175,6 +181,41 @@ function isSupportedIdentifierTypeForCountry(
 
 function getOptionalBooleanValue(formData: FormData, key: string): boolean {
   return formData.get(key) === 'on';
+}
+
+async function getCsvFileContents(formData: FormData): Promise<string> {
+  const file = formData.get('csvFile');
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Choose a CSV file to import.');
+  }
+
+  const content = await file.text();
+  if (!content.trim()) {
+    throw new Error('The uploaded CSV file is empty.');
+  }
+
+  return content;
+}
+
+export async function importDriversCsvAction(
+  _prevState: DriverBulkImportActionState,
+  formData: FormData,
+): Promise<DriverBulkImportActionState> {
+  try {
+    const csvContent = await getCsvFileContents(formData);
+    const autoSendSelfServiceLink = formData.get('autoSendSelfServiceLink') === 'on';
+    const result = await importDriversCsv(csvContent, autoSendSelfServiceLink);
+    revalidatePath('/drivers');
+    revalidatePath('/reports/readiness');
+    return {
+      success: `Imported ${result.createdCount} drivers. ${result.failedCount} rows failed.`,
+      ...(result.errors.length > 0 ? { error: result.errors.slice(0, 5).join(' ') } : {}),
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to import driver CSV.',
+    };
+  }
 }
 
 async function getOptionalImageBase64(

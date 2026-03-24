@@ -280,6 +280,56 @@ export function SettingsPanel({
                     type="number"
                   />
                 </div>
+                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    defaultChecked={tenant.autoSendDriverSelfServiceLinkOnCreate ?? true}
+                    name="autoSendDriverSelfServiceLinkOnCreate"
+                    type="checkbox"
+                  />
+                  Automatically send self-verification links when drivers are added
+                </label>
+                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    defaultChecked={tenant.requireIdentityVerificationForActivation ?? true}
+                    name="requireIdentityVerificationForActivation"
+                    type="checkbox"
+                  />
+                  Require identity verification before driver activation
+                </label>
+                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    defaultChecked={tenant.requireBiometricVerification ?? true}
+                    name="requireBiometricVerification"
+                    type="checkbox"
+                  />
+                  Require biometric selfie capture during verification
+                </label>
+                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    defaultChecked={tenant.requireGovernmentVerificationLookup ?? true}
+                    name="requireGovernmentVerificationLookup"
+                    type="checkbox"
+                  />
+                  Require government/provider identity lookup when available
+                </label>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
+                  <Input
+                    defaultValue={(tenant.requiredDriverDocumentSlugs ?? ['national-id', 'drivers-license']).join(', ')}
+                    id="requiredDriverDocumentSlugs"
+                    name="requiredDriverDocumentSlugs"
+                  />
+                  <Text tone="muted">Use comma-separated document slugs such as `national-id, drivers-license`.</Text>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="requiredVehicleDocumentSlugs">Required vehicle documents</Label>
+                  <Input
+                    defaultValue={(tenant.requiredVehicleDocumentSlugs ?? ['vehicle-license', 'insurance']).join(', ')}
+                    id="requiredVehicleDocumentSlugs"
+                    name="requiredVehicleDocumentSlugs"
+                  />
+                  <Text tone="muted">Use comma-separated document slugs such as `vehicle-license, insurance, road-worthiness`.</Text>
+                </div>
               </div>
               {organisationState.error ? <Text tone="danger">{organisationState.error}</Text> : null}
               {organisationState.success ? <Text tone="success">{organisationState.success}</Text> : null}
