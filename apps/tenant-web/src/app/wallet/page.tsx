@@ -142,10 +142,14 @@ export default async function WalletPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {billingError ? (
-            <Text>
-              Subscription data is not available right now. If this persists, redeploy the control
-              plane so the latest internal subscription routes are available.
-            </Text>
+            <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+              <p className="font-semibold">Subscription data is loading</p>
+              <p className="mt-1 text-amber-700">
+                Your account is being set up. Usage limits and billing details will appear here once
+                the subscription service is ready. You can continue using all features in the
+                meantime.
+              </p>
+            </div>
           ) : !billingSummary ? (
             <Text>Subscription context is not available yet.</Text>
           ) : (

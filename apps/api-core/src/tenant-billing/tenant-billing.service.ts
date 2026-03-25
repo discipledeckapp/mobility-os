@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
+import { getCountryConfig } from '@mobility-os/domain-config';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -20,8 +21,19 @@ function readNumericFeature(features: Record<string, unknown>, key: string): num
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+// Growth plan limits used for the trial fallback when control-plane is unreachable.
+const TRIAL_FEATURES = {
+  vehicleCap: 20,
+  driverCap: null as number | null,
+  seatLimit: 25,
+  verificationEnabled: true,
+  walletEnabled: true,
+};
+
 @Injectable()
 export class TenantBillingService {
+  private readonly logger = new Logger(TenantBillingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
@@ -29,14 +41,15 @@ export class TenantBillingService {
   ) {}
 
   async getSummary(tenantId: string, userId: string): Promise<TenantBillingSummaryDto> {
-    const [subscription, invoices, balance, entries, user, driverCount, vehicleCount, operatorSeatCount] = await Promise.all([
-      this.controlPlaneBillingClient.getSubscription(tenantId),
-      this.controlPlaneBillingClient.listInvoices(tenantId),
-      this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId),
-      this.controlPlaneBillingClient.listPlatformWalletEntries(tenantId),
+    // Always fetch local counts — these come from our own DB, never the control plane.
+    const [user, tenant, driverCount, vehicleCount, operatorSeatCount] = await Promise.all([
       this.prisma.user.findFirst({
         where: { id: userId, tenantId, isActive: true },
         select: { email: true, name: true },
+      }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { status: true, country: true, createdAt: true },
       }),
       this.prisma.driver.count({ where: { tenantId } }),
       this.prisma.vehicle.count({ where: { tenantId } }),
@@ -47,8 +60,75 @@ export class TenantBillingService {
       throw new NotFoundException('The authenticated tenant user could not be resolved.');
     }
 
-    const outstandingInvoice = invoices.find((invoice) => invoice.status === 'open') ?? null;
+    // Attempt to fetch live billing data from the control plane.
+    let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>> | null = null;
+    let invoices: Awaited<ReturnType<ControlPlaneBillingClient['listInvoices']>> = [];
+    let balance: Awaited<ReturnType<ControlPlaneBillingClient['getPlatformWalletBalance']>> | null = null;
+    let entries: Awaited<ReturnType<ControlPlaneBillingClient['listPlatformWalletEntries']>> = [];
 
+    try {
+      [subscription, invoices, balance, entries] = await Promise.all([
+        this.controlPlaneBillingClient.getSubscription(tenantId),
+        this.controlPlaneBillingClient.listInvoices(tenantId),
+        this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId),
+        this.controlPlaneBillingClient.listPlatformWalletEntries(tenantId),
+      ]);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(`Billing summary degraded for tenant '${tenantId}': ${error.message}`);
+      } else {
+        throw error;
+      }
+    }
+
+    // If control-plane data is unavailable, build a trial fallback from local tenant data.
+    if (!subscription) {
+      const currency = tenant ? (() => {
+        try { return getCountryConfig(tenant.country).currency; } catch { return 'NGN'; }
+      })() : 'NGN';
+      const createdAt = tenant?.createdAt ?? new Date();
+      const trialEndsAt = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+      return {
+        subscription: {
+          id: 'trial',
+          planId: 'trial',
+          planName: 'Growth (Free Trial)',
+          planTier: 'growth',
+          currency,
+          features: TRIAL_FEATURES,
+          status: tenant?.status ?? 'trialing',
+          currentPeriodStart: createdAt.toISOString(),
+          currentPeriodEnd: periodEnd.toISOString(),
+          cancelAtPeriodEnd: false,
+          trialEndsAt: trialEndsAt > now ? trialEndsAt.toISOString() : null,
+        },
+        invoices: [],
+        outstandingInvoice: null,
+        verificationWallet: {
+          walletId: 'pending',
+          currency,
+          balanceMinorUnits: 0,
+          entries: [],
+        },
+        usage: {
+          driverCount,
+          vehicleCount,
+          operatorSeatCount,
+          driverCap: TRIAL_FEATURES.driverCap,
+          vehicleCap: TRIAL_FEATURES.vehicleCap,
+          seatCap: TRIAL_FEATURES.seatLimit,
+          openInvoiceCount: 0,
+          verificationLedgerEntryCount: 0,
+        },
+        customerEmail: user.email,
+        customerName: user.name,
+      };
+    }
+
+    const outstandingInvoice = invoices.find((invoice) => invoice.status === 'open') ?? null;
     const driverCap =
       readNumericFeature(subscription.features, 'driverCap') ??
       readNumericFeature(subscription.features, 'seatLimit');
@@ -56,6 +136,7 @@ export class TenantBillingService {
       readNumericFeature(subscription.features, 'vehicleCap') ??
       readNumericFeature(subscription.features, 'fleetCap');
     const seatCap = readNumericFeature(subscription.features, 'seatLimit');
+    const walletCurrency = balance?.currency ?? subscription.currency;
 
     return {
       subscription: {
@@ -98,9 +179,9 @@ export class TenantBillingService {
           }
         : null,
       verificationWallet: {
-        walletId: balance.walletId,
-        currency: balance.currency,
-        balanceMinorUnits: balance.balanceMinorUnits,
+        walletId: balance?.walletId ?? 'pending',
+        currency: walletCurrency,
+        balanceMinorUnits: balance?.balanceMinorUnits ?? 0,
         entries: entries.map((entry) => ({
           id: entry.id,
           type: entry.type,

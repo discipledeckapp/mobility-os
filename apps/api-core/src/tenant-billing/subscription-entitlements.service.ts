@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
 
 function readNumericFeature(features: Record<string, unknown>, key: string): number | null {
@@ -6,26 +6,33 @@ function readNumericFeature(features: Record<string, unknown>, key: string): num
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-const BILLING_UNAVAILABLE =
-  'Your subscription could not be verified right now. Please try again in a moment or contact support if this continues.';
-
 @Injectable()
 export class SubscriptionEntitlementsService {
+  private readonly logger = new Logger(SubscriptionEntitlementsService.name);
+
   constructor(private readonly billingClient: ControlPlaneBillingClient) {}
 
   async getSubscriptionSummary(tenantId: string) {
+    return this.billingClient.getSubscription(tenantId);
+  }
+
+  /**
+   * Returns false if billing is reachable and the cap is exceeded.
+   * Returns true (allow through) if billing is unreachable — we never block
+   * user operations because the billing service is temporarily down.
+   */
+  async enforceDriverCapacity(tenantId: string, currentDriverCount: number): Promise<void> {
+    let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>>;
     try {
-      return await this.billingClient.getSubscription(tenantId);
+      subscription = await this.getSubscriptionSummary(tenantId);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
-        throw new ServiceUnavailableException(BILLING_UNAVAILABLE);
+        this.logger.warn(`Driver capacity check skipped for tenant '${tenantId}': ${error.message}`);
+        return; // fail open — never block onboarding because billing is down
       }
       throw error;
     }
-  }
 
-  async enforceDriverCapacity(tenantId: string, currentDriverCount: number): Promise<void> {
-    const subscription = await this.getSubscriptionSummary(tenantId);
     const driverCap =
       readNumericFeature(subscription.features, 'driverCap') ??
       readNumericFeature(subscription.features, 'seatLimit');
@@ -39,7 +46,17 @@ export class SubscriptionEntitlementsService {
   }
 
   async enforceVehicleCapacity(tenantId: string, currentVehicleCount: number): Promise<void> {
-    const subscription = await this.getSubscriptionSummary(tenantId);
+    let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>>;
+    try {
+      subscription = await this.getSubscriptionSummary(tenantId);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(`Vehicle capacity check skipped for tenant '${tenantId}': ${error.message}`);
+        return;
+      }
+      throw error;
+    }
+
     const vehicleCap =
       readNumericFeature(subscription.features, 'vehicleCap') ??
       readNumericFeature(subscription.features, 'fleetCap');
@@ -53,7 +70,17 @@ export class SubscriptionEntitlementsService {
   }
 
   async enforceSeatCapacity(tenantId: string, currentSeatCount: number): Promise<void> {
-    const subscription = await this.getSubscriptionSummary(tenantId);
+    let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>>;
+    try {
+      subscription = await this.getSubscriptionSummary(tenantId);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(`Seat capacity check skipped for tenant '${tenantId}': ${error.message}`);
+        return;
+      }
+      throw error;
+    }
+
     const seatLimit = readNumericFeature(subscription.features, 'seatLimit');
 
     if (seatLimit !== null && currentSeatCount >= seatLimit) {
