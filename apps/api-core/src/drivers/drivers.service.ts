@@ -25,6 +25,8 @@ import { PrismaService } from '../database/prisma.service';
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import { readOrganisationSettings } from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -199,6 +201,7 @@ export class DriversService {
     private readonly authEmailService: AuthEmailService,
     private readonly documentStorageService: DocumentStorageService,
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
+    private readonly meteringClient: ControlPlaneMeteringClient,
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
@@ -1647,6 +1650,8 @@ export class DriversService {
         identityStatus: 'unverified',
       } as never,
     });
+
+    this.meteringClient.fireEvent(tenantId, 'active_driver');
 
     const settings = await this.getOrganisationSettings(tenantId);
     const shouldAutoSendSelfServiceLink =

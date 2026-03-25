@@ -19,6 +19,8 @@ import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv, parseCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import type { CreateVehicleDto } from './dto/create-vehicle.dto';
 import type { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -85,6 +87,7 @@ export class VehiclesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
+    private readonly meteringClient: ControlPlaneMeteringClient,
   ) {}
 
   async list(
@@ -619,7 +622,7 @@ export class VehiclesService {
       );
 
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        const vehicle = await this.prisma.$transaction(async (tx) => {
           const tenant = await tx.tenant.findUnique({
             where: { id: tenantId },
             select: { country: true },
@@ -665,6 +668,8 @@ export class VehiclesService {
 
           return vehicle;
         });
+        this.meteringClient.fireEvent(tenantId, 'active_vehicle');
+        return vehicle;
       } catch (error) {
         if (this.isPrismaUniqueError(error)) {
           const target = this.getPrismaErrorTarget(error);

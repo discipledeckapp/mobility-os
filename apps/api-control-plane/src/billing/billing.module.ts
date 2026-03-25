@@ -9,6 +9,8 @@ import { BillingCollectionsService } from './billing-collections.service';
 import { BillingInternalController } from './billing-internal.controller';
 import { BillingRunsController } from './billing-runs.controller';
 import { BillingRunsService } from './billing-runs.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { BillingSchedulerService } from './billing-scheduler.service';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
 
@@ -26,7 +28,7 @@ import { BillingService } from './billing.service';
     BillingRunsController,
     BillingCollectionsController,
   ],
-  providers: [BillingService, BillingRunsService, BillingCollectionsService],
+  providers: [BillingService, BillingRunsService, BillingCollectionsService, BillingSchedulerService],
   exports: [BillingService, BillingRunsService, BillingCollectionsService],
 })
 export class BillingModule {}

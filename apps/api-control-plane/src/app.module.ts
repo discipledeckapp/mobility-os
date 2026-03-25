@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
@@ -101,6 +102,7 @@ function createLoggerModule() {
       },
     ]),
     createLoggerModule(),
+    ScheduleModule.forRoot(),
 
     // ── Infrastructure ────────────────────────────────────────────────────────
     DatabaseModule,
