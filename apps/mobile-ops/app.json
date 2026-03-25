@@ -21,7 +21,8 @@
           "photosPermission": "Allow Mobiris to access photos for driver verification documents.",
           "cameraPermission": "Allow Mobiris to use the camera for driver selfie verification."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "ios": {
       "supportsTablet": true,
