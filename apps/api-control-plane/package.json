@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "cli:seed-bootstrap-plan": "prisma generate && ts-node src/cli/seed-bootstrap-plan.ts",
+    "seed:plan": "node dist/cli/seed-bootstrap-plan.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {

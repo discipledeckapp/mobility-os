@@ -102,6 +102,7 @@ services:
       pnpm --filter @mobility-os/api-control-plane build
     startCommand: >-
       pnpm --filter @mobility-os/api-control-plane db:migrate &&
+      pnpm --filter @mobility-os/api-control-plane seed:plan &&
       pnpm --filter @mobility-os/api-control-plane start
     envVars:
       - key: NODE_ENV
