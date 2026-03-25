@@ -28,7 +28,7 @@ export class ControlPlaneLifecycleClient {
     let response: Response;
     try {
       response = await fetch(
-        `${baseUrl.replace(/\/$/, '')}/internal/tenant-lifecycle/tenant/${tenantId}`,
+        `${baseUrl.replace(/\/$/, '')}/api/internal/tenant-lifecycle/tenant/${tenantId}`,
         {
           headers: {
             'x-internal-service-token': internalToken,

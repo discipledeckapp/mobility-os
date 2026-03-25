@@ -47,7 +47,7 @@ export class SelfSignupService {
 
     try {
       const response = await fetch(
-        `${controlPlaneApiUrl.replace(/\/$/, '')}/internal/subscriptions/bootstrap`,
+        `${controlPlaneApiUrl.replace(/\/$/, '')}/api/internal/subscriptions/bootstrap`,
         {
           method: 'POST',
           headers: {
