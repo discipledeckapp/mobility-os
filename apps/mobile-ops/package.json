@@ -5,13 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "native:prebuild": "expo prebuild --platform ios,android",
     "lint": "biome check .",
-    "type-check": "tsc --noEmit",
-    "build": "expo export --platform ios && expo export --platform android"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@mobility-os/domain-config": "workspace:*",

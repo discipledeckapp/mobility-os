@@ -40,10 +40,7 @@
     "extra": {
       "apiUrl": "https://api.mobiris.ng/api/v1",
       "enableOfflineQueue": true,
-      "enableCrashReporting": false,
-      "eas": {
-        "projectId": "83ea2b51-d020-415e-a1f7-ceac04c41d87"
-      }
+      "enableCrashReporting": false
     }
   }
 }
