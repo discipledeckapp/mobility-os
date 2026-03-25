@@ -249,6 +249,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       SecureStore.getItemAsync(STORAGE_KEYS.refreshToken),
     ]);
 
+    // Tokens may be absent if the keychain was cleared independently of the
+    // cached session (e.g. OS upgrade, full data wipe). Allow offline mode
+    // entry so the user sees their last known session; the next online action
+    // will trigger a re-auth via the unauthorised handler.
     primeApiAuthReaders(storedToken, storedRefreshToken);
     setToken(storedToken);
     setRefreshToken(storedRefreshToken);
@@ -338,6 +342,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!storedToken || !storedRefreshToken) {
         if (cachedSession) {
+          primeApiAuthReaders(storedToken, storedRefreshToken);
           setToken(storedToken);
           setRefreshToken(storedRefreshToken);
           setSession(cachedSession.session);

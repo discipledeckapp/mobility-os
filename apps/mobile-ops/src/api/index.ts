@@ -853,10 +853,18 @@ async function apiFetch<T>(
         }
       }
 
-      const response = await fetch(`${mobileEnv.apiUrl}${path}`, {
-        ...init,
-        headers,
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+      let response: Response;
+      try {
+        response = await fetch(`${mobileEnv.apiUrl}${path}`, {
+          ...init,
+          headers,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (response.ok) {
         return (await response.json()) as T;
