@@ -1,128 +1,230 @@
-import { Prisma } from '../generated/prisma';
-import { PrismaClient } from '../generated/prisma';
+/**
+ * Seed the canonical Starter and Growth billing plans for all supported currencies.
+ * Safe to run on every deploy — upserts by (tier, billingInterval, currency).
+ *
+ * Pricing as per docs/marketing/copy/website/pricing-page.md:
+ *   Starter  NGN ₦15,000/mo  | vehicleCap:10  driverCap:15  seatLimit:3
+ *   Growth   NGN ₦35,000/mo  | vehicleCap:20  driverCap:null seatLimit:25
+ *   (GHS / KES / ZAR equivalents at country-config rates)
+ */
+import { Prisma, PrismaClient } from '../generated/prisma';
 
-interface ParsedArgs {
+interface PlanSpec {
   name: string;
   tier: string;
   billingInterval: string;
   currency: string;
   basePriceMinorUnits: number;
+  features: Record<string, unknown>;
 }
 
-const DEFAULT_PLAN = {
-  name: 'Growth Monthly',
-  tier: 'growth',
-  billingInterval: 'monthly',
-  currency: 'NGN',
-  basePriceMinorUnits: 5000000,
-  features: {
-    seatLimit: 25,
-    fleetCap: 250,
-    intelligenceEnabled: true,
-    walletEnabled: true,
-    supportTier: 'standard',
+const PLANS: PlanSpec[] = [
+  // ── Starter ───────────────────────────────────────────────────────────────
+  {
+    name: 'Starter',
+    tier: 'starter',
+    billingInterval: 'monthly',
+    currency: 'NGN',
+    basePriceMinorUnits: 1_500_000, // ₦15,000
+    features: {
+      vehicleCap: 10,
+      driverCap: 15,
+      seatLimit: 3,
+      verificationEnabled: false,
+      walletEnabled: false,
+      intelligenceEnabled: false,
+      supportTier: 'email',
+    },
   },
-} as const;
+  {
+    name: 'Starter',
+    tier: 'starter',
+    billingInterval: 'monthly',
+    currency: 'GHS',
+    basePriceMinorUnits: 15_000, // GHS 150
+    features: {
+      vehicleCap: 10,
+      driverCap: 15,
+      seatLimit: 3,
+      verificationEnabled: false,
+      walletEnabled: false,
+      intelligenceEnabled: false,
+      supportTier: 'email',
+    },
+  },
+  {
+    name: 'Starter',
+    tier: 'starter',
+    billingInterval: 'monthly',
+    currency: 'KES',
+    basePriceMinorUnits: 250_000, // KES 2,500
+    features: {
+      vehicleCap: 10,
+      driverCap: 15,
+      seatLimit: 3,
+      verificationEnabled: false,
+      walletEnabled: false,
+      intelligenceEnabled: false,
+      supportTier: 'email',
+    },
+  },
+  {
+    name: 'Starter',
+    tier: 'starter',
+    billingInterval: 'monthly',
+    currency: 'ZAR',
+    basePriceMinorUnits: 35_000, // ZAR 350
+    features: {
+      vehicleCap: 10,
+      driverCap: 15,
+      seatLimit: 3,
+      verificationEnabled: false,
+      walletEnabled: false,
+      intelligenceEnabled: false,
+      supportTier: 'email',
+    },
+  },
 
-function parseArgs(argv: string[]): ParsedArgs {
-  const args = new Map<string, string>();
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const current = argv[index];
-    const next = argv[index + 1];
-
-    if (!current?.startsWith('--') || !next) {
-      continue;
-    }
-
-    args.set(current.slice(2), next);
-    index += 1;
-  }
-
-  const basePriceMinorUnitsRaw =
-    args.get('basePriceMinorUnits') ?? `${DEFAULT_PLAN.basePriceMinorUnits}`;
-  const basePriceMinorUnits = Number.parseInt(basePriceMinorUnitsRaw, 10);
-
-  if (Number.isNaN(basePriceMinorUnits) || basePriceMinorUnits < 0) {
-    throw new Error('--basePriceMinorUnits must be a non-negative integer');
-  }
-
-  return {
-    name: args.get('name') ?? DEFAULT_PLAN.name,
-    tier: args.get('tier') ?? DEFAULT_PLAN.tier,
-    billingInterval: args.get('billingInterval') ?? DEFAULT_PLAN.billingInterval,
-    currency: (args.get('currency') ?? DEFAULT_PLAN.currency).toUpperCase(),
-    basePriceMinorUnits,
-  };
-}
+  // ── Growth ────────────────────────────────────────────────────────────────
+  {
+    name: 'Growth',
+    tier: 'growth',
+    billingInterval: 'monthly',
+    currency: 'NGN',
+    basePriceMinorUnits: 3_500_000, // ₦35,000
+    features: {
+      vehicleCap: 20,
+      vehicleOverageRateMinorUnits: 150_000, // ₦1,500/vehicle above 20
+      driverCap: null, // unlimited
+      seatLimit: 25,
+      verificationEnabled: true,
+      verificationsIncluded: 10,
+      verificationRateMinorUnits: 60_000, // ₦600 add-on
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      supportTier: 'whatsapp_email',
+    },
+  },
+  {
+    name: 'Growth',
+    tier: 'growth',
+    billingInterval: 'monthly',
+    currency: 'GHS',
+    basePriceMinorUnits: 35_000, // GHS 350
+    features: {
+      vehicleCap: 20,
+      vehicleOverageRateMinorUnits: 1_500, // GHS 15
+      driverCap: null,
+      seatLimit: 25,
+      verificationEnabled: true,
+      verificationsIncluded: 10,
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      supportTier: 'whatsapp_email',
+    },
+  },
+  {
+    name: 'Growth',
+    tier: 'growth',
+    billingInterval: 'monthly',
+    currency: 'KES',
+    basePriceMinorUnits: 550_000, // KES 5,500
+    features: {
+      vehicleCap: 20,
+      vehicleOverageRateMinorUnits: 25_000, // KES 250
+      driverCap: null,
+      seatLimit: 25,
+      verificationEnabled: true,
+      verificationsIncluded: 10,
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      supportTier: 'whatsapp_email',
+    },
+  },
+  {
+    name: 'Growth',
+    tier: 'growth',
+    billingInterval: 'monthly',
+    currency: 'ZAR',
+    basePriceMinorUnits: 80_000, // ZAR 800
+    features: {
+      vehicleCap: 20,
+      vehicleOverageRateMinorUnits: 3_500, // ZAR 35
+      driverCap: null,
+      seatLimit: 25,
+      verificationEnabled: true,
+      verificationsIncluded: 10,
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      supportTier: 'whatsapp_email',
+    },
+  },
+];
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
 
   try {
-    const args = parseArgs(process.argv.slice(2));
+    const results: Array<{ status: string; plan: object }> = [];
 
-    const existing = await prisma.cpPlan.findFirst({
-      where: {
-        tier: args.tier,
-        billingInterval: args.billingInterval,
-        currency: args.currency,
-        isActive: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    for (const spec of PLANS) {
+      const existing = await prisma.cpPlan.findFirst({
+        where: {
+          tier: spec.tier,
+          billingInterval: spec.billingInterval,
+          currency: spec.currency,
+          isActive: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
 
-    if (existing) {
-      console.log(
-        JSON.stringify(
-          {
-            status: 'exists',
-            message: 'Active bootstrap plan already present.',
-            plan: {
-              id: existing.id,
-              name: existing.name,
-              tier: existing.tier,
-              billingInterval: existing.billingInterval,
-              currency: existing.currency,
-            },
+      if (existing) {
+        // Update price and features so re-deploys pick up pricing changes.
+        const updated = await prisma.cpPlan.update({
+          where: { id: existing.id },
+          data: {
+            name: spec.name,
+            basePriceMinorUnits: spec.basePriceMinorUnits,
+            features: spec.features as Prisma.InputJsonValue,
           },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-
-    const plan = await prisma.cpPlan.create({
-      data: {
-        name: args.name,
-        tier: args.tier,
-        billingInterval: args.billingInterval,
-        basePriceMinorUnits: args.basePriceMinorUnits,
-        currency: args.currency,
-        isActive: true,
-        features: DEFAULT_PLAN.features as Prisma.InputJsonValue,
-        customTerms: Prisma.JsonNull,
-      },
-    });
-
-    console.log(
-      JSON.stringify(
-        {
+        });
+        results.push({
+          status: 'updated',
+          plan: {
+            id: updated.id,
+            name: updated.name,
+            tier: updated.tier,
+            currency: updated.currency,
+            basePriceMinorUnits: updated.basePriceMinorUnits,
+          },
+        });
+      } else {
+        const created = await prisma.cpPlan.create({
+          data: {
+            name: spec.name,
+            tier: spec.tier,
+            billingInterval: spec.billingInterval,
+            basePriceMinorUnits: spec.basePriceMinorUnits,
+            currency: spec.currency,
+            isActive: true,
+            features: spec.features as Prisma.InputJsonValue,
+            customTerms: Prisma.JsonNull,
+          },
+        });
+        results.push({
           status: 'created',
           plan: {
-            id: plan.id,
-            name: plan.name,
-            tier: plan.tier,
-            billingInterval: plan.billingInterval,
-            basePriceMinorUnits: plan.basePriceMinorUnits,
-            currency: plan.currency,
+            id: created.id,
+            name: created.name,
+            tier: created.tier,
+            currency: created.currency,
+            basePriceMinorUnits: created.basePriceMinorUnits,
           },
-        },
-        null,
-        2,
-      ),
-    );
+        });
+      }
+    }
+
+    console.log(JSON.stringify({ status: 'done', results }, null, 2));
   } finally {
     await prisma.$disconnect();
   }

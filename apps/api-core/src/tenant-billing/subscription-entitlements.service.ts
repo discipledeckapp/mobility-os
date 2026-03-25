@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
 
 function readNumericFeature(features: Record<string, unknown>, key: string): number | null {
@@ -6,12 +6,22 @@ function readNumericFeature(features: Record<string, unknown>, key: string): num
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+const BILLING_UNAVAILABLE =
+  'Your subscription could not be verified right now. Please try again in a moment or contact support if this continues.';
+
 @Injectable()
 export class SubscriptionEntitlementsService {
   constructor(private readonly billingClient: ControlPlaneBillingClient) {}
 
   async getSubscriptionSummary(tenantId: string) {
-    return this.billingClient.getSubscription(tenantId);
+    try {
+      return await this.billingClient.getSubscription(tenantId);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw new ServiceUnavailableException(BILLING_UNAVAILABLE);
+      }
+      throw error;
+    }
   }
 
   async enforceDriverCapacity(tenantId: string, currentDriverCount: number): Promise<void> {
@@ -22,7 +32,7 @@ export class SubscriptionEntitlementsService {
 
     if (driverCap !== null && currentDriverCount >= driverCap) {
       throw new HttpException(
-        `Your current ${subscription.planName} plan supports up to ${driverCap} managed drivers. Upgrade the organisation plan to add more drivers.`,
+        `Your ${subscription.planName} plan includes up to ${driverCap} drivers. Upgrade your plan to add more.`,
         HttpStatus.PAYMENT_REQUIRED,
       );
     }
@@ -36,7 +46,7 @@ export class SubscriptionEntitlementsService {
 
     if (vehicleCap !== null && currentVehicleCount >= vehicleCap) {
       throw new HttpException(
-        `Your current ${subscription.planName} plan supports up to ${vehicleCap} managed vehicles. Upgrade the organisation plan to add more vehicles.`,
+        `Your ${subscription.planName} plan includes up to ${vehicleCap} vehicles. Upgrade your plan to add more.`,
         HttpStatus.PAYMENT_REQUIRED,
       );
     }
@@ -48,7 +58,7 @@ export class SubscriptionEntitlementsService {
 
     if (seatLimit !== null && currentSeatCount >= seatLimit) {
       throw new HttpException(
-        `Your current ${subscription.planName} plan supports up to ${seatLimit} active operator seats. Upgrade the organisation plan to invite more team members.`,
+        `Your ${subscription.planName} plan includes up to ${seatLimit} operator seats. Upgrade your plan to invite more team members.`,
         HttpStatus.PAYMENT_REQUIRED,
       );
     }
