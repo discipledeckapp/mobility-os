@@ -174,7 +174,7 @@ export class ControlPlaneBillingClient {
 
     let response: Response;
     try {
-      response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      response = await fetch(`${baseUrl.replace(/\/$/, '')}/api${path}`, {
         ...init,
         headers,
       });
