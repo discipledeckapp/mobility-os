@@ -90,7 +90,23 @@ export class ControlPlaneBillingClient {
   constructor(private readonly configService: ConfigService) {}
 
   async getSubscription(tenantId: string): Promise<TenantSubscriptionSummary> {
-    return this.request(`/internal/subscriptions/tenant/${tenantId}`);
+    try {
+      return await this.request(`/internal/subscriptions/tenant/${tenantId}`);
+    } catch (error) {
+      // If the subscription doesn't exist yet (tenant created before bootstrap
+      // was wired), auto-bootstrap on 404 then re-fetch.
+      if (
+        error instanceof ServiceUnavailableException &&
+        String(error.message).includes('404')
+      ) {
+        await this.request('/internal/subscriptions/bootstrap', {
+          method: 'POST',
+          body: JSON.stringify({ tenantId }),
+        });
+        return this.request(`/internal/subscriptions/tenant/${tenantId}`);
+      }
+      throw error;
+    }
   }
 
   async listPlans(): Promise<TenantPlanSummary[]> {
