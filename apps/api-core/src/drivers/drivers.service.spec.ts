@@ -91,6 +91,7 @@ describe('DriversService', () => {
       authEmailService as never,
       documentStorageService as never,
       subscriptionEntitlementsService as never,
+      { fireEvent: jest.fn() } as never,
     );
   });
 
