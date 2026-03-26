@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import type { NavigationProp } from '@react-navigation/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RootStackParamList } from '../navigation/types';
@@ -10,12 +11,12 @@ type OperatorBottomNavTab =
   | 'OperatorRemittance'
   | 'OperatorMore';
 
-const tabs: Array<{ key: OperatorBottomNavTab; label: string; icon: string }> = [
-  { key: 'OperatorDashboard', label: 'Dashboard', icon: 'D' },
-  { key: 'OperatorDrivers', label: 'Drivers', icon: 'Dr' },
-  { key: 'OperatorAssignments', label: 'Ops', icon: 'Op' },
-  { key: 'OperatorRemittance', label: 'Cash', icon: '₦' },
-  { key: 'OperatorMore', label: 'More', icon: '⋯' },
+const tabs: Array<{ key: OperatorBottomNavTab; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
+  { key: 'OperatorDashboard', label: 'Dashboard', icon: 'grid' },
+  { key: 'OperatorDrivers', label: 'Drivers', icon: 'users' },
+  { key: 'OperatorAssignments', label: 'Ops', icon: 'truck' },
+  { key: 'OperatorRemittance', label: 'Cash', icon: 'dollar-sign' },
+  { key: 'OperatorMore', label: 'More', icon: 'more-horizontal' },
 ];
 
 interface OperatorBottomNavProps {
@@ -41,9 +42,11 @@ export function OperatorBottomNav({ currentTab, navigation }: OperatorBottomNavP
               style={[styles.item, active ? styles.itemActive : null]}
             >
               <View style={[styles.icon, active ? styles.iconActive : null]}>
-                <Text style={[styles.iconLabel, active ? styles.iconLabelActive : null]}>
-                  {tab.icon}
-                </Text>
+                <Feather
+                  color={active ? '#FFFFFF' : tokens.colors.inkSoft}
+                  name={tab.icon}
+                  size={15}
+                />
               </View>
               <Text style={[styles.label, active ? styles.labelActive : null]}>{tab.label}</Text>
             </Pressable>
@@ -81,10 +84,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.primaryTint,
   },
   icon: {
-    minWidth: 28,
-    height: 28,
-    paddingHorizontal: 4,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
@@ -94,14 +96,6 @@ const styles = StyleSheet.create({
   iconActive: {
     backgroundColor: tokens.colors.primary,
     borderColor: tokens.colors.primary,
-  },
-  iconLabel: {
-    color: tokens.colors.inkSoft,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  iconLabelActive: {
-    color: '#FFFFFF',
   },
   label: {
     color: tokens.colors.inkSoft,

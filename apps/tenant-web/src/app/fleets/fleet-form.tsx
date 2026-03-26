@@ -14,7 +14,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import type { SearchableSelectOption } from '@mobility-os/ui';
-import { useActionState, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type {
   BusinessEntityRecord,
   FleetRecord,
@@ -92,6 +92,19 @@ export function FleetForm({
     }
   }, [filteredOperatingUnits, operatingUnitId]);
 
+  const [displaySuccess, setDisplaySuccess] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (state.success) {
+      setDisplaySuccess(state.success);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setDisplaySuccess(null), 4000);
+    }
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, [state.success]);
+
   return (
     <Card>
       <CardHeader>
@@ -103,7 +116,7 @@ export function FleetForm({
           {fleet ? <input name="fleetId" type="hidden" value={fleet.id} /> : null}
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="name">Fleet name</Label>
+            <Label htmlFor="name">Fleet name <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input
               defaultValue={fleet?.name ?? ''}
               id="name"
@@ -169,9 +182,9 @@ export function FleetForm({
           </Text>
         ) : null}
 
-        {state.success ? (
+        {displaySuccess ? (
           <Text className="mt-4" tone="success">
-            {state.success}
+            {displaySuccess}
           </Text>
         ) : null}
       </CardContent>

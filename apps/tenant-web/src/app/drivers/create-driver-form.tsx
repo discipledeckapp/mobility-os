@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -72,6 +72,19 @@ export function CreateDriverForm({
     }
   }, [tenantCountryCode]);
 
+  const [displaySuccess, setDisplaySuccess] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (state.success) {
+      setDisplaySuccess(state.success);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setDisplaySuccess(null), 4000);
+    }
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, [state.success]);
+
   return (
     <Card>
       <CardHeader>
@@ -90,7 +103,7 @@ export function CreateDriverForm({
           />
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">Phone <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input
               id="phone"
               name="phone"
@@ -103,12 +116,12 @@ export function CreateDriverForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="firstName">First name</Label>
+            <Label htmlFor="firstName">First name <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input id="firstName" name="firstName" placeholder="Emeka" required />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last name</Label>
+            <Label htmlFor="lastName">Last name <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input id="lastName" name="lastName" placeholder="Okonkwo" required />
           </div>
 
@@ -155,9 +168,9 @@ export function CreateDriverForm({
           </Text>
         ) : null}
 
-        {state.success ? (
+        {displaySuccess ? (
           <Text className="mt-4" tone="success">
-            {state.success}
+            {displaySuccess}
           </Text>
         ) : null}
       </CardContent>

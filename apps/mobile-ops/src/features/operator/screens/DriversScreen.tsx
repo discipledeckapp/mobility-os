@@ -24,16 +24,20 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
     queryFn: () => listDrivers({ q: query.trim() || undefined, page: 1, limit: 100 }),
   });
 
-  const filteredDrivers =
-    driversQuery.data?.data.filter((driver) => {
-      if (readinessFilter === 'queue') {
-        return driver.activationReadiness !== 'ready';
-      }
-      if (readinessFilter === 'ready') {
-        return driver.activationReadiness === 'ready';
-      }
-      return true;
-    }) ?? [];
+  const allDrivers = driversQuery.data?.data ?? [];
+  const filteredDrivers = allDrivers.filter((driver) => {
+    if (readinessFilter === 'queue') {
+      return driver.activationReadiness !== 'ready';
+    }
+    if (readinessFilter === 'ready') {
+      return driver.activationReadiness === 'ready';
+    }
+    return true;
+  });
+
+  const allCount = allDrivers.length;
+  const queueCount = allDrivers.filter((d) => d.activationReadiness !== 'ready').length;
+  const readyCount = allDrivers.filter((d) => d.activationReadiness === 'ready').length;
 
   const onRefresh = async () => {
     try {
@@ -63,45 +67,29 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
           value={query}
         />
         <View style={styles.filterRow}>
-          <Pressable
-            onPress={() => setReadinessFilter('all')}
-            style={[styles.filterChip, readinessFilter === 'all' ? styles.filterChipActive : null]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                readinessFilter === 'all' ? styles.filterChipTextActive : null,
-              ]}
+          {(
+            [
+              { key: 'all', label: 'All drivers', count: allCount },
+              { key: 'queue', label: 'Readiness queue', count: queueCount },
+              { key: 'ready', label: 'Ready', count: readyCount },
+            ] as const
+          ).map(({ key, label, count }) => (
+            <Pressable
+              key={key}
+              onPress={() => setReadinessFilter(key)}
+              style={[styles.filterChip, readinessFilter === key ? styles.filterChipActive : null]}
             >
-              All drivers
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setReadinessFilter('queue')}
-            style={[styles.filterChip, readinessFilter === 'queue' ? styles.filterChipActive : null]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                readinessFilter === 'queue' ? styles.filterChipTextActive : null,
-              ]}
-            >
-              Readiness queue
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setReadinessFilter('ready')}
-            style={[styles.filterChip, readinessFilter === 'ready' ? styles.filterChipActive : null]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                readinessFilter === 'ready' ? styles.filterChipTextActive : null,
-              ]}
-            >
-              Ready
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  readinessFilter === key ? styles.filterChipTextActive : null,
+                ]}
+              >
+                {label}
+                {driversQuery.data ? ` · ${count}` : ''}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </Card>
 
@@ -116,8 +104,8 @@ export function DriversScreen({ navigation }: ScreenProps<'OperatorDrivers'>) {
             <View style={styles.rowBetween}>
               <View style={styles.copyBlock}>
                 <Text style={styles.driverName}>{driver.firstName} {driver.lastName}</Text>
-                <Text style={styles.meta}>{driver.phone}</Text>
-                {driver.email ? <Text style={styles.meta}>{driver.email}</Text> : null}
+                <Text style={styles.meta}>{driver.phone ?? 'No phone recorded'}</Text>
+                <Text style={styles.meta}>{driver.email ?? 'No email recorded'}</Text>
               </View>
               <Badge label={formatStatusLabel(driver.status)} tone="neutral" />
             </View>

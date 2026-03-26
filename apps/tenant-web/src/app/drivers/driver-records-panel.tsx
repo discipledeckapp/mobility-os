@@ -26,6 +26,60 @@ import {
 } from '../../lib/driver-identity';
 import { DriverStatusActions } from './driver-status-actions';
 
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14">
+      <rect height="11" rx="2" ry="2" width="18" x="3" y="11" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function LockedDriverModal({ driver, onClose }: { driver: DriverRecord; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white shadow-[0_32px_80px_-28px_rgba(15,23,42,0.45)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col items-center gap-4 px-8 py-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 ring-4 ring-amber-100">
+            <svg aria-hidden="true" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24">
+              <rect height="11" rx="2" ry="2" width="18" x="3" y="11" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-semibold text-[var(--mobiris-ink)]">
+              Driver record locked
+            </h2>
+            <p className="text-sm text-slate-500">
+              <span className="font-semibold text-[var(--mobiris-ink)]">{driver.firstName} {driver.lastName}</span>{' '}
+              exists in your roster but is beyond your current plan's driver limit. Upgrade your plan to unlock access to this driver and their full activity.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2">
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] hover:bg-[var(--mobiris-primary-dark)]"
+              href="/billing"
+              onClick={onClose}
+            >
+              Upgrade plan
+            </Link>
+            <button
+              className="h-10 rounded-[var(--mobiris-radius-button)] text-sm font-medium text-slate-500 hover:text-slate-800"
+              onClick={onClose}
+              type="button"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
@@ -114,6 +168,7 @@ export function DriverRecordsPanel({
   const [fleetId, setFleetId] = useState(initialFleetId);
   const [status, setStatus] = useState(initialStatus);
   const [identityStatus, setIdentityStatus] = useState(initialIdentityStatus);
+  const [selectedLockedDriver, setSelectedLockedDriver] = useState<DriverRecord | null>(null);
   const page = initialPage;
   const pageSize = initialPageSize;
 
@@ -310,72 +365,108 @@ export function DriverRecordsPanel({
           </TableHeader>
           <TableBody>
             {drivers.map((driver) => (
-              <TableRow className="group cursor-pointer hover:bg-slate-50/80" key={driver.id}>
+              <TableRow
+                className={`group cursor-pointer hover:bg-slate-50/80${driver.locked ? ' opacity-60 bg-slate-50/50' : ''}`}
+                key={driver.id}
+              >
                 <TableCell>
                   <div className="space-y-0.5">
-                    <Link
-                      className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                      href={`/drivers/${driver.id}`}
-                    >
-                      {`${driver.firstName} ${driver.lastName}`}
-                    </Link>
+                    {driver.locked ? (
+                      <button
+                        className="flex items-center gap-1.5 font-semibold text-slate-400 hover:text-slate-600"
+                        onClick={() => setSelectedLockedDriver(driver)}
+                        type="button"
+                      >
+                        <LockIcon />
+                        {`${driver.firstName} ${driver.lastName}`}
+                      </button>
+                    ) : (
+                      <Link
+                        className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                        href={`/drivers/${driver.id}`}
+                      >
+                        {`${driver.firstName} ${driver.lastName}`}
+                      </Link>
+                    )}
                     <p className="text-xs text-slate-400">{driver.email ?? driver.phone}</p>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <p className="text-sm text-[var(--mobiris-ink)]">{driver.phone}</p>
+                  <p className={`text-sm ${driver.locked ? 'text-slate-400' : 'text-[var(--mobiris-ink)]'}`}>{driver.phone}</p>
                 </TableCell>
                 <TableCell>
                   <p className="text-sm text-slate-600">{fleetLabels.get(driver.fleetId) ?? driver.fleetId}</p>
                 </TableCell>
                 <TableCell>
-                  <Badge tone={getStatusTone(driver.status)}>{driver.status}</Badge>
+                  {driver.locked ? (
+                    <Badge tone="neutral">locked</Badge>
+                  ) : (
+                    <Badge tone={getStatusTone(driver.status)}>{driver.status}</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1.5">
-                    <Badge tone={getDriverIdentityTone(driver.identityStatus)}>
-                      {getDriverIdentityLabel(driver.identityStatus)}
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Badge tone={getDriverIdentityTone(driver.identityStatus)}>
+                        {getDriverIdentityLabel(driver.identityStatus)}
+                      </Badge>
+                      {driver.identityReviewCaseId ? (
+                        <Link
+                          className="block text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                          href={`/drivers/${driver.id}/review`}
+                        >
+                          Review open →
+                        </Link>
+                      ) : null}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : (
+                    <Badge tone={getGuarantorTone(driver.guarantorStatus)}>
+                      {driver.guarantorStatus === 'active'
+                        ? 'Linked'
+                        : driver.guarantorStatus === 'disconnected'
+                          ? 'Disconnected'
+                          : 'Missing'}
                     </Badge>
-                    {driver.identityReviewCaseId ? (
-                      <Link
-                        className="block text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                        href={`/drivers/${driver.id}/review`}
-                      >
-                        Review open →
-                      </Link>
-                    ) : null}
-                  </div>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <Badge tone={getGuarantorTone(driver.guarantorStatus)}>
-                    {driver.guarantorStatus === 'active'
-                      ? 'Linked'
-                      : driver.guarantorStatus === 'disconnected'
-                        ? 'Disconnected'
-                        : 'Missing'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge tone={getMobileAccessTone(driver.mobileAccessStatus)}>
-                    {driver.mobileAccessStatus === 'linked'
-                      ? 'Linked'
-                      : driver.mobileAccessStatus === 'inactive'
-                        ? 'Inactive account'
-                        : 'Missing'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1.5">
-                    <Badge tone={getReadinessTone(driver.activationReadiness)}>
-                      {getReadinessLabel(driver.activationReadiness)}
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : (
+                    <Badge tone={getMobileAccessTone(driver.mobileAccessStatus)}>
+                      {driver.mobileAccessStatus === 'linked'
+                        ? 'Linked'
+                        : driver.mobileAccessStatus === 'inactive'
+                          ? 'Inactive account'
+                          : 'Missing'}
                     </Badge>
-                    {driver.activationReadinessReasons[0] ? (
-                      <p className="text-xs text-slate-500">{driver.activationReadinessReasons[0]}</p>
-                    ) : null}
-                  </div>
+                  )}
                 </TableCell>
                 <TableCell>
-                  {driver.riskBand ? (
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Badge tone={getReadinessTone(driver.activationReadiness)}>
+                        {getReadinessLabel(driver.activationReadiness)}
+                      </Badge>
+                      {driver.activationReadinessReasons[0] ? (
+                        <p className="text-xs text-slate-500">{driver.activationReadinessReasons[0]}</p>
+                      ) : null}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : driver.riskBand ? (
                     <Badge
                       tone={
                         driver.riskBand === 'critical'
@@ -396,13 +487,29 @@ export function DriverRecordsPanel({
                   )}
                 </TableCell>
                 <TableCell>
-                  <DriverStatusActions driver={driver} />
+                  {driver.locked ? (
+                    <button
+                      className="text-xs font-semibold text-amber-600 hover:text-amber-700"
+                      onClick={() => setSelectedLockedDriver(driver)}
+                      type="button"
+                    >
+                      Upgrade to unlock
+                    </button>
+                  ) : (
+                    <DriverStatusActions driver={driver} />
+                  )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </RegistryTable>
+      {selectedLockedDriver ? (
+        <LockedDriverModal
+          driver={selectedLockedDriver}
+          onClose={() => setSelectedLockedDriver(null)}
+        />
+      ) : null}
     </div>
   );
 }

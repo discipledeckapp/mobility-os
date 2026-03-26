@@ -428,8 +428,33 @@ export class DriversService {
       tenantId,
       driversWithDocuments,
     );
+    const ready = await this.attachReadinessSummariesSafely(tenantId, driversWithMobileAccess);
+
+    // Compute subscription lock: drivers created beyond the plan cap are locked.
+    const { driverCap } = await this.subscriptionEntitlementsService.getCapInfo(tenantId);
+    let lockedDriverIds: Set<string> | null = null;
+    if (driverCap !== null) {
+      const totalCount = await this.prisma.driver.count({ where: { tenantId } });
+      if (totalCount > driverCap) {
+        // The first `driverCap` drivers by createdAt are unlocked; everything else is locked.
+        const unlockedRows = await this.prisma.driver.findMany({
+          where: { tenantId },
+          orderBy: { createdAt: 'asc' },
+          take: driverCap,
+          select: { id: true },
+        });
+        const unlockedIds = new Set(unlockedRows.map((r) => r.id));
+        lockedDriverIds = new Set(
+          ready.filter((d) => !unlockedIds.has(d.id)).map((d) => d.id),
+        );
+      }
+    }
+
     return {
-      data: await this.attachReadinessSummariesSafely(tenantId, driversWithMobileAccess),
+      data: ready.map((d) => ({
+        ...d,
+        locked: lockedDriverIds !== null ? lockedDriverIds.has(d.id) : false,
+      })),
       total,
       page,
       limit,

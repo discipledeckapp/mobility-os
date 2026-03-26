@@ -69,6 +69,29 @@ export class SubscriptionEntitlementsService {
     }
   }
 
+  /**
+   * Returns the current plan's driver and vehicle caps without throwing.
+   * Returns null for a cap if billing is unreachable or the plan has no cap.
+   */
+  async getCapInfo(tenantId: string): Promise<{
+    driverCap: number | null;
+    vehicleCap: number | null;
+    planName: string | null;
+  }> {
+    try {
+      const subscription = await this.getSubscriptionSummary(tenantId);
+      const driverCap =
+        readNumericFeature(subscription.features, 'driverCap') ??
+        readNumericFeature(subscription.features, 'seatLimit');
+      const vehicleCap =
+        readNumericFeature(subscription.features, 'vehicleCap') ??
+        readNumericFeature(subscription.features, 'fleetCap');
+      return { driverCap, vehicleCap, planName: subscription.planName };
+    } catch {
+      return { driverCap: null, vehicleCap: null, planName: null };
+    }
+  }
+
   async enforceSeatCapacity(tenantId: string, currentSeatCount: number): Promise<void> {
     let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>>;
     try {

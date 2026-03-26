@@ -3,7 +3,7 @@
 import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
 import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { createOperatorAssignment, listDrivers, listVehicles } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -117,19 +117,21 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
         {driversQuery.isLoading ? (
           <LoadingSkeleton height={140} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.choiceRow}>
-              {filteredDrivers.map((driver) => (
-                <Text
-                  key={driver.id}
-                  style={[styles.choiceChip, selectedDriverId === driver.id ? styles.choiceChipActive : null]}
-                  onPress={() => setSelectedDriverId(driver.id)}
-                >
-                  {driver.firstName} {driver.lastName}
-                </Text>
-              ))}
-            </View>
-          </ScrollView>
+          <FlatList
+            contentContainerStyle={styles.choiceRow}
+            data={filteredDrivers}
+            horizontal
+            keyExtractor={(d) => d.id}
+            renderItem={({ item: driver }) => (
+              <Text
+                onPress={() => setSelectedDriverId(driver.id)}
+                style={[styles.choiceChip, selectedDriverId === driver.id ? styles.choiceChipActive : null]}
+              >
+                {driver.firstName} {driver.lastName}
+              </Text>
+            )}
+            showsHorizontalScrollIndicator={false}
+          />
         )}
       </Card>
 
@@ -139,19 +141,21 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
         {vehiclesQuery.isLoading ? (
           <LoadingSkeleton height={140} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.choiceRow}>
-              {filteredVehicles.map((vehicle) => (
-                <Text
-                  key={vehicle.id}
-                  style={[styles.choiceChip, selectedVehicleId === vehicle.id ? styles.choiceChipActive : null]}
-                  onPress={() => setSelectedVehicleId(vehicle.id)}
-                >
-                  {vehicle.tenantVehicleCode || vehicle.systemVehicleCode}
-                </Text>
-              ))}
-            </View>
-          </ScrollView>
+          <FlatList
+            contentContainerStyle={styles.choiceRow}
+            data={filteredVehicles}
+            horizontal
+            keyExtractor={(v) => v.id}
+            renderItem={({ item: vehicle }) => (
+              <Text
+                onPress={() => setSelectedVehicleId(vehicle.id)}
+                style={[styles.choiceChip, selectedVehicleId === vehicle.id ? styles.choiceChipActive : null]}
+              >
+                {vehicle.tenantVehicleCode || vehicle.systemVehicleCode}
+              </Text>
+            )}
+            showsHorizontalScrollIndicator={false}
+          />
         )}
       </Card>
 

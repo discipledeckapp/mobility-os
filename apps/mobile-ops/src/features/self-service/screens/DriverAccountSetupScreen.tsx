@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { createDriverMobileAccount } from '../../../api';
 import { Button } from '../../../components/button';
@@ -17,6 +17,15 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const passwordChecks = useMemo(() => ({
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  }), [password]);
+
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
 
   const onSubmit = async () => {
     if (!email.trim()) {
@@ -83,14 +92,56 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           label="Password"
           onChangeText={setPassword}
           secureTextEntry
-          helperText="At least 8 characters"
           value={password}
         />
+        {password.length > 0 ? (
+          <View style={styles.strengthWrap}>
+            <View style={styles.strengthBar}>
+              {[0, 1, 2, 3].map((i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.strengthSegment,
+                    i < passwordStrength
+                      ? passwordStrength <= 1
+                        ? styles.strengthDanger
+                        : passwordStrength === 2
+                          ? styles.strengthWarn
+                          : styles.strengthGood
+                      : styles.strengthEmpty,
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.checkList}>
+              {(
+                [
+                  { key: 'length', label: '8+ characters' },
+                  { key: 'upper', label: 'Uppercase letter' },
+                  { key: 'number', label: 'Number' },
+                  { key: 'special', label: 'Special character' },
+                ] as const
+              ).map(({ key, label }) => (
+                <Text
+                  key={key}
+                  style={[styles.checkItem, passwordChecks[key] ? styles.checkItemMet : null]}
+                >
+                  {passwordChecks[key] ? '✓' : '○'} {label}
+                </Text>
+              ))}
+            </View>
+          </View>
+        ) : null}
         <Input
           autoCapitalize="none"
           label="Confirm password"
           onChangeText={setConfirmPassword}
           secureTextEntry
+          errorText={
+            confirmPassword.length > 0 && confirmPassword !== password
+              ? 'Passwords do not match'
+              : undefined
+          }
           value={confirmPassword}
         />
         <Button
@@ -134,6 +185,43 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: tokens.spacing.md,
+  },
+  strengthWrap: {
+    gap: tokens.spacing.xs,
+  },
+  strengthBar: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  strengthSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  strengthEmpty: {
+    backgroundColor: tokens.colors.border,
+  },
+  strengthDanger: {
+    backgroundColor: tokens.colors.error,
+  },
+  strengthWarn: {
+    backgroundColor: '#F59E0B',
+  },
+  strengthGood: {
+    backgroundColor: '#10B981',
+  },
+  checkList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: tokens.spacing.xs,
+  },
+  checkItem: {
+    fontSize: 12,
+    color: tokens.colors.inkSoft,
+  },
+  checkItemMet: {
+    color: '#10B981',
+    fontWeight: '600',
   },
 });
 

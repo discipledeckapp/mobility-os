@@ -1,7 +1,7 @@
 'use client';
 
 import { describeRemittanceSchedule } from '@mobility-os/domain-config';
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -90,6 +90,19 @@ export function CreateAssignmentForm({
       setVehicleId('');
     }
   }, [fleetVehicles, vehicleId]);
+
+  const [displaySuccess, setDisplaySuccess] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (state.success) {
+      setDisplaySuccess(state.success);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setDisplaySuccess(null), 4000);
+    }
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, [state.success]);
 
   return (
     <Card>
@@ -222,7 +235,7 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="remittanceAmountMinorUnits">Expected remittance amount (minor units)</Label>
+            <Label htmlFor="remittanceAmountMinorUnits">Expected remittance amount (minor units) <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input
               id="remittanceAmountMinorUnits"
               min="1"
@@ -238,7 +251,7 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="remittanceCurrency">Remittance currency</Label>
+            <Label htmlFor="remittanceCurrency">Remittance currency <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input
               defaultValue="NGN"
               id="remittanceCurrency"
@@ -269,7 +282,7 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="remittanceStartDate">First remittance due date</Label>
+            <Label htmlFor="remittanceStartDate">First remittance due date <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input id="remittanceStartDate" name="remittanceStartDate" required type="date" />
           </div>
 
@@ -314,8 +327,8 @@ export function CreateAssignmentForm({
           <Text className="mt-4" tone="danger">{state.error}</Text>
         ) : null}
 
-        {state.success ? (
-          <Text className="mt-4" tone="success">{state.success}</Text>
+        {displaySuccess ? (
+          <Text className="mt-4" tone="success">{displaySuccess}</Text>
         ) : null}
 
         {helperNote ? (

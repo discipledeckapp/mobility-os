@@ -122,8 +122,30 @@ export class VehiclesService {
       this.prisma.vehicle.count({ where }),
     ]);
 
+    // Compute subscription lock: vehicles created beyond the plan cap are locked.
+    const { vehicleCap } = await this.subscriptionEntitlementsService.getCapInfo(tenantId);
+    let lockedVehicleIds: Set<string> | null = null;
+    if (vehicleCap !== null) {
+      const totalCount = await this.prisma.vehicle.count({ where: { tenantId } });
+      if (totalCount > vehicleCap) {
+        const unlockedRows = await this.prisma.vehicle.findMany({
+          where: { tenantId },
+          orderBy: { createdAt: 'asc' },
+          take: vehicleCap,
+          select: { id: true },
+        });
+        const unlockedIds = new Set(unlockedRows.map((r) => r.id));
+        lockedVehicleIds = new Set(
+          data.filter((v) => !unlockedIds.has(v.id)).map((v) => v.id),
+        );
+      }
+    }
+
     return {
-      data,
+      data: data.map((v) => ({
+        ...v,
+        locked: lockedVehicleIds !== null ? lockedVehicleIds.has(v.id) : false,
+      })),
       total,
       page,
       limit,

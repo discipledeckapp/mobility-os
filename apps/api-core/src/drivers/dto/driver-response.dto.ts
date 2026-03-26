@@ -186,4 +186,10 @@ export class DriverResponseDto {
 
   @ApiProperty()
   updatedAt!: Date;
+
+  @ApiProperty({
+    description:
+      'True when this driver record exceeds the subscription tier cap. The driver exists but is inaccessible until the plan is upgraded.',
+  })
+  locked!: boolean;
 }

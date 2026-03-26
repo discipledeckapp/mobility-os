@@ -174,6 +174,7 @@ export interface DriverRecord {
   assignmentReadinessReasons: string[];
   createdAt: string;
   updatedAt: string;
+  locked?: boolean;
 }
 
 export interface DriverMobileAccessUserRecord {
@@ -496,6 +497,7 @@ export interface VehicleRecord {
   odometerKm?: number | null;
   createdAt: string;
   updatedAt: string;
+  locked?: boolean;
 }
 
 export interface CreateVehicleInput {

@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import type { NavigationProp } from '@react-navigation/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RootStackParamList } from '../navigation/types';
@@ -5,10 +6,10 @@ import { tokens } from '../theme/tokens';
 
 type BottomNavTab = 'Home' | 'Remittance' | 'Profile';
 
-const tabs: Array<{ key: BottomNavTab; label: string; icon: string }> = [
-  { key: 'Home', label: 'Assignments', icon: 'A' },
-  { key: 'Remittance', label: 'Remittance', icon: 'R' },
-  { key: 'Profile', label: 'Profile', icon: 'P' },
+const tabs: Array<{ key: BottomNavTab; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
+  { key: 'Home', label: 'Assignments', icon: 'clipboard' },
+  { key: 'Remittance', label: 'Remittance', icon: 'credit-card' },
+  { key: 'Profile', label: 'Profile', icon: 'user' },
 ];
 
 interface BottomNavProps {
@@ -38,9 +39,11 @@ export function BottomNav({ currentTab, navigation }: BottomNavProps) {
               style={[styles.item, active ? styles.itemActive : null]}
             >
               <View style={[styles.icon, active ? styles.iconActive : null]}>
-                <Text style={[styles.iconLabel, active ? styles.iconLabelActive : null]}>
-                  {tab.icon}
-                </Text>
+                <Feather
+                  color={active ? '#FFFFFF' : tokens.colors.inkSoft}
+                  name={tab.icon}
+                  size={16}
+                />
               </View>
               <Text style={[styles.label, active ? styles.labelActive : null]}>{tab.label}</Text>
             </Pressable>
@@ -78,9 +81,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.primaryTint,
   },
   icon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
@@ -90,14 +93,6 @@ const styles = StyleSheet.create({
   iconActive: {
     backgroundColor: tokens.colors.primary,
     borderColor: tokens.colors.primary,
-  },
-  iconLabel: {
-    color: tokens.colors.inkSoft,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  iconLabelActive: {
-    color: '#FFFFFF',
   },
   label: {
     color: tokens.colors.inkSoft,
