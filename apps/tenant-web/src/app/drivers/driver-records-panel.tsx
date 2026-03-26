@@ -229,7 +229,7 @@ export function DriverRecordsPanel({
         }
         title="Driver registry"
         toolbar={
-          <form action={pathname} className="flex flex-col gap-4 xl:flex-row xl:items-end">
+          <form action={pathname ?? '/drivers'} className="flex flex-col gap-4 xl:flex-row xl:items-end">
             <div className="min-w-0 flex-[1.5] space-y-2">
               <Text tone="muted">Search drivers</Text>
               <Input

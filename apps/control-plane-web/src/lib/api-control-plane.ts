@@ -565,3 +565,54 @@ export async function deactivateStaffMember(
     token: await getPlatformApiToken(token),
   });
 }
+
+// ── Platform wallet credit ──────────────────────────────────────────────────────
+
+export interface PlatformWalletBalanceRecord {
+  tenantId: string;
+  walletId: string;
+  currency: string;
+  balanceMinorUnits: number;
+  updatedAt: string;
+}
+
+export interface PlatformWalletEntryInput {
+  type: 'credit' | 'debit' | 'reversal';
+  amountMinorUnits: number;
+  currency: string;
+  description?: string;
+  referenceId?: string;
+  referenceType?: string;
+}
+
+export async function getTenantPlatformWalletBalance(
+  tenantId: string,
+  token?: string,
+): Promise<PlatformWalletBalanceRecord> {
+  return apiControlPlaneFetch<PlatformWalletBalanceRecord>(
+    `/platform-wallets/tenant/${tenantId}/balance`,
+    { token: await getPlatformApiToken(token) },
+  );
+}
+
+export async function createTenantPlatformWalletEntry(
+  tenantId: string,
+  input: PlatformWalletEntryInput,
+  token?: string,
+): Promise<{
+  id: string;
+  type: string;
+  amountMinorUnits: number;
+  currency: string;
+  description?: string;
+  createdAt: string;
+}> {
+  return apiControlPlaneFetch(
+    `/platform-wallets/tenant/${tenantId}/entries`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      token: await getPlatformApiToken(token),
+    },
+  );
+}

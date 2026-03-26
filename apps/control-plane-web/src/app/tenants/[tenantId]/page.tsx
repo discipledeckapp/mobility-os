@@ -14,8 +14,13 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { ControlPlaneShell } from '../../../features/shared/control-plane-shell';
-import { getTenantDetail } from '../../../lib/api-control-plane';
+import {
+  getTenantDetail,
+  getTenantPlatformWalletBalance,
+} from '../../../lib/api-control-plane';
+import type { PlatformWalletBalanceRecord } from '../../../lib/api-control-plane';
 import { TransitionTenantCard } from './transition-tenant-card';
+import { TenantWalletCard } from './tenant-wallet-card';
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
@@ -31,6 +36,13 @@ export default async function TenantDetailPage({
 }) {
   const { tenantId } = await params;
   const tenant = await getTenantDetail(tenantId);
+
+  let walletBalance: PlatformWalletBalanceRecord | null = null;
+  try {
+    walletBalance = await getTenantPlatformWalletBalance(tenantId);
+  } catch {
+    // Non-blocking — display page without wallet balance if unavailable
+  }
 
   return (
     <ControlPlaneShell
@@ -145,6 +157,8 @@ export default async function TenantDetailPage({
               </TableViewport>
             </CardContent>
           </Card>
+
+          <TenantWalletCard tenantId={tenant.id} walletBalance={walletBalance} />
         </div>
 
         <div className="space-y-6">

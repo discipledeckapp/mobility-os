@@ -266,7 +266,7 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
             </p>
           ) : null}
           {section.items.map(({ href, label, Icon }) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            const isActive = href === '/' ? pathname === '/' : (pathname ?? '').startsWith(href);
             return (
               <Link
                 className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
