@@ -14,6 +14,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -40,6 +41,12 @@ import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+function maskIdentifier(value: string): string {
+  if (!value) return '';
+  if (value.length <= 4) return '•'.repeat(value.length);
+  return '•'.repeat(value.length - 4) + value.slice(-4);
+}
 
 interface VerificationDraft {
   token: string;
@@ -154,7 +161,7 @@ export function SelfServiceVerificationScreen({
           ),
         );
       } catch {
-        // Ignore malformed draft state and let the screen continue with a clean draft.
+        // Ignore malformed draft state.
       } finally {
         setDraftHydrated(true);
       }
@@ -184,9 +191,7 @@ export function SelfServiceVerificationScreen({
       );
     };
 
-    persistDraft().catch(() => {
-      // Draft persistence is best-effort.
-    });
+    persistDraft().catch(() => undefined);
   }, [countryCode, draftHydrated, identifierValues, selectedDocumentType, token]);
 
   useEffect(() => {
@@ -202,52 +207,6 @@ export function SelfServiceVerificationScreen({
     );
   }, [requiredDocuments]);
 
-  const canSubmitIdentity = useMemo(
-    () =>
-      Boolean(
-        token &&
-          identifierTypes.every((identifier) => {
-            const value = (identifierValues[identifier.type] ?? '').trim();
-            if (!identifier.required && !value) {
-              return true;
-            }
-            if (!value) {
-              return false;
-            }
-            if (identifier.numericOnly && !/^\d+$/.test(value)) {
-              return false;
-            }
-            if (identifier.exactLength && value.length !== identifier.exactLength) {
-              return false;
-            }
-            return true;
-          }) &&
-          (!biometricVerificationRequired || selfieBase64),
-      ),
-    [biometricVerificationRequired, identifierTypes, identifierValues, selfieBase64, token],
-  );
-
-  const identifiersReady = useMemo(
-    () =>
-      identifierTypes.every((identifier) => {
-        const value = (identifierValues[identifier.type] ?? '').trim();
-        if (!identifier.required && !value) {
-          return true;
-        }
-        if (!value) {
-          return false;
-        }
-        if (identifier.numericOnly && !/^\d+$/.test(value)) {
-          return false;
-        }
-        if (identifier.exactLength && value.length !== identifier.exactLength) {
-          return false;
-        }
-        return true;
-      }),
-    [identifierTypes, identifierValues],
-  );
-
   const identitySubmitted = useMemo(
     () =>
       !identityVerificationRequired ||
@@ -258,6 +217,37 @@ export function SelfServiceVerificationScreen({
     [driver?.identityStatus, identityResult, identityVerificationRequired],
   );
 
+  const canSubmitIdentity = useMemo(
+    () =>
+      !identitySubmitted &&
+      Boolean(
+        token &&
+          identifierTypes.every((identifier) => {
+            const value = (identifierValues[identifier.type] ?? '').trim();
+            if (!identifier.required && !value) return true;
+            if (!value) return false;
+            if (identifier.numericOnly && !/^\d+$/.test(value)) return false;
+            if (identifier.exactLength && value.length !== identifier.exactLength) return false;
+            return true;
+          }) &&
+          (!biometricVerificationRequired || selfieBase64),
+      ),
+    [biometricVerificationRequired, identitySubmitted, identifierTypes, identifierValues, selfieBase64, token],
+  );
+
+  const identifiersReady = useMemo(
+    () =>
+      identifierTypes.every((identifier) => {
+        const value = (identifierValues[identifier.type] ?? '').trim();
+        if (!identifier.required && !value) return true;
+        if (!value) return false;
+        if (identifier.numericOnly && !/^\d+$/.test(value)) return false;
+        if (identifier.exactLength && value.length !== identifier.exactLength) return false;
+        return true;
+      }),
+    [identifierTypes, identifierValues],
+  );
+
   const documentChecklist = useMemo(
     () =>
       requiredDocuments.map((document) => {
@@ -265,11 +255,7 @@ export function SelfServiceVerificationScreen({
           (uploadedDocument) => uploadedDocument.documentType === document.slug,
         );
         const latestDocument = matchingDocuments[0] ?? null;
-        return {
-          ...document,
-          uploaded: matchingDocuments.length > 0,
-          latestDocument,
-        };
+        return { ...document, uploaded: matchingDocuments.length > 0, latestDocument };
       }),
     [documents, requiredDocuments],
   );
@@ -295,7 +281,7 @@ export function SelfServiceVerificationScreen({
           documentChecklist.every((document) => document.uploaded),
       },
     ],
-    [countryCode, documentChecklist, identifiersReady, identitySubmitted, selfieBase64],
+    [countryCode, documentChecklist, identifiersReady, identitySubmitted, biometricVerificationRequired, selfieBase64],
   );
 
   const completedStepCount = useMemo(
@@ -316,13 +302,11 @@ export function SelfServiceVerificationScreen({
   };
 
   const onCaptureSelfie = async () => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Camera access', 'Camera permission is required to capture a verification selfie.');
+      Alert.alert('Camera access', 'Allow camera access to capture a verification selfie.');
       return;
     }
 
@@ -335,16 +319,15 @@ export function SelfServiceVerificationScreen({
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false,
+        allowsEditing: true,
+        aspect: [1, 1],
         base64: true,
         cameraType: ImagePicker.CameraType.front,
         mediaTypes: ['images'],
-        quality: 0.8,
+        quality: 0.85,
       });
 
-      if (result.canceled) {
-        return;
-      }
+      if (result.canceled) return;
 
       const asset = result.assets[0];
       if (!asset.base64) {
@@ -363,16 +346,14 @@ export function SelfServiceVerificationScreen({
   };
 
   const onSubmitIdentity = async () => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     if (!canSubmitIdentity) {
       Alert.alert(
         'Driver verification',
         biometricVerificationRequired
-          ? 'Complete the required identifiers and capture a live selfie before submitting.'
-          : 'Complete the required identifiers before submitting.',
+          ? 'Complete required identifiers and capture a live selfie before submitting.'
+          : 'Complete required identifiers before submitting.',
       );
       return;
     }
@@ -383,6 +364,9 @@ export function SelfServiceVerificationScreen({
         providerLookupStatus: 'skipped_by_organisation_policy',
       });
       showToast('Identity details saved for organisation review.', 'success');
+      if (!driver?.hasMobileAccess) {
+        navigation.navigate('DriverAccountSetup');
+      }
       return;
     }
 
@@ -414,6 +398,13 @@ export function SelfServiceVerificationScreen({
       await SecureStore.deleteItemAsync(STORAGE_KEYS.selfServiceVerificationDraft);
       setDraftRestored(false);
       showToast('Identity verification submitted.', 'success');
+
+      // Auto-navigate: go to account setup if no mobile access yet, else readiness
+      if (!driver?.hasMobileAccess) {
+        navigation.navigate('DriverAccountSetup');
+      } else {
+        navigation.navigate('SelfServiceReadiness');
+      }
     } catch (error) {
       Alert.alert(
         'Driver verification',
@@ -437,9 +428,7 @@ export function SelfServiceVerificationScreen({
   };
 
   const onUploadDocument = async () => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
     if (!selectedDocumentType) {
       Alert.alert('Driver documents', 'Select the document type before uploading.');
       return;
@@ -452,9 +441,7 @@ export function SelfServiceVerificationScreen({
         type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
       });
 
-      if (result.canceled) {
-        return;
-      }
+      if (result.canceled) return;
 
       const asset = result.assets[0];
       if ((asset.size ?? 0) > MAX_UPLOAD_BYTES) {
@@ -505,63 +492,48 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.kicker}>Driver verification</Text>
         <Text style={styles.title}>Complete identity setup</Text>
         <Text style={styles.copy}>
-          Submit your identity details, capture a profile photo when required, and upload your onboarding documents from this device.
+          Submit your identity details, take a selfie, and upload onboarding documents to get started.
         </Text>
+        <View style={styles.badgeRow}>
+          <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
+          <Badge
+            label={`Docs: ${uploadedRequiredDocumentCount}/${documentChecklist.length}`}
+            tone={
+              documentChecklist.length > 0 && uploadedRequiredDocumentCount === documentChecklist.length
+                ? 'success'
+                : 'warning'
+            }
+          />
+          <Badge
+            label={`${completedStepCount}/${stepCompletion.length} steps done`}
+            tone={completedStepCount === stepCompletion.length ? 'success' : 'neutral'}
+          />
+        </View>
       </Card>
 
       {draftRestored ? (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Saved progress restored</Text>
           <Text style={styles.copy}>
-            Your last country, identifier inputs, and document selection were restored on this
-            device. Selfie capture is not stored and must be completed again.
+            Your last inputs were restored. Selfie capture is not saved and must be done again.
           </Text>
           <Button label="Clear saved draft" variant="secondary" onPress={() => void onClearDraft()} />
         </Card>
       ) : null}
 
+      {/* Step 1: Country */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress</Text>
-        <Text style={styles.copy}>
-          {completedStepCount} of {stepCompletion.length} onboarding tasks completed.
-        </Text>
-        <View style={styles.badgeRow}>
-          <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
-          <Badge
-            label={`Documents: ${uploadedRequiredDocumentCount}/${documentChecklist.length || 0}`}
-            tone={
-              documentChecklist.length > 0 &&
-              uploadedRequiredDocumentCount === documentChecklist.length
-                ? 'success'
-                : 'warning'
-            }
-          />
-        </View>
-        {stepCompletion.map((step) => (
-          <View key={step.label} style={styles.checklistRow}>
-            <Badge label={step.complete ? 'Done' : 'Pending'} tone={step.complete ? 'success' : 'warning'} />
-            <Text style={styles.checklistLabel}>{step.label}</Text>
-          </View>
-        ))}
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>1. Country</Text>
+        <Text style={styles.stepLabel}>Step 1 of 5</Text>
+        <Text style={styles.sectionTitle}>Country</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {countryOptions.map((option: { code: string; label: string }) => (
-            <Pressable key={option.code} onPress={() => setCountryCode(option.code)}>
-              <View
-                style={[
-                  styles.chip,
-                  countryCode === option.code ? styles.chipActive : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    countryCode === option.code ? styles.chipLabelActive : null,
-                  ]}
-                >
+            <Pressable
+              key={option.code}
+              disabled={identitySubmitted}
+              onPress={() => setCountryCode(option.code)}
+            >
+              <View style={[styles.chip, countryCode === option.code ? styles.chipActive : null]}>
+                <Text style={[styles.chipLabel, countryCode === option.code ? styles.chipLabelActive : null]}>
                   {option.label}
                 </Text>
               </View>
@@ -570,13 +542,19 @@ export function SelfServiceVerificationScreen({
         </ScrollView>
       </Card>
 
+      {/* Step 2: Identification numbers */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>2. Identification numbers</Text>
+        <Text style={styles.stepLabel}>Step 2 of 5</Text>
+        <Text style={styles.sectionTitle}>Identification numbers</Text>
+        <Text style={styles.copy}>
+          Enter your government-issued ID numbers exactly as they appear on the document.
+        </Text>
         {identifierTypes.map((identifier) => (
           <Input
             key={identifier.type}
             keyboardType={identifier.numericOnly ? 'number-pad' : 'default'}
             label={identifier.label}
+            editable={!identitySubmitted}
             onChangeText={(value) =>
               setIdentifierValues((current) => ({
                 ...current,
@@ -588,142 +566,229 @@ export function SelfServiceVerificationScreen({
                 ? `${identifier.exactLength} ${identifier.numericOnly ? 'digits' : 'characters'}`
                 : identifier.label
             }
-            value={identifierValues[identifier.type] ?? ''}
-            helperText={identifier.required ? 'Required' : 'Optional'}
+            value={
+              identitySubmitted
+                ? maskIdentifier(identifierValues[identifier.type] ?? '')
+                : identifierValues[identifier.type] ?? ''
+            }
+            helperText={
+              identitySubmitted
+                ? 'Submitted — number masked for security'
+                : identifier.required
+                  ? 'Required'
+                  : 'Optional'
+            }
           />
         ))}
+        {identifiersReady && !identitySubmitted ? (
+          <View style={styles.successRow}>
+            <Text style={styles.successText}>All required identifiers look good</Text>
+          </View>
+        ) : null}
       </Card>
 
+      {/* Step 3: Selfie capture */}
       <Card style={styles.section}>
+        <Text style={styles.stepLabel}>Step 3 of 5</Text>
         <Text style={styles.sectionTitle}>
-          3. {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}
+          {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}
         </Text>
         <Text style={styles.copy}>
           {biometricVerificationRequired
-            ? 'Capture a live selfie to support liveness and identity matching.'
-            : 'Capture a clear face photo for your organisation record.'}
+            ? 'Look directly at the front camera in good lighting. Keep your face centred in the frame.'
+            : 'Take a clear face photo for your operator record.'}
         </Text>
-        {selfiePreviewUri ? (
-          <View style={styles.previewCard}>
-            <Text style={styles.meta}>Selfie captured and ready for submission.</Text>
-            <Text style={styles.meta}>{selfiePreviewUri}</Text>
-          </View>
-        ) : null}
-        {biometricVerificationRequired && livenessSession ? (
-          <View style={styles.previewCard}>
-            <Text style={styles.meta}>Live verification session prepared.</Text>
-          </View>
-        ) : null}
-        <Button
-          label={selfiePreviewUri ? 'Retake photo' : biometricVerificationRequired ? 'Capture selfie' : 'Capture photo'}
-          onPress={() => void onCaptureSelfie()}
-        />
-      </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>4. Submit verification</Text>
-        <Text style={styles.copy}>
-          {identityVerificationRequired
-            ? 'Submit once your required identifiers are complete and your capture step is done.'
-            : 'Your organisation does not require identity verification before activation. You can continue after document upload.'}
-        </Text>
-        {identityVerificationRequired ? (
-          <Button
-            label={
-              governmentLookupRequired
-                ? 'Submit identity verification'
-                : 'Save identity details for review'
-            }
-            disabled={!canSubmitIdentity}
-            loading={submittingIdentity}
-            onPress={() => void onSubmitIdentity()}
-          />
-        ) : (
-          <Text style={styles.meta}>
-            Identity verification is optional for this organisation. Upload the required
-            documents and open the readiness checklist when you are done.
-          </Text>
-        )}
-        {identityResult ? (
-          <View style={styles.previewCard}>
-            <Badge label={identityResult.decision} tone={identityResult.decision === 'verified' ? 'success' : 'warning'} />
-            <Text style={styles.meta}>
-              {identityResult.providerLookupStatus === 'skipped_by_organisation_policy'
-                ? 'Your organisation will complete any remaining checks internally.'
-                : 'Identity details submitted successfully.'}
+        {selfiePreviewUri ? (
+          <View style={styles.selfiePreviewContainer}>
+            <Image
+              source={{ uri: selfiePreviewUri }}
+              style={styles.selfiePreview}
+              resizeMode="cover"
+            />
+            <Text style={styles.selfieCaption}>
+              {identitySubmitted ? 'Selfie submitted' : 'Selfie captured — ready to submit'}
             </Text>
           </View>
         ) : null}
+
+        {!identitySubmitted ? (
+          <Button
+            label={selfiePreviewUri ? 'Retake selfie' : biometricVerificationRequired ? 'Open camera for selfie' : 'Take profile photo'}
+            variant={selfiePreviewUri ? 'secondary' : 'default'}
+            onPress={() => void onCaptureSelfie()}
+          />
+        ) : null}
       </Card>
 
+      {/* Step 4: Submit identity */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>5. Documents</Text>
+        <Text style={styles.stepLabel}>Step 4 of 5</Text>
+        <Text style={styles.sectionTitle}>Submit verification</Text>
+
+        {identitySubmitted && identityResult ? (
+          <View style={[styles.resultCard, identityResult.decision === 'verified' ? styles.resultCardSuccess : styles.resultCardPending]}>
+            <View style={styles.badgeRow}>
+              <Badge
+                label={formatDecisionLabel(identityResult.decision)}
+                tone={identityResult.decision === 'verified' ? 'success' : identityResult.decision === 'failed' ? 'danger' : 'warning'}
+              />
+              {identityResult.livenessPassed != null ? (
+                <Badge
+                  label={identityResult.livenessPassed ? 'Liveness passed' : 'Liveness failed'}
+                  tone={identityResult.livenessPassed ? 'success' : 'danger'}
+                />
+              ) : null}
+            </View>
+
+            {/* Smile Identity record fields */}
+            {identityResult.verifiedProfile ? (
+              <View style={styles.profileGrid}>
+                <Text style={styles.profileLabel}>Name on record</Text>
+                <Text style={styles.profileValue}>{identityResult.verifiedProfile.fullName ?? '—'}</Text>
+                {identityResult.verifiedProfile.dateOfBirth ? (
+                  <>
+                    <Text style={styles.profileLabel}>Date of birth</Text>
+                    <Text style={styles.profileValue}>{identityResult.verifiedProfile.dateOfBirth}</Text>
+                  </>
+                ) : null}
+                {identityResult.verifiedProfile.gender ? (
+                  <>
+                    <Text style={styles.profileLabel}>Gender</Text>
+                    <Text style={styles.profileValue}>{identityResult.verifiedProfile.gender}</Text>
+                  </>
+                ) : null}
+              </View>
+            ) : null}
+
+            {identityResult.verificationConfidence != null ? (
+              <Text style={styles.meta}>
+                Match confidence: {Math.round(identityResult.verificationConfidence * 100)}%
+              </Text>
+            ) : null}
+            {identityResult.livenessConfidenceScore != null ? (
+              <Text style={styles.meta}>
+                Liveness confidence: {Math.round(identityResult.livenessConfidenceScore * 100)}%
+              </Text>
+            ) : null}
+            {identityResult.matchedIdentifierType ? (
+              <Text style={styles.meta}>
+                Matched via: {identityResult.matchedIdentifierType}
+              </Text>
+            ) : null}
+            {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
+              <Text style={styles.copy}>
+                Your organisation will complete remaining checks internally.
+              </Text>
+            ) : identityResult.decision === 'review_needed' ? (
+              <Text style={styles.copy}>
+                Your identity is under manual review. The operator will confirm once complete.
+              </Text>
+            ) : null}
+          </View>
+        ) : identitySubmitted ? (
+          <View style={styles.resultCard}>
+            <Badge label={formatIdentityLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
+            <Text style={styles.copy}>
+              Identity already submitted. Check the readiness checklist for your current status.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.copy}>
+              {identityVerificationRequired
+                ? 'Submit once your ID numbers and selfie are ready.'
+                : 'Your organisation does not require identity verification. Upload documents and continue.'}
+            </Text>
+            {identityVerificationRequired ? (
+              <Button
+                label={governmentLookupRequired ? 'Submit identity verification' : 'Save for organisation review'}
+                disabled={!canSubmitIdentity}
+                loading={submittingIdentity}
+                onPress={() => void onSubmitIdentity()}
+              />
+            ) : (
+              <Text style={styles.meta}>
+                Upload required documents below and open the readiness checklist when done.
+              </Text>
+            )}
+            {!canSubmitIdentity && !identitySubmitted ? (
+              <Text style={styles.hintText}>
+                {!identifiersReady
+                  ? 'Enter all required ID numbers first.'
+                  : biometricVerificationRequired && !selfieBase64
+                    ? 'Capture your selfie using the camera above.'
+                    : ''}
+              </Text>
+            ) : null}
+          </>
+        )}
+      </Card>
+
+      {/* Step 5: Documents */}
+      <Card style={styles.section}>
+        <Text style={styles.stepLabel}>Step 5 of 5</Text>
+        <Text style={styles.sectionTitle}>Upload documents</Text>
         <Text style={styles.copy}>
-          Required documents depend on your selected country profile. Upload each item once from
-          this device.
+          Upload each required document from this device. Files must be under 10 MB (PDF, JPG, PNG).
         </Text>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {requiredDocuments.map((document: { slug: string; name: string }) => (
             <Pressable key={document.slug} onPress={() => setSelectedDocumentType(document.slug)}>
-              <View
-                style={[
-                  styles.chip,
-                  selectedDocumentType === document.slug ? styles.chipActive : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    selectedDocumentType === document.slug ? styles.chipLabelActive : null,
-                  ]}
-                >
+              <View style={[styles.chip, selectedDocumentType === document.slug ? styles.chipActive : null]}>
+                <Text style={[styles.chipLabel, selectedDocumentType === document.slug ? styles.chipLabelActive : null]}>
                   {document.name}
                 </Text>
               </View>
             </Pressable>
           ))}
         </ScrollView>
+
         <Button
           label="Upload selected document"
           disabled={!selectedDocumentType}
           loading={uploadingDocument}
           onPress={() => void onUploadDocument()}
         />
+
         {documentChecklist.map((document) => (
           <View key={document.slug} style={styles.documentRow}>
             <View style={styles.documentCopy}>
               <Text style={styles.documentTitle}>{document.name}</Text>
               <Text style={styles.meta}>
                 {document.latestDocument
-                  ? `Current status: ${formatDocumentStatus(document.latestDocument.status)}`
-                  : 'No file uploaded yet'}
+                  ? `Status: ${formatDocumentStatus(document.latestDocument.status)}`
+                  : 'Not uploaded yet'}
               </Text>
             </View>
             <Badge
-              label={
-                document.latestDocument
-                  ? formatDocumentStatus(document.latestDocument.status)
-                  : 'Missing'
-              }
+              label={document.latestDocument ? formatDocumentStatus(document.latestDocument.status) : 'Missing'}
               tone={documentStatusTone(document.latestDocument?.status)}
             />
           </View>
         ))}
-        {documents.map((document) => (
-          <View key={document.id} style={styles.previewCard}>
-            <Text style={styles.meta}>{getDocumentType(document.documentType).name}</Text>
-            <Text style={styles.meta}>Status: {document.status}</Text>
-            {document.reviewedAt ? <Text style={styles.meta}>Reviewed: {document.reviewedAt}</Text> : null}
-          </View>
-        ))}
       </Card>
 
+      {/* Continue CTA */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>6. Review readiness</Text>
+        <Text style={styles.sectionTitle}>Next step</Text>
         <Text style={styles.copy}>
-          Refresh your checklist after submitting identity or documents to confirm whether you are ready for activation and assignments.
+          {!driver.hasMobileAccess
+            ? 'Set up your sign-in email and password so you can log into the app once approved.'
+            : 'Check your readiness status to see what's still needed for activation.'}
         </Text>
-        <Button label="Open readiness checklist" onPress={() => navigation.navigate('SelfServiceReadiness')} />
+        {!driver.hasMobileAccess ? (
+          <Button
+            label="Set up sign-in account"
+            onPress={() => navigation.navigate('DriverAccountSetup')}
+          />
+        ) : null}
+        <Button
+          label="Open readiness checklist"
+          variant="secondary"
+          onPress={() => navigation.navigate('SelfServiceReadiness')}
+        />
       </Card>
     </Screen>
   );
@@ -733,12 +798,10 @@ function encodeBase64(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
   const chunkSize = 0x8000;
-
   for (let index = 0; index < bytes.length; index += chunkSize) {
     const chunk = bytes.subarray(index, index + chunkSize);
     binary += String.fromCharCode(...chunk);
   }
-
   return globalThis.btoa(binary);
 }
 
@@ -746,16 +809,18 @@ function formatIdentityLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatDecisionLabel(decision: string) {
+  if (decision === 'verified') return 'Verified';
+  if (decision === 'review_needed') return 'Under review';
+  if (decision === 'failed') return 'Not matched';
+  if (decision === 'manual_review') return 'Sent for review';
+  return decision.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function identityTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'verified') {
-    return 'success';
-  }
-  if (status === 'failed') {
-    return 'danger';
-  }
-  if (status === 'review_needed' || status === 'pending_verification') {
-    return 'warning';
-  }
+  if (status === 'verified') return 'success';
+  if (status === 'failed') return 'danger';
+  if (status === 'review_needed' || status === 'pending_verification') return 'warning';
   return 'neutral';
 }
 
@@ -763,70 +828,44 @@ function formatDocumentStatus(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function documentStatusTone(
-  status?: string,
-): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (!status) {
-    return 'warning';
-  }
-  if (status === 'approved') {
-    return 'success';
-  }
-  if (status === 'rejected' || status === 'expired') {
-    return 'danger';
-  }
-  if (status === 'pending' || status === 'submitted' || status === 'uploaded') {
-    return 'warning';
-  }
+function documentStatusTone(status?: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (!status) return 'warning';
+  if (status === 'approved') return 'success';
+  if (status === 'rejected' || status === 'expired') return 'danger';
+  if (['pending', 'submitted', 'uploaded'].includes(status)) return 'warning';
   return 'neutral';
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    justifyContent: 'center',
-  },
-  section: {
-    gap: tokens.spacing.sm,
-  },
+  centered: { justifyContent: 'center' },
+  section: { gap: tokens.spacing.sm },
   kicker: {
     color: tokens.colors.primary,
     fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  copy: {
-    color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
+  title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
+  copy: { color: tokens.colors.inkSoft, fontSize: 15, lineHeight: 22 },
+  stepLabel: {
+    color: tokens.colors.primary,
+    fontSize: 11,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.spacing.xs,
-  },
-  checklistRow: {
+  sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
+  successRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.spacing.sm,
-  },
-  checklistLabel: {
-    color: tokens.colors.ink,
-    fontSize: 14,
-    flex: 1,
-  },
-  chipRow: {
     gap: tokens.spacing.xs,
+    backgroundColor: '#f0fdf4',
+    borderRadius: tokens.radius.card,
+    padding: tokens.spacing.sm,
   },
+  successText: { color: '#15803d', fontSize: 13, fontWeight: '600' },
+  chipRow: { gap: tokens.spacing.xs },
   chip: {
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -835,26 +874,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  chipActive: {
-    backgroundColor: tokens.colors.primaryTint,
-    borderColor: tokens.colors.primary,
-  },
-  chipLabel: {
-    color: tokens.colors.ink,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  chipLabelActive: {
-    color: tokens.colors.primaryDark,
-  },
-  previewCard: {
+  chipActive: { backgroundColor: tokens.colors.primaryTint, borderColor: tokens.colors.primary },
+  chipLabel: { color: tokens.colors.ink, fontSize: 13, fontWeight: '600' },
+  chipLabelActive: { color: tokens.colors.primaryDark },
+  selfiePreviewContainer: {
     gap: tokens.spacing.xs,
+    borderRadius: tokens.radius.card,
+    overflow: 'hidden',
+    backgroundColor: tokens.colors.border,
+  },
+  selfiePreview: {
+    width: '100%',
+    height: 260,
+    backgroundColor: '#0f172a',
+  },
+  selfieCaption: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: tokens.spacing.xs,
+  },
+  resultCard: {
+    gap: tokens.spacing.sm,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.card,
     backgroundColor: '#FFFFFF',
     padding: tokens.spacing.sm,
   },
+  resultCardSuccess: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#f0fdf4',
+  },
+  resultCardPending: {
+    borderColor: '#fde68a',
+    backgroundColor: '#fffbeb',
+  },
+  profileGrid: { gap: 4 },
+  profileLabel: { color: tokens.colors.inkSoft, fontSize: 12, fontWeight: '600' },
+  profileValue: { color: tokens.colors.ink, fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  hintText: { color: tokens.colors.inkSoft, fontSize: 13, fontStyle: 'italic' },
+  meta: { color: tokens.colors.ink, fontSize: 13 },
   documentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -866,19 +926,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: tokens.spacing.sm,
   },
-  documentCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  documentTitle: {
-    color: tokens.colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  meta: {
-    color: tokens.colors.ink,
-    fontSize: 13,
-  },
+  documentCopy: { flex: 1, gap: 4 },
+  documentTitle: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
 });
 
 export default SelfServiceVerificationScreen;

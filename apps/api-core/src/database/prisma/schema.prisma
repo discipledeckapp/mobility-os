@@ -255,6 +255,10 @@ model Driver {
   kycPaymentReference  String?
   kycPaymentVerifiedAt DateTime?
 
+  // Per-driver override for the driverPaysKyc org setting.
+  // null = use the org-level default; true/false = explicit override for this driver.
+  driverPaysKycOverride Boolean?
+
   // Denormalized for fast lookups without joining fleet → operating unit → business entity.
   businessEntityId String
   operatingUnitId  String

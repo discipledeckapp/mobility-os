@@ -543,7 +543,10 @@ export class DriversService {
       requireGovernmentVerificationLookup:
         settings.operations.requireGovernmentVerificationLookup,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
-      driverPaysKyc: settings.operations.driverPaysKyc,
+      // Driver-level override takes precedence over org setting.
+      driverPaysKyc:
+        (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
+        settings.operations.driverPaysKyc,
       kycPaymentVerified: !!(driver as Driver & { kycPaymentVerifiedAt?: Date | null })
         .kycPaymentVerifiedAt,
     };
@@ -674,8 +677,17 @@ export class DriversService {
   async sendSelfServiceLink(
     tenantId: string,
     id: string,
+    driverPaysKycOverride?: boolean,
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
     const driver = await this.findOne(tenantId, id);
+
+    // Persist per-driver KYC payment override if explicitly provided
+    if (driverPaysKycOverride !== undefined) {
+      await this.prisma.driver.update({
+        where: { id: driver.id },
+        data: { driverPaysKycOverride },
+      });
+    }
 
     if (!driver.email) {
       throw new BadRequestException(

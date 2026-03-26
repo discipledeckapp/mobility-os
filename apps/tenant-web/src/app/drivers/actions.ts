@@ -582,13 +582,20 @@ export async function sendDriverSelfServiceLinkAction(
   formData: FormData,
 ): Promise<SendDriverSelfServiceLinkActionState> {
   const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const driverPaysKycOverrideRaw = formData.get('driverPaysKycOverride');
+  const driverPaysKycOverride =
+    driverPaysKycOverrideRaw === 'true'
+      ? true
+      : driverPaysKycOverrideRaw === 'false'
+        ? false
+        : undefined;
 
   if (!driverId) {
     return { error: 'Driver is required before sending a self-service link.' };
   }
 
   try {
-    const delivery = await sendDriverSelfServiceLink(driverId);
+    const delivery = await sendDriverSelfServiceLink(driverId, { driverPaysKycOverride });
     return {
       delivery,
       success: `A self-service verification link was sent to ${delivery.destination}.`,

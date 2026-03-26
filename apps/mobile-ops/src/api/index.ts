@@ -281,6 +281,14 @@ export interface DriverIdentityResolutionResult {
   livenessProviderName?: string;
   livenessConfidenceScore?: number;
   livenessReason?: string;
+  /** Verified profile data returned from the identity provider (e.g. Smile Identity NIN/BVN record). */
+  verifiedProfile?: {
+    fullName?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    address?: string;
+    photoUrl?: string;
+  };
 }
 
 export interface RemittanceRecord {

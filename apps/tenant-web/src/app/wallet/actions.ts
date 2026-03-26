@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import {
   changeTenantBillingPlan,
   initializeTenantInvoiceCheckout,
@@ -10,6 +9,7 @@ import {
 export interface WalletCheckoutActionState {
   error?: string;
   success?: string;
+  checkoutUrl?: string;
 }
 
 function getTrimmedValue(formData: FormData, key: string): string {
@@ -33,20 +33,18 @@ export async function initializeVerificationWalletTopUpAction(
     return { error: 'Enter a valid amount to fund the verification wallet.' };
   }
 
-  let checkoutUrl: string;
   try {
     const checkout = await initializeTenantWalletTopUpCheckout({
       provider,
       amountMinorUnits,
     });
-    checkoutUrl = checkout.checkoutUrl;
+    return { checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
     return {
       error:
         error instanceof Error ? error.message : 'Unable to initialize wallet funding checkout.',
     };
   }
-  redirect(checkoutUrl as never);
 }
 
 export async function initializeOutstandingInvoiceCheckoutAction(
@@ -60,19 +58,17 @@ export async function initializeOutstandingInvoiceCheckoutAction(
     return { error: 'Payment provider and invoice are required.' };
   }
 
-  let checkoutUrl: string;
   try {
     const checkout = await initializeTenantInvoiceCheckout({
       provider,
       invoiceId,
     });
-    checkoutUrl = checkout.checkoutUrl;
+    return { checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
     };
   }
-  redirect(checkoutUrl as never);
 }
 
 export async function changePlanAction(

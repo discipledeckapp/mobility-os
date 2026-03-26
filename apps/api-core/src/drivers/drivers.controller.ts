@@ -212,8 +212,9 @@ export class DriversController {
   sendSelfServiceLink(
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
+    @Body() body?: { driverPaysKycOverride?: boolean },
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string }> {
-    return this.service.sendSelfServiceLink(ctx.tenantId, id);
+    return this.service.sendSelfServiceLink(ctx.tenantId, id, body?.driverPaysKycOverride);
   }
 
   @Get(':id/guarantor')

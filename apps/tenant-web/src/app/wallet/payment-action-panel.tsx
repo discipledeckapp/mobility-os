@@ -11,7 +11,7 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { type ChangeEvent, useActionState, useState } from 'react';
+import { type ChangeEvent, useActionState, useEffect, useState } from 'react';
 import { SelectField } from '../../features/shared/select-field';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
 import {
@@ -44,6 +44,19 @@ export function PaymentActionPanel({
     initialState,
   );
   const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
+
+  // Redirect to payment provider when checkout URL is returned from server action
+  useEffect(() => {
+    if (walletState.checkoutUrl) {
+      window.location.href = walletState.checkoutUrl;
+    }
+  }, [walletState.checkoutUrl]);
+
+  useEffect(() => {
+    if (invoiceState.checkoutUrl) {
+      window.location.href = invoiceState.checkoutUrl;
+    }
+  }, [invoiceState.checkoutUrl]);
 
   const factor = 10 ** currencyMinorUnit;
   const amountMinorUnits = amountInput ? Math.round(Number(amountInput) * factor) : 0;
@@ -95,8 +108,8 @@ export function PaymentActionPanel({
                 The amount is converted to minor units before checkout.
               </Text>
             </div>
-            <Button disabled={walletPending} type="submit">
-              {walletPending ? 'Redirecting...' : 'Fund wallet'}
+            <Button disabled={walletPending || Boolean(walletState.checkoutUrl)} type="submit">
+              {walletPending || walletState.checkoutUrl ? 'Redirecting to payment...' : 'Fund wallet'}
             </Button>
             {walletState.error ? <Text className="text-rose-700">{walletState.error}</Text> : null}
           </form>
@@ -255,8 +268,8 @@ export function PaymentActionPanel({
                 Open invoice:{' '}
                 <span className="font-medium text-slate-900">{summary.outstandingInvoice.id}</span>
               </div>
-              <Button disabled={invoicePending} type="submit" variant="secondary">
-                {invoicePending ? 'Redirecting...' : 'Pay invoice'}
+              <Button disabled={invoicePending || Boolean(invoiceState.checkoutUrl)} type="submit" variant="secondary">
+                {invoicePending || invoiceState.checkoutUrl ? 'Redirecting to payment...' : 'Pay invoice'}
               </Button>
               {invoiceState.error ? (
                 <Text className="text-rose-700">{invoiceState.error}</Text>

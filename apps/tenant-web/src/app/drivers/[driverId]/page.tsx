@@ -394,6 +394,7 @@ export default async function DriverDetailsPage({
                 <DriverIdentityVerification
                   defaultCountryCode={tenant?.country ?? null}
                   driver={driver}
+                  orgDriverPaysKyc={tenant?.driverPaysKyc ?? false}
                 />
               </CardContent>
             </Card>

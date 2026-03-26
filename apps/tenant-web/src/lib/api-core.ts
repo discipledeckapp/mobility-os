@@ -51,6 +51,7 @@ export interface TenantRecord {
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -1556,12 +1557,17 @@ export async function createDriverLivenessSession(
 
 export async function sendDriverSelfServiceLink(
   driverId: string,
-  token?: string,
+  options?: { driverPaysKycOverride?: boolean; token?: string },
 ): Promise<DriverSelfServiceDeliveryRecord> {
+  const body =
+    options?.driverPaysKycOverride !== undefined
+      ? JSON.stringify({ driverPaysKycOverride: options.driverPaysKycOverride })
+      : undefined;
   return apiCoreFetch<DriverSelfServiceDeliveryRecord>(`/drivers/${driverId}/self-service-links`, {
     method: 'POST',
     cache: 'no-store',
-    token: await getTenantApiToken(token),
+    token: await getTenantApiToken(options?.token),
+    ...(body ? { body, headers: { 'Content-Type': 'application/json' } } : {}),
   });
 }
 

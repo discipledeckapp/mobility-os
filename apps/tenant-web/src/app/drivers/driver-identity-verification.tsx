@@ -82,14 +82,18 @@ export function DriverIdentityVerification({
   defaultCountryCode,
   mode = 'operator',
   selfServiceToken,
+  orgDriverPaysKyc = false,
 }: {
   driver: DriverRecord;
   defaultCountryCode?: string | null;
   mode?: 'operator' | 'self_service' | 'guarantor_self_service';
   selfServiceToken?: string | null;
+  /** Whether the organisation has driverPaysKyc enabled — used as default for the send-link override toggle. */
+  orgDriverPaysKyc?: boolean;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
   const [isOpen, setIsOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
+  const [sendLinkPaysKyc, setSendLinkPaysKyc] = useState(orgDriverPaysKyc);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
     () =>
@@ -258,8 +262,21 @@ export function DriverIdentityVerification({
             </Link>
           ) : null}
           <span title={canSendSelfServiceLink ? undefined : 'Add email address to send a self-service link.'}>
-            <form action={sendLinkAction}>
+            <form action={sendLinkAction} className="flex flex-wrap items-center gap-2">
               <input name="driverId" type="hidden" value={driver.id} />
+              <input name="driverPaysKycOverride" type="hidden" value={String(sendLinkPaysKyc)} />
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600 select-none">
+                <input
+                  checked={sendLinkPaysKyc}
+                  className="size-3.5 accent-[var(--mobiris-primary)]"
+                  onChange={(e) => setSendLinkPaysKyc(e.target.checked)}
+                  type="checkbox"
+                />
+                Driver pays KYC
+                {orgDriverPaysKyc !== sendLinkPaysKyc ? (
+                  <span className="text-amber-600">(overriding org default)</span>
+                ) : null}
+              </label>
               <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit" variant="ghost">
                 {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
               </Button>
