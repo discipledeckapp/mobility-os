@@ -268,7 +268,7 @@ export class PaymentsService {
         status: 'applied',
         amountMinorUnits: verified.amountMinorUnits,
         currency: verified.currency,
-        tenantId: tenantId ?? undefined,
+        tenantId: tenantId ?? '',
       };
     }
 
@@ -377,7 +377,7 @@ export class PaymentsService {
   }
 
   private buildReference(
-    purpose: 'invoice_settlement' | 'platform_wallet_topup',
+    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'driver_kyc',
     targetId: string,
     provider: string,
   ): string {

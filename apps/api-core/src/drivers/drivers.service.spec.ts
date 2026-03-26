@@ -92,6 +92,7 @@ describe('DriversService', () => {
       documentStorageService as never,
       subscriptionEntitlementsService as never,
       { fireEvent: jest.fn() } as never,
+      { initializeDriverKycCheckout: jest.fn() } as never,
     );
   });
 
