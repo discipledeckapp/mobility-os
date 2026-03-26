@@ -377,7 +377,7 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
 
 function GuarantorSelfServiceInner() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token') ?? null;
 
   if (!token) {
     return <GuarantorOtpEntryForm />;

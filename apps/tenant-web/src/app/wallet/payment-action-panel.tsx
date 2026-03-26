@@ -231,7 +231,7 @@ export function PaymentActionPanel({
                       className="shrink-0"
                       disabled={planPending || isCurrent}
                       type="submit"
-                      variant={isCurrent ? 'secondary' : 'default'}
+                      variant={isCurrent ? 'secondary' : 'primary'}
                     >
                       {isCurrent ? 'Current' : 'Upgrade'}
                     </Button>

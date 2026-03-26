@@ -124,7 +124,7 @@ export function DriverRecordsPanel({
   const fleetOptions = useMemo(() => toFleetOptions(fleets), [fleets]);
 
   const updateSearch = (updates: Record<string, string | number | null>) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
 
     for (const [key, value] of Object.entries(updates)) {
       const normalized = typeof value === 'number' ? String(value) : value;

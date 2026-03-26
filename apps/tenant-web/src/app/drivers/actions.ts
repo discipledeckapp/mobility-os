@@ -618,7 +618,9 @@ export async function sendDriverSelfServiceLinkAction(
   }
 
   try {
-    const delivery = await sendDriverSelfServiceLink(driverId, { driverPaysKycOverride });
+    const delivery = await sendDriverSelfServiceLink(driverId, {
+      ...(driverPaysKycOverride !== undefined ? { driverPaysKycOverride } : {}),
+    });
     return {
       delivery,
       success: `A self-service verification link was sent to ${delivery.destination}.`,

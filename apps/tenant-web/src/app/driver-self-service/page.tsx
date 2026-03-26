@@ -249,7 +249,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
 
 function DriverSelfServiceInner() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token') ?? null;
 
   if (!token) {
     return <OtpEntryForm />;

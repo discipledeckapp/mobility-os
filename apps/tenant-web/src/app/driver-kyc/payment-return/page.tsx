@@ -11,9 +11,9 @@ function DriverKycPaymentReturnInner() {
   const [errorMsg, setErrorMsg] = useState('');
   const called = useRef(false);
 
-  const provider = params.get('provider');
-  const token = params.get('token');
-  const reference = params.get('reference') ?? params.get('trxref');
+  const provider = params?.get('provider') ?? null;
+  const token = params?.get('token') ?? null;
+  const reference = params?.get('reference') ?? params?.get('trxref') ?? null;
 
   useEffect(() => {
     if (called.current || !provider || !token || !reference) {
