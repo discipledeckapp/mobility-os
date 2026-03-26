@@ -363,15 +363,34 @@ export class DriversController {
   @RequirePermissions(Permission.DriversRead)
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: DriverResponseDto })
-  findOne(
+  async findOne(
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<DriverResponseDto> {
     assertLinkedDriverAccess(ctx, id);
-    return this.service.findOne(ctx.tenantId, id).then((driver) => {
-      assertFleetAccess(ctx, driver.fleetId);
-      return this.toResponse(driver);
-    });
+    const [driver, hasPortrait] = await Promise.all([
+      this.service.findOne(ctx.tenantId, id),
+      this.service.hasPortrait(ctx.tenantId, id),
+    ]);
+    assertFleetAccess(ctx, driver.fleetId);
+    return {
+      ...this.toResponse(driver),
+      photoUrl: hasPortrait ? `/api/drivers/${id}/portrait` : null,
+    };
+  }
+
+  @Get(':id/portrait')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  async getPortrait(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    const portrait = await this.service.getPortrait(ctx.tenantId, id);
+    response.setHeader('content-type', portrait.contentType);
+    response.setHeader('content-disposition', 'inline');
+    return new StreamableFile(portrait.buffer);
   }
 
   @Get(':id/identity-summary')

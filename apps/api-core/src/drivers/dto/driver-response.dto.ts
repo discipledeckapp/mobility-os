@@ -36,6 +36,9 @@ export class DriverResponseDto {
   @ApiPropertyOptional()
   email?: string | null;
 
+  @ApiPropertyOptional({ description: 'Proxied URL to the driver portrait image, populated when a portrait has been captured.' })
+  photoUrl?: string | null;
+
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
   dateOfBirth?: string | null;
 
@@ -150,7 +153,7 @@ export class DriverResponseDto {
   hasMobileAccess!: boolean;
 
   @ApiPropertyOptional({
-    description: 'Operator-facing mobile access status: linked | inactive | missing',
+    description: 'Operator-facing mobile access status: linked | inactive | revoked | missing',
   })
   mobileAccessStatus?: string | null;
 
@@ -180,6 +183,24 @@ export class DriverResponseDto {
 
   @ApiProperty({ type: [String] })
   assignmentReadinessReasons!: string[];
+
+  @ApiProperty({
+    description:
+      'Aggregated access readiness for driver/mobile authentication surfaces: ready | not_ready',
+  })
+  authenticationAccess!: string;
+
+  @ApiProperty({ type: [String] })
+  authenticationAccessReasons!: string[];
+
+  @ApiProperty({
+    description:
+      'Aggregated operational readiness for remittance actions: ready | partially_ready | not_ready',
+  })
+  remittanceReadiness!: string;
+
+  @ApiProperty({ type: [String] })
+  remittanceReadinessReasons!: string[];
 
   @ApiProperty()
   createdAt!: Date;

@@ -1100,10 +1100,37 @@ export class DriversService {
   async listDocuments(tenantId: string, id: string): Promise<DriverDocumentRecord[]> {
     const driver = await this.findOne(tenantId, id);
     await this.syncExpiredDocuments(tenantId, [driver.id]);
-    return this.driverDocuments.findMany({
+    const docs = (await this.driverDocuments.findMany({
       where: { tenantId: driver.tenantId, driverId: driver.id },
       orderBy: { createdAt: 'desc' },
-    }) as Promise<DriverDocumentRecord[]>;
+    })) as DriverDocumentRecord[];
+    // Portrait documents are stored separately and never shown in the document list.
+    return docs.filter((d) => d.documentType !== 'portrait');
+  }
+
+  async hasPortrait(tenantId: string, driverId: string): Promise<boolean> {
+    const doc = await this.driverDocuments.findFirst({
+      where: { tenantId, driverId, documentType: 'portrait', status: 'approved' },
+    });
+    return Boolean(doc);
+  }
+
+  async getPortrait(
+    tenantId: string,
+    driverId: string,
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const driver = await this.prisma.driver.findUnique({ where: { id: driverId } });
+    if (!driver || driver.tenantId !== tenantId) {
+      throw new NotFoundException('Driver not found');
+    }
+    const doc = await this.driverDocuments.findFirst({
+      where: { tenantId, driverId, documentType: 'portrait', status: 'approved' },
+    });
+    if (!doc?.storageKey) {
+      throw new NotFoundException('Portrait not found');
+    }
+    const buffer = await this.documentStorageService.readFile(doc.storageKey);
+    return { buffer, contentType: doc.contentType, fileName: doc.fileName };
   }
 
   async listDocumentReviewQueue(
@@ -2220,6 +2247,34 @@ export class DriversService {
         identityLivenessReason: result.livenessReason ?? null,
       } as never,
     });
+
+    // Store selfie as portrait document in S3 (no base64 in DB).
+    if (dto.selfieImageBase64) {
+      try {
+        const buffer = Buffer.from(dto.selfieImageBase64, 'base64');
+        const stored = await this.documentStorageService.uploadFile(
+          buffer,
+          `portrait-${driver.id}-${Date.now()}.jpg`,
+          'image/jpeg',
+        );
+        await this.driverDocuments.create({
+          data: {
+            tenantId,
+            driverId: driver.id,
+            documentType: 'portrait',
+            fileName: `portrait-${Date.now()}.jpg`,
+            contentType: 'image/jpeg',
+            storageKey: stored.storageKey,
+            storageUrl: stored.storageUrl,
+            uploadedBy: 'identity_resolution',
+            status: 'approved',
+          },
+        });
+      } catch (err) {
+        // Portrait storage is best-effort — never block identity resolution on it.
+        this.logger.warn(`Portrait upload failed for driver ${driver.id}: ${String(err)}`);
+      }
+    }
 
     return result;
   }

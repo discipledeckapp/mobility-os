@@ -163,6 +163,7 @@ export function DriverIdentityVerification({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
+  const [captureProgress, setCaptureProgress] = useState(0); // 0 = idle, 1–3 = capturing frame N
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -234,20 +235,59 @@ export function DriverIdentityVerification({
     }
   }
 
-  function captureSelfie(): void {
-    if (!videoRef.current) { setCameraError('Camera preview is not ready. Please open the camera again.'); return; }
-    const video = videoRef.current;
+  function captureFrameWithVariance(video: HTMLVideoElement): { dataUrl: string; variance: number } {
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const context = canvas.getContext('2d');
-    if (!context) { setCameraError('Unable to capture the selfie image.'); return; }
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    const [, base64 = ''] = dataUrl.split(',');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return { dataUrl: '', variance: 0 };
+    ctx.drawImage(video, 0, 0, w, h);
+
+    // Compute luminance variance on a 64×64 thumbnail for speed.
+    const thumb = document.createElement('canvas');
+    thumb.width = 64;
+    thumb.height = 64;
+    const tCtx = thumb.getContext('2d');
+    if (!tCtx) return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), variance: 0 };
+    tCtx.drawImage(canvas, 0, 0, 64, 64);
+    const px = tCtx.getImageData(0, 0, 64, 64).data;
+    let sum = 0;
+    let sum2 = 0;
+    const n = px.length / 4;
+    for (let i = 0; i < px.length; i += 4) {
+      // biome-ignore lint/style/noNonNullAssertion: Uint8ClampedArray access within bounds
+      const lum = 0.299 * px[i]! + 0.587 * px[i + 1]! + 0.114 * px[i + 2]!;
+      sum += lum;
+      sum2 += lum * lum;
+    }
+    const mean = sum / n;
+    const variance = sum2 / n - mean * mean;
+
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), variance };
+  }
+
+  async function captureAutoFrames(): Promise<void> {
+    const video = videoRef.current;
+    if (!video) { setCameraError('Camera preview is not ready. Please open the camera again.'); return; }
+
+    const frames: { dataUrl: string; variance: number }[] = [];
+    for (let i = 0; i < 3; i++) {
+      setCaptureProgress(i + 1);
+      frames.push(captureFrameWithVariance(video));
+      if (i < 2) await new Promise<void>((resolve) => setTimeout(resolve, 800));
+    }
+    setCaptureProgress(0);
+
+    // Pick the sharpest frame (highest pixel-luminance variance).
+    const best = frames.reduce((a, b) => (a.variance >= b.variance ? a : b));
+    if (!best.dataUrl) { setCameraError('Unable to capture the selfie image.'); return; }
+
+    const [, base64 = ''] = best.dataUrl.split(',');
     if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
     setSelfieImageBase64(base64);
-    setSelfiePreviewUrl(dataUrl);
+    setSelfiePreviewUrl(best.dataUrl);
     setCameraReady(false);
     stopStream();
   }
@@ -259,6 +299,7 @@ export function DriverIdentityVerification({
     setSelfieImageBase64('');
     setCameraError(null);
     setCameraReady(false);
+    setCaptureProgress(0);
   }
 
   function updateIdentifierValue(type: string, value: string): void {
@@ -383,14 +424,26 @@ export function DriverIdentityVerification({
                     />
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     {!cameraReady ? (
                       <Button onClick={() => void startCamera()} type="button">
                         Open camera
                       </Button>
+                    ) : captureProgress > 0 ? (
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1.5">
+                          {[1, 2, 3].map((n) => (
+                            <span
+                              key={n}
+                              className={`h-2 w-8 rounded-full transition-colors ${n <= captureProgress ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-200'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-slate-600">Capturing {captureProgress}/3…</span>
+                      </div>
                     ) : (
                       <>
-                        <Button onClick={captureSelfie} type="button">
+                        <Button onClick={() => void captureAutoFrames()} type="button">
                           Capture selfie
                         </Button>
                         <Button onClick={resetSelfieCapture} type="button" variant="ghost">
