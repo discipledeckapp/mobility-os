@@ -112,13 +112,15 @@ export class PaymentProvidersService {
     input: InitializeProviderPaymentInput,
   ): Promise<InitializeProviderPaymentResult> {
     const secretKey = this.configService.get<string>('FLUTTERWAVE_SECRET_KEY');
-    const baseUrl = this.configService.getOrThrow<string>('FLUTTERWAVE_BASE_URL');
+    const baseUrl = (
+      this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3'
+    ).replace(/\/$/, '');
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Flutterwave is not configured for this environment');
     }
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/payments`, {
+    const response = await fetch(`${baseUrl}/payments`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -142,12 +144,22 @@ export class PaymentProvidersService {
     });
 
     if (!response.ok) {
-      throw new BadGatewayException(`Flutterwave initialize returned status ${response.status}`);
+      const errorBody = await response.text().catch(() => '');
+      throw new BadGatewayException(
+        `Flutterwave initialize returned status ${response.status}${errorBody ? `: ${errorBody}` : ''}`,
+      );
     }
 
     const payload = (await response.json()) as {
+      status?: string;
+      message?: string;
       data?: { link?: string };
     };
+    if (payload.status === 'error' || payload.status === false as unknown) {
+      throw new BadGatewayException(
+        `Flutterwave initialize failed: ${payload.message ?? 'unknown error'}`,
+      );
+    }
     const checkoutUrl = payload.data?.link;
     if (!checkoutUrl) {
       throw new BadGatewayException(
@@ -163,14 +175,16 @@ export class PaymentProvidersService {
 
   private async verifyFlutterwave(reference: string): Promise<VerifiedProviderPayment> {
     const secretKey = this.configService.get<string>('FLUTTERWAVE_SECRET_KEY');
-    const baseUrl = this.configService.getOrThrow<string>('FLUTTERWAVE_BASE_URL');
+    const baseUrl = (
+      this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3'
+    ).replace(/\/$/, '');
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Flutterwave is not configured for this environment');
     }
 
     const response = await fetch(
-      `${baseUrl.replace(/\/$/, '')}/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`,
+      `${baseUrl}/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`,
       {
         headers: {
           authorization: `Bearer ${secretKey}`,
@@ -216,13 +230,15 @@ export class PaymentProvidersService {
     input: InitializeProviderPaymentInput,
   ): Promise<InitializeProviderPaymentResult> {
     const secretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
-    const baseUrl = this.configService.getOrThrow<string>('PAYSTACK_BASE_URL');
+    const baseUrl = (
+      this.configService.get<string>('PAYSTACK_BASE_URL') ?? 'https://api.paystack.co'
+    ).replace(/\/$/, '');
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Paystack is not configured for this environment');
     }
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/transaction/initialize`, {
+    const response = await fetch(`${baseUrl}/transaction/initialize`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -242,19 +258,25 @@ export class PaymentProvidersService {
       }),
     });
 
-    if (!response.ok) {
-      throw new BadGatewayException(`Paystack initialize returned status ${response.status}`);
-    }
-
-    const payload = (await response.json()) as {
+    const paystackInitPayload = (await response.json().catch(() => ({}))) as {
+      status?: boolean;
+      message?: string;
       data?: { authorization_url?: string; access_code?: string };
     };
-    const checkoutUrl = payload.data?.authorization_url;
+
+    if (!response.ok || paystackInitPayload.status === false) {
+      throw new BadGatewayException(
+        `Paystack initialize failed: ${paystackInitPayload.message ?? `status ${response.status}`}`,
+      );
+    }
+
+    const checkoutUrl = paystackInitPayload.data?.authorization_url;
     if (!checkoutUrl) {
       throw new BadGatewayException(
         'Paystack initialize response did not include an authorization URL',
       );
     }
+    const payload = paystackInitPayload;
 
     return {
       provider: 'paystack',
@@ -265,14 +287,16 @@ export class PaymentProvidersService {
 
   private async verifyPaystack(reference: string): Promise<VerifiedProviderPayment> {
     const secretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
-    const baseUrl = this.configService.getOrThrow<string>('PAYSTACK_BASE_URL');
+    const baseUrl = (
+      this.configService.get<string>('PAYSTACK_BASE_URL') ?? 'https://api.paystack.co'
+    ).replace(/\/$/, '');
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Paystack is not configured for this environment');
     }
 
     const response = await fetch(
-      `${baseUrl.replace(/\/$/, '')}/transaction/verify/${encodeURIComponent(reference)}`,
+      `${baseUrl}/transaction/verify/${encodeURIComponent(reference)}`,
       {
         headers: {
           authorization: `Bearer ${secretKey}`,

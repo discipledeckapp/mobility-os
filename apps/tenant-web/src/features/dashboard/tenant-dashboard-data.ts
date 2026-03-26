@@ -38,13 +38,122 @@ export interface DashboardActivityItem {
   status?: string;
 }
 
+export interface DashboardActionItem {
+  id: string;
+  priority: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  href: Route;
+  count?: number;
+}
+
 export interface DashboardData {
   summary: DashboardSummaryItem[];
   remittanceSummary: DashboardSummaryItem[];
   recentActivity: DashboardActivityItem[];
   featureCards: DashboardFeatureCard[];
+  actionItems: DashboardActionItem[];
   notes: string[];
   isEmpty: boolean;
+}
+
+function buildActionItems(
+  drivers: DriverRecord[],
+  remittances: RemittanceRecord[],
+): DashboardActionItem[] {
+  const items: DashboardActionItem[] = [];
+
+  const pendingDocDrivers = drivers.filter((d) => d.pendingDocumentCount > 0);
+  if (pendingDocDrivers.length > 0) {
+    items.push({
+      id: 'pending-docs',
+      priority: 'warning',
+      title: `${pendingDocDrivers.length} driver${pendingDocDrivers.length > 1 ? 's' : ''} with pending document review`,
+      description: 'Review and approve uploaded ID documents to unblock driver activation.',
+      href: '/drivers?identityStatus=pending_verification',
+      count: pendingDocDrivers.length,
+    });
+  }
+
+  const rejectedDocDrivers = drivers.filter((d) => d.rejectedDocumentCount > 0);
+  if (rejectedDocDrivers.length > 0) {
+    items.push({
+      id: 'rejected-docs',
+      priority: 'critical',
+      title: `${rejectedDocDrivers.length} driver${rejectedDocDrivers.length > 1 ? 's' : ''} with rejected documents`,
+      description: 'Rejected documents need driver re-upload before onboarding can continue.',
+      href: '/drivers',
+      count: rejectedDocDrivers.length,
+    });
+  }
+
+  const unverifiedDrivers = drivers.filter(
+    (d) => d.status === 'active' && d.identityStatus === 'unverified',
+  );
+  if (unverifiedDrivers.length > 0) {
+    items.push({
+      id: 'unverified',
+      priority: 'warning',
+      title: `${unverifiedDrivers.length} active driver${unverifiedDrivers.length > 1 ? 's' : ''} not yet verified`,
+      description: 'Identity verification is incomplete for these active drivers.',
+      href: '/drivers?status=active&identityStatus=unverified',
+      count: unverifiedDrivers.length,
+    });
+  }
+
+  const reviewNeeded = drivers.filter((d) => d.identityStatus === 'review_needed');
+  if (reviewNeeded.length > 0) {
+    items.push({
+      id: 'review-needed',
+      priority: 'critical',
+      title: `${reviewNeeded.length} identity review${reviewNeeded.length > 1 ? 's' : ''} open`,
+      description: 'These drivers have flagged identity cases waiting for manual review.',
+      href: '/drivers?identityStatus=review_needed',
+      count: reviewNeeded.length,
+    });
+  }
+
+  const crossRoleConflicts = drivers.filter((d) => d.guarantorIsAlsoDriver);
+  if (crossRoleConflicts.length > 0) {
+    items.push({
+      id: 'cross-role',
+      priority: 'critical',
+      title: `${crossRoleConflicts.length} cross-role conflict${crossRoleConflicts.length > 1 ? 's' : ''} detected`,
+      description: 'A guarantor is also registered as a driver — review both records.',
+      href: '/drivers',
+      count: crossRoleConflicts.length,
+    });
+  }
+
+  const overdueRemittances = remittances.filter((r) => r.status === 'overdue');
+  if (overdueRemittances.length > 0) {
+    items.push({
+      id: 'overdue-remittance',
+      priority: 'critical',
+      title: `${overdueRemittances.length} overdue remittance${overdueRemittances.length > 1 ? 's' : ''}`,
+      description: 'Collect outstanding overdue payments before they affect driver standing.',
+      href: '/remittance',
+      count: overdueRemittances.length,
+    });
+  }
+
+  const missingGuarantors = drivers.filter(
+    (d) => d.status === 'active' && !d.hasGuarantor,
+  );
+  if (missingGuarantors.length > 0) {
+    items.push({
+      id: 'missing-guarantors',
+      priority: 'info',
+      title: `${missingGuarantors.length} active driver${missingGuarantors.length > 1 ? 's' : ''} without a guarantor`,
+      description: 'Guarantors strengthen your risk coverage — add one for each active driver.',
+      href: '/drivers?status=active',
+      count: missingGuarantors.length,
+    });
+  }
+
+  // Sort: critical first, then warning, then info
+  const order = { critical: 0, warning: 1, info: 2 };
+  return items.sort((a, b) => order[a.priority] - order[b.priority]);
 }
 
 function getEmptyDashboardData(): DashboardData {
@@ -73,6 +182,7 @@ function getEmptyDashboardData(): DashboardData {
     ],
     recentActivity: [],
     featureCards: getDashboardFeatureCards(),
+    actionItems: [],
     notes: [],
     isEmpty: true,
   };
@@ -379,6 +489,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     ],
     recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, remittances),
     featureCards: getDashboardFeatureCards(),
+    actionItems: buildActionItems(drivers, remittances),
     notes,
     isEmpty:
       drivers.length === 0 &&

@@ -12,6 +12,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { TenantAppShell } from '../shared/tenant-app-shell';
 import type {
+  DashboardActionItem,
   DashboardActivityItem,
   DashboardFeatureCard,
   DashboardSummaryItem,
@@ -24,6 +25,7 @@ interface TenantDashboardShellProps {
   remittanceSummary: DashboardSummaryItem[];
   recentActivity: DashboardActivityItem[];
   featureCards: DashboardFeatureCard[];
+  actionItems: DashboardActionItem[];
   notes: string[];
   isEmpty: boolean;
 }
@@ -126,6 +128,7 @@ export function TenantDashboardShell({
   remittanceSummary,
   recentActivity,
   featureCards,
+  actionItems,
   notes,
   isEmpty,
 }: TenantDashboardShellProps) {
@@ -227,6 +230,47 @@ export function TenantDashboardShell({
           );
         })}
       </div>
+
+      {/* Action items */}
+      {actionItems.length > 0 ? (
+        <Card className="border-slate-200 bg-white shadow-[0_4px_20px_-10px_rgba(15,23,42,0.14)]">
+          <CardHeader>
+            <CardTitle>Actions required</CardTitle>
+            <CardDescription>
+              Data-driven items that need attention now to keep operations running smoothly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-slate-100">
+              {actionItems.map((item) => (
+                <div className="flex items-start gap-3 py-3" key={item.id}>
+                  <div className="mt-0.5 flex-shrink-0">
+                    <div
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        item.priority === 'critical'
+                          ? 'bg-rose-500'
+                          : item.priority === 'warning'
+                            ? 'bg-amber-400'
+                            : 'bg-sky-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--mobiris-ink)]">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{item.description}</p>
+                  </div>
+                  <Link
+                    className="shrink-0 text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                    href={item.href}
+                  >
+                    Fix →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
         {/* Remittance summary */}

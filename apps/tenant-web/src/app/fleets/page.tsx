@@ -91,7 +91,7 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
                     <TableCell>
                       <Link
                         className="font-semibold text-[var(--mobiris-primary)] hover:underline"
-                        href={`/fleets?fleetId=${encodeURIComponent(fleet.id)}`}
+                        href={`/fleets/${fleet.id}` as Route}
                       >
                         {fleet.name}
                       </Link>

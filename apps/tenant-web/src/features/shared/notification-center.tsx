@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Button, Text } from '@mobility-os/ui';
+// Button is kept for internal mark-read actions
 import type { UserNotificationRecord } from '../../lib/api-core';
 import { Modal } from './modal';
 
@@ -62,14 +63,32 @@ export function NotificationCenter({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} size="sm" variant="secondary">
-        Inbox
+      <button
+        aria-label={unreadCount > 0 ? `Inbox — ${unreadCount} unread` : 'Inbox'}
+        className="relative flex h-10 w-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.6"
+          viewBox="0 0 24 24"
+          width="18"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
         {unreadCount > 0 ? (
-          <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] px-2 py-0.5 text-[11px] font-bold text-white">
-            {unreadCount}
+          <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--mobiris-primary)] px-1.5 py-px text-[10px] font-bold leading-none text-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : null}
-      </Button>
+      </button>
 
       <Modal
         description="Organisation reminders, approvals, and risk updates delivered to this account."

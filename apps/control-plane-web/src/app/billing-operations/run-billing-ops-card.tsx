@@ -14,6 +14,7 @@ import {
   type BillingOperationsActionState,
   runBillingCycleAction,
   runCollectionsCycleAction,
+  seedStandardPlansAction,
 } from './actions';
 
 const initialState: BillingOperationsActionState = {};
@@ -27,6 +28,7 @@ export function RunBillingOpsCard() {
     runCollectionsCycleAction,
     initialState,
   );
+  const [seedState, seedAction, seedPending] = useActionState(seedStandardPlansAction, initialState);
 
   function handleBillingSubmit(event: FormEvent<HTMLFormElement>) {
     if (
@@ -87,6 +89,19 @@ export function RunBillingOpsCard() {
             <Text className="text-emerald-300">{collectionsState.success}</Text>
           ) : null}
         </form>
+
+        <div className="border-t border-white/10 pt-4">
+          <form action={seedAction} className="space-y-2">
+            <Button disabled={seedPending} type="submit" variant="secondary">
+              {seedPending ? 'Seeding plans...' : 'Seed standard plans'}
+            </Button>
+            <Text className="text-xs leading-5 text-blue-100/60">
+              Creates Starter (₦15k/mo) and Growth (₦35k/mo) plans if they don&apos;t already exist.
+            </Text>
+            {seedState.error ? <Text className="text-rose-300">{seedState.error}</Text> : null}
+            {seedState.success ? <Text className="text-emerald-300">{seedState.success}</Text> : null}
+          </form>
+        </div>
       </CardContent>
     </Card>
   );

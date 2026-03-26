@@ -21,6 +21,7 @@ export default async function HomePage() {
       remittanceSummary={dashboardData.remittanceSummary}
       recentActivity={dashboardData.recentActivity}
       featureCards={dashboardData.featureCards}
+      actionItems={dashboardData.actionItems}
       notes={dashboardData.notes}
       isEmpty={dashboardData.isEmpty}
     />

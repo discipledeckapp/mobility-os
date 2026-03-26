@@ -595,6 +595,26 @@ export async function getTenantPlatformWalletBalance(
   );
 }
 
+// ── Plans management ───────────────────────────────────────────────────────────
+
+export interface CreatePlanInput {
+  name: string;
+  tier: string;
+  billingInterval: string;
+  basePriceMinorUnits: number;
+  currency: string;
+  features: Record<string, unknown>;
+  isActive?: boolean;
+}
+
+export async function createPlan(input: CreatePlanInput, token?: string): Promise<PlanRecord> {
+  return apiControlPlaneFetch<PlanRecord>('/plans', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
+}
+
 export async function createTenantPlatformWalletEntry(
   tenantId: string,
   input: PlatformWalletEntryInput,
