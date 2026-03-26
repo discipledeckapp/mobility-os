@@ -29,7 +29,6 @@
       "bundleIdentifier": "com.mobiris.mobileops"
     },
     "android": {
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "../../docs/ux/mobiris-brand/icons/png-transparent/icon-transparent-512.png",
         "backgroundColor": "#0F172A"
