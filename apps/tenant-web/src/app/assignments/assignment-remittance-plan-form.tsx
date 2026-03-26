@@ -10,6 +10,47 @@ import {
 
 const initialState: AssignmentRemittancePlanActionState = {};
 
+function AmountField({
+  currency,
+  initialMinorUnits,
+}: {
+  currency: string;
+  initialMinorUnits?: number | null;
+}) {
+  const [display, setDisplay] = useState(
+    initialMinorUnits ? (initialMinorUnits / 100).toFixed(2) : '',
+  );
+  const majorUnits = parseFloat(display.replace(/,/g, '')) || 0;
+  const minorUnits = Math.round(majorUnits * 100);
+  const formatted =
+    majorUnits > 0
+      ? new Intl.NumberFormat('en-NG', {
+          style: 'currency',
+          currency: currency || 'NGN',
+          minimumFractionDigits: 2,
+        }).format(majorUnits)
+      : null;
+
+  return (
+    <div className="space-y-1.5">
+      <Input
+        id="remittanceAmountDisplay"
+        inputMode="decimal"
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisplay(e.target.value)}
+        placeholder="2,500.00"
+        required
+        value={display}
+      />
+      <input name="remittanceAmountMinorUnits" type="hidden" value={minorUnits} />
+      {formatted ? (
+        <Text tone="muted">{formatted} = {minorUnits.toLocaleString()} minor units</Text>
+      ) : (
+        <Text tone="muted">Enter in major units, e.g. 2500 for ₦2,500.</Text>
+      )}
+    </div>
+  );
+}
+
 export function AssignmentRemittancePlanForm({
   assignmentId,
   remittanceAmountMinorUnits,
@@ -29,6 +70,7 @@ export function AssignmentRemittancePlanForm({
     updateAssignmentRemittancePlanAction,
     initialState,
   );
+  const [currency, setCurrency] = useState(remittanceCurrency ?? 'NGN');
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>(
     remittanceFrequency === 'weekly' ? 'weekly' : 'daily',
   );
@@ -38,26 +80,21 @@ export function AssignmentRemittancePlanForm({
       <input name="assignmentId" type="hidden" value={assignmentId} />
 
       <div className="space-y-2">
-        <Label htmlFor="remittanceAmountMinorUnits">Expected amount (minor units)</Label>
-        <Input
-          defaultValue={String(remittanceAmountMinorUnits ?? '')}
-          id="remittanceAmountMinorUnits"
-          min="1"
-          name="remittanceAmountMinorUnits"
-          required
-          step="1"
-          type="number"
-        />
+        <Label htmlFor="remittanceAmountDisplay">Expected remittance amount</Label>
+        <AmountField currency={currency} initialMinorUnits={remittanceAmountMinorUnits} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="remittanceCurrency">Currency</Label>
         <Input
-          defaultValue={remittanceCurrency ?? 'NGN'}
           id="remittanceCurrency"
           maxLength={3}
           name="remittanceCurrency"
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setCurrency(e.target.value.toUpperCase())
+          }
           required
+          value={currency}
         />
       </div>
 

@@ -9,7 +9,6 @@ import {
   listVehicles,
 } from '../../lib/api-core';
 import { SettingsPanel } from './settings-panel';
-import { TeamPanel } from './team-panel';
 
 export default async function SettingsPage() {
   const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications] = await Promise.all([
@@ -30,20 +29,16 @@ export default async function SettingsPage() {
       eyebrow="Workspace"
       title="Settings"
     >
-      <div className="space-y-8">
-        <SettingsPanel
-          notificationPreferences={notificationPreferences ?? session.notificationPreferences ?? null}
-          notifications={notifications}
-          session={session}
-          tenant={tenant}
-        />
-        <TeamPanel
-          canManage={canManage}
-          fleets={fleets}
-          members={members}
-          vehicles={vehiclesPage.data}
-        />
-      </div>
+      <SettingsPanel
+        canManage={canManage}
+        fleets={fleets}
+        members={members}
+        notificationPreferences={notificationPreferences ?? session.notificationPreferences ?? null}
+        notifications={notifications}
+        session={session}
+        tenant={tenant}
+        vehicles={vehiclesPage.data}
+      />
     </TenantAppShell>
   );
 }

@@ -935,17 +935,24 @@ export function CreateVehicleForm({
             </Label>
             <Input
               id="acquisitionCost"
+              inputMode="decimal"
               name="acquisitionCost"
-              min="0"
               onChange={(event) => setAcquisitionCost(event.target.value)}
-              placeholder={tenantCurrencyCode ? `0.00 ${tenantCurrencyCode}` : '2450000.00'}
-              step="0.01"
-              type="number"
+              placeholder="2,450,000.00"
               value={acquisitionCost}
             />
-            <HelperDisclosure summary="Acquisition cost help">
-              Optional. Enter the acquisition amount in major units for the tenant country currency.
-            </HelperDisclosure>
+            {(() => {
+              const v = parseFloat(acquisitionCost.replace(/,/g, ''));
+              return Number.isFinite(v) && v > 0 ? (
+                <Text tone="muted">
+                  {new Intl.NumberFormat('en-NG', {
+                    style: 'currency',
+                    currency: tenantCurrencyCode || 'NGN',
+                    minimumFractionDigits: 2,
+                  }).format(v)}
+                </Text>
+              ) : null;
+            })()}
           </div>
 
           <div className="space-y-2">
@@ -960,17 +967,27 @@ export function CreateVehicleForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currentEstimatedValue">Current estimated value</Label>
+            <Label htmlFor="currentEstimatedValue">Current estimated value{tenantCurrencyCode ? ` (${tenantCurrencyCode})` : ''}</Label>
             <Input
               id="currentEstimatedValue"
+              inputMode="decimal"
               name="currentEstimatedValue"
-              min="0"
               onChange={(event) => setCurrentEstimatedValue(event.target.value)}
-              placeholder={tenantCurrencyCode ? `0.00 ${tenantCurrencyCode}` : '2200000.00'}
-              step="0.01"
-              type="number"
+              placeholder="2,200,000.00"
               value={currentEstimatedValue}
             />
+            {(() => {
+              const v = parseFloat(currentEstimatedValue.replace(/,/g, ''));
+              return Number.isFinite(v) && v > 0 ? (
+                <Text tone="muted">
+                  {new Intl.NumberFormat('en-NG', {
+                    style: 'currency',
+                    currency: tenantCurrencyCode || 'NGN',
+                    minimumFractionDigits: 2,
+                  }).format(v)}
+                </Text>
+              ) : null;
+            })()}
           </div>
 
           <div className="space-y-2">

@@ -12,7 +12,7 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import type { TenantAuthSessionRecord, TenantRecord } from '../../lib/api-core';
+import type { FleetRecord, TenantAuthSessionRecord, TenantRecord, TeamMemberRecord, VehicleRecord } from '../../lib/api-core';
 import {
   changePasswordAction,
   syncMaintenanceRemindersAction,
@@ -26,6 +26,7 @@ import type {
   NotificationPreferencesRecord,
   UserNotificationRecord,
 } from '../../lib/api-core';
+import { TeamPanel } from './team-panel';
 
 const initialState: SettingsActionState = {};
 
@@ -45,13 +46,14 @@ const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> =
   marketing_updates: 'Campaigns, offers, and optional marketing updates',
 };
 
-type SettingsSection = 'account' | 'organisation' | 'drivers' | 'fleet' | 'notifications';
+type SettingsSection = 'account' | 'organisation' | 'drivers' | 'fleet' | 'notifications' | 'team';
 
 const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'account', label: 'Account' },
   { id: 'organisation', label: 'Organisation' },
   { id: 'drivers', label: 'Drivers' },
   { id: 'fleet', label: 'Fleet' },
+  { id: 'team', label: 'Team' },
   { id: 'notifications', label: 'Notifications' },
 ];
 
@@ -212,11 +214,19 @@ export function SettingsPanel({
   tenant,
   notificationPreferences,
   notifications,
+  members,
+  fleets,
+  vehicles,
+  canManage,
 }: {
   session: TenantAuthSessionRecord;
   tenant: TenantRecord;
   notificationPreferences: NotificationPreferencesRecord | null;
   notifications: UserNotificationRecord[];
+  members: TeamMemberRecord[];
+  fleets: FleetRecord[];
+  vehicles: VehicleRecord[];
+  canManage: boolean;
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
 
@@ -690,6 +700,16 @@ export function SettingsPanel({
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Team section */}
+        {activeSection === 'team' && (
+          <TeamPanel
+            canManage={canManage}
+            fleets={fleets}
+            members={members}
+            vehicles={vehicles}
+          />
         )}
 
         {/* Notifications section */}

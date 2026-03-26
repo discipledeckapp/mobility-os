@@ -11,7 +11,7 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import type { VehicleDetailRecord, VehicleValuationRecord } from '../../../lib/api-core';
 import { type UpdateVehicleActionState, updateVehicleAction } from '../actions';
 
@@ -38,6 +38,12 @@ export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
   const [state, formAction, isPending] = useActionState(updateVehicleAction, initialState);
   const acquisition = findValuation(vehicle.valuations, 'acquisition');
   const estimate = findValuation(vehicle.valuations, 'estimate');
+  const [acquisitionCost, setAcquisitionCost] = useState(
+    formatMajorUnits(acquisition?.amountMinorUnits),
+  );
+  const [currentEstimatedValue, setCurrentEstimatedValue] = useState(
+    formatMajorUnits(estimate?.amountMinorUnits),
+  );
 
   return (
     <Card>
@@ -93,13 +99,27 @@ export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
           <div className="space-y-2">
             <Label htmlFor="acquisitionCost">Acquisition cost</Label>
             <Input
-              defaultValue={formatMajorUnits(acquisition?.amountMinorUnits)}
               id="acquisitionCost"
-              min="0"
+              inputMode="decimal"
               name="acquisitionCost"
-              step="0.01"
-              type="number"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setAcquisitionCost(e.target.value)
+              }
+              placeholder="2,450,000.00"
+              value={acquisitionCost}
             />
+            {(() => {
+              const v = parseFloat(acquisitionCost.replace(/,/g, ''));
+              return Number.isFinite(v) && v > 0 ? (
+                <Text tone="muted">
+                  {new Intl.NumberFormat('en-NG', {
+                    style: 'currency',
+                    currency: acquisition?.currency ?? 'NGN',
+                    minimumFractionDigits: 2,
+                  }).format(v)}
+                </Text>
+              ) : null;
+            })()}
           </div>
 
           <div className="space-y-2">
@@ -115,13 +135,27 @@ export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
           <div className="space-y-2">
             <Label htmlFor="currentEstimatedValue">Current estimated value</Label>
             <Input
-              defaultValue={formatMajorUnits(estimate?.amountMinorUnits)}
               id="currentEstimatedValue"
-              min="0"
+              inputMode="decimal"
               name="currentEstimatedValue"
-              step="0.01"
-              type="number"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setCurrentEstimatedValue(e.target.value)
+              }
+              placeholder="2,200,000.00"
+              value={currentEstimatedValue}
             />
+            {(() => {
+              const v = parseFloat(currentEstimatedValue.replace(/,/g, ''));
+              return Number.isFinite(v) && v > 0 ? (
+                <Text tone="muted">
+                  {new Intl.NumberFormat('en-NG', {
+                    style: 'currency',
+                    currency: estimate?.currency ?? acquisition?.currency ?? 'NGN',
+                    minimumFractionDigits: 2,
+                  }).format(v)}
+                </Text>
+              ) : null;
+            })()}
           </div>
 
           <div className="space-y-2">

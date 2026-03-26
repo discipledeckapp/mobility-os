@@ -172,74 +172,91 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       </Card>
 
       <Card style={styles.section}>
-        <Input label="Notes" multiline onChangeText={setNotes} value={notes} />
+        <Text style={styles.sectionTitle}>Remittance plan</Text>
+
         <Input
           keyboardType="decimal-pad"
-          label="Expected remittance amount"
-          helperText={remittanceAmountFormatted ?? 'e.g. 2500 for ₦2,500 · decimals supported'}
+          label="Expected amount"
+          helperText={remittanceAmountFormatted ?? 'Major units — e.g. 2500 for ₦2,500'}
           onChangeText={setRemittanceAmountDisplay}
           placeholder="2500"
           value={remittanceAmountDisplay}
         />
-        <Input
-          label="Contract model"
-          editable={false}
-          value={remittanceModel === 'hire_purchase' ? 'Hire purchase' : 'Fixed remittance'}
-        />
-        <View style={styles.choiceRow}>
-          <Text
-            style={[styles.choiceChip, remittanceModel === 'fixed' ? styles.choiceChipActive : null]}
-            onPress={() => setRemittanceModel('fixed')}
-          >
-            Fixed
-          </Text>
-          <Text
-            style={[
-              styles.choiceChip,
-              remittanceModel === 'hire_purchase' ? styles.choiceChipActive : null,
-            ]}
-            onPress={() => setRemittanceModel('hire_purchase')}
-          >
-            Hire purchase
-          </Text>
-        </View>
+
         <Input label="Currency" autoCapitalize="characters" onChangeText={setRemittanceCurrency} value={remittanceCurrency} />
-        <Input
-          label="Schedule"
-          editable={false}
-          value={describeRemittanceSchedule({
-            remittanceFrequency,
-            ...(remittanceFrequency === 'weekly'
-              ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
-              : {}),
-          })}
-        />
-        <View style={styles.choiceRow}>
-          <Text
-            style={[styles.choiceChip, remittanceFrequency === 'daily' ? styles.choiceChipActive : null]}
-            onPress={() => setRemittanceFrequency('daily')}
-          >
-            Daily
-          </Text>
-          <Text
-            style={[styles.choiceChip, remittanceFrequency === 'weekly' ? styles.choiceChipActive : null]}
-            onPress={() => setRemittanceFrequency('weekly')}
-          >
-            Weekly
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Contract model</Text>
+          <View style={styles.chipRow}>
+            <Text
+              style={[styles.choiceChip, remittanceModel === 'fixed' ? styles.choiceChipActive : null]}
+              onPress={() => setRemittanceModel('fixed')}
+            >
+              Fixed
+            </Text>
+            <Text
+              style={[
+                styles.choiceChip,
+                remittanceModel === 'hire_purchase' ? styles.choiceChipActive : null,
+              ]}
+              onPress={() => setRemittanceModel('hire_purchase')}
+            >
+              Hire purchase
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Collection schedule</Text>
+          <View style={styles.chipRow}>
+            <Text
+              style={[styles.choiceChip, remittanceFrequency === 'daily' ? styles.choiceChipActive : null]}
+              onPress={() => setRemittanceFrequency('daily')}
+            >
+              Daily
+            </Text>
+            <Text
+              style={[styles.choiceChip, remittanceFrequency === 'weekly' ? styles.choiceChipActive : null]}
+              onPress={() => setRemittanceFrequency('weekly')}
+            >
+              Weekly
+            </Text>
+          </View>
+          {remittanceFrequency === 'weekly' ? (
+            <View style={[styles.chipRow, { marginTop: 8 }]}>
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+                <Text
+                  key={day}
+                  style={[
+                    styles.choiceChip,
+                    remittanceCollectionDay === String(index + 1) ? styles.choiceChipActive : null,
+                  ]}
+                  onPress={() => setRemittanceCollectionDay(String(index + 1))}
+                >
+                  {day}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+          <Text style={styles.scheduleHint}>
+            {describeRemittanceSchedule({
+              remittanceFrequency,
+              ...(remittanceFrequency === 'weekly'
+                ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
+                : {}),
+            })}
           </Text>
         </View>
+
         <Input label="First due date" onChangeText={setRemittanceStartDate} value={remittanceStartDate} />
-        {remittanceFrequency === 'weekly' ? (
-          <Input
-            keyboardType="number-pad"
-            label="Weekly collection day (1=Mon ... 7=Sun)"
-            onChangeText={setRemittanceCollectionDay}
-            value={remittanceCollectionDay}
-          />
-        ) : null}
+
         {projectedDueDate ? (
-          <Text style={styles.copy}>Next projected remittance due date: {projectedDueDate}</Text>
+          <Text style={styles.copy}>Next projected due: {projectedDueDate}</Text>
         ) : null}
+      </Card>
+
+      <Card style={styles.section}>
+        <Input label="Notes" multiline onChangeText={setNotes} value={notes} />
         <Button label="Create assignment" loading={createMutation.isPending} onPress={onSubmit} />
       </Card>
     </Screen>
@@ -249,16 +266,21 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
 const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
-  copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
-  sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
+  copy: { color: tokens.colors.inkSoft, fontSize: 13, lineHeight: 18 },
+  sectionTitle: { color: tokens.colors.ink, fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
+  fieldGroup: { gap: 8 },
+  fieldLabel: { color: tokens.colors.ink, fontSize: 13, fontWeight: '600' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
+  scheduleHint: { color: tokens.colors.inkSoft, fontSize: 12, lineHeight: 17, marginTop: 2 },
   choiceRow: { flexDirection: 'row', gap: tokens.spacing.sm },
   choiceChip: {
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     color: tokens.colors.ink,
+    fontSize: 13,
     backgroundColor: '#FFFFFF',
   },
   choiceChipActive: {
