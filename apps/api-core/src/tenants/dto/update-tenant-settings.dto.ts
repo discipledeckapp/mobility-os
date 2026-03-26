@@ -76,4 +76,9 @@ export class UpdateTenantSettingsDto {
   @IsArray()
   @IsIn(VEHICLE_DOCUMENT_TYPES, { each: true })
   requiredVehicleDocumentSlugs?: string[];
+
+  @ApiPropertyOptional({ description: 'When true, drivers are charged for their own KYC check instead of the org wallet.' })
+  @IsOptional()
+  @IsBoolean()
+  driverPaysKyc?: boolean;
 }

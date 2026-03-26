@@ -33,18 +33,20 @@ export async function initializeVerificationWalletTopUpAction(
     return { error: 'Enter a valid amount to fund the verification wallet.' };
   }
 
+  let checkoutUrl: string;
   try {
     const checkout = await initializeTenantWalletTopUpCheckout({
       provider,
       amountMinorUnits,
     });
-    redirect(checkout.checkoutUrl as never);
+    checkoutUrl = checkout.checkoutUrl;
   } catch (error) {
     return {
       error:
         error instanceof Error ? error.message : 'Unable to initialize wallet funding checkout.',
     };
   }
+  redirect(checkoutUrl as never);
 }
 
 export async function initializeOutstandingInvoiceCheckoutAction(
@@ -58,17 +60,19 @@ export async function initializeOutstandingInvoiceCheckoutAction(
     return { error: 'Payment provider and invoice are required.' };
   }
 
+  let checkoutUrl: string;
   try {
     const checkout = await initializeTenantInvoiceCheckout({
       provider,
       invoiceId,
     });
-    redirect(checkout.checkoutUrl as never);
+    checkoutUrl = checkout.checkoutUrl;
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
     };
   }
+  redirect(checkoutUrl as never);
 }
 
 export async function changePlanAction(

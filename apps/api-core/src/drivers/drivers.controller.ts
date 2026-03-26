@@ -1,6 +1,7 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -689,6 +690,48 @@ export class DriverSelfServiceController {
   ) {
     const { token: _ignored, ...payload } = dto;
     return this.service.uploadDocumentFromSelfService(token, payload);
+  }
+
+  @Post('create-account')
+  @ApiCreatedResponse({ type: Object })
+  createAccount(
+    @Body('token') token: string,
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    if (!token?.trim() || !email?.trim() || !password?.trim()) {
+      throw new BadRequestException('token, email and password are required');
+    }
+    return this.service.createDriverMobileAccountFromSelfService(token, email, password);
+  }
+
+  @Post('guarantor')
+  @ApiCreatedResponse({ type: Object })
+  submitGuarantor(
+    @Body('token') token: string,
+    @Body() dto: CreateOrUpdateDriverGuarantorDto & { token?: string },
+  ) {
+    const { token: _ignored, ...guarantorDto } = dto;
+    return this.service.submitGuarantorFromSelfService(token, guarantorDto);
+  }
+
+  @Post('kyc-checkout')
+  @ApiCreatedResponse({ type: Object })
+  initiateKycCheckout(
+    @Body('token') token: string,
+    @Body('provider') provider: 'paystack' | 'flutterwave',
+  ) {
+    return this.service.initiateKycCheckoutFromSelfService(token, provider ?? 'paystack');
+  }
+
+  @Post('verify-kyc-payment')
+  @ApiCreatedResponse({ type: Object })
+  verifyKycPayment(
+    @Body('token') token: string,
+    @Body('provider') provider: string,
+    @Body('reference') reference: string,
+  ) {
+    return this.service.verifyKycPaymentFromSelfService(token, provider, reference);
   }
 
   @Post('documents/list')

@@ -21,6 +21,8 @@ export interface OrganisationOperationsSettings {
   requireGovernmentVerificationLookup: boolean;
   requiredDriverDocumentSlugs: string[];
   requiredVehicleDocumentSlugs: string[];
+  /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
+  driverPaysKyc: boolean;
 }
 
 export interface OrganisationSettings {
@@ -169,6 +171,8 @@ export function readOrganisationSettings(
         VEHICLE_DOCUMENT_SLUGS,
         documentDefaults.requiredVehicleDocumentSlugs,
       ),
+      driverPaysKyc:
+        typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : false,
     },
   };
 }
@@ -186,6 +190,7 @@ export function writeOrganisationSettings(
     requireGovernmentVerificationLookup: boolean;
     requiredDriverDocumentSlugs: string[];
     requiredVehicleDocumentSlugs: string[];
+    driverPaysKyc: boolean;
   }>,
   countryCode?: string | null,
 ): Record<string, unknown> {
@@ -219,6 +224,7 @@ export function writeOrganisationSettings(
       input.requiredDriverDocumentSlugs ?? settings.operations.requiredDriverDocumentSlugs,
     requiredVehicleDocumentSlugs:
       input.requiredVehicleDocumentSlugs ?? settings.operations.requiredVehicleDocumentSlugs,
+    driverPaysKyc: input.driverPaysKyc ?? settings.operations.driverPaysKyc,
   };
 
   return current;

@@ -163,6 +163,21 @@ export class ControlPlaneBillingClient {
     });
   }
 
+  async initializeDriverKycCheckout(input: {
+    tenantId: string;
+    driverId: string;
+    provider: string;
+    currency: string;
+    customerEmail: string;
+    customerName?: string;
+    redirectUrl: string;
+  }): Promise<TenantPaymentCheckout> {
+    return this.request('/internal/payments/driver-kyc-checkouts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   async verifyAndApplyPayment(input: {
     provider: string;
     reference: string;

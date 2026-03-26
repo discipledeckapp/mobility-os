@@ -69,6 +69,7 @@ export async function updateOrganisationSettingsAction(
     formData.get('requireBiometricVerification') === 'on';
   const requireGovernmentVerificationLookup =
     formData.get('requireGovernmentVerificationLookup') === 'on';
+  const driverPaysKyc = formData.get('driverPaysKyc') === 'on';
   const requiredDriverDocumentSlugs = String(formData.get('requiredDriverDocumentSlugs') ?? '')
     .split(',')
     .map((value) => value.trim())
@@ -90,6 +91,7 @@ export async function updateOrganisationSettingsAction(
       requireIdentityVerificationForActivation,
       requireBiometricVerification,
       requireGovernmentVerificationLookup,
+      driverPaysKyc,
       ...(requiredDriverDocumentSlugs.length > 0 ? { requiredDriverDocumentSlugs } : {}),
       ...(requiredVehicleDocumentSlugs.length > 0 ? { requiredVehicleDocumentSlugs } : {}),
     });

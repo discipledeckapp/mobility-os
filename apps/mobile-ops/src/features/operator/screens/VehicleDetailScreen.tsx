@@ -7,6 +7,7 @@ import {
   createVehicleIncident,
   createVehicleInspection,
   createVehicleMaintenanceEvent,
+  getFleet,
   getVehicle,
   updateVehicle,
   updateVehicleStatus,
@@ -43,6 +44,12 @@ export function VehicleDetailScreen({ route }: ScreenProps<'OperatorVehicleDetai
   const vehicleQuery = useQuery({
     queryKey: ['operator-vehicle', route.params.vehicleId],
     queryFn: () => getVehicle(route.params.vehicleId),
+  });
+
+  const fleetQuery = useQuery({
+    queryKey: ['operator-fleet', vehicleQuery.data?.fleetId],
+    queryFn: () => getFleet(vehicleQuery.data?.fleetId ?? ''),
+    enabled: Boolean(vehicleQuery.data?.fleetId),
   });
 
   const [plate, setPlate] = useState('');
@@ -297,10 +304,21 @@ export function VehicleDetailScreen({ route }: ScreenProps<'OperatorVehicleDetai
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Log inspection</Text>
-        <Input label="Inspection summary" multiline onChangeText={setInspectionSummary} style={styles.multilineInput} value={inspectionSummary} />
-        <Input label="Inspection date (ISO)" onChangeText={setInspectionDate} placeholder="2026-03-24T09:00:00.000Z" value={inspectionDate} />
-        <Input keyboardType="numeric" label="Odometer (km)" onChangeText={setInspectionOdometerKm} value={inspectionOdometerKm} />
-        <Input label="Next due date (ISO)" onChangeText={setInspectionNextDueAt} placeholder="2026-04-24T09:00:00.000Z" value={inspectionNextDueAt} />
+        <Input
+          label="Inspection summary"
+          multiline
+          onChangeText={setInspectionSummary}
+          placeholder="Describe the condition and any issues found"
+          style={styles.multilineInput}
+          value={inspectionSummary}
+        />
+        <Input
+          keyboardType="numeric"
+          label="Odometer at inspection (km)"
+          onChangeText={setInspectionOdometerKm}
+          placeholder={vehicle.odometerKm?.toString() ?? ''}
+          value={inspectionOdometerKm}
+        />
         <Button
           disabled={!inspectionSummary.trim()}
           label="Save inspection"
@@ -310,23 +328,115 @@ export function VehicleDetailScreen({ route }: ScreenProps<'OperatorVehicleDetai
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Preventive maintenance schedule</Text>
-        <Input label="Schedule type" onChangeText={setScheduleType} value={scheduleType} />
-        <Input keyboardType="numeric" label="Repeat every (days)" onChangeText={setScheduleIntervalDays} value={scheduleIntervalDays} />
-        <Input keyboardType="numeric" label="Repeat every (km)" onChangeText={setScheduleIntervalKm} value={scheduleIntervalKm} />
-        <Input label="Next due date (ISO)" onChangeText={setScheduleNextDueAt} placeholder="2026-04-24T09:00:00.000Z" value={scheduleNextDueAt} />
-        <Input keyboardType="numeric" label="Next due odometer (km)" onChangeText={setScheduleNextDueKm} value={scheduleNextDueKm} />
-        <Button label="Save maintenance schedule" loading={scheduleMutation.isPending} onPress={() => scheduleMutation.mutate()} />
+        <Text style={styles.sectionTitle}>Maintenance schedule</Text>
+        <Text style={styles.meta}>
+          Set how often this vehicle needs servicing. Overrides any fleet or platform default for
+          this vehicle only.
+        </Text>
+        {fleetQuery.data && (fleetQuery.data.maintenanceIntervalDays || fleetQuery.data.maintenanceIntervalKm) ? (
+          <View style={styles.fleetDefaultsBox}>
+            <Text style={styles.fleetDefaultsLabel}>Fleet defaults (inherited)</Text>
+            <Text style={styles.meta}>
+              {fleetQuery.data.maintenanceScheduleType ?? 'Preventive service'}
+              {fleetQuery.data.maintenanceIntervalDays ? ` · Every ${fleetQuery.data.maintenanceIntervalDays} days` : ''}
+              {fleetQuery.data.maintenanceIntervalKm ? ` · Every ${fleetQuery.data.maintenanceIntervalKm.toLocaleString('en-NG')} km` : ''}
+            </Text>
+          </View>
+        ) : null}
+        {vehicle.maintenanceSchedules && vehicle.maintenanceSchedules.length > 0 ? (
+          <View style={styles.scheduleList}>
+            {vehicle.maintenanceSchedules.map((s) => (
+              <View key={s.id} style={styles.scheduleItem}>
+                <Text style={styles.scheduleLabel}>{formatStatusLabel(s.scheduleType)}</Text>
+                <Text style={styles.meta}>
+                  {s.intervalDays ? `Every ${s.intervalDays} days` : ''}
+                  {s.intervalDays && s.intervalKm ? ' · ' : ''}
+                  {s.intervalKm ? `Every ${s.intervalKm.toLocaleString()} km` : ''}
+                </Text>
+                {s.nextDueAt ? (
+                  <Text style={styles.meta}>Next due: {formatMaybeDate(s.nextDueAt)}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.meta}>
+            No schedule set. This vehicle will inherit fleet or platform defaults.
+          </Text>
+        )}
+        <View style={styles.scheduleForm}>
+          <Input
+            label="Service type"
+            helperText="e.g. preventive_service, oil_change, tyre_rotation"
+            onChangeText={setScheduleType}
+            value={scheduleType}
+          />
+          <View style={styles.intervalRow}>
+            <View style={styles.intervalField}>
+              <Input
+                keyboardType="numeric"
+                label="Every (days)"
+                onChangeText={setScheduleIntervalDays}
+                placeholder="e.g. 90"
+                value={scheduleIntervalDays}
+              />
+            </View>
+            <View style={styles.intervalField}>
+              <Input
+                keyboardType="numeric"
+                label="Every (km)"
+                onChangeText={setScheduleIntervalKm}
+                placeholder="e.g. 10000"
+                value={scheduleIntervalKm}
+              />
+            </View>
+          </View>
+          <Input
+            keyboardType="numeric"
+            label="Current odometer at start (km)"
+            helperText="Used to calculate the next km-based due point"
+            onChangeText={setScheduleNextDueKm}
+            placeholder={vehicle.odometerKm?.toString() ?? ''}
+            value={scheduleNextDueKm}
+          />
+        </View>
+        <Button label="Save schedule" loading={scheduleMutation.isPending} onPress={() => scheduleMutation.mutate()} />
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Maintenance activity</Text>
-        <Input label="Title" onChangeText={setMaintenanceTitle} value={maintenanceTitle} />
-        <Input label="Scheduled for (ISO)" onChangeText={setMaintenanceScheduledFor} placeholder="2026-03-24T09:00:00.000Z" value={maintenanceScheduledFor} />
-        <Input label="Service provider" onChangeText={setMaintenanceVendor} value={maintenanceVendor} />
-        <Input keyboardType="numeric" label="Cost" onChangeText={setMaintenanceCost} value={maintenanceCost} />
-        <Input label="Notes" multiline onChangeText={setMaintenanceNotes} style={styles.multilineInput} value={maintenanceNotes} />
-        <Button label="Save maintenance event" loading={maintenanceMutation.isPending} onPress={() => maintenanceMutation.mutate()} />
+        <Text style={styles.sectionTitle}>Log maintenance activity</Text>
+        <Input
+          label="What was done"
+          onChangeText={setMaintenanceTitle}
+          placeholder="e.g. Full service, Brake pad replacement"
+          value={maintenanceTitle}
+        />
+        <Input
+          label="Service provider"
+          onChangeText={setMaintenanceVendor}
+          placeholder="Garage or workshop name"
+          value={maintenanceVendor}
+        />
+        <Input
+          keyboardType="numeric"
+          label="Cost (₦)"
+          onChangeText={setMaintenanceCost}
+          placeholder="0"
+          value={maintenanceCost}
+        />
+        <Input
+          label="Notes"
+          multiline
+          onChangeText={setMaintenanceNotes}
+          style={styles.multilineInput}
+          value={maintenanceNotes}
+        />
+        <Button
+          disabled={!maintenanceTitle.trim()}
+          label="Save maintenance activity"
+          loading={maintenanceMutation.isPending}
+          onPress={() => maintenanceMutation.mutate()}
+        />
       </Card>
 
       <Card style={styles.section}>
@@ -392,6 +502,33 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
   },
   timelineTitle: { color: tokens.colors.ink, fontSize: 15, fontWeight: '700' },
+  scheduleList: { gap: tokens.spacing.xs },
+  scheduleItem: {
+    borderColor: tokens.colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
+    padding: tokens.spacing.sm,
+  },
+  scheduleLabel: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
+  scheduleForm: { gap: tokens.spacing.sm, paddingTop: tokens.spacing.xs },
+  intervalRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.sm,
+  },
+  intervalField: { flex: 1 },
+  fleetDefaultsBox: {
+    backgroundColor: tokens.colors.primaryTint,
+    borderRadius: 10,
+    gap: 4,
+    padding: tokens.spacing.sm,
+  },
+  fleetDefaultsLabel: {
+    color: tokens.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
 });
 
 export default VehicleDetailScreen;

@@ -17,6 +17,6 @@ import { TenantBillingService } from './tenant-billing.service';
     TenantBillingService,
     SubscriptionEntitlementsService,
   ],
-  exports: [TenantBillingService, SubscriptionEntitlementsService, ControlPlaneMeteringClient],
+  exports: [TenantBillingService, SubscriptionEntitlementsService, ControlPlaneMeteringClient, ControlPlaneBillingClient],
 })
 export class TenantBillingModule {}

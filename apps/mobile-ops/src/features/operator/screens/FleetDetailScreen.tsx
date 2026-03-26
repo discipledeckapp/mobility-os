@@ -3,7 +3,7 @@
 import { getAllBusinessModelSlugs } from '@mobility-os/domain-config';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { createFleet, getFleet, listOperatingUnits, updateFleet } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -33,11 +33,19 @@ export function FleetDetailScreen({ navigation, route }: ScreenProps<'OperatorFl
   const [name, setName] = useState('');
   const [businessModel, setBusinessModel] = useState(BUSINESS_MODELS[0] ?? 'hire-purchase');
 
+  // Fleet maintenance defaults
+  const [maintenanceScheduleType, setMaintenanceScheduleType] = useState('preventive_service');
+  const [maintenanceIntervalDays, setMaintenanceIntervalDays] = useState('');
+  const [maintenanceIntervalKm, setMaintenanceIntervalKm] = useState('');
+
   useEffect(() => {
     if (fleetQuery.data) {
       setOperatingUnitId(fleetQuery.data.operatingUnitId);
       setName(fleetQuery.data.name);
       setBusinessModel(fleetQuery.data.businessModel);
+      setMaintenanceScheduleType(fleetQuery.data.maintenanceScheduleType ?? 'preventive_service');
+      setMaintenanceIntervalDays(fleetQuery.data.maintenanceIntervalDays?.toString() ?? '');
+      setMaintenanceIntervalKm(fleetQuery.data.maintenanceIntervalKm?.toString() ?? '');
     }
   }, [fleetQuery.data]);
 
@@ -47,6 +55,13 @@ export function FleetDetailScreen({ navigation, route }: ScreenProps<'OperatorFl
         operatingUnitId: operatingUnitId.trim(),
         name: name.trim(),
         businessModel: businessModel.trim(),
+        maintenanceScheduleType: maintenanceScheduleType.trim() || undefined,
+        maintenanceIntervalDays: maintenanceIntervalDays.trim()
+          ? Number.parseInt(maintenanceIntervalDays, 10)
+          : undefined,
+        maintenanceIntervalKm: maintenanceIntervalKm.trim()
+          ? Number.parseInt(maintenanceIntervalKm, 10)
+          : undefined,
       };
       return isEditing && fleetId ? updateFleet(fleetId, payload) : createFleet(payload);
     },
@@ -106,6 +121,43 @@ export function FleetDetailScreen({ navigation, route }: ScreenProps<'OperatorFl
           onChangeText={setBusinessModel}
           value={businessModel}
         />
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Maintenance defaults</Text>
+        <Text style={styles.copy}>
+          These settings apply to all vehicles in this fleet unless overridden on an individual
+          vehicle. Platform-level defaults apply where no fleet default is set.
+        </Text>
+        <Input
+          label="Default service type"
+          helperText="e.g. preventive_service, oil_change"
+          onChangeText={setMaintenanceScheduleType}
+          value={maintenanceScheduleType}
+        />
+        <View style={styles.intervalRow}>
+          <View style={styles.intervalField}>
+            <Input
+              keyboardType="numeric"
+              label="Every (days)"
+              onChangeText={setMaintenanceIntervalDays}
+              placeholder="e.g. 90"
+              value={maintenanceIntervalDays}
+            />
+          </View>
+          <View style={styles.intervalField}>
+            <Input
+              keyboardType="numeric"
+              label="Every (km)"
+              onChangeText={setMaintenanceIntervalKm}
+              placeholder="e.g. 10000"
+              value={maintenanceIntervalKm}
+            />
+          </View>
+        </View>
+      </Card>
+
+      <Card style={styles.section}>
         <Button
           label={isEditing ? 'Update fleet' : 'Create fleet'}
           loading={mutation.isPending}
@@ -126,7 +178,13 @@ export function FleetDetailScreen({ navigation, route }: ScreenProps<'OperatorFl
 const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
+  sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
   copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
+  intervalRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.sm,
+  },
+  intervalField: { flex: 1 },
 });
 
 export default FleetDetailScreen;

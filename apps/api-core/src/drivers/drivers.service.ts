@@ -5,6 +5,7 @@ import {
   normalizePhoneNumberForCountry,
 } from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
+import { TenantRole } from '@mobility-os/authz-model';
 import {
   BadRequestException,
   ConflictException,
@@ -26,9 +27,13 @@ import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ControlPlaneBillingClient } from '../tenant-billing/control-plane-billing.client';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
-import { readOrganisationSettings } from '../tenants/tenant-settings';
+import { hashPassword } from '../auth/password-utils';
+import { writeUserSettings } from '../auth/user-settings';
+import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
 import type { CreateDriverDocumentDto } from './dto/create-driver-document.dto';
@@ -202,6 +207,7 @@ export class DriversService {
     private readonly documentStorageService: DocumentStorageService,
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
     private readonly meteringClient: ControlPlaneMeteringClient,
+    private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
@@ -519,6 +525,8 @@ export class DriversService {
         requireBiometricVerification?: boolean;
         requireGovernmentVerificationLookup?: boolean;
         requiredDriverDocumentSlugs?: string[];
+        driverPaysKyc?: boolean;
+        kycPaymentVerified?: boolean;
       }
   > {
     const payload = await this.verifySelfServiceToken(token);
@@ -535,6 +543,9 @@ export class DriversService {
       requireGovernmentVerificationLookup:
         settings.operations.requireGovernmentVerificationLookup,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+      driverPaysKyc: settings.operations.driverPaysKyc,
+      kycPaymentVerified: !!(driver as Driver & { kycPaymentVerifiedAt?: Date | null })
+        .kycPaymentVerifiedAt,
     };
   }
 
@@ -804,9 +815,16 @@ export class DriversService {
     driverName: string;
     driverId: string;
     tenantId: string;
+    organisationName: string | null;
   }> {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
-    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const [driver, tenant] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.prisma.tenant.findUnique({
+        where: { id: payload.tenantId },
+        select: { name: true, country: true, metadata: true },
+      }),
+    ]);
     const guarantor = await this.driverGuarantors.findUnique({
       where: { driverId: driver.id },
     });
@@ -814,6 +832,10 @@ export class DriversService {
     if (!guarantor) {
       throw new NotFoundException('No guarantor is linked to this driver.');
     }
+
+    const organisationName = tenant
+      ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name)
+      : null;
 
     return {
       guarantorName: guarantor.name,
@@ -826,7 +848,92 @@ export class DriversService {
       driverName: `${driver.firstName} ${driver.lastName}`,
       driverId: driver.id,
       tenantId: driver.tenantId,
+      organisationName,
     };
+  }
+
+  async initiateKycCheckoutFromSelfService(
+    token: string,
+    provider: 'paystack' | 'flutterwave',
+  ): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: payload.tenantId },
+      select: { name: true, country: true, metadata: true },
+    });
+
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+
+    if (!settings.operations.driverPaysKyc) {
+      throw new BadRequestException(
+        'This organisation does not require drivers to pay for their own KYC verification.',
+      );
+    }
+
+    if (!driver.email) {
+      throw new BadRequestException(
+        'A driver email address is required to initiate a KYC payment checkout.',
+      );
+    }
+
+    // Determine currency from tenant country config.
+    let currency = 'NGN';
+    if (tenant?.country) {
+      try {
+        const { getCountryConfig } = await import('@mobility-os/domain-config');
+        currency = getCountryConfig(tenant.country).currency ?? 'NGN';
+      } catch {
+        // fall through to default
+      }
+    }
+
+    const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
+    const redirectUrl = new URL('/driver-kyc/payment-return', tenantWebUrl);
+    redirectUrl.searchParams.set('provider', provider);
+    redirectUrl.searchParams.set('token', token);
+
+    const checkout = await this.controlPlaneBillingClient.initializeDriverKycCheckout({
+      tenantId: payload.tenantId,
+      driverId: driver.id,
+      provider,
+      currency,
+      customerEmail: driver.email,
+      customerName: `${driver.firstName} ${driver.lastName}`,
+      redirectUrl: redirectUrl.toString(),
+    });
+
+    return {
+      checkoutUrl: checkout.checkoutUrl,
+      amountMinorUnits: 500_000, // ₦5,000 in kobo
+      currency,
+    };
+  }
+
+  async verifyKycPaymentFromSelfService(
+    token: string,
+    provider: string,
+    reference: string,
+  ): Promise<{ status: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+
+    await this.controlPlaneBillingClient.verifyAndApplyPayment({
+      provider,
+      reference,
+      purpose: 'driver_kyc',
+      tenantId: payload.tenantId,
+    });
+
+    await this.prisma.driver.update({
+      where: { id: payload.driverId },
+      data: {
+        kycPaymentReference: reference,
+        kycPaymentVerifiedAt: new Date(),
+      } as never,
+    });
+
+    return { status: 'verified' };
   }
 
   async initializeGuarantorLivenessSessionFromSelfService(
@@ -1398,6 +1505,74 @@ export class DriversService {
   async resolveIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
     const payload = await this.verifySelfServiceToken(token);
     return this.resolveIdentity(payload.tenantId, payload.driverId, dto);
+  }
+
+  async createDriverMobileAccountFromSelfService(
+    token: string,
+    email: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+
+    const existingLinkedUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, driverId: driver.id },
+    });
+
+    if (existingLinkedUser) {
+      throw new ConflictException(
+        'A sign-in account already exists for this driver. Use the sign-in screen to access the app.',
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingEmailUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, email: normalizedEmail },
+    });
+
+    if (existingEmailUser) {
+      throw new ConflictException(
+        'An account with this email already exists in this organisation. Use a different email address.',
+      );
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: payload.tenantId },
+      select: { country: true },
+    });
+
+    const lang = getDefaultLanguageForCountry(tenant?.country);
+    const settings = writeUserSettings(
+      null,
+      { assignedFleetIds: [], assignedVehicleIds: [], customPermissions: [] },
+      { preferredLanguage: lang, role: TenantRole.FieldOfficer, hasLinkedDriver: true },
+    );
+
+    await this.prisma.user.create({
+      data: {
+        tenantId: payload.tenantId,
+        driverId: driver.id,
+        name: `${driver.firstName} ${driver.lastName}`,
+        email: normalizedEmail,
+        phone: driver.phone ?? null,
+        role: TenantRole.FieldOfficer,
+        passwordHash: hashPassword(password),
+        isActive: true,
+        isEmailVerified: true,
+        mobileAccessRevoked: false,
+        settings: settings as import('@prisma/client').Prisma.InputJsonValue,
+      },
+    });
+
+    return { message: 'Account created. You can now sign in with your email and password.' };
+  }
+
+  async submitGuarantorFromSelfService(
+    token: string,
+    dto: CreateOrUpdateDriverGuarantorDto,
+  ): Promise<DriverGuarantorRecord> {
+    const payload = await this.verifySelfServiceToken(token);
+    return this.createOrUpdateGuarantor(payload.tenantId, payload.driverId, dto);
   }
 
   private async enrichDriversWithRisk(

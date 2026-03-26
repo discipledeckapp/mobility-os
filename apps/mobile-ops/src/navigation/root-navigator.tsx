@@ -33,6 +33,8 @@ import { VehiclesScreen } from '../features/operator/screens/VehiclesScreen';
 import { WalletScreen } from '../features/operator/screens/WalletScreen';
 import { RemittanceHistoryScreen } from '../features/remittance/screens/RemittanceHistoryScreen';
 import { RemittanceScreen } from '../features/remittance/screens/RemittanceScreen';
+import { DriverAccountSetupScreen } from '../features/self-service/screens/DriverAccountSetupScreen';
+import { DriverGuarantorScreen } from '../features/self-service/screens/DriverGuarantorScreen';
 import { SelfServiceOtpScreen } from '../features/self-service/screens/SelfServiceOtpScreen';
 import { SelfServiceReadinessScreen } from '../features/self-service/screens/SelfServiceReadinessScreen';
 import { SelfServiceResumeScreen } from '../features/self-service/screens/SelfServiceResumeScreen';
@@ -109,6 +111,16 @@ export function RootNavigator() {
               name="SelfServiceOtp"
               component={SelfServiceOtpScreen}
               options={{ title: 'Verification access' }}
+            />
+            <Stack.Screen
+              name="DriverAccountSetup"
+              component={DriverAccountSetupScreen}
+              options={{ title: 'Set up account' }}
+            />
+            <Stack.Screen
+              name="DriverGuarantor"
+              component={DriverGuarantorScreen}
+              options={{ title: 'Add guarantor' }}
             />
             <Stack.Screen
               name="Profile"
@@ -242,6 +254,16 @@ export function RootNavigator() {
               component={SelfServiceOtpScreen}
               options={{ title: 'Verification access' }}
             />
+            <Stack.Screen
+              name="DriverAccountSetup"
+              component={DriverAccountSetupScreen}
+              options={{ title: 'Set up account' }}
+            />
+            <Stack.Screen
+              name="DriverGuarantor"
+              component={DriverGuarantorScreen}
+              options={{ title: 'Add guarantor' }}
+            />
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           </>
         ) : (
@@ -282,6 +304,16 @@ export function RootNavigator() {
               name="SelfServiceReadiness"
               component={SelfServiceReadinessScreen}
               options={{ title: 'Readiness checklist' }}
+            />
+            <Stack.Screen
+              name="DriverAccountSetup"
+              component={DriverAccountSetupScreen}
+              options={{ title: 'Set up account' }}
+            />
+            <Stack.Screen
+              name="DriverGuarantor"
+              component={DriverGuarantorScreen}
+              options={{ title: 'Add guarantor' }}
             />
           </>
         )}

@@ -129,6 +129,7 @@ export interface TenantRecord {
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -210,6 +211,8 @@ export interface DriverRecord {
   hasApprovedLicence: boolean;
   hasMobileAccess?: boolean;
   mobileAccessStatus?: string | null;
+  hasGuarantor?: boolean;
+  guarantorStatus?: string | null;
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
@@ -221,6 +224,8 @@ export interface DriverRecord {
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
+  kycPaymentVerified?: boolean;
 }
 
 export interface DriverSelfServiceDocumentRecord {
@@ -408,6 +413,9 @@ export interface FleetRecord {
   name: string;
   businessModel: string;
   status: string;
+  maintenanceScheduleType?: string | null;
+  maintenanceIntervalDays?: number | null;
+  maintenanceIntervalKm?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -459,12 +467,18 @@ export interface CreateFleetInput {
   operatingUnitId: string;
   name: string;
   businessModel: string;
+  maintenanceScheduleType?: string;
+  maintenanceIntervalDays?: number;
+  maintenanceIntervalKm?: number;
 }
 
 export interface UpdateFleetInput {
   operatingUnitId?: string;
   name?: string;
   businessModel?: string;
+  maintenanceScheduleType?: string;
+  maintenanceIntervalDays?: number;
+  maintenanceIntervalKm?: number;
 }
 
 export interface TeamMemberRecord {
@@ -1041,6 +1055,7 @@ export function updateTenantSettings(input: {
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
 }): Promise<TenantRecord> {
   return apiFetch<TenantRecord>(`${API_PATHS.tenants}/me/settings`, {
     method: 'PATCH',
@@ -1167,6 +1182,54 @@ export function uploadDriverSelfServiceDocument(
     {
       method: 'POST',
       body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function createDriverMobileAccount(
+  selfServiceToken: string,
+  input: { email: string; password: string },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/create-account',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function submitDriverSelfServiceGuarantor(
+  selfServiceToken: string,
+  input: {
+    name: string;
+    phone: string;
+    email?: string;
+    countryCode?: string;
+    relationship?: string;
+  },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/guarantor',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function initiateDriverKycCheckout(
+  selfServiceToken: string,
+  provider: 'paystack' | 'flutterwave' = 'paystack',
+): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
+  return apiFetch<{ checkoutUrl: string; amountMinorUnits: number; currency: string }>(
+    '/driver-self-service/kyc-checkout',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, provider }),
     },
     false,
   );

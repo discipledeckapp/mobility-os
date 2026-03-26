@@ -2,6 +2,8 @@ import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { InternalServiceAuthGuard } from '../auth/guards/internal-service-auth.guard';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
@@ -30,6 +32,13 @@ export class PaymentsInternalController {
     @Body() dto: InitializeWalletTopUpDto,
   ): Promise<PaymentCheckoutResponseDto> {
     return this.paymentsService.initializeWalletTopUp(dto);
+  }
+
+  @Post('driver-kyc-checkouts')
+  initializeDriverKycPayment(
+    @Body() dto: InitializeDriverKycPaymentDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    return this.paymentsService.initializeDriverKycPayment(dto);
   }
 
   @Post('verify-and-apply')

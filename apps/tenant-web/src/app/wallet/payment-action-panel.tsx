@@ -105,41 +105,122 @@ export function PaymentActionPanel({
 
       <Card className="border-slate-200/80">
         <CardHeader>
-          <CardTitle>Company plan</CardTitle>
+          <CardTitle>Subscription plan</CardTitle>
           <CardDescription>
-            Review plan limits and upgrade the company subscription when you need more vehicles,
-            more operators, or verification features.
+            Your current plan and available upgrades. Upgrading takes effect immediately.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/80 p-4">
-            <p className="text-sm font-semibold text-slate-900">{summary.subscription.planName}</p>
-            <p className="mt-1 text-sm text-slate-500">
-              {summary.subscription.trialEndsAt
-                ? `Free trial ends ${new Date(summary.subscription.trialEndsAt).toLocaleDateString()}`
-                : `${summary.subscription.status.replace(/_/g, ' ')} plan`}
-            </p>
+          {/* Current plan badge */}
+          <div className="rounded-[var(--mobiris-radius-card)] border border-blue-200/80 bg-blue-50/60 p-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+              <p className="text-sm font-semibold text-slate-900">{summary.subscription.planName}</p>
+              <span className="ml-auto rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                Active plan
+              </span>
+            </div>
+            {summary.subscription.trialEndsAt ? (
+              <p className="mt-2 text-xs text-amber-700">
+                Free trial ends{' '}
+                {new Date(summary.subscription.trialEndsAt).toLocaleDateString('en-NG', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+                . Your card will be charged when the trial ends.
+              </p>
+            ) : null}
+            {/* Limits snapshot */}
+            {(() => {
+              const f = summary.subscription as unknown as { features?: Record<string, unknown> };
+              const features = f.features ?? {};
+              const vehicleCap = typeof features.vehicleCap === 'number' ? features.vehicleCap : null;
+              const driverCap = typeof features.driverCap === 'number' ? features.driverCap : null;
+              const seatLimit = typeof features.seatLimit === 'number' ? features.seatLimit : null;
+              if (!vehicleCap && !driverCap && !seatLimit) return null;
+              return (
+                <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-600">
+                  {vehicleCap !== null ? (
+                    <span className="rounded-md bg-white/80 border border-slate-200 px-2 py-1">
+                      Up to <strong>{vehicleCap}</strong> vehicles
+                    </span>
+                  ) : null}
+                  {driverCap !== null ? (
+                    <span className="rounded-md bg-white/80 border border-slate-200 px-2 py-1">
+                      Up to <strong>{driverCap}</strong> drivers
+                    </span>
+                  ) : null}
+                  {seatLimit !== null ? (
+                    <span className="rounded-md bg-white/80 border border-slate-200 px-2 py-1">
+                      Up to <strong>{seatLimit}</strong> operator seats
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
-          <div className="space-y-3">
+
+          {/* Plan picker */}
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Available plans
+          </p>
+          <div className="space-y-2">
             {plans.map((plan) => {
               const isCurrent = plan.id === summary.subscription.planId;
+              const f = plan.features;
+              const vehicleCap = typeof f.vehicleCap === 'number' ? f.vehicleCap : null;
+              const driverCap = typeof f.driverCap === 'number' ? f.driverCap : null;
+              const verificationEnabled = f.verificationEnabled === true;
+              const walletEnabled = f.walletEnabled === true;
+              const price = (plan.basePriceMinorUnits / 100).toLocaleString('en-NG');
               return (
                 <form
                   action={planAction}
-                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-white p-4"
+                  className={`rounded-[var(--mobiris-radius-card)] border p-4 transition-colors ${
+                    isCurrent
+                      ? 'border-blue-200 bg-blue-50/50'
+                      : 'border-slate-200/80 bg-white hover:border-blue-200 hover:bg-blue-50/30'
+                  }`}
                   key={plan.id}
                 >
                   <input name="planId" type="hidden" value={plan.id} />
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">{plan.name}</p>
-                      <p className="text-sm text-slate-500">
-                        {plan.currency} {(plan.basePriceMinorUnits / 100).toLocaleString()} /{' '}
-                        {plan.billingInterval}
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {plan.currency} {price} / {plan.billingInterval}
                       </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {vehicleCap !== null ? (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                            {vehicleCap} vehicles
+                          </span>
+                        ) : null}
+                        {driverCap !== null ? (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                            {driverCap} drivers
+                          </span>
+                        ) : null}
+                        {verificationEnabled ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700">
+                            Identity verification
+                          </span>
+                        ) : null}
+                        {walletEnabled ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700">
+                            Verification wallet
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <Button disabled={planPending || isCurrent} type="submit" variant="secondary">
-                      {isCurrent ? 'Current plan' : 'Switch plan'}
+                    <Button
+                      className="shrink-0"
+                      disabled={planPending || isCurrent}
+                      type="submit"
+                      variant={isCurrent ? 'secondary' : 'default'}
+                    >
+                      {isCurrent ? 'Current' : 'Upgrade'}
                     </Button>
                   </div>
                 </form>

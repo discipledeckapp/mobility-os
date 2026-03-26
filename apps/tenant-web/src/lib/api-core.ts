@@ -1818,6 +1818,7 @@ export async function getGuarantorSelfServiceContext(
   driverName: string;
   driverId: string;
   tenantId: string;
+  organisationName: string | null;
 }> {
   return apiCoreFetch('/guarantor-self-service/context', {
     method: 'POST',

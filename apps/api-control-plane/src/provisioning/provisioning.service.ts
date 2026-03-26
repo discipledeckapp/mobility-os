@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { StaffNotificationService } from '../notifications/staff-notification.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlansService } from '../plans/plans.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
@@ -62,6 +64,7 @@ export class ProvisioningService {
     private readonly plansService: PlansService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly platformWalletsService: PlatformWalletsService,
+    private readonly staffNotification: StaffNotificationService,
   ) {}
 
   async provisionTenant(dto: ProvisionTenantDto): Promise<ProvisionTenantResult> {
@@ -108,7 +111,7 @@ export class ProvisioningService {
       });
     }
 
-    return {
+    const result: ProvisionTenantResult = {
       ...coreResult,
       subscription: {
         id: subscription.id,
@@ -123,6 +126,20 @@ export class ProvisioningService {
         initialCreditMinorUnits,
       },
     };
+
+    // Fire-and-forget — never let notification failure block provisioning.
+    void this.staffNotification
+      .notifyNewTenantProvisioned({
+        tenantName: coreResult.tenant.name,
+        tenantSlug: coreResult.tenant.slug,
+        tenantCountry: coreResult.tenant.country,
+        operatorEmail: dto.operatorEmail,
+        planName: plan.name,
+        provisionedAt: new Date(),
+      })
+      .catch(() => undefined);
+
+    return result;
   }
 
   private calculatePeriodEnd(start: Date, billingInterval: string): Date {

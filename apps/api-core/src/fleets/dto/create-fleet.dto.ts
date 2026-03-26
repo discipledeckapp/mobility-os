@@ -1,6 +1,6 @@
 import { getAllBusinessModelSlugs } from '@mobility-os/domain-config';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Length, Min } from 'class-validator';
 
 export class CreateFleetDto {
   @ApiProperty({ description: 'ID of the parent OperatingUnit' })
@@ -31,4 +31,22 @@ export class CreateFleetDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ example: 'preventive_service' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  maintenanceScheduleType?: string;
+
+  @ApiPropertyOptional({ example: 90 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maintenanceIntervalDays?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maintenanceIntervalKm?: number;
 }

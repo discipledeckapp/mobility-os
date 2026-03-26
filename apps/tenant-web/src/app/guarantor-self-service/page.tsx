@@ -3,6 +3,138 @@
 import { Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
+
+// ─────────────────────────────────────────────────────────────
+// Guarantor agreement contract
+// ─────────────────────────────────────────────────────────────
+
+function GuarantorAgreementCard({
+  guarantorName,
+  driverName,
+  organisationName,
+  onAccept,
+}: {
+  guarantorName: string;
+  driverName: string;
+  organisationName: string | null;
+  onAccept: () => void;
+}) {
+  const [accepted, setAccepted] = useState(false);
+  const org = organisationName ?? 'the operator';
+  const today = new Date().toLocaleDateString('en-NG', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  return (
+    <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
+      <CardHeader className="space-y-2 border-b border-amber-100 pb-4">
+        <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Guarantor agreement
+        </Text>
+        <CardTitle>Review and accept before continuing</CardTitle>
+        <Text tone="muted">
+          Read the agreement below carefully. You will need to confirm that you understand and accept
+          your responsibilities as a guarantor before completing identity verification.
+        </Text>
+      </CardHeader>
+      <CardContent className="space-y-6 pt-6">
+        {/* Contract document */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm leading-relaxed text-slate-700">
+          <div className="mb-6 border-b border-slate-200 pb-4 text-center">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Mobiris Fleet Platform</p>
+            <p className="mt-1 text-base font-bold text-slate-900">Driver Guarantor Agreement</p>
+            <p className="mt-1 text-xs text-slate-500">Date: {today}</p>
+          </div>
+
+          <p className="mb-4">
+            This agreement is made between <strong className="text-slate-900">{guarantorName}</strong>{' '}
+            (&ldquo;Guarantor&rdquo;) and <strong className="text-slate-900">{org}</strong>{' '}
+            (&ldquo;Operator&rdquo;) in connection with the engagement of{' '}
+            <strong className="text-slate-900">{driverName}</strong> (&ldquo;Driver&rdquo;) on the Mobiris platform.
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <p className="font-semibold text-slate-900">1. Role of the Guarantor</p>
+              <p className="mt-1">
+                The Guarantor voluntarily accepts the role of guarantor for the Driver named above. The
+                Guarantor confirms that they personally know the Driver and that the information provided
+                about the Driver is true to the best of their knowledge.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900">2. Remittance obligations</p>
+              <p className="mt-1">
+                In the event that the Driver fails to meet remittance obligations owed to the Operator
+                (for example, daily or weekly payments for the use of a vehicle), the Operator may
+                contact the Guarantor to assist in recovering those outstanding amounts. The Guarantor
+                agrees to make reasonable efforts to encourage the Driver to fulfil their obligations.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900">3. No liability for vehicle damage</p>
+              <p className="mt-1">
+                The Guarantor&rsquo;s responsibility is limited to remittance obligations only. This
+                agreement does not make the Guarantor liable for physical damage to any vehicle, road
+                traffic violations, or criminal acts committed by the Driver.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900">4. Identity verification</p>
+              <p className="mt-1">
+                The Guarantor agrees to complete an identity verification step (live selfie and
+                government-issued ID check) to confirm their identity. This is required to activate
+                the guarantor relationship and to comply with the Operator&rsquo;s onboarding policy.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900">5. Duration</p>
+              <p className="mt-1">
+                This agreement remains in effect for as long as the Driver is actively engaged with
+                the Operator on the Mobiris platform. Either party may request a formal discharge in
+                writing to the Operator.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900">6. Consent</p>
+              <p className="mt-1">
+                By completing the identity verification below, the Guarantor confirms that they have
+                read, understood, and voluntarily agreed to the terms set out in this document.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Accept checkbox */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
+          />
+          <span className="text-sm leading-relaxed text-slate-700">
+            I, <strong className="text-slate-900">{guarantorName}</strong>, confirm that I have read the
+            Guarantor Agreement above, understand my responsibilities, and voluntarily accept the role of
+            guarantor for <strong className="text-slate-900">{driverName}</strong>.
+          </span>
+        </label>
+
+        <button
+          type="button"
+          disabled={!accepted}
+          onClick={onAccept}
+          className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Continue to identity verification
+        </button>
+      </CardContent>
+    </Card>
+  );
+}
 import { getGuarantorSelfServiceContext } from '../../lib/api-core';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 
@@ -132,6 +264,7 @@ function ExpiredLinkCard() {
 function GuarantorVerificationFlow({ token }: { token: string }) {
   const [context, setContext] = useState<GuarantorContext | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'expired' | 'error'>('loading');
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -195,41 +328,44 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fffbeb_28%,#fefce8_62%,#ffffff_100%)] px-4 py-10">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <section className="space-y-3">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <section className="space-y-2">
           <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
             Mobiris guarantor verification
           </Text>
-          <div className="space-y-2">
-            <Heading size="h1">{context.guarantorName}</Heading>
-            <Text tone="muted">
-              You are completing identity verification as a guarantor for{' '}
-              <span className="font-semibold text-slate-700">{context.driverName}</span>.
-              Complete the live selfie and submit your identification details below.
-            </Text>
-          </div>
+          <Heading size="h1">{context.guarantorName}</Heading>
+          <Text tone="muted">
+            {context.organisationName ?? 'An operator'} has requested you to act as guarantor for{' '}
+            <span className="font-semibold text-slate-700">{context.driverName}</span>.
+          </Text>
         </section>
 
-        <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
-          <CardHeader>
-            <CardTitle>Driver you are guaranteeing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Text className="text-lg font-semibold">{context.driverName}</Text>
-            {context.guarantorRelationship && (
-              <Text tone="muted" className="mt-1">
-                Relationship: {context.guarantorRelationship}
-              </Text>
-            )}
-          </CardContent>
-        </Card>
+        {!agreementAccepted ? (
+          <GuarantorAgreementCard
+            guarantorName={context.guarantorName}
+            driverName={context.driverName}
+            organisationName={context.organisationName}
+            onAccept={() => setAgreementAccepted(true)}
+          />
+        ) : (
+          <>
+            <Card className="border-emerald-200 bg-emerald-50/60">
+              <CardContent className="py-3 px-5">
+                <Text className="text-sm text-emerald-800">
+                  ✓ You have accepted the Guarantor Agreement for{' '}
+                  <strong>{context.driverName}</strong>.
+                </Text>
+              </CardContent>
+            </Card>
 
-        <DriverIdentityVerification
-          defaultCountryCode={context.guarantorCountryCode}
-          driver={driverProxy}
-          mode="guarantor_self_service"
-          selfServiceToken={token}
-        />
+            <DriverIdentityVerification
+              defaultCountryCode={context.guarantorCountryCode}
+              driver={driverProxy}
+              mode="guarantor_self_service"
+              selfServiceToken={token}
+            />
+          </>
+        )}
       </div>
     </main>
   );

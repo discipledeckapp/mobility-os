@@ -55,6 +55,9 @@ export class FleetsService {
         name: dto.name,
         businessModel: dto.businessModel,
         status: dto.status ?? 'active',
+        ...(dto.maintenanceScheduleType ? { maintenanceScheduleType: dto.maintenanceScheduleType } : {}),
+        ...(dto.maintenanceIntervalDays ? { maintenanceIntervalDays: dto.maintenanceIntervalDays } : {}),
+        ...(dto.maintenanceIntervalKm ? { maintenanceIntervalKm: dto.maintenanceIntervalKm } : {}),
       },
     });
   }
@@ -84,6 +87,9 @@ export class FleetsService {
         ...(dto.name ? { name: dto.name } : {}),
         ...(dto.operatingUnitId ? { operatingUnitId: dto.operatingUnitId } : {}),
         ...(dto.businessModel ? { businessModel: dto.businessModel } : {}),
+        ...(dto.maintenanceScheduleType !== undefined ? { maintenanceScheduleType: dto.maintenanceScheduleType || null } : {}),
+        ...(dto.maintenanceIntervalDays !== undefined ? { maintenanceIntervalDays: dto.maintenanceIntervalDays || null } : {}),
+        ...(dto.maintenanceIntervalKm !== undefined ? { maintenanceIntervalKm: dto.maintenanceIntervalKm || null } : {}),
       },
     });
   }

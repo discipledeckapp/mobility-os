@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -10,11 +10,25 @@ import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { initiateDriverKycCheckout } from '../../../api';
 
 export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServiceReadiness'>) {
   const { showToast } = useToast();
   const { token, driver, documents, isLoading, isRefreshing, refreshSelfService, clearSelfService } =
     useSelfService();
+
+  const onPayKyc = async () => {
+    if (!token) return;
+    try {
+      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      await Linking.openURL(checkout.checkoutUrl);
+    } catch (error) {
+      Alert.alert(
+        'Payment error',
+        error instanceof Error ? error.message : 'Unable to start KYC payment. Try again.',
+      );
+    }
+  };
 
   const onRefresh = async () => {
     try {
@@ -138,6 +152,72 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         )}
       </Card>
 
+      {driver.driverPaysKyc && !driver.kycPaymentVerified ? (
+        <Card style={[styles.section, styles.kycPaymentCard]}>
+          <Text style={styles.sectionTitle}>Identity verification payment</Text>
+          <Text style={styles.copy}>
+            Your organisation requires you to pay a ₦5,000 verification fee before your identity
+            check can proceed. This covers the cost of the biometric identity check.
+          </Text>
+          <Button
+            label="Pay ₦5,000 for identity verification"
+            onPress={() => void onPayKyc()}
+          />
+          <Text style={styles.kycNote}>
+            You will be redirected to a secure payment page. Return here after payment completes.
+          </Text>
+        </Card>
+      ) : driver.driverPaysKyc && driver.kycPaymentVerified ? (
+        <Card style={styles.section}>
+          <View style={styles.row}>
+            <Text style={styles.label}>Verification payment</Text>
+            <Badge label="Paid" tone="success" />
+          </View>
+        </Card>
+      ) : null}
+
+      {!driver.hasGuarantor ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Guarantor</Text>
+          <Text style={styles.copy}>
+            Your organisation requires a guarantor. Add contact details for someone who can vouch
+            for you — they may be contacted for verification.
+          </Text>
+          <Button
+            label="Add your guarantor"
+            onPress={() => navigation.navigate('DriverGuarantor')}
+          />
+        </Card>
+      ) : (
+        <Card style={styles.section}>
+          <View style={styles.row}>
+            <Text style={styles.label}>Guarantor</Text>
+            <Badge label="Submitted" tone="success" />
+          </View>
+        </Card>
+      )}
+
+      {!driver.hasMobileAccess ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Sign-in account</Text>
+          <Text style={styles.copy}>
+            Create your email and password so you can sign in to the app once your operator
+            approves your profile.
+          </Text>
+          <Button
+            label="Set up sign-in account"
+            onPress={() => navigation.navigate('DriverAccountSetup')}
+          />
+        </Card>
+      ) : (
+        <Card style={styles.section}>
+          <View style={styles.row}>
+            <Text style={styles.label}>Sign-in account</Text>
+            <Badge label="Active" tone="success" />
+          </View>
+        </Card>
+      )}
+
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Recommended next action</Text>
         <Text style={styles.copy}>{recommendedAction(driver.identityStatus, hasDocumentBlockers, canSignIn)}</Text>
@@ -154,7 +234,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             onPress={() => void onRefresh()}
           />
         ) : null}
-        {canSignIn ? (
+        {canSignIn && driver.hasMobileAccess ? (
           <Button
             label="Return to sign in"
             variant="secondary"
@@ -285,6 +365,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+  },
+  kycPaymentCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.primary + '40',
+    backgroundColor: '#eff6ff',
+  },
+  kycNote: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: tokens.spacing.xs,
   },
 });
 

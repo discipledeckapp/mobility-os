@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from '../../../components/button';
 import { Badge } from '../../../components/badge';
 import { Card } from '../../../components/card';
@@ -29,7 +29,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
   const onSubmit = async () => {
     if (!identifier.trim() || !password) {
-      Alert.alert('Sign in', 'Enter both your email or phone number and password.');
+      Alert.alert('Sign in', 'Enter your email or phone number and password.');
       return;
     }
 
@@ -48,15 +48,46 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
   return (
     <Screen contentContainerStyle={styles.content}>
+      {/* ── Welcome ───────────────────────────────────────────────── */}
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Mobiris Mobile Ops</Text>
-        <Text style={styles.title}>Secure field operations access</Text>
-        <Text style={styles.copy}>
-          Sign in with the same tenant account you use for operational workflows.
-        </Text>
+        <Text style={styles.wordmark}>Mobiris</Text>
+        <Text style={styles.title}>Welcome back</Text>
+        <Text style={styles.subtitle}>Fleet operations, handled.</Text>
       </View>
 
+      {/* ── Saved driver verification (resumed self-service) ─────── */}
+      {token && driver ? (
+        <Card style={styles.driverCard}>
+          <View style={styles.driverCardHeader}>
+            <View style={styles.driverAvatarDot} />
+            <View style={styles.driverCardInfo}>
+              <Text style={styles.driverName}>{driver.firstName} {driver.lastName}</Text>
+              <Text style={styles.driverHint}>Self-service verification in progress</Text>
+            </View>
+          </View>
+          <View style={styles.badgeRow}>
+            <Badge label={formatStatusLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
+            <Badge
+              label={formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
+              tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
+            />
+          </View>
+          <Text style={styles.driverSummary}>{resumeSummary(driver)}</Text>
+          <Button
+            label="Continue where you left off"
+            onPress={() => navigation.navigate('SelfServiceReadiness')}
+          />
+          <Button
+            label="Open verification tasks"
+            variant="secondary"
+            onPress={() => navigation.navigate('SelfServiceVerification')}
+          />
+        </Card>
+      ) : null}
+
+      {/* ── Sign in form ──────────────────────────────────────────── */}
       <Card style={styles.card}>
+        <Text style={styles.cardTitle}>Sign in</Text>
         <Input
           autoCapitalize="none"
           autoCorrect={false}
@@ -87,7 +118,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
                   'Biometric sign-in',
                   error instanceof Error
                     ? error.message
-                    : 'Unable to unlock this device session right now.',
+                    : 'Unable to unlock this device session.',
                 );
               } finally {
                 setSubmitting(false);
@@ -95,49 +126,34 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
             }}
           />
         ) : null}
-        <Button label="Create organisation" variant="secondary" onPress={() => navigation.navigate('Signup')} />
-        <Button
-          label="Forgot password"
-          variant="secondary"
+        <TouchableOpacity
+          style={styles.forgotRow}
           onPress={() => navigation.navigate('ForgotPassword')}
-        />
-        {token && driver ? (
-          <Card style={styles.resumeCard}>
-            <Text style={styles.resumeTitle}>Saved driver verification</Text>
-            <Text style={styles.resumeCopy}>
-              {driver.firstName} {driver.lastName}
-            </Text>
-            <View style={styles.badgeRow}>
-              <Badge label={formatStatusLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
-              <Badge
-                label={formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
-                tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
-              />
-            </View>
-            <Text style={styles.resumeMeta}>{resumeSummary(driver)}</Text>
-            <Button
-              label="Resume readiness checklist"
-              variant="secondary"
-              onPress={() => navigation.navigate('SelfServiceReadiness')}
-            />
-            <Button
-              label="Continue verification tasks"
-              variant="secondary"
-              onPress={() => navigation.navigate('SelfServiceVerification')}
-            />
-          </Card>
-        ) : (
-          <Button
-            label="Continue driver verification"
-            variant="secondary"
-            onPress={() => navigation.navigate('SelfServiceOtp')}
-          />
-        )}
+        >
+          <Text style={styles.forgotLink}>Forgot password?</Text>
+        </TouchableOpacity>
       </Card>
+
+      {/* ── Secondary paths ───────────────────────────────────────── */}
+      <View style={styles.secondaryRow}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('SelfServiceOtp')}
+        >
+          <Text style={styles.secondaryButtonText}>I'm a driver — start verification</Text>
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('Signup')}
+        >
+          <Text style={styles.secondaryButtonText}>Create an organisation</Text>
+        </TouchableOpacity>
+      </View>
+
       {isOfflineSession ? (
         <Text style={styles.offlineNote}>
-          You are using a cached offline session. New information and queued actions will sync when
-          internet access is restored.
+          Using cached offline session — actions will sync when connectivity is restored.
         </Text>
       ) : null}
     </Screen>
@@ -160,75 +176,125 @@ function resumeSummary(driver: {
     driver.rejectedDocumentCount === 0 &&
     driver.expiredDocumentCount === 0
   ) {
-    return 'Verification work on this device is complete. You can sign in for operations.';
+    return 'Verification complete. Return here after your operator activates your profile.';
   }
-
   if (driver.identityStatus !== 'verified') {
-    return 'Identity verification still needs attention on this device.';
+    return 'Identity verification still needs attention.';
   }
-
   if (!driver.hasApprovedLicence) {
-    return 'A valid approved licence is still missing from the onboarding checklist.';
+    return 'A valid approved licence is still missing.';
   }
-
   return 'Open the readiness checklist to finish outstanding onboarding items.';
 }
 
 const styles = StyleSheet.create({
   content: {
     justifyContent: 'center',
+    gap: tokens.spacing.md,
   },
   hero: {
-    gap: 10,
-    marginTop: 24,
+    alignItems: 'center',
+    paddingTop: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.sm,
+    gap: 4,
   },
-  kicker: {
+  wordmark: {
     color: tokens.colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
     textTransform: 'uppercase',
   },
   title: {
     color: tokens.colors.ink,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  copy: {
+  subtitle: {
     color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    fontWeight: '400',
   },
   card: {
-    gap: tokens.spacing.md,
+    gap: tokens.spacing.sm,
   },
-  resumeCard: {
+  cardTitle: {
+    color: tokens.colors.ink,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  forgotRow: {
+    alignItems: 'flex-end',
+    paddingTop: 2,
+  },
+  forgotLink: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  driverCard: {
     gap: tokens.spacing.sm,
     backgroundColor: tokens.colors.primaryTint,
   },
-  resumeTitle: {
+  driverCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  driverAvatarDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: tokens.colors.primary,
+  },
+  driverCardInfo: {
+    flex: 1,
+  },
+  driverName: {
     color: tokens.colors.ink,
     fontSize: 16,
     fontWeight: '700',
   },
-  resumeCopy: {
-    color: tokens.colors.ink,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  resumeMeta: {
+  driverHint: {
     color: tokens.colors.inkSoft,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
   },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
   },
+  driverSummary: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  secondaryRow: {
+    alignItems: 'center',
+    gap: tokens.spacing.xs,
+  },
+  secondaryButton: {
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.md,
+    width: '100%',
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: tokens.colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    width: '40%',
+    backgroundColor: tokens.colors.border,
+  },
   offlineNote: {
     color: tokens.colors.inkSoft,
     fontSize: 13,
     lineHeight: 18,
+    textAlign: 'center',
   },
 });
 

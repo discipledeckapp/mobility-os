@@ -8,6 +8,8 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import type { CpSubscription } from '../generated/prisma';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { StaffNotificationService } from '../notifications/staff-notification.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlansService } from '../plans/plans.service';
 import type { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import type { SubscriptionListItemDto } from './dto/subscription-list-item.dto';
@@ -17,6 +19,7 @@ export class SubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly plansService: PlansService,
+    private readonly staffNotification: StaffNotificationService,
   ) {}
 
   async listSubscriptions(): Promise<SubscriptionListItemDto[]> {
@@ -206,12 +209,12 @@ export class SubscriptionsService {
   }
 
   async changePlan(tenantId: string, newPlanId: string): Promise<CpSubscription> {
-    const [sub, plan] = await Promise.all([
+    const [sub, newPlan] = await Promise.all([
       this.getByTenant(tenantId),
       this.plansService.getPlan(newPlanId),
     ]);
 
-    if (!plan.isActive) {
+    if (!newPlan.isActive) {
       throw new BadRequestException(`Plan '${newPlanId}' is not active`);
     }
 
@@ -219,7 +222,9 @@ export class SubscriptionsService {
       throw new BadRequestException(`Tenant '${tenantId}' is already on plan '${newPlanId}'`);
     }
 
-    return this.prisma.cpSubscription.update({
+    const previousPlan = await this.plansService.getPlan(sub.planId).catch(() => null);
+
+    const updated = await this.prisma.cpSubscription.update({
       where: { id: sub.id },
       data: {
         planId: newPlanId,
@@ -228,5 +233,17 @@ export class SubscriptionsService {
         cancelAtPeriodEnd: false,
       },
     });
+
+    // Fire-and-forget — never let notification failure block a plan change.
+    void this.staffNotification
+      .notifySubscriptionTierUpgraded({
+        tenantId,
+        fromPlanName: previousPlan?.name ?? sub.planId,
+        toPlanName: newPlan.name,
+        upgradedAt: new Date(),
+      })
+      .catch(() => undefined);
+
+    return updated;
   }
 }

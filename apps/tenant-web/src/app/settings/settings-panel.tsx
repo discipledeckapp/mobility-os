@@ -316,6 +316,18 @@ export function SettingsPanel({
                   />
                   Require government/provider identity lookup when available
                 </label>
+                <label className="flex items-start gap-3 rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm md:col-span-2">
+                  <input
+                    className="mt-0.5"
+                    defaultChecked={tenant.driverPaysKyc ?? false}
+                    name="driverPaysKyc"
+                    type="checkbox"
+                  />
+                  <div>
+                    <span className="font-semibold text-slate-900">Charge drivers for identity verification (₦5,000 per check)</span>
+                    <p className="mt-0.5 text-slate-500">When enabled, drivers pay for their own KYC check instead of your organisation wallet being charged. Drivers will see a payment prompt in the mobile app before verification begins.</p>
+                  </div>
+                </label>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
                   <Input

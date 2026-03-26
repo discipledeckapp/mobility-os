@@ -9,6 +9,7 @@ import { PrismaService } from '../database/prisma.service';
 import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
+import type { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
 import type { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
 import type { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
 import type { PaymentApplicationResponseDto } from './dto/payment-application-response.dto';
@@ -125,6 +126,60 @@ export class PaymentsService {
     };
   }
 
+  // Fixed KYC verification charge: ₦5,000 = 500,000 kobo for NGN.
+  // Extend if other currencies are needed.
+  private readonly KYC_AMOUNT_BY_CURRENCY: Record<string, number> = {
+    NGN: 500_000,
+  };
+
+  async initializeDriverKycPayment(
+    dto: InitializeDriverKycPaymentDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    const currency = dto.currency.toUpperCase();
+    const amountMinorUnits = this.KYC_AMOUNT_BY_CURRENCY[currency] ?? 500_000;
+    const reference = this.buildReference('driver_kyc', dto.driverId, dto.provider);
+    const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
+    const initialized = await this.paymentProvidersService.initializePayment({
+      provider: dto.provider,
+      reference,
+      amountMinorUnits,
+      currency,
+      redirectUrl,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      description: `Mobiris identity verification fee`,
+      metadata: {
+        purpose: 'driver_kyc',
+        tenantId: dto.tenantId,
+        driverId: dto.driverId,
+      },
+    });
+
+    await this.prisma.cpPaymentAttempt.create({
+      data: {
+        provider: dto.provider,
+        reference,
+        purpose: 'driver_kyc',
+        tenantId: dto.tenantId,
+        status: 'checkout_initialized',
+        amountMinorUnits,
+        currency,
+        customerEmail: dto.customerEmail,
+        customerName: dto.customerName ?? null,
+        checkoutUrl: initialized.checkoutUrl,
+        accessCode: initialized.accessCode ?? null,
+      },
+    });
+
+    return {
+      provider: initialized.provider,
+      reference,
+      checkoutUrl: initialized.checkoutUrl,
+      ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
+      purpose: 'driver_kyc',
+    };
+  }
+
   async verifyAndApplyPayment(
     dto: VerifyAndApplyPaymentDto,
   ): Promise<PaymentApplicationResponseDto> {
@@ -196,6 +251,24 @@ export class PaymentsService {
         amountMinorUnits: verified.amountMinorUnits,
         currency: verified.currency,
         invoiceId,
+      };
+    }
+
+    // Driver KYC payment — just mark as applied. The api-core side handles
+    // the driver's kycPaymentVerifiedAt update after calling this endpoint.
+    if (purpose === 'driver_kyc') {
+      await this.prisma.cpPaymentAttempt.updateMany({
+        where: { reference: dto.reference },
+        data: { status: 'applied', appliedAt: new Date() },
+      });
+      return {
+        provider: dto.provider,
+        reference: dto.reference,
+        purpose,
+        status: 'applied',
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        tenantId: tenantId ?? undefined,
       };
     }
 
