@@ -90,7 +90,9 @@ export function CreateDriverForm({
       <CardHeader>
         <CardTitle>Create driver</CardTitle>
         <CardDescription>
-          Add a new driver to this fleet.
+          Add a new driver. Only an email address is required — the driver
+          completes their name, date of birth, and identity verification via the
+          self-service onboarding link that is sent automatically.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -103,39 +105,44 @@ export function CreateDriverForm({
           />
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone <span aria-hidden="true" className="text-red-500">*</span></Label>
+            <Label htmlFor="email">
+              Email <span aria-hidden="true" className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              placeholder="emeka@example.com"
+              required
+              type="email"
+            />
+            <HelperDisclosure summary="Why is email required?">
+              The driver receives their self-service onboarding link at this
+              address. They will set their own password and complete their
+              profile from that link.
+            </HelperDisclosure>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"
               name="phone"
               placeholder="08012345678 or +2348012345678"
-              required
             />
             <HelperDisclosure summary="Phone entry help">
-              Enter the driver&apos;s phone number with or without the country code.
+              Optional at creation. The driver can provide their phone during
+              self-service onboarding.
             </HelperDisclosure>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="firstName">First name <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <Input id="firstName" name="firstName" placeholder="Emeka" required />
+            <Label htmlFor="firstName">First name</Label>
+            <Input id="firstName" name="firstName" placeholder="Emeka" />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last name <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <Input id="lastName" name="lastName" placeholder="Okonkwo" required />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" placeholder="emeka@example.com" type="email" />
-            <HelperDisclosure summary="When is email needed?">
-              An email address is required for the driver to use the Mobiris mobile app for self-service remittance and document uploads.
-            </HelperDisclosure>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of birth</Label>
-            <Input id="dateOfBirth" name="dateOfBirth" type="date" />
+            <Label htmlFor="lastName">Last name</Label>
+            <Input id="lastName" name="lastName" placeholder="Okonkwo" />
           </div>
 
           <SearchableSelect
@@ -145,13 +152,13 @@ export function CreateDriverForm({
             onChange={setCountryCode}
             options={countryOptions}
             placeholder="Select country"
-            required
             value={countryCode}
           />
           <div className="-mt-2 md:col-span-2">
             <HelperDisclosure summary="Country selection help">
-              Driver country defaults to the organisation country, but you can change it here when
-              the driver should follow a different country profile.
+              Driver country defaults to the organisation country. Change it
+              here when the driver should follow a different country profile for
+              identity verification.
             </HelperDisclosure>
           </div>
 

@@ -7,32 +7,40 @@ export class CreateDriverDto {
   @IsNotEmpty()
   fleetId!: string;
 
-  @ApiProperty({ example: 'Emeka' })
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 80)
-  firstName!: string;
+  /**
+   * Email is required at admin-creation stage so a self-service onboarding
+   * link can be sent to the driver immediately after creation.
+   */
+  @ApiProperty({ example: 'emeka@example.com' })
+  @IsEmail()
+  email!: string;
 
-  @ApiProperty({ example: 'Okonkwo' })
+  /**
+   * Name and phone are optional at creation — the driver completes them
+   * during self-service onboarding.
+   */
+  @ApiPropertyOptional({ example: 'Emeka' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Length(1, 80)
-  lastName!: string;
+  firstName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({ example: 'Okonkwo' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  lastName?: string;
+
+  @ApiPropertyOptional({
     description: 'Phone number in local or international format',
     example: '08012345678',
   })
+  @IsOptional()
   @IsString()
   @Matches(/^\+?\d{10,15}$/, {
     message: 'phone must contain only digits and may start with +',
   })
-  phone!: string;
-
-  @ApiPropertyOptional({ example: 'emeka@example.com' })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  phone?: string;
 
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)', example: '1990-06-15' })
   @IsOptional()

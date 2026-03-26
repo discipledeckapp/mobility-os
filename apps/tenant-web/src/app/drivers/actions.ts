@@ -100,32 +100,26 @@ export async function createDriverAction(
   _prevState: CreateDriverActionState,
   formData: FormData,
 ): Promise<CreateDriverActionState> {
-  const payload: CreateDriverInput = {
-    fleetId: getTrimmedValue(formData, 'fleetId'),
-    firstName: getTrimmedValue(formData, 'firstName'),
-    lastName: getTrimmedValue(formData, 'lastName'),
-    phone: getTrimmedValue(formData, 'phone'),
-  };
-
+  const fleetId = getTrimmedValue(formData, 'fleetId');
   const email = getTrimmedValue(formData, 'email');
+
+  if (!fleetId || !email) {
+    return { error: 'Fleet and email are required.' };
+  }
+
+  const payload: CreateDriverInput = { fleetId, email };
+
+  const firstName = getTrimmedValue(formData, 'firstName');
+  const lastName = getTrimmedValue(formData, 'lastName');
+  const phone = getTrimmedValue(formData, 'phone');
   const dateOfBirth = getTrimmedValue(formData, 'dateOfBirth');
   const nationality = getTrimmedValue(formData, 'nationality').toUpperCase();
 
-  if (!payload.fleetId || !payload.firstName || !payload.lastName || !payload.phone) {
-    return {
-      error: 'Fleet, first name, last name, and phone are required.',
-    };
-  }
-
-  if (email) {
-    payload.email = email;
-  }
-  if (dateOfBirth) {
-    payload.dateOfBirth = dateOfBirth;
-  }
-  if (nationality) {
-    payload.nationality = nationality;
-  }
+  if (firstName) payload.firstName = firstName;
+  if (lastName) payload.lastName = lastName;
+  if (phone) payload.phone = phone;
+  if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
+  if (nationality) payload.nationality = nationality;
 
   let driverId: string;
   try {

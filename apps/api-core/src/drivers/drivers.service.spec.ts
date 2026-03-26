@@ -29,6 +29,7 @@ describe('DriversService', () => {
       update: jest.fn(),
     },
     user: {
+      create: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
       findFirst: jest.fn(),
@@ -36,6 +37,10 @@ describe('DriversService', () => {
     fleet: {
       findUnique: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   const intelligenceClient = {
@@ -59,6 +64,7 @@ describe('DriversService', () => {
   const subscriptionEntitlementsService = {
     enforceDriverCapacity: jest.fn(),
     enforceVehicleCapacity: jest.fn(),
+    getCapInfo: jest.fn(),
   };
 
   let service: DriversService;
@@ -72,6 +78,17 @@ describe('DriversService', () => {
     prisma.driver.findMany.mockResolvedValue([]);
     prisma.driver.count.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([]);
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requiredDriverDocumentSlugs: ['drivers-license'],
+          requireGuarantor: true,
+          requireGuarantorVerification: true,
+        },
+      },
+    });
+    prisma.$transaction.mockImplementation(async (operations: unknown[]) => Promise.all(operations));
     documentStorageService.uploadFile.mockResolvedValue({
       storageKey: 'doc-key',
       storageUrl: 'https://storage.example.com/driver-documents/doc-key',
@@ -83,6 +100,7 @@ describe('DriversService', () => {
     intelligenceClient.queryPersonRolePresence.mockResolvedValue({
       isDriver: false,
     });
+    subscriptionEntitlementsService.getCapInfo.mockResolvedValue({ driverCap: null });
     subscriptionEntitlementsService.enforceDriverCapacity.mockResolvedValue(undefined);
     service = new DriversService(
       prisma as never,
@@ -209,6 +227,10 @@ describe('DriversService', () => {
   });
 
   it('allows activation when the driver is verified and has a guarantor', async () => {
+    prisma.tenant.findUnique.mockResolvedValueOnce({
+      country: 'NG',
+      metadata: { operations: { requiredDriverDocumentSlugs: ['drivers-license'] } },
+    });
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
       tenantId: 'tenant_1',
@@ -392,6 +414,128 @@ describe('DriversService', () => {
     );
   });
 
+  it('links a field-officer tenant user as constrained driver mobile access', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      businessEntityId: 'be_1',
+      operatingUnitId: 'ou_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      phone: '+2348012345678',
+      email: 'ada@example.com',
+      identityStatus: 'verified',
+      status: 'inactive',
+    });
+    prisma.user.findFirst
+      .mockResolvedValueOnce({
+        id: 'user_1',
+        tenantId: 'tenant_1',
+        driverId: null,
+        email: 'ada-mobile@example.com',
+        phone: '+2348012345678',
+        name: 'Ada Mobile',
+        role: 'FIELD_OFFICER',
+        isActive: true,
+        settings: null,
+      })
+      .mockResolvedValueOnce(null);
+    prisma.user.update.mockResolvedValue({
+      id: 'user_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      email: 'ada-mobile@example.com',
+      phone: '+2348012345678',
+      name: 'Ada Mobile',
+      role: 'FIELD_OFFICER',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await service.linkUserToDriver('tenant_1', 'driver_1', 'user_1');
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: expect.objectContaining({
+        driverId: 'driver_1',
+        businessEntityId: 'be_1',
+        operatingUnitId: 'ou_1',
+        mobileAccessRevoked: false,
+        role: 'READ_ONLY',
+        settings: expect.objectContaining({
+          accessMode: 'driver_mobile',
+          assignedFleetIds: ['fleet_1'],
+          assignedVehicleIds: [],
+          customPermissions: expect.arrayContaining([
+            'drivers:read',
+            'assignments:read',
+            'assignments:write',
+            'remittance:read',
+            'remittance:write',
+          ]),
+        }),
+      }),
+    });
+  });
+
+  it('creates a dedicated driver mobile account from self-service with driver hierarchy scope', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'driver_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      businessEntityId: 'be_1',
+      operatingUnitId: 'ou_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      phone: '+2348012345678',
+      email: 'ada@example.com',
+      identityStatus: 'verified',
+      status: 'inactive',
+    });
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.user.create = jest.fn().mockResolvedValue({
+      id: 'user_driver_1',
+    });
+    prisma.$transaction.mockImplementation(async (operations: Promise<unknown>[]) =>
+      Promise.all(operations),
+    );
+
+    await service.createDriverMobileAccountFromSelfService(
+      'driver-self-service-token',
+      'mobile@example.com',
+      'password123',
+    );
+
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        businessEntityId: 'be_1',
+        operatingUnitId: 'ou_1',
+        role: 'READ_ONLY',
+        settings: expect.objectContaining({
+          accessMode: 'driver_mobile',
+          assignedFleetIds: ['fleet_1'],
+          assignedVehicleIds: [],
+          customPermissions: expect.arrayContaining([
+            'drivers:read',
+            'assignments:read',
+            'assignments:write',
+            'remittance:read',
+            'remittance:write',
+          ]),
+        }),
+      }),
+    });
+  });
+
   it('initializes a driver liveness session through api-intelligence', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
@@ -511,6 +655,7 @@ describe('DriversService', () => {
     await expect(
       service.create('tenant_1', {
         fleetId: 'fleet_1',
+        email: 'ada@example.com',
         firstName: 'Ada',
         lastName: 'Okafor',
         phone: '08012345678',

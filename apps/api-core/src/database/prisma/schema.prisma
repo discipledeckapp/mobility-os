@@ -223,11 +223,12 @@ model Driver {
   // active | inactive | suspended | terminated
   status   String @default("inactive")
 
-  // Personal details
-  firstName   String
-  lastName    String
-  // E.164 format
-  phone       String
+  // Personal details — name and phone are optional at admin-creation stage;
+  // the driver completes them during self-service onboarding.
+  firstName   String?
+  lastName    String?
+  // E.164 format — optional; driver may be created with email only.
+  phone       String?
   // Nullable — driver may not yet have a linked email
   email       String?
   // ISO 8601 date string (YYYY-MM-DD). Not DateTime — avoids tz ambiguity.

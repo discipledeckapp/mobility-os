@@ -5,7 +5,7 @@ import {
   normalizePhoneNumberForCountry,
 } from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
-import { TenantRole } from '@mobility-os/authz-model';
+import { Permission, TenantRole } from '@mobility-os/authz-model';
 import {
   BadRequestException,
   ConflictException,
@@ -32,7 +32,7 @@ import { ControlPlaneBillingClient } from '../tenant-billing/control-plane-billi
 import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import { hashPassword } from '../auth/password-utils';
-import { writeUserSettings } from '../auth/user-settings';
+import { readUserSettings, writeUserSettings } from '../auth/user-settings';
 import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
@@ -89,10 +89,14 @@ type DriverMobileAccessSummary = {
 };
 
 type DriverReadinessSummary = {
+  authenticationAccess: 'ready' | 'not_ready';
+  authenticationAccessReasons: string[];
   activationReadiness: 'ready' | 'partially_ready' | 'not_ready';
   activationReadinessReasons: string[];
   assignmentReadiness: 'ready' | 'partially_ready' | 'not_ready';
   assignmentReadinessReasons: string[];
+  remittanceReadiness: 'ready' | 'partially_ready' | 'not_ready';
+  remittanceReadinessReasons: string[];
 };
 
 type DriverIdentityResolutionResult = {
@@ -157,6 +161,7 @@ type MobileAccessUserRecord = {
   name: string;
   role: string;
   isActive: boolean;
+  settings?: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -188,6 +193,13 @@ type DriverDocumentReviewQueueItem = DriverDocumentRecord & {
 };
 
 const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
+const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
+  Permission.DriversRead,
+  Permission.AssignmentsRead,
+  Permission.AssignmentsWrite,
+  Permission.RemittanceRead,
+  Permission.RemittanceWrite,
+] as const;
 
 // TODO: Remove the narrow write casts in this service after the api-core Prisma
 // generation paths are unified. This repo currently has a stale secondary client
@@ -219,6 +231,31 @@ export class DriversService {
     });
 
     return readOrganisationSettings(tenant?.metadata, tenant?.country);
+  }
+
+  private async buildDriverMobileAccessSettings(
+    currentSettings: unknown,
+    input: {
+      tenantCountry?: string | null | undefined;
+      fleetId: string;
+      hasLinkedDriver?: boolean;
+    },
+  ): Promise<Prisma.InputJsonValue> {
+    const preferredLanguage = getDefaultLanguageForCountry(input.tenantCountry);
+    return writeUserSettings(
+      currentSettings,
+      {
+        assignedFleetIds: [input.fleetId],
+        assignedVehicleIds: [],
+        customPermissions: [...DRIVER_MOBILE_CUSTOM_PERMISSIONS],
+        accessMode: 'driver_mobile',
+      },
+      {
+        preferredLanguage,
+        role: TenantRole.ReadOnly,
+        hasLinkedDriver: input.hasLinkedDriver ?? true,
+      },
+    ) as Prisma.InputJsonValue;
   }
 
   private get driverDocuments(): {
@@ -533,10 +570,14 @@ export class DriversService {
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
         approvedDocumentTypes: [],
+        authenticationAccess: 'not_ready',
+        authenticationAccessReasons: [],
         activationReadiness: 'not_ready',
         activationReadinessReasons: [],
         assignmentReadiness: 'not_ready',
         assignmentReadinessReasons: [],
+        remittanceReadiness: 'not_ready',
+        remittanceReadinessReasons: [],
       }
     );
   }
@@ -620,6 +661,14 @@ export class DriversService {
     const suggestedUsers = [...emailMatches, ...phoneMatches]
       .filter((user, index, users) => users.findIndex((item) => item.id === user.id) === index)
       .filter((user) => user.id !== linkedUser?.id)
+      .filter(
+        (user) =>
+          readUserSettings(user.settings, {
+            preferredLanguage: 'en',
+            role: user.role,
+            hasLinkedDriver: Boolean(user.driverId),
+          }).accessMode === 'driver_mobile',
+      )
       .map((user) => ({
         ...user,
         matchReason:
@@ -642,23 +691,35 @@ export class DriversService {
     userId: string,
   ): Promise<MobileAccessUserRecord> {
     const driver = await this.findOne(tenantId, driverId);
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: userId,
-        tenantId,
-      },
-    });
+    const [user, tenant] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          tenantId,
+        },
+      }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { country: true },
+      }),
+    ]);
 
     if (!user) {
       throw new NotFoundException(`User '${userId}' not found`);
     }
 
     if (!user.isActive) {
-      throw new BadRequestException('Only active organisation users can be linked to a driver.');
+      throw new BadRequestException('Only active mobile access accounts can be linked to a driver.');
+    }
+
+    if (![TenantRole.FieldOfficer, TenantRole.ReadOnly].includes(user.role as TenantRole)) {
+      throw new BadRequestException(
+        'Only READ_ONLY or FIELD_OFFICER tenant users can be linked as driver mobile access accounts.',
+      );
     }
 
     if (user.driverId && user.driverId !== driver.id) {
-      throw new ConflictException('This organisation user is already linked to another driver.');
+      throw new ConflictException('This mobile access account is already linked to another driver.');
     }
 
     const currentLinkedUser = await this.prisma.user.findFirst({
@@ -670,13 +731,25 @@ export class DriversService {
 
     if (currentLinkedUser && currentLinkedUser.id !== user.id) {
       throw new ConflictException(
-        'This driver already has a linked mobile access user. Disconnect it before linking another user.',
+        'This driver already has a linked mobile access account. Disconnect it before linking another account.',
       );
     }
 
+    const settings = await this.buildDriverMobileAccessSettings(user.settings, {
+      tenantCountry: tenant?.country ?? null,
+      fleetId: driver.fleetId,
+    });
+
     return this.prisma.user.update({
       where: { id: user.id },
-      data: { driverId: driver.id, mobileAccessRevoked: false },
+      data: {
+        driverId: driver.id,
+        businessEntityId: driver.businessEntityId,
+        operatingUnitId: driver.operatingUnitId,
+        role: TenantRole.ReadOnly,
+        mobileAccessRevoked: false,
+        settings,
+      },
     });
   }
 
@@ -690,12 +763,27 @@ export class DriversService {
     });
 
     if (!user || user.driverId !== driver.id) {
-      throw new NotFoundException('No linked organisation user was found for this driver.');
+      throw new NotFoundException('No linked mobile access account was found for this driver.');
     }
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { driverId: null },
+      data: {
+        driverId: null,
+        mobileAccessRevoked: true,
+        settings: writeUserSettings(
+          user.settings,
+          {
+            accessMode: 'tenant_user',
+            customPermissions: [],
+          },
+          {
+            preferredLanguage: getDefaultLanguageForCountry(driver.nationality),
+            role: user.role,
+            hasLinkedDriver: false,
+          },
+        ) as Prisma.InputJsonValue,
+      },
     });
   }
 
@@ -733,8 +821,8 @@ export class DriversService {
 
     await this.authEmailService.sendDriverSelfServiceVerificationEmail({
       email: driver.email,
-      name: `${driver.firstName} ${driver.lastName}`,
-      driverName: `${driver.firstName} ${driver.lastName}`,
+      name: this.formatDriverName(driver),
+      driverName: this.formatDriverName(driver),
       organisationName: tenant
         ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name)
         : null,
@@ -781,7 +869,7 @@ export class DriversService {
     await this.authEmailService.sendGuarantorSelfServiceVerificationEmail({
       email: guarantor.email,
       guarantorName: guarantor.name,
-      driverName: `${driver.firstName} ${driver.lastName}`,
+      driverName: this.formatDriverName(driver),
       organisationName: tenant
         ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name)
         : null,
@@ -882,7 +970,7 @@ export class DriversService {
       guarantorRelationship: guarantor.relationship ?? null,
       guarantorPersonId: guarantor.personId ?? null,
       guarantorStatus: guarantor.status,
-      driverName: `${driver.firstName} ${driver.lastName}`,
+      driverName: this.formatDriverName(driver),
       driverId: driver.id,
       tenantId: driver.tenantId,
       organisationName,
@@ -937,7 +1025,7 @@ export class DriversService {
       provider,
       currency,
       customerEmail: driver.email,
-      customerName: `${driver.firstName} ${driver.lastName}`,
+      customerName: this.formatDriverName(driver),
       redirectUrl: redirectUrl.toString(),
     });
 
@@ -1055,7 +1143,7 @@ export class DriversService {
       drivers.map((driver) => [
         driver.id,
         {
-          driverName: `${driver.firstName} ${driver.lastName}`.trim(),
+          driverName: this.formatDriverName(driver),
           driverPhone: driver.phone,
           driverStatus: driver.status,
           fleetId: driver.fleetId,
@@ -1123,14 +1211,19 @@ export class DriversService {
       }
 
       try {
+        const rowEmail = row.email?.trim();
+        if (!rowEmail) {
+          errors.push(`Row skipped: email is required for each driver (row had no email).`);
+          continue;
+        }
         await this.create(
           tenantId,
           {
             fleetId: fleet.id,
-            firstName: row.firstName?.trim() ?? '',
-            lastName: row.lastName?.trim() ?? '',
-            phone: row.phone?.trim() ?? '',
-            ...(row.email?.trim() ? { email: row.email.trim() } : {}),
+            email: rowEmail,
+            ...(row.firstName?.trim() ? { firstName: row.firstName.trim() } : {}),
+            ...(row.lastName?.trim() ? { lastName: row.lastName.trim() } : {}),
+            ...(row.phone?.trim() ? { phone: row.phone.trim() } : {}),
             ...(row.dateOfBirth?.trim() ? { dateOfBirth: row.dateOfBirth.trim() } : {}),
             ...(row.nationality?.trim()
               ? { nationality: row.nationality.trim().toUpperCase() }
@@ -1578,27 +1671,27 @@ export class DriversService {
       select: { country: true },
     });
 
-    const lang = getDefaultLanguageForCountry(tenant?.country);
-    const settings = writeUserSettings(
-      null,
-      { assignedFleetIds: [], assignedVehicleIds: [], customPermissions: [] },
-      { preferredLanguage: lang, role: TenantRole.FieldOfficer, hasLinkedDriver: true },
-    );
+    const settings = await this.buildDriverMobileAccessSettings(null, {
+      tenantCountry: tenant?.country ?? null,
+      fleetId: driver.fleetId,
+    });
 
     await this.prisma.$transaction([
       this.prisma.user.create({
         data: {
           tenantId: payload.tenantId,
           driverId: driver.id,
-          name: `${driver.firstName} ${driver.lastName}`,
+          name: this.formatDriverName(driver),
           email: normalizedEmail,
           phone: driver.phone ?? null,
-          role: TenantRole.FieldOfficer,
+          role: TenantRole.ReadOnly,
+          businessEntityId: driver.businessEntityId,
+          operatingUnitId: driver.operatingUnitId,
           passwordHash: hashPassword(password),
           isActive: true,
           isEmailVerified: true,
           mobileAccessRevoked: false,
-          settings: settings as import('@prisma/client').Prisma.InputJsonValue,
+          settings,
         },
       }),
       // Keep driver record email in sync with the sign-in email
@@ -1622,11 +1715,56 @@ export class DriversService {
     if (Object.keys(updates).length === 0) {
       return { message: 'No changes.' };
     }
+
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, driverId: payload.driverId },
+    });
+
+    if (updates.email) {
+      const conflictingUser = await this.prisma.user.findFirst({
+        where: {
+          tenantId: payload.tenantId,
+          email: updates.email,
+          ...(linkedUser ? { NOT: { id: linkedUser.id } } : {}),
+        },
+      });
+
+      if (conflictingUser) {
+        throw new ConflictException(
+          'A tenant user with this email already exists. Use a different email address.',
+        );
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.driver.update({
+        where: { id: payload.driverId },
+        data: updates,
+      }),
+      ...(linkedUser && updates.email
+        ? [this.prisma.user.update({ where: { id: linkedUser.id }, data: { email: updates.email } })]
+        : []),
+    ]);
+    return { message: 'Contact details updated.' };
+  }
+
+  async updateProfileFromSelfService(
+    token: string,
+    profile: { firstName?: string; lastName?: string; dateOfBirth?: string },
+  ): Promise<{ message: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const updates: { firstName?: string; lastName?: string; dateOfBirth?: string } = {};
+    if (profile.firstName?.trim()) updates.firstName = profile.firstName.trim();
+    if (profile.lastName?.trim()) updates.lastName = profile.lastName.trim();
+    if (profile.dateOfBirth?.trim()) updates.dateOfBirth = profile.dateOfBirth.trim();
+    if (Object.keys(updates).length === 0) {
+      return { message: 'No changes.' };
+    }
     await this.prisma.driver.update({
       where: { id: payload.driverId },
       data: updates,
     });
-    return { message: 'Contact details updated.' };
+    return { message: 'Profile updated.' };
   }
 
   async submitGuarantorFromSelfService(
@@ -1805,10 +1943,14 @@ export class DriversService {
       this.logger.warn(`Driver readiness enrichment failed: ${this.getErrorMessage(error)}`);
       return drivers.map((driver) => ({
         ...driver,
+        authenticationAccess: 'not_ready',
+        authenticationAccessReasons: [],
         activationReadiness: 'not_ready',
         activationReadinessReasons: [],
         assignmentReadiness: 'not_ready',
         assignmentReadinessReasons: [],
+        remittanceReadiness: 'not_ready',
+        remittanceReadinessReasons: [],
       }));
     }
   }
@@ -1852,18 +1994,22 @@ export class DriversService {
       );
     }
 
-    const normalizedPhone = this.normalizePhoneNumber(dto.phone, dto.nationality ?? null);
+    const normalizedPhone = dto.phone
+      ? this.normalizePhoneNumber(dto.phone, dto.nationality ?? null)
+      : null;
 
     // Phone uniqueness per tenant is enforced by @@unique in the schema,
     // but surface a friendly error before hitting the DB constraint.
-    const existing = await this.prisma.driver.findUnique({
-      where: { tenantId_phone: { tenantId, phone: normalizedPhone } },
-    });
+    if (normalizedPhone) {
+      const existing = await this.prisma.driver.findUnique({
+        where: { tenantId_phone: { tenantId, phone: normalizedPhone } },
+      });
 
-    if (existing) {
-      throw new ConflictException(
-        `A driver with phone '${normalizedPhone}' already exists in this tenant`,
-      );
+      if (existing) {
+        throw new ConflictException(
+          `A driver with phone '${normalizedPhone}' already exists in this tenant`,
+        );
+      }
     }
 
     const currentDriverCount = await this.prisma.driver.count({
@@ -1877,10 +2023,10 @@ export class DriversService {
         fleetId: dto.fleetId,
         operatingUnitId: fleet.operatingUnit.id,
         businessEntityId: fleet.operatingUnit.businessEntityId,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
+        firstName: dto.firstName ?? null,
+        lastName: dto.lastName ?? null,
         phone: normalizedPhone,
-        email: dto.email ?? null,
+        email: dto.email,
         dateOfBirth: dto.dateOfBirth ?? null,
         nationality: dto.nationality ?? null,
         status: 'inactive', // drivers start inactive until onboarding completes
@@ -2102,6 +2248,10 @@ export class DriversService {
     return 'pending_verification';
   }
 
+  private formatDriverName(driver: { firstName?: string | null; lastName?: string | null }): string {
+    return [driver.firstName, driver.lastName].filter(Boolean).join(' ') || 'Driver';
+  }
+
   private normalizePhoneNumber(phone: string, countryCode?: string | null): string {
     const sanitized = phone.trim().replace(/[^\d+]/g, '');
 
@@ -2241,11 +2391,13 @@ export class DriversService {
   }
 
   private computeReadiness(driver: {
+    status: string;
     identityStatus: string;
     guarantorStatus?: string | null;
     guarantorPersonId?: string | null;
     hasApprovedLicence: boolean;
     hasMobileAccess: boolean;
+    mobileAccessStatus?: string | null;
     approvedDocumentTypes?: string[];
     adminAssignmentOverride?: boolean | null;
     isWatchlisted?: boolean | null | undefined;
@@ -2255,8 +2407,20 @@ export class DriversService {
     requireIdentityVerificationForActivation: boolean;
     requiredDriverDocumentSlugs: string[];
     requireGuarantor: boolean;
+    requireGuarantorVerification?: boolean;
     allowAdminAssignmentOverride: boolean;
   }): DriverReadinessSummary {
+    const authenticationAccessReasons: string[] = [];
+    if (!driver.hasMobileAccess) {
+      if (driver.mobileAccessStatus === 'inactive' || driver.mobileAccessStatus === 'revoked') {
+        authenticationAccessReasons.push('Driver mobile access is inactive or revoked.');
+      } else {
+        authenticationAccessReasons.push('Driver mobile access is not linked.');
+      }
+    }
+    const authenticationAccess =
+      authenticationAccessReasons.length === 0 ? 'ready' : 'not_ready';
+
     // --- Activation readiness (standard, unaffected by admin override) ---
     const activationReasons: string[] = [];
 
@@ -2267,16 +2431,16 @@ export class DriversService {
       activationReasons.push('Identity verification must be completed.');
     }
 
-    if (settings.requireGuarantor && (driver.guarantorStatus !== 'active' || !driver.guarantorPersonId)) {
+    if (
+      settings.requireGuarantor &&
+      (driver.guarantorStatus !== 'active' ||
+        (settings.requireGuarantorVerification && !driver.guarantorPersonId))
+    ) {
       activationReasons.push('A guarantor with verified linkage is required.');
     }
 
     if (!driver.hasApprovedLicence) {
       activationReasons.push('An approved driver licence is required.');
-    }
-
-    if (!driver.hasMobileAccess) {
-      activationReasons.push('Mobile access must be linked before operations begin.');
     }
 
     const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
@@ -2297,6 +2461,12 @@ export class DriversService {
           : 'not_ready';
 
     // --- Assignment readiness — may be overridden by admin ---
+    const assignmentReasons = [...activationReasons];
+
+    if (driver.status !== 'active') {
+      assignmentReasons.push('Driver status must be active before assignment can start.');
+    }
+
     // Check for active fraud flags that block the override regardless of setting.
     const hasFraudFlag =
       Boolean(driver.isWatchlisted) ||
@@ -2307,38 +2477,87 @@ export class DriversService {
     const overrideAllowed =
       settings.allowAdminAssignmentOverride &&
       Boolean(driver.adminAssignmentOverride) &&
+      driver.status === 'active' &&
+      authenticationAccess === 'ready' &&
       !hasFraudFlag;
 
     if (overrideAllowed) {
+      const remittanceReadiness =
+        authenticationAccess === 'ready' && driver.status === 'active' ? 'ready' : 'not_ready';
+      const remittanceReadinessReasons = [
+        ...authenticationAccessReasons,
+        ...(driver.status === 'active'
+          ? []
+          : ['Driver status must be active before remittance can be recorded.']),
+      ];
       return {
+        authenticationAccess,
+        authenticationAccessReasons,
         activationReadiness,
         activationReadinessReasons: activationReasons,
         assignmentReadiness: 'ready',
         assignmentReadinessReasons: ['Admin has approved this driver for assignment.'],
+        remittanceReadiness,
+        remittanceReadinessReasons,
       };
     }
 
     // If override was requested but blocked by fraud flags, surface that explicitly.
     if (Boolean(driver.adminAssignmentOverride) && hasFraudFlag) {
-      const assignmentReasons = [
-        ...activationReasons,
+      const blockedAssignmentReasons = [
+        ...assignmentReasons,
         'Admin override is blocked because active fraud flags are present on this driver.',
       ];
       const assignmentReadiness =
-        assignmentReasons.length <= 2 ? 'partially_ready' : 'not_ready';
+        blockedAssignmentReasons.length <= 2 ? 'partially_ready' : 'not_ready';
+      const remittanceReadiness =
+        authenticationAccess === 'ready' && driver.status === 'active'
+          ? 'ready'
+          : 'not_ready';
+      const remittanceReadinessReasons = [
+        ...authenticationAccessReasons,
+        ...(driver.status === 'active' ? [] : ['Driver status must be active before remittance can be recorded.']),
+      ];
       return {
+        authenticationAccess,
+        authenticationAccessReasons,
         activationReadiness,
         activationReadinessReasons: activationReasons,
         assignmentReadiness,
-        assignmentReadinessReasons: assignmentReasons,
+        assignmentReadinessReasons: blockedAssignmentReasons,
+        remittanceReadiness,
+        remittanceReadinessReasons,
       };
     }
 
+    const assignmentReadiness =
+      assignmentReasons.length === 0
+        ? 'ready'
+        : assignmentReasons.length <= 2
+          ? 'partially_ready'
+          : 'not_ready';
+    const remittanceReadinessReasons = [
+      ...authenticationAccessReasons,
+      ...(driver.status === 'active'
+        ? []
+        : ['Driver status must be active before remittance can be recorded.']),
+    ];
+    const remittanceReadiness =
+      remittanceReadinessReasons.length === 0
+        ? 'ready'
+        : remittanceReadinessReasons.length <= 2
+          ? 'partially_ready'
+          : 'not_ready';
+
     return {
+      authenticationAccess,
+      authenticationAccessReasons,
       activationReadiness,
       activationReadinessReasons: activationReasons,
-      assignmentReadiness: activationReadiness,
-      assignmentReadinessReasons: activationReasons,
+      assignmentReadiness,
+      assignmentReadinessReasons: assignmentReasons,
+      remittanceReadiness,
+      remittanceReadinessReasons,
     };
   }
 
@@ -2538,14 +2757,19 @@ export class DriversService {
 
     const mobileAccessByDriverId = new Map<
       string,
-      { hasMobileAccess: boolean; mobileAccessStatus: 'linked' | 'inactive' }
+      { hasMobileAccess: boolean; mobileAccessStatus: 'linked' | 'inactive' | 'revoked' }
     >();
 
     for (const user of linkedUsers) {
       if (!user.driverId) continue;
+      const mobileAccessStatus = user.mobileAccessRevoked
+        ? 'revoked'
+        : user.isActive
+          ? 'linked'
+          : 'inactive';
       mobileAccessByDriverId.set(user.driverId, {
         hasMobileAccess: user.isActive && !user.mobileAccessRevoked,
-        mobileAccessStatus: user.isActive && !user.mobileAccessRevoked ? 'linked' : 'inactive',
+        mobileAccessStatus,
       });
     }
 

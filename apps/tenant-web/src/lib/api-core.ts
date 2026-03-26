@@ -185,6 +185,7 @@ export interface DriverMobileAccessUserRecord {
   phone?: string | null;
   name: string;
   role: string;
+  accessMode?: 'tenant_user' | 'driver_mobile' | null;
   isActive: boolean;
   driverId?: string | null;
   matchReason?: string | null;
@@ -471,10 +472,12 @@ export interface UpdateOperatingUnitInput {
 
 export interface CreateDriverInput {
   fleetId: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email?: string;
+  /** Required — used to send the self-service onboarding link immediately after creation. */
+  email: string;
+  /** Optional at creation — driver completes name during self-service onboarding. */
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
   dateOfBirth?: string;
   nationality?: string;
 }
@@ -1821,6 +1824,17 @@ export async function uploadDriverSelfServiceDocument(
   return apiCoreFetch<DriverDocumentRecord>('/driver-self-service/documents', {
     method: 'POST',
     body: JSON.stringify({ token: selfServiceToken, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function updateDriverSelfServiceProfile(
+  token: string,
+  profile: { firstName?: string; lastName?: string; dateOfBirth?: string },
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/driver-self-service/update-profile', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...profile }),
     cache: 'no-store',
   });
 }

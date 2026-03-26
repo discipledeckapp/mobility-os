@@ -46,7 +46,6 @@ const initialSendState: SendDriverSelfServiceLinkActionState = {};
 
 // ── Identifier helpers ────────────────────────────────────────────────────────
 
-/** Returns the identifier types that should be collected manually (excludes auto-captured types). */
 function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[] {
   if (!isCountrySupported(countryCode)) return [];
   return getCountryConfig(countryCode).supportedIdentifierTypes.filter(
@@ -75,6 +74,16 @@ function isIdentifierPhaseComplete(
   return identifierTypes.every((id) => validateIdentifierValue(values[id.type] ?? '', id) === null);
 }
 
+function friendlyDecisionLabel(decision: string): string {
+  switch (decision) {
+    case 'verified': return 'Verification successful';
+    case 'review_needed': return 'Verification requires review';
+    case 'failed': return 'Verification failed';
+    case 'pending': return 'Verification in progress';
+    default: return 'Verification in progress';
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DriverIdentityVerification({
@@ -88,7 +97,6 @@ export function DriverIdentityVerification({
   defaultCountryCode?: string | null;
   mode?: 'operator' | 'self_service' | 'guarantor_self_service';
   selfServiceToken?: string | null;
-  /** Whether the organisation has driverPaysKyc enabled — used as default for the send-link override toggle. */
   orgDriverPaysKyc?: boolean;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
@@ -108,7 +116,6 @@ export function DriverIdentityVerification({
   const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
   const [identifierTouched, setIdentifierTouched] = useState<Record<string, boolean>>({});
 
-  // Reset identifier state when country changes
   useEffect(() => {
     setIdentifierValues({});
     setIdentifierTouched({});
@@ -155,7 +162,7 @@ export function DriverIdentityVerification({
   const [selfieImageBase64, setSelfieImageBase64] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [verificationMode, setVerificationMode] = useState<'live' | 'manual'>('live');
+  const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -165,49 +172,70 @@ export function DriverIdentityVerification({
   const identityTone = getDriverIdentityTone(identityStatus);
   const identityLabel = getDriverIdentityLabel(identityStatus);
   const canSendSelfServiceLink = Boolean(driver.email);
-  const isManualMode = verificationMode === 'manual';
-  const livenessUnavailable = startState.errorCode === 'liveness_unavailable';
+
+  // Selfie captured = liveness step done; identifier phase = step 2
+  const livenessDone = Boolean(selfieImageBase64);
 
   useEffect(() => {
     return () => {
       if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
-      if (streamRef.current) {
-        for (const track of streamRef.current.getTracks()) track.stop();
-      }
+      stopStream();
     };
-  }, [selfiePreviewUrl]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Attach stream to video element after it mounts (fixes black screen)
   useEffect(() => {
-    if (isManualMode || !session || cameraReady || selfiePreviewUrl || streamRef.current) return;
-    void startCamera();
-  }, [cameraReady, isManualMode, selfiePreviewUrl, session]);
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (video && stream && !video.srcObject) {
+      video.srcObject = stream;
+      void video.play().catch(() => {});
+    }
+  }, [cameraReady]);
+
+  function stopStream(): void {
+    if (streamRef.current) {
+      for (const track of streamRef.current.getTracks()) track.stop();
+      streamRef.current = null;
+    }
+  }
 
   async function startCamera(): Promise<void> {
     setCameraError(null);
+    setCameraGuidance('Position your face in the frame');
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('This browser cannot access the camera for live selfie capture.');
+      setCameraError('Camera access is not available in this browser. Please use a modern browser over HTTPS.');
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      if (streamRef.current) {
-        for (const track of streamRef.current.getTracks()) track.stop();
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      stopStream();
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+        setCameraReady(true);
+      } else {
+        // Video element not yet in DOM — setCameraReady will trigger re-render
+        // and the useEffect above will attach the stream.
+        setCameraReady(true);
       }
-      setCameraReady(true);
     } catch (error) {
-      setCameraError(
-        error instanceof Error ? error.message : 'Unable to access the camera for live selfie capture.',
-      );
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        setCameraError('Camera permission denied. Please allow camera access in your browser settings and try again.');
+      } else {
+        setCameraError(error instanceof Error ? error.message : 'Unable to access the camera.');
+      }
     }
   }
 
   function captureSelfie(): void {
-    if (!videoRef.current) { setCameraError('Camera preview is not ready yet.'); return; }
+    if (!videoRef.current) { setCameraError('Camera preview is not ready. Please open the camera again.'); return; }
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
@@ -221,17 +249,11 @@ export function DriverIdentityVerification({
     setSelfieImageBase64(base64);
     setSelfiePreviewUrl(dataUrl);
     setCameraReady(false);
-    if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) track.stop();
-      streamRef.current = null;
-    }
+    stopStream();
   }
 
   function resetSelfieCapture(): void {
-    if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) track.stop();
-      streamRef.current = null;
-    }
+    stopStream();
     if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
     setSelfiePreviewUrl(null);
     setSelfieImageBase64('');
@@ -303,193 +325,188 @@ export function DriverIdentityVerification({
         <Card className="border-slate-200">
           <CardHeader>
             <CardTitle>
-              {mode === 'self_service' ? 'Complete identity verification' : 'Verify identity'}
+              {mode === 'self_service' ? 'Identity verification' : 'Verify identity'}
             </CardTitle>
             <CardDescription>
-              Enter the driver's identification numbers first, then complete live or manual verification.
+              {mode === 'self_service'
+                ? 'Capture a live selfie, then enter your identification number to complete verification.'
+                : 'Capture a live selfie, then enter the driver\'s identification numbers.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
 
-            {/* ── Step 1: Country + Identifiers ── */}
+            {/* ── Step 1: Liveness capture ── */}
             <div className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
               <div className="flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] text-xs font-bold text-white">1</div>
-                <Text tone="strong">Identification numbers</Text>
+                <Text tone="strong">Face liveness capture</Text>
               </div>
               <Text tone="muted">
-                Enter the driver's identification numbers before starting verification. NIN is required; BVN is optional but recommended.
+                {mode === 'self_service'
+                  ? 'Use this device\'s camera to capture a live selfie. Make sure your face is well-lit and centred.'
+                  : 'Start a liveness session, then capture a selfie using this device\'s camera.'}
               </Text>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <SearchableSelect
-                    helperText="Country determines which identifier types are required."
-                    inputId={`countryCode-${driver.id}`}
-                    label="Country"
-                    onChange={setCountryCode}
-                    options={countryOptions}
-                    placeholder="Select country"
-                    required
-                    value={countryCode}
-                  />
-                </div>
+              {/* Start session form */}
+              {!session && !livenessDone ? (
+                <form action={startFormAction} className="space-y-3">
+                  {mode === 'self_service' || mode === 'guarantor_self_service' ? (
+                    <input name="token" type="hidden" value={selfServiceToken ?? ''} />
+                  ) : (
+                    <input name="driverId" type="hidden" value={driver.id} />
+                  )}
+                  <input name="countryCode" type="hidden" value={countryCode} />
+                  <Button disabled={isStarting} type="submit">
+                    {isStarting ? 'Starting...' : 'Start face verification'}
+                  </Button>
+                  {startState.error ? <Text tone="danger">{startState.error}</Text> : null}
+                </form>
+              ) : null}
 
-                {identifierTypes.map((idType) => {
-                  const value = identifierValues[idType.type] ?? '';
-                  const error = identifierTouched[idType.type] ? identifierErrors[idType.type] : null;
-                  const hint = [
-                    idType.exactLength ? `${idType.exactLength} digits` : null,
-                    idType.numericOnly ? 'numbers only' : null,
-                    idType.required ? 'required' : 'optional',
-                  ].filter(Boolean).join(' · ');
-
-                  return (
-                    <div className="space-y-1.5" key={idType.type}>
-                      <Label htmlFor={`${idType.type}-${driver.id}`}>
-                        {idType.label}
-                        {idType.required ? <span className="ml-1 text-rose-500">*</span> : <span className="ml-1 text-slate-400">(optional)</span>}
-                      </Label>
-                      <Input
-                        autoComplete="off"
-                        id={`${idType.type}-${driver.id}`}
-                        inputMode={idType.numericOnly ? 'numeric' : 'text'}
-                        maxLength={idType.exactLength}
-                        onBlur={() => markIdentifierTouched(idType.type)}
-                        onChange={(e) => {
-                          const raw = idType.numericOnly ? e.target.value.replace(/\D/g, '') : e.target.value;
-                          updateIdentifierValue(idType.type, raw);
-                        }}
-                        placeholder={`Enter ${hint}`}
-                        value={value}
-                      />
-                      {error ? (
-                        <Text tone="danger">{error}</Text>
-                      ) : value.length > 0 && !identifierErrors[idType.type] ? (
-                        <Text tone="success">✓ Valid</Text>
-                      ) : (
-                        <Text tone="muted">{hint}</Text>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Phone on record — shown for context */}
-                <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
-                  <Text tone="muted">Phone on record</Text>
-                  <Text>{driver.phone}</Text>
-                </div>
-                {driver.email ? (
-                  <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
-                    <Text tone="muted">Email on record</Text>
-                    <Text>{driver.email}</Text>
+              {/* Session active — camera area */}
+              {session && !livenessDone ? (
+                <div className="space-y-3">
+                  {/* Guidance text */}
+                  <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-700">
+                    {cameraError ? '⚠ ' : '📷 '}{cameraError ?? cameraGuidance}
                   </div>
-                ) : null}
-              </div>
 
-              {!idPhaseComplete && identifierTypes.some((id) => id.required) ? (
-                <Text tone="muted">
-                  Enter a valid NIN to unlock verification.
-                </Text>
-              ) : idPhaseComplete ? (
-                <Text tone="success">Identification numbers look good — proceed to verification below.</Text>
+                  {/* Video — always in DOM once session starts; hidden until stream ready */}
+                  <div className={`overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? 'max-h-72' : 'max-h-0 border-0'}`}>
+                    <video
+                      autoPlay
+                      className="w-full object-cover"
+                      muted
+                      playsInline
+                      ref={videoRef}
+                      onCanPlay={() => setCameraGuidance('Camera is ready — centre your face and capture')}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    {!cameraReady ? (
+                      <Button onClick={() => void startCamera()} type="button">
+                        Open camera
+                      </Button>
+                    ) : (
+                      <>
+                        <Button onClick={captureSelfie} type="button">
+                          Capture selfie
+                        </Button>
+                        <Button onClick={resetSelfieCapture} type="button" variant="ghost">
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Selfie preview */}
+              {selfiePreviewUrl && livenessDone ? (
+                <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-emerald-50/50 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-600 font-medium text-sm">✓ Selfie captured</span>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img alt="Captured selfie preview" className="max-h-40 rounded-[var(--mobiris-radius-card)] object-cover" src={selfiePreviewUrl} />
+                  <Button onClick={resetSelfieCapture} type="button" variant="ghost" size="sm">
+                    Retake selfie
+                  </Button>
+                </div>
               ) : null}
             </div>
 
-            {/* ── Step 2: Choose method + Start liveness ── */}
-            <div className={`space-y-4 rounded-[var(--mobiris-radius-card)] border p-4 transition-opacity ${idPhaseComplete ? 'border-[var(--mobiris-border)] bg-white opacity-100' : 'border-slate-100 bg-slate-50/50 opacity-50'}`}>
+            {/* ── Step 2: Identification numbers (shown AFTER selfie captured) ── */}
+            <div className={`space-y-4 rounded-[var(--mobiris-radius-card)] border p-4 transition-opacity ${livenessDone ? 'border-[var(--mobiris-border)] bg-white opacity-100' : 'border-slate-100 bg-slate-50/50 opacity-40 pointer-events-none'}`}>
               <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>2</div>
-                <Text tone="strong">Choose verification method</Text>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>2</div>
+                <Text tone="strong">Identification numbers</Text>
               </div>
 
-              {livenessUnavailable ? (
-                <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50/60 p-3 space-y-2">
-                  <Text tone="strong">Live verification is not available right now</Text>
-                  <Text tone="muted">
-                    The identity verification service is not configured on this environment. Use manual verification to submit identifiers for review instead.
-                  </Text>
-                </div>
-              ) : null}
-
-              <form action={startFormAction} className="space-y-3">
-                {mode === 'self_service' || mode === 'guarantor_self_service' ? (
-                  <input name="token" type="hidden" value={selfServiceToken ?? ''} />
-                ) : (
-                  <input name="driverId" type="hidden" value={driver.id} />
-                )}
-                <input name="countryCode" type="hidden" value={countryCode} />
-
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    disabled={!idPhaseComplete || isStarting || livenessUnavailable}
-                    onClick={() => setVerificationMode('live')}
-                    type="submit"
-                  >
-                    {isStarting && verificationMode === 'live' ? 'Starting...' : 'Start live verification'}
-                  </Button>
-                  <Button
-                    disabled={!idPhaseComplete}
-                    onClick={() => { setVerificationMode('manual'); resetSelfieCapture(); }}
-                    type="button"
-                    variant="secondary"
-                  >
-                    Manual verification only
-                  </Button>
-                </div>
-              </form>
-
-              {startState.error && !livenessUnavailable ? (
-                <Text tone="danger">{startState.error}</Text>
-              ) : null}
-
-              {/* Liveness session info */}
-              {session && !isManualMode ? (
-                <div className="rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4 space-y-2">
-                  <Text tone="strong">Live session active</Text>
-                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                    <Text>Provider: {session.providerName}</Text>
-                    <Text>{cameraReady ? 'Camera is ready' : selfiePreviewUrl ? 'Selfie captured' : 'Opening camera...'}</Text>
-                    <Text>Expires: {session.expiresAt ?? 'Not provided'}</Text>
-                    <Text>Fallbacks: {session.fallbackChain.length > 0 ? session.fallbackChain.join(', ') : 'None'}</Text>
+              {!livenessDone ? (
+                <Text tone="muted">Complete face capture above to unlock this step.</Text>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <SearchableSelect
+                      helperText="Country determines which identifier types are required."
+                      inputId={`countryCode-${driver.id}`}
+                      label="Country"
+                      onChange={setCountryCode}
+                      options={countryOptions}
+                      placeholder="Select country"
+                      required
+                      value={countryCode}
+                    />
                   </div>
-                </div>
-              ) : null}
 
-              {/* Camera */}
-              {session && !isManualMode && !cameraReady && !selfiePreviewUrl ? (
-                <Button onClick={() => void startCamera()} type="button" variant="secondary">Open camera again</Button>
-              ) : null}
-              {cameraReady && !isManualMode ? (
-                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
-                  <video
-                    autoPlay
-                    className="max-h-64 w-full rounded-[var(--mobiris-radius-card)] bg-slate-950 object-cover"
-                    muted
-                    playsInline
-                    ref={videoRef}
-                  />
-                  <div className="flex flex-wrap gap-3">
-                    <Button onClick={captureSelfie} type="button">Capture selfie</Button>
-                    <Button onClick={resetSelfieCapture} type="button" variant="ghost">Cancel camera</Button>
-                  </div>
+                  {identifierTypes.map((idType) => {
+                    const value = identifierValues[idType.type] ?? '';
+                    const error = identifierTouched[idType.type] ? identifierErrors[idType.type] : null;
+                    const hint = [
+                      idType.exactLength ? `${idType.exactLength} digits` : null,
+                      idType.numericOnly ? 'numbers only' : null,
+                      idType.required ? 'required' : 'optional',
+                    ].filter(Boolean).join(' · ');
+
+                    return (
+                      <div className="space-y-1.5" key={idType.type}>
+                        <Label htmlFor={`${idType.type}-${driver.id}`}>
+                          {idType.label}
+                          {idType.required ? <span className="ml-1 text-rose-500">*</span> : <span className="ml-1 text-slate-400">(optional)</span>}
+                        </Label>
+                        <Input
+                          autoComplete="off"
+                          id={`${idType.type}-${driver.id}`}
+                          inputMode={idType.numericOnly ? 'numeric' : 'text'}
+                          maxLength={idType.exactLength}
+                          onBlur={() => markIdentifierTouched(idType.type)}
+                          onChange={(e) => {
+                            const raw = idType.numericOnly ? e.target.value.replace(/\D/g, '') : e.target.value;
+                            updateIdentifierValue(idType.type, raw);
+                          }}
+                          placeholder={`Enter ${hint}`}
+                          value={value}
+                        />
+                        {error ? (
+                          <Text tone="danger">{error}</Text>
+                        ) : value.length > 0 && !identifierErrors[idType.type] ? (
+                          <Text tone="success">✓ Valid</Text>
+                        ) : (
+                          <Text tone="muted">{hint}</Text>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Auto-captured context */}
+                  {driver.phone ? (
+                    <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
+                      <Text tone="muted">Phone on record</Text>
+                      <Text>{driver.phone}</Text>
+                    </div>
+                  ) : null}
+                  {driver.email ? (
+                    <div className="space-y-1 rounded-[var(--mobiris-radius-card)] border border-slate-100 bg-slate-50/70 p-3">
+                      <Text tone="muted">Email on record</Text>
+                      <Text>{driver.email}</Text>
+                    </div>
+                  ) : null}
+
+                  {idPhaseComplete ? (
+                    <div className="md:col-span-2">
+                      <Text tone="success">Identification numbers look good — proceed to submit below.</Text>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              {selfiePreviewUrl && !isManualMode ? (
-                <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-3">
-                  <Text tone="strong">Captured selfie</Text>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img alt="Captured live selfie preview" className="max-h-48 rounded-[var(--mobiris-radius-card)] object-cover" src={selfiePreviewUrl} />
-                  <Button onClick={resetSelfieCapture} type="button" variant="ghost">Retake selfie</Button>
-                </div>
-              ) : null}
-              {cameraError ? <Text tone="danger">{cameraError}</Text> : null}
+              )}
             </div>
 
             {/* ── Step 3: Consent + Submit ── */}
             <form action={resolveFormAction} className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
               <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>3</div>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone && idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>3</div>
                 <Text tone="strong">Consent and submit</Text>
               </div>
 
@@ -499,7 +516,7 @@ export function DriverIdentityVerification({
               ) : (
                 <input name="driverId" type="hidden" value={driver.id} />
               )}
-              <input name="verificationMode" type="hidden" value={verificationMode} />
+              <input name="verificationMode" type="hidden" value="live" />
               <input name="countryCode" type="hidden" value={countryCode} />
               <input name="providerName" type="hidden" value={session?.providerName ?? ''} />
               <input name="sessionId" type="hidden" value={session?.sessionId ?? ''} />
@@ -514,13 +531,11 @@ export function DriverIdentityVerification({
               ))}
 
               <Text tone="muted">
-                {isManualMode
-                  ? 'This submission will proceed without a live selfie and may be routed to manual review.'
-                  : !session
-                    ? 'Start live verification above before submitting.'
-                    : !selfieImageBase64
-                      ? 'Capture a live selfie above before submitting.'
-                      : 'Ready to submit.'}
+                {!livenessDone
+                  ? 'Complete the face capture in step 1 before submitting.'
+                  : !idPhaseComplete
+                    ? 'Enter your identification number in step 2 before submitting.'
+                    : 'Ready to submit your verification.'}
               </Text>
 
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -532,23 +547,17 @@ export function DriverIdentityVerification({
                 <span>
                   {mode === 'guarantor_self_service'
                     ? 'I confirm I have given consent for my identity and liveness to be verified.'
-                    : 'I confirm the driver has given consent for identity and liveness verification.'}
+                    : mode === 'self_service'
+                      ? 'I confirm I have given consent for my identity and liveness to be verified.'
+                      : 'I confirm the driver has given consent for identity and liveness verification.'}
                 </span>
               </label>
 
               <Button
-                disabled={
-                  !idPhaseComplete ||
-                  isResolving ||
-                  (!isManualMode && (!session || !selfieImageBase64))
-                }
+                disabled={!livenessDone || !idPhaseComplete || isResolving || !session}
                 type="submit"
               >
-                {isResolving
-                  ? 'Submitting...'
-                  : isManualMode
-                    ? 'Submit for manual review'
-                    : 'Submit verification'}
+                {isResolving ? 'Submitting...' : 'Submit verification'}
               </Button>
 
               {resolveState.error ? <Text tone="danger">{resolveState.error}</Text> : null}
@@ -560,16 +569,22 @@ export function DriverIdentityVerification({
                     {resolveState.success ? <Text>{resolveState.success}</Text> : null}
                   </div>
                   <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                    <Text>Decision: {result.decision}</Text>
-                    <Text>Provider status: {result.providerVerificationStatus ?? result.providerLookupStatus ?? 'Not provided'}</Text>
-                    <Text>Liveness passed: {result.livenessPassed === true ? 'Yes' : result.livenessPassed === false ? 'No' : 'Awaiting provider evidence'}</Text>
-                    <Text>Liveness confidence: {result.livenessConfidenceScore ?? 'Not returned'}</Text>
-                    <Text>Provider: {result.livenessProviderName ?? result.providerName ?? 'Not returned'}</Text>
-                    <Text>Confidence: {result.verificationConfidence ?? 'Not returned'}</Text>
+                    <Text>{friendlyDecisionLabel(result.decision)}</Text>
+                    <Text>
+                      Liveness:{' '}
+                      {result.livenessPassed === true
+                        ? 'Passed'
+                        : result.livenessPassed === false
+                          ? 'Did not pass'
+                          : 'Verification in progress'}
+                    </Text>
+                    {result.livenessConfidenceScore != null ? (
+                      <Text>Confidence: {(result.livenessConfidenceScore * 100).toFixed(0)}%</Text>
+                    ) : null}
                   </div>
                   {result.livenessReason ? <Text tone="muted">{result.livenessReason}</Text> : null}
                   {identityStatus === 'review_needed' ? (
-                    <Text>This driver cannot be activated yet. Open the review guidance to see what your operations team should do next.</Text>
+                    <Text>This driver cannot be activated yet. Your operations team will review the case and take action.</Text>
                   ) : null}
                 </div>
               ) : null}

@@ -30,8 +30,10 @@ import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import {
   applyFleetScope,
+  assertLinkedDriverAccess,
   assertFleetAccess,
   getAssignedFleetIds,
+  getLinkedDriverId,
 } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -110,10 +112,14 @@ type DriverMobileAccessSummary = {
 };
 
 type DriverReadinessSummary = {
+  authenticationAccess: string;
+  authenticationAccessReasons: string[];
   activationReadiness: string;
   activationReadinessReasons: string[];
   assignmentReadiness: string;
   assignmentReadinessReasons: string[];
+  remittanceReadiness: string;
+  remittanceReadinessReasons: string[];
 };
 
 @ApiTags('Drivers')
@@ -135,6 +141,33 @@ export class DriversController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListDriversDto,
   ): Promise<PaginatedResponse<DriverResponseDto>> {
+    const linkedDriverId = getLinkedDriverId(ctx);
+    if (linkedDriverId) {
+      return this.service.findOne(ctx.tenantId, linkedDriverId).then((driver) => {
+        const q = query.q?.trim().toLowerCase();
+        const matchesQuery =
+          !q ||
+          [driver.firstName, driver.lastName, driver.phone, driver.email ?? ''].some((value) =>
+            value.toLowerCase().includes(q),
+          );
+        const matchesFleet = !query.fleetId || driver.fleetId === query.fleetId;
+        const matchesStatus = !query.status || driver.status === query.status;
+        const matchesIdentityStatus =
+          !query.identityStatus || driver.identityStatus === query.identityStatus;
+        const data =
+          matchesQuery && matchesFleet && matchesStatus && matchesIdentityStatus
+            ? [this.toResponse(driver)]
+            : [];
+
+        return {
+          data,
+          total: data.length,
+          page: query.page ?? 1,
+          limit: query.limit ?? 50,
+        };
+      });
+    }
+
     return this.service.list(ctx.tenantId, applyFleetScope(query, ctx)).then((result) => ({
       ...result,
       data: result.data.map((driver) => this.toResponse(driver)),
@@ -334,6 +367,7 @@ export class DriversController {
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
   ): Promise<DriverResponseDto> {
+    assertLinkedDriverAccess(ctx, id);
     return this.service.findOne(ctx.tenantId, id).then((driver) => {
       assertFleetAccess(ctx, driver.fleetId);
       return this.toResponse(driver);
@@ -581,10 +615,14 @@ export class DriversController {
       pendingDocumentCount: driver.pendingDocumentCount ?? 0,
       rejectedDocumentCount: driver.rejectedDocumentCount ?? 0,
       expiredDocumentCount: driver.expiredDocumentCount ?? 0,
+      authenticationAccess: driver.authenticationAccess ?? 'not_ready',
+      authenticationAccessReasons: driver.authenticationAccessReasons ?? [],
       activationReadiness: driver.activationReadiness ?? 'not_ready',
       activationReadinessReasons: driver.activationReadinessReasons ?? [],
       assignmentReadiness: driver.assignmentReadiness ?? 'not_ready',
       assignmentReadinessReasons: driver.assignmentReadinessReasons ?? [],
+      remittanceReadiness: driver.remittanceReadiness ?? 'not_ready',
+      remittanceReadinessReasons: driver.remittanceReadinessReasons ?? [],
       adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
@@ -598,6 +636,7 @@ export class DriversController {
     phone?: string | null;
     name: string;
     role: string;
+    settings?: unknown;
     isActive: boolean;
     driverId?: string | null;
     matchReason?: string | null;
@@ -610,6 +649,15 @@ export class DriversController {
       phone: user.phone ?? null,
       name: user.name,
       role: user.role,
+      accessMode:
+        typeof user.settings === 'object' &&
+        user.settings &&
+        !Array.isArray(user.settings) &&
+        (user.settings as Record<string, unknown>).accessMode === 'driver_mobile'
+          ? 'driver_mobile'
+          : user.driverId
+            ? 'driver_mobile'
+            : 'tenant_user',
       isActive: user.isActive,
       driverId: user.driverId ?? null,
       matchReason: user.matchReason ?? null,
@@ -678,6 +726,10 @@ export class DriverSelfServiceController {
       pendingDocumentCount: (driver as Partial<DriverDocumentSummary>).pendingDocumentCount ?? 0,
       rejectedDocumentCount: (driver as Partial<DriverDocumentSummary>).rejectedDocumentCount ?? 0,
       expiredDocumentCount: (driver as Partial<DriverDocumentSummary>).expiredDocumentCount ?? 0,
+      authenticationAccess:
+        (driver as Partial<DriverReadinessSummary>).authenticationAccess ?? 'not_ready',
+      authenticationAccessReasons:
+        (driver as Partial<DriverReadinessSummary>).authenticationAccessReasons ?? [],
       activationReadiness:
         (driver as Partial<DriverReadinessSummary>).activationReadiness ?? 'not_ready',
       activationReadinessReasons:
@@ -686,6 +738,10 @@ export class DriverSelfServiceController {
         (driver as Partial<DriverReadinessSummary>).assignmentReadiness ?? 'not_ready',
       assignmentReadinessReasons:
         (driver as Partial<DriverReadinessSummary>).assignmentReadinessReasons ?? [],
+      remittanceReadiness:
+        (driver as Partial<DriverReadinessSummary>).remittanceReadiness ?? 'not_ready',
+      remittanceReadinessReasons:
+        (driver as Partial<DriverReadinessSummary>).remittanceReadinessReasons ?? [],
       adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
@@ -745,6 +801,24 @@ export class DriverSelfServiceController {
       throw new BadRequestException('token is required');
     }
     return this.service.updateContactFromSelfService(token, { ...(email ? { email } : {}) });
+  }
+
+  @Post('update-profile')
+  @ApiCreatedResponse({ type: Object })
+  updateProfile(
+    @Body('token') token: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+    @Body('dateOfBirth') dateOfBirth?: string,
+  ): Promise<{ message: string }> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.updateProfileFromSelfService(token, {
+      ...(firstName ? { firstName } : {}),
+      ...(lastName ? { lastName } : {}),
+      ...(dateOfBirth ? { dateOfBirth } : {}),
+    });
   }
 
   @Post('guarantor')
