@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   type SessionRecord,
   configureApiRefreshHandler,
@@ -23,7 +24,7 @@ import {
   refreshAuthToken,
 } from '../api';
 import { DEFAULT_REFRESH_LEAD_TIME_MS, STORAGE_KEYS } from '../constants';
-import { getRefreshDelayMs } from '../lib/jwt';
+import { getRefreshDelayMs, parseJwtExpiry } from '../lib/jwt';
 import { configureMobileLogContext } from '../services/mobile-log-service';
 import {
   cacheOfflineSession,
@@ -41,12 +42,15 @@ interface AuthContextValue {
   isOfflineSession: boolean;
   biometricAvailable: boolean;
   biometricEnabled: boolean;
+  sessionExpiresAt: number | null;
+  showExpiryWarning: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   loginWithBiometric: () => Promise<void>;
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   tryRefreshToken: () => Promise<boolean>;
+  dismissExpiryWarning: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -59,7 +63,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isOfflineSession, setIsOfflineSession] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expiryWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
   const tryRefreshTokenRef = useRef<() => Promise<boolean>>(async () => false);
 
@@ -68,6 +75,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
     }
+    if (expiryWarningTimerRef.current) {
+      clearTimeout(expiryWarningTimerRef.current);
+      expiryWarningTimerRef.current = null;
+    }
+  }, []);
+
+  const dismissExpiryWarning = useCallback(() => {
+    setShowExpiryWarning(false);
   }, []);
 
   const primeApiAuthReaders = useCallback((nextAccessToken: string | null, nextRefreshToken: string | null) => {
@@ -92,8 +107,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     (nextToken: string | null) => {
       clearRefreshTimer();
       if (!nextToken) {
+        setSessionExpiresAt(null);
+        setShowExpiryWarning(false);
         return;
       }
+
+      const expiryMs = parseJwtExpiry(nextToken);
+      setSessionExpiresAt(expiryMs);
+      setShowExpiryWarning(false);
 
       const delayMs = getRefreshDelayMs(nextToken, DEFAULT_REFRESH_LEAD_TIME_MS);
       if (delayMs === null) {
@@ -103,6 +124,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refreshTimerRef.current = setTimeout(() => {
         void tryRefreshTokenRef.current();
       }, delayMs);
+
+      // Show expiry warning 2 minutes before the token expires
+      const WARNING_LEAD_MS = 2 * 60 * 1000;
+      const warningDelayMs = getRefreshDelayMs(nextToken, WARNING_LEAD_MS);
+      if (warningDelayMs !== null && warningDelayMs > 0) {
+        expiryWarningTimerRef.current = setTimeout(() => {
+          setShowExpiryWarning(true);
+        }, warningDelayMs);
+      }
     },
     [clearRefreshTimer],
   );
@@ -130,6 +160,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setToken(nextTokens.accessToken);
         setRefreshToken(nextTokens.refreshToken);
         scheduleTokenRefresh(nextTokens.accessToken);
+        setShowExpiryWarning(false);
         const nextSession = await getSession();
         setSession(nextSession);
         setIsOfflineSession(false);
@@ -373,16 +404,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } else if (isNetworkError(error) && cachedSession) {
           setSession(cachedSession.session);
           setIsOfflineSession(true);
-        } else {
-          throw error;
         }
+        // Unknown errors (5xx, parse failures, etc.) — do NOT logout. The user
+        // is still authenticated; they just can't reach the server right now.
+        // The next foreground action will retry and the unauthorised handler
+        // will fire if the token is genuinely invalid.
       } finally {
         setIsLoading(false);
       }
     };
 
-    restore().catch(async () => {
-      await logout();
+    restore().catch(() => {
+      // Catastrophic startup failure (e.g. SecureStore unavailable). Do not
+      // logout — that would wipe tokens unnecessarily. Just unblock the UI.
       setIsLoading(false);
     });
 
@@ -399,16 +433,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isOfflineSession,
       biometricAvailable,
       biometricEnabled,
+      sessionExpiresAt,
+      showExpiryWarning,
       loginWithPassword,
       loginWithBiometric,
       setBiometricEnabled,
       logout,
       refreshSession,
       tryRefreshToken,
+      dismissExpiryWarning,
     }),
     [
       biometricAvailable,
       biometricEnabled,
+      dismissExpiryWarning,
       isLoading,
       isOfflineSession,
       loginWithBiometric,
@@ -416,14 +454,163 @@ export function AuthProvider({ children }: PropsWithChildren) {
       logout,
       refreshSession,
       session,
+      sessionExpiresAt,
       setBiometricEnabled,
+      showExpiryWarning,
       token,
       tryRefreshToken,
     ],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <SessionExpiryWarning
+        visible={showExpiryWarning}
+        expiresAt={sessionExpiresAt}
+        onRefresh={async () => {
+          const ok = await tryRefreshToken();
+          if (!ok) await logout();
+        }}
+        onDismiss={dismissExpiryWarning}
+      />
+    </AuthContext.Provider>
+  );
 }
+
+// ---------------------------------------------------------------------------
+// Session expiry warning modal
+// ---------------------------------------------------------------------------
+
+interface SessionExpiryWarningProps {
+  visible: boolean;
+  expiresAt: number | null;
+  onRefresh: () => Promise<void>;
+  onDismiss: () => void;
+}
+
+function SessionExpiryWarning({ visible, expiresAt, onRefresh, onDismiss }: SessionExpiryWarningProps) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!visible || !expiresAt) {
+      setSecondsLeft(null);
+      return;
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [visible, expiresAt]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={onDismiss}>
+      <View style={expiryStyles.overlay}>
+        <View style={expiryStyles.card}>
+          <Text style={expiryStyles.title}>Session expiring soon</Text>
+          <Text style={expiryStyles.body}>
+            Your session will expire{' '}
+            {secondsLeft !== null ? (
+              <Text style={expiryStyles.countdown}>{formatTime(secondsLeft)}</Text>
+            ) : null}
+            . Tap below to stay signed in.
+          </Text>
+          <TouchableOpacity
+            style={[expiryStyles.btn, expiryStyles.btnPrimary]}
+            onPress={handleRefresh}
+            disabled={refreshing}
+            activeOpacity={0.8}
+          >
+            <Text style={expiryStyles.btnPrimaryText}>
+              {refreshing ? 'Refreshing…' : 'Stay signed in'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[expiryStyles.btn, expiryStyles.btnGhost]}
+            onPress={onDismiss}
+            activeOpacity={0.7}
+          >
+            <Text style={expiryStyles.btnGhostText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const expiryStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    gap: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  body: {
+    fontSize: 15,
+    color: '#475569',
+    lineHeight: 22,
+  },
+  countdown: {
+    fontWeight: '700',
+    color: '#EF4444',
+    fontVariant: ['tabular-nums'],
+  },
+  btn: {
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  btnPrimary: {
+    backgroundColor: '#2563EB',
+  },
+  btnPrimaryText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  btnGhost: {
+    backgroundColor: 'transparent',
+  },
+  btnGhostText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+});
 
 export function useAuth() {
   const value = useContext(AuthContext);

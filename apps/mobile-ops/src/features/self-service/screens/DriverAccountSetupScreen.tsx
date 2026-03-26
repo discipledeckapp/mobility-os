@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { createDriverMobileAccount } from '../../../api';
+import { createDriverMobileAccount, updateDriverSelfServiceContact } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
@@ -49,6 +49,12 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
     setSubmitting(true);
     try {
       await createDriverMobileAccount(token, { email: email.trim(), password });
+      // If the email differs from what the operator originally recorded, sync it back
+      if (email.trim().toLowerCase() !== (driver?.email ?? '').toLowerCase()) {
+        await updateDriverSelfServiceContact(token, { email: email.trim() }).catch(() => {
+          // Non-fatal — account was created; email sync will be retried next context refresh
+        });
+      }
       Alert.alert(
         'Account created',
         'Your sign-in account is ready. Return to the sign-in screen and log in with your email and password.',
@@ -78,6 +84,15 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
       </View>
 
       <Card style={styles.card}>
+        {driver?.phone ? (
+          <Input
+            editable={false}
+            helperText="Phone is set by your operator and cannot be changed here."
+            label="Phone"
+            style={styles.readOnly}
+            value={driver.phone}
+          />
+        ) : null}
         <Input
           autoCapitalize="none"
           autoCorrect={false}
@@ -222,6 +237,9 @@ const styles = StyleSheet.create({
   checkItemMet: {
     color: '#10B981',
     fontWeight: '600',
+  },
+  readOnly: {
+    opacity: 0.65,
   },
 });
 

@@ -315,14 +315,9 @@ export function SelfServiceVerificationScreen({
       return;
     }
 
+    // Open the camera FIRST — the liveness session creation is a background
+    // concern and must never block the camera from launching.
     try {
-      if (biometricVerificationRequired) {
-        const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
-        setLivenessSession(session);
-      } else {
-        setLivenessSession(null);
-      }
-
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
@@ -342,6 +337,16 @@ export function SelfServiceVerificationScreen({
       setSelfieBase64(asset.base64);
       setSelfiePreviewUri(asset.uri ?? null);
       showToast('Selfie captured.', 'success');
+
+      // Create liveness session after capture — non-fatal if it fails; the
+      // identity submission will still proceed without a session reference.
+      if (biometricVerificationRequired) {
+        createDriverSelfServiceLivenessSession(token, { countryCode })
+          .then(setLivenessSession)
+          .catch(() => setLivenessSession(null));
+      } else {
+        setLivenessSession(null);
+      }
     } catch (error) {
       Alert.alert(
         'Live verification',
@@ -485,6 +490,8 @@ export function SelfServiceVerificationScreen({
         uploadedBy: 'driver_self_service',
       });
 
+      // Brief delay so the server write is visible before we re-fetch.
+      await new Promise((resolve) => setTimeout(resolve, 800));
       await refreshSelfService();
       showToast('Document uploaded.', 'success');
     } catch (error) {

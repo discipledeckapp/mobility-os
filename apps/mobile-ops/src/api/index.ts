@@ -1209,6 +1209,20 @@ export function createDriverMobileAccount(
   );
 }
 
+export function updateDriverSelfServiceContact(
+  selfServiceToken: string,
+  input: { email?: string },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/update-contact',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
 export function submitDriverSelfServiceGuarantor(
   selfServiceToken: string,
   input: {

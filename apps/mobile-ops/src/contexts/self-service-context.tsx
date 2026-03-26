@@ -54,13 +54,19 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
       setToken(nextToken);
 
       try {
-        const [nextDriver, nextDocuments] = await Promise.all([
+        const [nextDriver, documentsResult] = await Promise.all([
           getDriverSelfServiceContext(nextToken),
-          listDriverSelfServiceDocuments(nextToken).catch(() => []),
+          listDriverSelfServiceDocuments(nextToken)
+            .then((docs) => ({ ok: true as const, docs }))
+            .catch(() => ({ ok: false as const, docs: [] })),
         ]);
 
         setDriver(nextDriver);
-        setDocuments(nextDocuments);
+        // Only overwrite documents when the fetch succeeded — an error should
+        // never silently wipe previously-loaded documents from the UI.
+        if (documentsResult.ok) {
+          setDocuments(documentsResult.docs);
+        }
       } catch (error) {
         await clearSelfService();
         throw error;

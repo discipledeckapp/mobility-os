@@ -1585,23 +1585,48 @@ export class DriversService {
       { preferredLanguage: lang, role: TenantRole.FieldOfficer, hasLinkedDriver: true },
     );
 
-    await this.prisma.user.create({
-      data: {
-        tenantId: payload.tenantId,
-        driverId: driver.id,
-        name: `${driver.firstName} ${driver.lastName}`,
-        email: normalizedEmail,
-        phone: driver.phone ?? null,
-        role: TenantRole.FieldOfficer,
-        passwordHash: hashPassword(password),
-        isActive: true,
-        isEmailVerified: true,
-        mobileAccessRevoked: false,
-        settings: settings as import('@prisma/client').Prisma.InputJsonValue,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.user.create({
+        data: {
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          name: `${driver.firstName} ${driver.lastName}`,
+          email: normalizedEmail,
+          phone: driver.phone ?? null,
+          role: TenantRole.FieldOfficer,
+          passwordHash: hashPassword(password),
+          isActive: true,
+          isEmailVerified: true,
+          mobileAccessRevoked: false,
+          settings: settings as import('@prisma/client').Prisma.InputJsonValue,
+        },
+      }),
+      // Keep driver record email in sync with the sign-in email
+      ...(driver.email !== normalizedEmail
+        ? [this.prisma.driver.update({ where: { id: driver.id }, data: { email: normalizedEmail } })]
+        : []),
+    ]);
 
     return { message: 'Account created. You can now sign in with your email and password.' };
+  }
+
+  async updateContactFromSelfService(
+    token: string,
+    contact: { email?: string },
+  ): Promise<{ message: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const updates: { email?: string } = {};
+    if (contact.email) {
+      updates.email = contact.email.trim().toLowerCase();
+    }
+    if (Object.keys(updates).length === 0) {
+      return { message: 'No changes.' };
+    }
+    await this.prisma.driver.update({
+      where: { id: payload.driverId },
+      data: updates,
+    });
+    return { message: 'Contact details updated.' };
   }
 
   async submitGuarantorFromSelfService(

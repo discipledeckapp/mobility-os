@@ -708,6 +708,18 @@ export class DriverSelfServiceController {
     return this.service.createDriverMobileAccountFromSelfService(token, email, password);
   }
 
+  @Post('update-contact')
+  @ApiCreatedResponse({ type: Object })
+  updateContact(
+    @Body('token') token: string,
+    @Body('email') email?: string,
+  ): Promise<{ message: string }> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.updateContactFromSelfService(token, { email });
+  }
+
   @Post('guarantor')
   @ApiCreatedResponse({ type: Object })
   submitGuarantor(
