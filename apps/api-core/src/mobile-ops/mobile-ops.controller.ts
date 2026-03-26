@@ -287,8 +287,10 @@ export class MobileOpsController {
       activationReadinessReasons: driver.activationReadinessReasons ?? [],
       assignmentReadiness: driver.assignmentReadiness ?? 'not_ready',
       assignmentReadinessReasons: driver.assignmentReadinessReasons ?? [],
+      adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
+      locked: false,
     };
   }
 }

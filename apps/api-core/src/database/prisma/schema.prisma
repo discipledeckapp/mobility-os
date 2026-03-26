@@ -259,6 +259,12 @@ model Driver {
   // null = use the org-level default; true/false = explicit override for this driver.
   driverPaysKycOverride Boolean?
 
+  // Admin-set override that marks this driver as eligible for assignment even when
+  // the standard readiness checks are incomplete (e.g. liveness not done but all
+  // other details are present). Only honoured when the org setting
+  // allowAdminAssignmentOverride = true AND no active fraud flags are present.
+  adminAssignmentOverride Boolean @default(false)
+
   // Denormalized for fast lookups without joining fleet → operating unit → business entity.
   businessEntityId String
   operatingUnitId  String

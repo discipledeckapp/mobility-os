@@ -54,6 +54,7 @@ export interface TenantRecord {
   driverPaysKyc?: boolean;
   requireGuarantor?: boolean;
   requireGuarantorVerification?: boolean;
+  allowAdminAssignmentOverride?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -172,6 +173,7 @@ export interface DriverRecord {
   activationReadinessReasons: string[];
   assignmentReadiness: string;
   assignmentReadinessReasons: string[];
+  adminAssignmentOverride?: boolean;
   createdAt: string;
   updatedAt: string;
   locked?: boolean;
@@ -1452,6 +1454,20 @@ export async function getDriver(driverId: string, token?: string): Promise<Drive
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function setDriverAdminOverride(
+  driverId: string,
+  override: boolean,
+): Promise<{ adminAssignmentOverride: boolean }> {
+  return apiCoreFetch<{ adminAssignmentOverride: boolean }>(
+    `/drivers/${driverId}/admin-override`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ override }),
+      token: await getTenantApiToken(),
+    },
+  );
 }
 
 export async function getDriverMobileAccess(

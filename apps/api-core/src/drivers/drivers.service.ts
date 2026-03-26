@@ -2247,29 +2247,36 @@ export class DriversService {
     hasApprovedLicence: boolean;
     hasMobileAccess: boolean;
     approvedDocumentTypes?: string[];
+    adminAssignmentOverride?: boolean | null;
+    isWatchlisted?: boolean | null | undefined;
+    duplicateIdentityFlag?: boolean | null | undefined;
+    riskBand?: string | null | undefined;
   }, settings: {
     requireIdentityVerificationForActivation: boolean;
     requiredDriverDocumentSlugs: string[];
+    requireGuarantor: boolean;
+    allowAdminAssignmentOverride: boolean;
   }): DriverReadinessSummary {
-    const reasons: string[] = [];
+    // --- Activation readiness (standard, unaffected by admin override) ---
+    const activationReasons: string[] = [];
 
     if (
       settings.requireIdentityVerificationForActivation &&
       driver.identityStatus !== 'verified'
     ) {
-      reasons.push('Identity verification must be completed.');
+      activationReasons.push('Identity verification must be completed.');
     }
 
-    if (driver.guarantorStatus !== 'active' || !driver.guarantorPersonId) {
-      reasons.push('A guarantor with verified linkage is required.');
+    if (settings.requireGuarantor && (driver.guarantorStatus !== 'active' || !driver.guarantorPersonId)) {
+      activationReasons.push('A guarantor with verified linkage is required.');
     }
 
     if (!driver.hasApprovedLicence) {
-      reasons.push('An approved driver licence is required.');
+      activationReasons.push('An approved driver licence is required.');
     }
 
     if (!driver.hasMobileAccess) {
-      reasons.push('Mobile access must be linked before operations begin.');
+      activationReasons.push('Mobile access must be linked before operations begin.');
     }
 
     const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
@@ -2277,20 +2284,77 @@ export class DriversService {
       (slug) => !approvedDocumentTypes.has(slug),
     );
     if (missingRequiredDocuments.length > 0) {
-      reasons.push(
+      activationReasons.push(
         `Required driver documents are still missing: ${missingRequiredDocuments.join(', ')}.`,
       );
     }
 
-    const readiness =
-      reasons.length === 0 ? 'ready' : reasons.length <= 2 ? 'partially_ready' : 'not_ready';
+    const activationReadiness =
+      activationReasons.length === 0
+        ? 'ready'
+        : activationReasons.length <= 2
+          ? 'partially_ready'
+          : 'not_ready';
+
+    // --- Assignment readiness — may be overridden by admin ---
+    // Check for active fraud flags that block the override regardless of setting.
+    const hasFraudFlag =
+      Boolean(driver.isWatchlisted) ||
+      Boolean(driver.duplicateIdentityFlag) ||
+      driver.riskBand === 'high' ||
+      driver.riskBand === 'critical';
+
+    const overrideAllowed =
+      settings.allowAdminAssignmentOverride &&
+      Boolean(driver.adminAssignmentOverride) &&
+      !hasFraudFlag;
+
+    if (overrideAllowed) {
+      return {
+        activationReadiness,
+        activationReadinessReasons: activationReasons,
+        assignmentReadiness: 'ready',
+        assignmentReadinessReasons: ['Admin has approved this driver for assignment.'],
+      };
+    }
+
+    // If override was requested but blocked by fraud flags, surface that explicitly.
+    if (Boolean(driver.adminAssignmentOverride) && hasFraudFlag) {
+      const assignmentReasons = [
+        ...activationReasons,
+        'Admin override is blocked because active fraud flags are present on this driver.',
+      ];
+      const assignmentReadiness =
+        assignmentReasons.length <= 2 ? 'partially_ready' : 'not_ready';
+      return {
+        activationReadiness,
+        activationReadinessReasons: activationReasons,
+        assignmentReadiness,
+        assignmentReadinessReasons: assignmentReasons,
+      };
+    }
 
     return {
-      activationReadiness: readiness,
-      activationReadinessReasons: reasons,
-      assignmentReadiness: readiness,
-      assignmentReadinessReasons: reasons,
+      activationReadiness,
+      activationReadinessReasons: activationReasons,
+      assignmentReadiness: activationReadiness,
+      assignmentReadinessReasons: activationReasons,
     };
+  }
+
+  async setAdminAssignmentOverride(
+    tenantId: string,
+    driverId: string,
+    override: boolean,
+  ): Promise<void> {
+    const driver = await this.prisma.driver.findUnique({ where: { id: driverId } });
+    if (!driver || driver.tenantId !== tenantId) {
+      throw new Error('Driver not found.');
+    }
+    await this.prisma.driver.update({
+      where: { id: driverId },
+      data: { adminAssignmentOverride: override },
+    });
   }
 
   private async attachGuarantorSummaries<

@@ -18,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
@@ -506,13 +507,35 @@ export class DriversController {
     return this.service.resolveIdentity(ctx.tenantId, id, dto);
   }
 
+  @Patch(':id/admin-override')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  @ApiOperation({
+    summary: 'Set or clear the admin assignment override for a driver',
+    description:
+      'When set, the driver is treated as eligible for assignment even if standard readiness checks are incomplete. Ignored when the org setting allowAdminAssignmentOverride is false or when the driver has active fraud flags.',
+  })
+  async setAdminOverride(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('override') override: boolean,
+  ): Promise<{ adminAssignmentOverride: boolean }> {
+    if (typeof override !== 'boolean') {
+      throw new BadRequestException('override must be a boolean');
+    }
+    await this.service.setAdminAssignmentOverride(ctx.tenantId, id, override);
+    return { adminAssignmentOverride: override };
+  }
+
   private toResponse(
     driver: DriverWithIdentityState &
       Partial<DriverIntelligenceSummary> &
       Partial<DriverGuarantorSummary> &
       Partial<DriverDocumentSummary> &
       Partial<DriverMobileAccessSummary> &
-      Partial<DriverReadinessSummary>,
+      Partial<DriverReadinessSummary> &
+      { locked?: boolean },
   ): DriverResponseDto {
     return {
       id: driver.id,
@@ -562,8 +585,10 @@ export class DriversController {
       activationReadinessReasons: driver.activationReadinessReasons ?? [],
       assignmentReadiness: driver.assignmentReadiness ?? 'not_ready',
       assignmentReadinessReasons: driver.assignmentReadinessReasons ?? [],
+      adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
+      locked: driver.locked ?? false,
     };
   }
 
@@ -661,8 +686,10 @@ export class DriverSelfServiceController {
         (driver as Partial<DriverReadinessSummary>).assignmentReadiness ?? 'not_ready',
       assignmentReadinessReasons:
         (driver as Partial<DriverReadinessSummary>).assignmentReadinessReasons ?? [],
+      adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
+      locked: false, // self-service context is never subscription-locked
     };
   }
 
@@ -717,7 +744,7 @@ export class DriverSelfServiceController {
     if (!token?.trim()) {
       throw new BadRequestException('token is required');
     }
-    return this.service.updateContactFromSelfService(token, { email });
+    return this.service.updateContactFromSelfService(token, { ...(email ? { email } : {}) });
   }
 
   @Post('guarantor')

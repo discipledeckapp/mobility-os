@@ -192,4 +192,10 @@ export class DriverResponseDto {
       'True when this driver record exceeds the subscription tier cap. The driver exists but is inaccessible until the plan is upgraded.',
   })
   locked!: boolean;
+
+  @ApiProperty({
+    description:
+      'When true, an admin has manually approved this driver for assignment even if standard readiness checks are incomplete. Blocked by active fraud flags or when the org disables allowAdminAssignmentOverride.',
+  })
+  adminAssignmentOverride!: boolean;
 }

@@ -158,6 +158,9 @@ model Driver {
   businessEntityId String
   operatingUnitId  String
 
+  // Admin-set override for assignment eligibility even when readiness checks are incomplete.
+  adminAssignmentOverride Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

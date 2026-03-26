@@ -27,6 +27,12 @@ export interface OrganisationOperationsSettings {
   requireGuarantor: boolean;
   /** When true, guarantors must also pass identity verification. Defaults false. */
   requireGuarantorVerification: boolean;
+  /**
+   * When true (default), org admins can set a per-driver override that marks the
+   * driver as eligible for assignment even when standard readiness checks are
+   * incomplete. The override is still blocked if active fraud flags are present.
+   */
+  allowAdminAssignmentOverride: boolean;
 }
 
 export interface OrganisationSettings {
@@ -183,6 +189,10 @@ export function readOrganisationSettings(
         typeof operations.requireGuarantorVerification === 'boolean'
           ? operations.requireGuarantorVerification
           : false,
+      allowAdminAssignmentOverride:
+        typeof operations.allowAdminAssignmentOverride === 'boolean'
+          ? operations.allowAdminAssignmentOverride
+          : true,
     },
   };
 }
@@ -203,6 +213,7 @@ export function writeOrganisationSettings(
     driverPaysKyc: boolean;
     requireGuarantor: boolean;
     requireGuarantorVerification: boolean;
+    allowAdminAssignmentOverride: boolean;
   }>,
   countryCode?: string | null,
 ): Record<string, unknown> {
@@ -240,6 +251,8 @@ export function writeOrganisationSettings(
     requireGuarantor: input.requireGuarantor ?? settings.operations.requireGuarantor,
     requireGuarantorVerification:
       input.requireGuarantorVerification ?? settings.operations.requireGuarantorVerification,
+    allowAdminAssignmentOverride:
+      input.allowAdminAssignmentOverride ?? settings.operations.allowAdminAssignmentOverride,
   };
 
   return current;

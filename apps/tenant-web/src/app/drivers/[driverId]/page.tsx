@@ -37,6 +37,7 @@ import {
 } from '../../../lib/driver-identity';
 import { getFormattingLocale } from '../../../lib/locale';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
+import { DriverAdminOverridePanel } from '../driver-admin-override-panel';
 import { DriverIdentityVerification } from '../driver-identity-verification';
 import { DriverGuarantorPanel } from '../driver-guarantor-panel';
 import { DriverMobileAccessPanel } from '../driver-mobile-access-panel';
@@ -383,6 +384,18 @@ export default async function DriverDetailsPage({
                 </CardContent>
               </Card>
             ) : null}
+
+            <DriverAdminOverridePanel
+              adminAssignmentOverride={driver.adminAssignmentOverride ?? false}
+              allowAdminAssignmentOverride={tenant?.allowAdminAssignmentOverride ?? true}
+              driverId={driverId}
+              hasFraudFlag={
+                Boolean(driver.isWatchlisted) ||
+                Boolean(driver.duplicateIdentityFlag) ||
+                driver.riskBand === 'high' ||
+                driver.riskBand === 'critical'
+              }
+            />
           </>
         }
 

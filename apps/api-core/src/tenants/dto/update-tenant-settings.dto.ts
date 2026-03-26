@@ -91,4 +91,12 @@ export class UpdateTenantSettingsDto {
   @IsOptional()
   @IsBoolean()
   requireGuarantorVerification?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'When true (default), org admins can mark individual drivers as ready for assignment even when standard KYC checks are incomplete. Blocked by active fraud flags regardless of this setting.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowAdminAssignmentOverride?: boolean;
 }

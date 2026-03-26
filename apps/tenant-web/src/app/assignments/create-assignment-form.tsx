@@ -25,6 +25,43 @@ import {
 
 const initialState: CreateAssignmentActionState = {};
 
+// ---------------------------------------------------------------------------
+// Currency amount field — accepts decimal input (e.g. "2500" or "2,500.00")
+// and submits the value in minor units as a hidden field.
+// ---------------------------------------------------------------------------
+
+function RemittanceAmountField({ currency }: { currency: string }) {
+  const [display, setDisplay] = useState('');
+
+  const majorUnits = parseFloat(display.replace(/,/g, '')) || 0;
+  const minorUnits = Math.round(majorUnits * 100);
+
+  const formatted = majorUnits > 0
+    ? new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 2 }).format(majorUnits)
+    : null;
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Input
+          id="remittanceAmountDisplay"
+          inputMode="decimal"
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisplay(e.target.value)}
+          placeholder="2,500.00"
+          required
+          value={display}
+        />
+        <input name="remittanceAmountMinorUnits" type="hidden" value={minorUnits} />
+      </div>
+      {formatted ? (
+        <Text tone="muted">{formatted} = {minorUnits.toLocaleString()} minor units</Text>
+      ) : (
+        <Text tone="muted">Enter the amount in major units (e.g. 2500 for ₦2,500). Decimals are supported.</Text>
+      )}
+    </div>
+  );
+}
+
 export function CreateAssignmentForm({
   fleets,
   fleetError,
@@ -235,19 +272,8 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="remittanceAmountMinorUnits">Expected remittance amount (minor units) <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <Input
-              id="remittanceAmountMinorUnits"
-              min="1"
-              name="remittanceAmountMinorUnits"
-              placeholder="250000"
-              required
-              step="1"
-              type="number"
-            />
-            <Text tone="muted">
-              Store the planned collection amount in minor units so projections line up with the wallet ledger.
-            </Text>
+            <Label htmlFor="remittanceAmountDisplay">Expected remittance amount <span aria-hidden="true" className="text-red-500">*</span></Label>
+            <RemittanceAmountField currency="NGN" />
           </div>
 
           <div className="space-y-2">

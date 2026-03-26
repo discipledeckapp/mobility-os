@@ -28,7 +28,7 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
   const [vehicleQuery, setVehicleQuery] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [remittanceModel, setRemittanceModel] = React.useState<'fixed' | 'hire_purchase'>('fixed');
-  const [remittanceAmountMinorUnits, setRemittanceAmountMinorUnits] = React.useState('');
+  const [remittanceAmountDisplay, setRemittanceAmountDisplay] = React.useState('');
   const [remittanceCurrency, setRemittanceCurrency] = React.useState('NGN');
   const [remittanceFrequency, setRemittanceFrequency] = React.useState<'daily' | 'weekly'>('daily');
   const [remittanceStartDate, setRemittanceStartDate] = React.useState(
@@ -36,13 +36,25 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
   );
   const [remittanceCollectionDay, setRemittanceCollectionDay] = React.useState('1');
 
+  const remittanceAmountMinorUnits = Math.round(
+    (parseFloat(remittanceAmountDisplay.replace(/,/g, '')) || 0) * 100,
+  );
+
+  const remittanceAmountFormatted = remittanceAmountMinorUnits > 0
+    ? new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency: remittanceCurrency || 'NGN',
+        minimumFractionDigits: 2,
+      }).format(remittanceAmountMinorUnits / 100)
+    : null;
+
   const createMutation = useMutation({
     mutationFn: () =>
       createOperatorAssignment({
         driverId: selectedDriverId,
         vehicleId: selectedVehicleId,
         remittanceModel,
-        remittanceAmountMinorUnits: Number(remittanceAmountMinorUnits),
+        remittanceAmountMinorUnits,
         remittanceCurrency: remittanceCurrency.trim().toUpperCase(),
         remittanceFrequency,
         remittanceStartDate,
@@ -65,8 +77,8 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       Alert.alert('Create assignment', 'Select both a driver and a vehicle.');
       return;
     }
-    if (!Number.isFinite(Number(remittanceAmountMinorUnits)) || Number(remittanceAmountMinorUnits) < 1) {
-      Alert.alert('Create assignment', 'Enter a valid remittance amount in minor units.');
+    if (!Number.isFinite(remittanceAmountMinorUnits) || remittanceAmountMinorUnits < 1) {
+      Alert.alert('Create assignment', 'Enter a valid remittance amount (e.g. 2500 for ₦2,500).');
       return;
     }
     createMutation.mutate();
@@ -74,7 +86,7 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
 
   const projectedDueDate = computeNextRemittanceDueDate({
     remittanceFrequency,
-    remittanceAmountMinorUnits: Number(remittanceAmountMinorUnits) || 0,
+    remittanceAmountMinorUnits,
     remittanceCurrency,
     remittanceStartDate,
     ...(remittanceFrequency === 'weekly'
@@ -162,10 +174,12 @@ export function CreateAssignmentScreen({ navigation }: ScreenProps<'OperatorAssi
       <Card style={styles.section}>
         <Input label="Notes" multiline onChangeText={setNotes} value={notes} />
         <Input
-          keyboardType="number-pad"
-          label="Expected remittance amount (minor units)"
-          onChangeText={setRemittanceAmountMinorUnits}
-          value={remittanceAmountMinorUnits}
+          keyboardType="decimal-pad"
+          label="Expected remittance amount"
+          helperText={remittanceAmountFormatted ?? 'e.g. 2500 for ₦2,500 · decimals supported'}
+          onChangeText={setRemittanceAmountDisplay}
+          placeholder="2500"
+          value={remittanceAmountDisplay}
         />
         <Input
           label="Contract model"
