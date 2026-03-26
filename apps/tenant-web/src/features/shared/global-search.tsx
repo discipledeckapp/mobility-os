@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useEffect, useState, useTransition } from 'react';
-import { Button, Input, Text } from '@mobility-os/ui';
+import { Input, Text } from '@mobility-os/ui';
 import { Modal } from './modal';
 
 type SearchResult = {
@@ -48,9 +48,18 @@ export function GlobalSearch() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} size="sm" variant="secondary">
-        Search
-      </Button>
+      <button
+        aria-label="Search"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 text-sm font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width="15">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" x2="16.65" y1="21" y2="16.65" />
+        </svg>
+        <span className="hidden sm:inline">Search</span>
+      </button>
       <Modal
         description="Find drivers, vehicles, fleets, and assignments from one place."
         onClose={() => setOpen(false)}

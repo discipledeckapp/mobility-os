@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@mobility-os/ui';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -24,6 +25,12 @@ export function Modal({
   footer?: React.ReactNode;
   size?: 'md' | 'lg';
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -39,12 +46,12 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onClose]);
 
-  if (!open) {
+  if (!open || !mounted) {
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
       <div
         aria-modal="true"
         className={cx(
@@ -71,6 +78,7 @@ export function Modal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

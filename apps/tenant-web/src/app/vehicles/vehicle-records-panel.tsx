@@ -22,6 +22,9 @@ import { useMemo, useState } from 'react';
 import type { FleetRecord, VehicleRecord } from '../../lib/api-core';
 import { getVehiclePrimaryLabel, getVehicleSecondaryLabel } from '../../lib/vehicle-display';
 import { VehicleStatusActions } from './vehicle-status-actions';
+import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
+
+type CsvActionState = { error?: string; success?: string };
 
 const STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'available', label: 'Available' },
@@ -56,16 +59,23 @@ export function VehicleRecordsPanel({
   vehicles,
   fleets,
   errorMessage,
+  importAction,
+  templateHref,
+  exportHref,
 }: {
   vehicles: VehicleRecord[];
   fleets: FleetRecord[];
   errorMessage?: string | null;
+  importAction?: (state: CsvActionState, formData: FormData) => Promise<CsvActionState>;
+  templateHref?: string;
+  exportHref?: string;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [fleetId, setFleetId] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [showImport, setShowImport] = useState(false);
 
   const fleetLabels = useMemo(
     () => new Map(fleets.map((fleet) => [fleet.id, fleet.name])),
@@ -118,14 +128,34 @@ export function VehicleRecordsPanel({
 
   return (
     <div className="space-y-6">
+      {showImport && importAction && templateHref ? (
+        <CsvBulkImportCard
+          description="Download the vehicle template, map your existing fleet inventory into it, and import vehicles in bulk. Subscription limits are enforced during import."
+          {...(exportHref ? { exportHref } : {})}
+          formAction={importAction}
+          templateHref={templateHref}
+          title="Bulk import vehicles"
+        />
+      ) : null}
       <RegistryTable
         actions={
-          <Link
-            className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-            href="/vehicles/new"
-          >
-            Add vehicle
-          </Link>
+          <div className="flex items-center gap-2">
+            {importAction ? (
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-ink)] transition-colors hover:bg-slate-50"
+                onClick={() => setShowImport((v) => !v)}
+                type="button"
+              >
+                {showImport ? 'Hide import' : 'Bulk import'}
+              </button>
+            ) : null}
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+              href="/vehicles/new"
+            >
+              Add vehicle
+            </Link>
+          </div>
         }
         description="Search, filter, and drill into vehicle records by organisation code, system code, plate, fleet, or vehicle profile."
         emptyState={

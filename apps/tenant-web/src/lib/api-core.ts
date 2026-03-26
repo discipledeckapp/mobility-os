@@ -134,6 +134,7 @@ export interface DriverRecord {
   lastName: string;
   phone: string;
   email?: string | null;
+  photoUrl?: string | null;
   dateOfBirth?: string | null;
   nationality?: string | null;
   hasResolvedIdentity: boolean;

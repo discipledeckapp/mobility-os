@@ -112,9 +112,8 @@ export class PaymentProvidersService {
     input: InitializeProviderPaymentInput,
   ): Promise<InitializeProviderPaymentResult> {
     const secretKey = this.configService.get<string>('FLUTTERWAVE_SECRET_KEY');
-    const baseUrl = (
-      this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3'
-    ).replace(/\/$/, '');
+    const rawBase = this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3';
+    const baseUrl = rawBase.replace(/\/v3\/?$/, '').replace(/\/$/, '') + '/v3';
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Flutterwave is not configured for this environment');
@@ -175,9 +174,8 @@ export class PaymentProvidersService {
 
   private async verifyFlutterwave(reference: string): Promise<VerifiedProviderPayment> {
     const secretKey = this.configService.get<string>('FLUTTERWAVE_SECRET_KEY');
-    const baseUrl = (
-      this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3'
-    ).replace(/\/$/, '');
+    const rawBase = this.configService.get<string>('FLUTTERWAVE_BASE_URL') ?? 'https://api.flutterwave.com/v3';
+    const baseUrl = rawBase.replace(/\/v3\/?$/, '').replace(/\/$/, '') + '/v3';
 
     if (!secretKey) {
       throw new ServiceUnavailableException('Flutterwave is not configured for this environment');

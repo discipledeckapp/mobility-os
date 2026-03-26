@@ -127,6 +127,55 @@ function PasswordInput({
   );
 }
 
+function LogoUploadField({ currentUrl }: { currentUrl?: string | null | undefined }) {
+  const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
+
+  function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result;
+      if (typeof dataUrl === 'string') {
+        setPreview(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="space-y-3">
+      {preview ? (
+        <div className="flex items-center gap-3">
+          <img
+            alt="Organisation logo"
+            className="h-14 w-14 rounded-xl border border-slate-200 object-contain p-1"
+            src={preview}
+          />
+          <button
+            className="text-sm text-slate-500 hover:text-rose-600"
+            onClick={() => setPreview(null)}
+            type="button"
+          >
+            Remove
+          </button>
+        </div>
+      ) : null}
+      <input name="logoUrl" type="hidden" value={preview ?? ''} />
+      <input
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        className="block w-full cursor-pointer rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm text-[var(--mobiris-ink)] file:mr-3 file:rounded-[var(--mobiris-radius-button)] file:border-0 file:bg-[var(--mobiris-primary)]/10 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-[var(--mobiris-primary)]"
+        id="logoFile"
+        onChange={handleFile}
+        type="file"
+      />
+      <p className="text-xs text-slate-400">PNG, JPG, SVG or WebP. Shown in the workspace header.</p>
+    </div>
+  );
+}
+
 function SelectInput({
   id,
   name,
@@ -352,14 +401,9 @@ export function SettingsPanel({
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="logoUrl">Logo URL</Label>
-                      <Input
-                        defaultValue={tenant.logoUrl ?? ''}
-                        id="logoUrl"
-                        name="logoUrl"
-                        placeholder="https://..."
-                      />
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="logoFile">Company logo</Label>
+                      <LogoUploadField currentUrl={tenant.logoUrl} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="defaultLanguage">Default language</Label>

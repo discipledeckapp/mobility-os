@@ -363,7 +363,9 @@ export class DriversController {
         ...document,
         storageKey: document.storageKey ?? null,
         storageUrl: document.storageUrl ?? null,
-        previewUrl: `/api/drivers/${id}/documents/${document.id}/content`,
+        previewUrl: document.storageUrl?.startsWith('http')
+          ? document.storageUrl
+          : `/api/drivers/${id}/documents/${document.id}/content`,
       })),
     );
   }
@@ -743,7 +745,9 @@ export class DriverSelfServiceController {
         ...document,
         storageKey: document.storageKey ?? null,
         storageUrl: document.storageUrl ?? null,
-        previewUrl: `/api/drivers/${document.driverId}/documents/${document.id}/content?token=${encodeURIComponent(token)}`,
+        previewUrl: document.storageUrl?.startsWith('http')
+          ? document.storageUrl
+          : `/api/drivers/${document.driverId}/documents/${document.id}/content?token=${encodeURIComponent(token)}`,
       })),
     );
   }

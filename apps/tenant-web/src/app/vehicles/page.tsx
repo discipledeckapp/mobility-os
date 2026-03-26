@@ -1,4 +1,3 @@
-import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import { type FleetRecord, type VehicleRecord, listFleets, listVehicles } from '../../lib/api-core';
 import { importVehiclesCsvAction } from './actions';
@@ -39,16 +38,14 @@ export default async function VehiclesPage() {
       eyebrow="Assets"
       title="Vehicles"
     >
-      <div className="mb-6">
-        <CsvBulkImportCard
-          description="Download the vehicle template, map your existing fleet inventory into it, and import vehicles in bulk. Subscription limits are enforced during import."
-          exportHref="/api/download/vehicles-export"
-          formAction={importVehiclesCsvAction}
-          templateHref="/api/download/vehicle-import-template"
-          title="Bulk import vehicles"
-        />
-      </div>
-      <VehicleRecordsPanel errorMessage={errorMessage} fleets={fleets} vehicles={vehicles} />
+      <VehicleRecordsPanel
+        errorMessage={errorMessage}
+        exportHref="/api/download/vehicles-export"
+        fleets={fleets}
+        importAction={importVehiclesCsvAction}
+        templateHref="/api/download/vehicle-import-template"
+        vehicles={vehicles}
+      />
     </TenantAppShell>
   );
 }

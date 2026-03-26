@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 const TABS = [
@@ -11,6 +12,10 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
+
+function isTabKey(value: string | null | undefined): value is TabKey {
+  return TABS.some((t) => t.key === value);
+}
 
 export function DriverDetailTabs({
   overview,
@@ -27,7 +32,12 @@ export function DriverDetailTabs({
   activity: React.ReactNode;
   defaultTab?: TabKey;
 }) {
-  const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab') ?? null;
+  const urlTab = isTabKey(tabParam) ? tabParam : null;
+
+  const [manualTab, setManualTab] = useState<TabKey | null>(null);
+  const activeTab = manualTab ?? urlTab ?? defaultTab;
 
   const panels: Record<TabKey, React.ReactNode> = {
     overview,
@@ -49,7 +59,7 @@ export function DriverDetailTabs({
                 : 'text-slate-500 hover:bg-white/60 hover:text-[var(--mobiris-ink)]'
             }`}
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => setManualTab(tab.key)}
             type="button"
           >
             {tab.label}

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import {
   Badge,
   Card,
@@ -164,6 +165,21 @@ export default async function DriverDetailsPage({
       <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              {/* Avatar */}
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--mobiris-primary)]/10 ring-2 ring-white shadow-sm">
+                {driver.photoUrl ? (
+                  <img
+                    alt={`${driver.firstName} ${driver.lastName}`}
+                    className="h-14 w-14 rounded-full object-cover"
+                    src={driver.photoUrl}
+                  />
+                ) : (
+                  <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">
+                    {driver.firstName[0]}{driver.lastName[0]}
+                  </span>
+                )}
+              </div>
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Heading size="h2">{`${driver.firstName} ${driver.lastName}`}</Heading>
@@ -222,12 +238,14 @@ export default async function DriverDetailsPage({
                 ) : null}
               </div>
             </div>
+            </div>
             <DriverStatusActions driver={driver} />
           </div>
         </CardContent>
       </Card>
 
       {/* Tab layout */}
+      <Suspense>
       <DriverDetailTabs
         defaultTab={tab === 'verification' ? 'verification' : 'overview'}
         overview={
@@ -724,6 +742,7 @@ export default async function DriverDetailsPage({
           </>
         }
       />
+      </Suspense>
     </TenantAppShell>
   );
 }

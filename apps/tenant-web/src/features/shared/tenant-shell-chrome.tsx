@@ -94,7 +94,7 @@ export function TenantShellChrome({
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Header>
-            <div className="flex min-w-0 items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
                   {eyebrow}
