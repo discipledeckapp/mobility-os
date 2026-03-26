@@ -95,10 +95,10 @@ export default async function DriverDetailsPage({
   searchParams,
 }: {
   params: Promise<{ driverId: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; walletWarning?: string }>;
 }) {
   const { driverId } = await params;
-  const { tab } = await searchParams;
+  const { tab, walletWarning } = await searchParams;
 
   const [driver, assignments, remittances, vehicles, fleets, tenant, documents, guarantor, mobileAccess] = await Promise.all([
     getDriver(driverId),
@@ -136,6 +136,30 @@ export default async function DriverDetailsPage({
       eyebrow="Operators"
       title={`${driver.firstName} ${driver.lastName}`}
     >
+      {/* Wallet warning banner */}
+      {walletWarning === '1' ? (
+        <Card className="border-amber-300 bg-amber-50/80">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-start gap-3">
+              <svg aria-hidden="true" className="mt-0.5 shrink-0 text-amber-600" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" x2="12" y1="9" y2="13" />
+                <line x1="12" x2="12.01" y1="17" y2="17" />
+              </svg>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-900">Verification wallet balance is low</p>
+                <p className="text-sm text-amber-800">
+                  Your organisation wallet may not have enough funds to cover identity verification for this driver.{' '}
+                  <a className="font-semibold underline hover:no-underline" href="/billing">Fund the wallet</a>{' '}
+                  before starting verification, or switch to driver-pays mode in{' '}
+                  <a className="font-semibold underline hover:no-underline" href="/settings">Settings</a>.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Always-visible hero card */}
       <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
         <CardContent className="pt-6">

@@ -11,6 +11,8 @@ import {
   createDriverLivenessSession,
   createDriverSelfServiceLivenessSession,
   createGuarantorSelfServiceLivenessSession,
+  getTenantBillingSummary,
+  getTenantMe,
   linkDriverMobileAccessUser,
   removeDriverGuarantor,
   reviewDriverDocument,
@@ -139,7 +141,28 @@ export async function createDriverAction(
   }
 
   revalidatePath('/drivers');
-  redirect(`/drivers/${driverId}?tab=verification`);
+
+  // Check wallet balance if org pays for verification
+  let walletWarning = false;
+  try {
+    const [settings, billing] = await Promise.all([
+      getTenantMe(),
+      getTenantBillingSummary(),
+    ]);
+    const orgPaysForVerification =
+      (settings.requireIdentityVerificationForActivation ?? true) &&
+      !(settings.driverPaysKyc ?? false);
+    if (orgPaysForVerification) {
+      const balanceMinorUnits = billing.verificationWallet.balanceMinorUnits;
+      if (balanceMinorUnits < 100000) {
+        walletWarning = true;
+      }
+    }
+  } catch {
+    // Non-blocking — don't fail driver creation over a balance check
+  }
+
+  redirect(`/drivers/${driverId}?tab=verification${walletWarning ? '&walletWarning=1' : ''}`);
 }
 
 function getOptionalTrimmedValue(formData: FormData, key: string): string {

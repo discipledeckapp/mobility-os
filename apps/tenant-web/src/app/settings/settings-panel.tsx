@@ -149,6 +149,13 @@ export function SettingsPanel({
     initialState,
   );
 
+  const [requiresIdentityVerification, setRequiresIdentityVerification] = useState(
+    tenant.requireIdentityVerificationForActivation ?? true,
+  );
+  const [requiresGuarantor, setRequiresGuarantor] = useState(
+    tenant.requireGuarantor ?? true,
+  );
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
       <div className="space-y-6">
@@ -292,42 +299,94 @@ export function SettingsPanel({
                   />
                   Automatically send self-verification links when drivers are added
                 </label>
-                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
-                  <input
-                    defaultChecked={tenant.requireIdentityVerificationForActivation ?? true}
-                    name="requireIdentityVerificationForActivation"
-                    type="checkbox"
-                  />
-                  Require identity verification before driver activation
-                </label>
-                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
-                  <input
-                    defaultChecked={tenant.requireBiometricVerification ?? true}
-                    name="requireBiometricVerification"
-                    type="checkbox"
-                  />
-                  Require biometric selfie capture during verification
-                </label>
-                <label className="flex items-center gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 px-3 py-2 text-sm">
-                  <input
-                    defaultChecked={tenant.requireGovernmentVerificationLookup ?? true}
-                    name="requireGovernmentVerificationLookup"
-                    type="checkbox"
-                  />
-                  Require government/provider identity lookup when available
-                </label>
-                <label className="flex items-start gap-3 rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm md:col-span-2">
-                  <input
-                    className="mt-0.5"
-                    defaultChecked={tenant.driverPaysKyc ?? false}
-                    name="driverPaysKyc"
-                    type="checkbox"
-                  />
-                  <div>
-                    <span className="font-semibold text-slate-900">Charge drivers for identity verification (₦5,000 per check)</span>
-                    <p className="mt-0.5 text-slate-500">When enabled, drivers pay for their own KYC check instead of your organisation wallet being charged. Drivers will see a payment prompt in the mobile app before verification begins.</p>
+
+                {/* Driver identity verification sub-section */}
+                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Driver identity verification</p>
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      checked={requiresIdentityVerification}
+                      name="requireIdentityVerificationForActivation"
+                      onChange={(e) => setRequiresIdentityVerification(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span className="font-medium text-slate-800">Require identity verification before driver activation</span>
+                  </label>
+
+                  <div className={`space-y-3 pl-6 border-l-2 border-slate-200 ${requiresIdentityVerification ? '' : 'opacity-50'}`}>
+                    <label className="flex items-center gap-3 text-sm">
+                      <input
+                        defaultChecked={tenant.requireBiometricVerification ?? true}
+                        disabled={!requiresIdentityVerification}
+                        name="requireBiometricVerification"
+                        type="checkbox"
+                      />
+                      <span className="text-slate-700">Require biometric selfie capture</span>
+                    </label>
+                    <label className="flex items-center gap-3 text-sm">
+                      <input
+                        defaultChecked={tenant.requireGovernmentVerificationLookup ?? true}
+                        disabled={!requiresIdentityVerification}
+                        name="requireGovernmentVerificationLookup"
+                        type="checkbox"
+                      />
+                      <span className="text-slate-700">Require government ID lookup when available</span>
+                    </label>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-slate-700">Who covers the verification cost?</p>
+                      <label className="flex items-center gap-3 text-sm">
+                        <input
+                          defaultChecked={!(tenant.driverPaysKyc ?? false)}
+                          disabled={!requiresIdentityVerification}
+                          name="driverPaysKyc"
+                          type="radio"
+                          value="false"
+                        />
+                        <span className="text-slate-700">Organisation's verification wallet</span>
+                      </label>
+                      <label className="flex items-start gap-3 text-sm">
+                        <input
+                          className="mt-0.5"
+                          defaultChecked={tenant.driverPaysKyc ?? false}
+                          disabled={!requiresIdentityVerification}
+                          name="driverPaysKyc"
+                          type="radio"
+                          value="true"
+                        />
+                        <span className="text-slate-700">
+                          Driver pays ₦5,000 per check
+                          <span className="ml-1 text-slate-400 text-xs">(driver is prompted in the mobile app)</span>
+                        </span>
+                      </label>
+                    </div>
                   </div>
-                </label>
+                </div>
+
+                {/* Guarantor requirements sub-section */}
+                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Guarantor requirements</p>
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      checked={requiresGuarantor}
+                      name="requireGuarantor"
+                      onChange={(e) => setRequiresGuarantor(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span className="font-medium text-slate-800">Require guarantors for drivers</span>
+                  </label>
+                  <div className={`space-y-3 pl-6 border-l-2 border-slate-200 ${requiresGuarantor ? '' : 'opacity-50'}`}>
+                    <label className="flex items-center gap-3 text-sm">
+                      <input
+                        defaultChecked={tenant.requireGuarantorVerification ?? false}
+                        disabled={!requiresGuarantor}
+                        name="requireGuarantorVerification"
+                        type="checkbox"
+                      />
+                      <span className="text-slate-700">Require guarantor identity verification</span>
+                    </label>
+                  </div>
+                </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
                   <Input

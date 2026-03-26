@@ -23,6 +23,10 @@ export interface OrganisationOperationsSettings {
   requiredVehicleDocumentSlugs: string[];
   /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
   driverPaysKyc: boolean;
+  /** When false, guarantors are not required for driver onboarding. Defaults true. */
+  requireGuarantor: boolean;
+  /** When true, guarantors must also pass identity verification. Defaults false. */
+  requireGuarantorVerification: boolean;
 }
 
 export interface OrganisationSettings {
@@ -173,6 +177,12 @@ export function readOrganisationSettings(
       ),
       driverPaysKyc:
         typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : false,
+      requireGuarantor:
+        typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : true,
+      requireGuarantorVerification:
+        typeof operations.requireGuarantorVerification === 'boolean'
+          ? operations.requireGuarantorVerification
+          : false,
     },
   };
 }
@@ -191,6 +201,8 @@ export function writeOrganisationSettings(
     requiredDriverDocumentSlugs: string[];
     requiredVehicleDocumentSlugs: string[];
     driverPaysKyc: boolean;
+    requireGuarantor: boolean;
+    requireGuarantorVerification: boolean;
   }>,
   countryCode?: string | null,
 ): Record<string, unknown> {
@@ -225,6 +237,9 @@ export function writeOrganisationSettings(
     requiredVehicleDocumentSlugs:
       input.requiredVehicleDocumentSlugs ?? settings.operations.requiredVehicleDocumentSlugs,
     driverPaysKyc: input.driverPaysKyc ?? settings.operations.driverPaysKyc,
+    requireGuarantor: input.requireGuarantor ?? settings.operations.requireGuarantor,
+    requireGuarantorVerification:
+      input.requireGuarantorVerification ?? settings.operations.requireGuarantorVerification,
   };
 
   return current;

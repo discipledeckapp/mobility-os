@@ -76,6 +76,11 @@ export class TenantsService {
         ...(dto.requiredVehicleDocumentSlugs !== undefined
           ? { requiredVehicleDocumentSlugs: dto.requiredVehicleDocumentSlugs }
           : {}),
+        ...(dto.driverPaysKyc !== undefined ? { driverPaysKyc: dto.driverPaysKyc } : {}),
+        ...(dto.requireGuarantor !== undefined ? { requireGuarantor: dto.requireGuarantor } : {}),
+        ...(dto.requireGuarantorVerification !== undefined
+          ? { requireGuarantorVerification: dto.requireGuarantorVerification }
+          : {}),
       },
       tenant.country,
     );

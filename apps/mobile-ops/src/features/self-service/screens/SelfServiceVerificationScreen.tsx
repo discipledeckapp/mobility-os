@@ -2,7 +2,6 @@
 
 import {
   getCountryConfig,
-  getDocumentType,
   getRequiredDocuments,
   getSupportedCountryCodes,
   isCountrySupported,
@@ -15,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import {
   createDriverSelfServiceLivenessSession,
+  initiateDriverKycCheckout,
   resolveDriverSelfServiceIdentity,
   uploadDriverSelfServiceDocument,
   type DriverIdentityResolutionResult,
@@ -42,6 +43,8 @@ import { tokens } from '../../../theme/tokens';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+type WizardStep = 'overview' | 'payment' | 'identity' | 'documents';
+
 function maskIdentifier(value: string): string {
   if (!value) return '';
   if (value.length <= 4) return '•'.repeat(value.length);
@@ -55,6 +58,20 @@ interface VerificationDraft {
   selectedDocumentType: string;
 }
 
+const STEP_ORDER: WizardStep[] = ['overview', 'payment', 'identity', 'documents'];
+
+function getStepIndex(step: WizardStep, includePayment: boolean): number {
+  if (!includePayment) {
+    const filtered: WizardStep[] = ['overview', 'identity', 'documents'];
+    return filtered.indexOf(step);
+  }
+  return STEP_ORDER.indexOf(step);
+}
+
+function getTotalSteps(includePayment: boolean): number {
+  return includePayment ? 4 : 3;
+}
+
 export function SelfServiceVerificationScreen({
   navigation,
 }: ScreenProps<'SelfServiceVerification'>) {
@@ -66,6 +83,14 @@ export function SelfServiceVerificationScreen({
     isRefreshing,
     refreshSelfService,
   } = useSelfService();
+
+  const driverPaysKyc = driver?.driverPaysKyc ?? false;
+  const kycPaymentVerified = driver?.kycPaymentVerified ?? false;
+
+  const identityVerificationRequired = driver?.requireIdentityVerificationForActivation ?? true;
+  const biometricVerificationRequired = driver?.requireBiometricVerification ?? true;
+  const governmentLookupRequired = driver?.requireGovernmentVerificationLookup ?? true;
+
   const [countryCode, setCountryCode] = useState(driver?.nationality ?? 'NG');
   const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
   const [selfieBase64, setSelfieBase64] = useState('');
@@ -77,7 +102,33 @@ export function SelfServiceVerificationScreen({
   const [selectedDocumentType, setSelectedDocumentType] = useState('');
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [initiatingPayment, setInitiatingPayment] = useState(false);
   const previousCountryCodeRef = useRef(countryCode);
+
+  const identitySubmitted = useMemo(
+    () =>
+      !identityVerificationRequired ||
+      Boolean(identityResult) ||
+      ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
+        driver?.identityStatus ?? '',
+      ),
+    [driver?.identityStatus, identityResult, identityVerificationRequired],
+  );
+
+  // Determine initial step
+  const computeInitialStep = (): WizardStep => {
+    if (identitySubmitted && (!driverPaysKyc || kycPaymentVerified)) {
+      return 'documents';
+    }
+    if (driverPaysKyc && !kycPaymentVerified) {
+      return 'overview';
+    }
+    return 'overview';
+  };
+
+  const [currentStep, setCurrentStep] = useState<WizardStep>(computeInitialStep);
+
+  const includePayment = driverPaysKyc && !kycPaymentVerified;
 
   const countryOptions = useMemo(
     () =>
@@ -110,11 +161,6 @@ export function SelfServiceVerificationScreen({
         : [],
     [countryCode, driver?.requiredDriverDocumentSlugs],
   );
-
-  const identityVerificationRequired =
-    driver?.requireIdentityVerificationForActivation ?? true;
-  const biometricVerificationRequired = driver?.requireBiometricVerification ?? true;
-  const governmentLookupRequired = driver?.requireGovernmentVerificationLookup ?? true;
 
   useEffect(() => {
     if (!draftHydrated) {
@@ -207,34 +253,6 @@ export function SelfServiceVerificationScreen({
     );
   }, [requiredDocuments]);
 
-  const identitySubmitted = useMemo(
-    () =>
-      !identityVerificationRequired ||
-      Boolean(identityResult) ||
-      ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
-        driver?.identityStatus ?? '',
-      ),
-    [driver?.identityStatus, identityResult, identityVerificationRequired],
-  );
-
-  const canSubmitIdentity = useMemo(
-    () =>
-      !identitySubmitted &&
-      Boolean(
-        token &&
-          identifierTypes.every((identifier) => {
-            const value = (identifierValues[identifier.type] ?? '').trim();
-            if (!identifier.required && !value) return true;
-            if (!value) return false;
-            if (identifier.numericOnly && !/^\d+$/.test(value)) return false;
-            if (identifier.exactLength && value.length !== identifier.exactLength) return false;
-            return true;
-          }) &&
-          (!biometricVerificationRequired || selfieBase64),
-      ),
-    [biometricVerificationRequired, identitySubmitted, identifierTypes, identifierValues, selfieBase64, token],
-  );
-
   const identifiersReady = useMemo(
     () =>
       identifierTypes.every((identifier) => {
@@ -246,6 +264,17 @@ export function SelfServiceVerificationScreen({
         return true;
       }),
     [identifierTypes, identifierValues],
+  );
+
+  const canSubmitIdentity = useMemo(
+    () =>
+      !identitySubmitted &&
+      Boolean(
+        token &&
+          identifiersReady &&
+          (!biometricVerificationRequired || selfieBase64),
+      ),
+    [biometricVerificationRequired, identitySubmitted, identifiersReady, selfieBase64, token],
   );
 
   const documentChecklist = useMemo(
@@ -263,30 +292,6 @@ export function SelfServiceVerificationScreen({
   const uploadedRequiredDocumentCount = useMemo(
     () => documentChecklist.filter((document) => document.uploaded).length,
     [documentChecklist],
-  );
-
-  const stepCompletion = useMemo(
-    () => [
-      { label: 'Select country', complete: Boolean(countryCode) },
-      { label: 'Enter required identifiers', complete: identifiersReady },
-      {
-        label: biometricVerificationRequired ? 'Capture live selfie' : 'Capture profile photo',
-        complete: biometricVerificationRequired ? Boolean(selfieBase64) : true,
-      },
-      { label: 'Submit identity', complete: identitySubmitted },
-      {
-        label: 'Upload required documents',
-        complete:
-          documentChecklist.length > 0 &&
-          documentChecklist.every((document) => document.uploaded),
-      },
-    ],
-    [countryCode, documentChecklist, identifiersReady, identitySubmitted, biometricVerificationRequired, selfieBase64],
-  );
-
-  const completedStepCount = useMemo(
-    () => stepCompletion.filter((step) => step.complete).length,
-    [stepCompletion],
   );
 
   const onRefresh = async () => {
@@ -364,9 +369,7 @@ export function SelfServiceVerificationScreen({
         providerLookupStatus: 'skipped_by_organisation_policy',
       });
       showToast('Identity details saved for organisation review.', 'success');
-      if (!driver?.hasMobileAccess) {
-        navigation.navigate('DriverAccountSetup');
-      }
+      setCurrentStep('documents');
       return;
     }
 
@@ -398,13 +401,7 @@ export function SelfServiceVerificationScreen({
       await SecureStore.deleteItemAsync(STORAGE_KEYS.selfServiceVerificationDraft);
       setDraftRestored(false);
       showToast('Identity verification submitted.', 'success');
-
-      // Auto-navigate: go to account setup if no mobile access yet, else readiness
-      if (!driver?.hasMobileAccess) {
-        navigation.navigate('DriverAccountSetup');
-      } else {
-        navigation.navigate('SelfServiceReadiness');
-      }
+      setCurrentStep('documents');
     } catch (error) {
       Alert.alert(
         'Driver verification',
@@ -425,6 +422,34 @@ export function SelfServiceVerificationScreen({
     setIdentityResult(null);
     setDraftRestored(false);
     showToast('Saved verification draft cleared.', 'success');
+  };
+
+  const onInitiatePayment = async () => {
+    if (!token) return;
+    setInitiatingPayment(true);
+    try {
+      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      await Linking.openURL(checkout.checkoutUrl);
+    } catch (error) {
+      Alert.alert(
+        'Payment',
+        error instanceof Error ? error.message : 'Unable to start the payment process. Please try again.',
+      );
+    } finally {
+      setInitiatingPayment(false);
+    }
+  };
+
+  const onConfirmPayment = async () => {
+    try {
+      await refreshSelfService();
+      showToast('Payment status refreshed.', 'success');
+    } catch (error) {
+      Alert.alert(
+        'Payment',
+        error instanceof Error ? error.message : 'Unable to refresh payment status.',
+      );
+    }
   };
 
   const onUploadDocument = async () => {
@@ -486,249 +511,413 @@ export function SelfServiceVerificationScreen({
     );
   }
 
-  return (
-    <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
-      <Card style={styles.section}>
-        <Text style={styles.kicker}>Driver verification</Text>
-        <Text style={styles.title}>Complete identity setup</Text>
-        <Text style={styles.copy}>
-          Submit your identity details, take a selfie, and upload onboarding documents to get started.
-        </Text>
-        <View style={styles.badgeRow}>
-          <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
-          <Badge
-            label={`Docs: ${uploadedRequiredDocumentCount}/${documentChecklist.length}`}
-            tone={
-              documentChecklist.length > 0 && uploadedRequiredDocumentCount === documentChecklist.length
-                ? 'success'
-                : 'warning'
-            }
-          />
-          <Badge
-            label={`${completedStepCount}/${stepCompletion.length} steps done`}
-            tone={completedStepCount === stepCompletion.length ? 'success' : 'neutral'}
-          />
-        </View>
-      </Card>
+  const totalSteps = getTotalSteps(includePayment);
+  const currentStepIndex = getStepIndex(currentStep, includePayment);
 
-      {draftRestored ? (
+  const goBack = () => {
+    if (currentStep === 'payment') setCurrentStep('overview');
+    else if (currentStep === 'identity') setCurrentStep(includePayment ? 'payment' : 'overview');
+    else if (currentStep === 'documents') setCurrentStep('identity');
+  };
+
+  const renderProgressBar = () => (
+    <View style={styles.progressRow}>
+      {Array.from({ length: totalSteps }).map((_, index) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: stable fixed-length array
+          key={index}
+          style={[styles.progressDot, index <= currentStepIndex ? styles.progressDotActive : null]}
+        />
+      ))}
+      <Text style={styles.progressLabel}>
+        Step {currentStepIndex + 1} of {totalSteps}
+      </Text>
+    </View>
+  );
+
+  // ─── Step: overview ────────────────────────────────────────────────────────
+
+  if (currentStep === 'overview') {
+    return (
+      <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
+        {renderProgressBar()}
+
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Saved progress restored</Text>
+          <Text style={styles.kicker}>Driver verification</Text>
+          <Text style={styles.title}>What to expect</Text>
           <Text style={styles.copy}>
-            Your last inputs were restored. Selfie capture is not saved and must be done again.
+            Complete the steps below to finish your onboarding. Here's what we'll collect:
           </Text>
-          <Button label="Clear saved draft" variant="secondary" onPress={() => void onClearDraft()} />
-        </Card>
-      ) : null}
 
-      {/* Step 1: Country */}
-      <Card style={styles.section}>
-        <Text style={styles.stepLabel}>Step 1 of 5</Text>
-        <Text style={styles.sectionTitle}>Country</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {countryOptions.map((option: { code: string; label: string }) => (
-            <Pressable
-              key={option.code}
-              disabled={identitySubmitted}
-              onPress={() => setCountryCode(option.code)}
-            >
-              <View style={[styles.chip, countryCode === option.code ? styles.chipActive : null]}>
-                <Text style={[styles.chipLabel, countryCode === option.code ? styles.chipLabelActive : null]}>
-                  {option.label}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </Card>
-
-      {/* Step 2: Identification numbers */}
-      <Card style={styles.section}>
-        <Text style={styles.stepLabel}>Step 2 of 5</Text>
-        <Text style={styles.sectionTitle}>Identification numbers</Text>
-        <Text style={styles.copy}>
-          Enter your government-issued ID numbers exactly as they appear on the document.
-        </Text>
-        {identifierTypes.map((identifier) => (
-          <Input
-            key={identifier.type}
-            keyboardType={identifier.numericOnly ? 'number-pad' : 'default'}
-            label={identifier.label}
-            editable={!identitySubmitted}
-            onChangeText={(value) =>
-              setIdentifierValues((current) => ({
-                ...current,
-                [identifier.type]: identifier.numericOnly ? value.replace(/\D/g, '') : value,
-              }))
-            }
-            placeholder={
-              identifier.exactLength
-                ? `${identifier.exactLength} ${identifier.numericOnly ? 'digits' : 'characters'}`
-                : identifier.label
-            }
-            value={
-              identitySubmitted
-                ? maskIdentifier(identifierValues[identifier.type] ?? '')
-                : identifierValues[identifier.type] ?? ''
-            }
-            helperText={
-              identitySubmitted
-                ? 'Submitted — number masked for security'
-                : identifier.required
-                  ? 'Required'
-                  : 'Optional'
-            }
-          />
-        ))}
-        {identifiersReady && !identitySubmitted ? (
-          <View style={styles.successRow}>
-            <Text style={styles.successText}>All required identifiers look good</Text>
-          </View>
-        ) : null}
-      </Card>
-
-      {/* Step 3: Selfie capture */}
-      <Card style={styles.section}>
-        <Text style={styles.stepLabel}>Step 3 of 5</Text>
-        <Text style={styles.sectionTitle}>
-          {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}
-        </Text>
-        <Text style={styles.copy}>
-          {biometricVerificationRequired
-            ? 'Look directly at the front camera in good lighting. Keep your face centred in the frame.'
-            : 'Take a clear face photo for your operator record.'}
-        </Text>
-
-        {selfiePreviewUri ? (
-          <View style={styles.selfiePreviewContainer}>
-            <Image
-              source={{ uri: selfiePreviewUri }}
-              style={styles.selfiePreview}
-              resizeMode="cover"
-            />
-            <Text style={styles.selfieCaption}>
-              {identitySubmitted ? 'Selfie submitted' : 'Selfie captured — ready to submit'}
-            </Text>
-          </View>
-        ) : null}
-
-        {!identitySubmitted ? (
-          <Button
-            label={selfiePreviewUri ? 'Retake selfie' : biometricVerificationRequired ? 'Open camera for selfie' : 'Take profile photo'}
-            variant={selfiePreviewUri ? 'secondary' : 'default'}
-            onPress={() => void onCaptureSelfie()}
-          />
-        ) : null}
-      </Card>
-
-      {/* Step 4: Submit identity */}
-      <Card style={styles.section}>
-        <Text style={styles.stepLabel}>Step 4 of 5</Text>
-        <Text style={styles.sectionTitle}>Submit verification</Text>
-
-        {identitySubmitted && identityResult ? (
-          <View style={[styles.resultCard, identityResult.decision === 'verified' ? styles.resultCardSuccess : styles.resultCardPending]}>
-            <View style={styles.badgeRow}>
-              <Badge
-                label={formatDecisionLabel(identityResult.decision)}
-                tone={identityResult.decision === 'verified' ? 'success' : identityResult.decision === 'failed' ? 'danger' : 'warning'}
-              />
-              {identityResult.livenessPassed != null ? (
-                <Badge
-                  label={identityResult.livenessPassed ? 'Liveness passed' : 'Liveness failed'}
-                  tone={identityResult.livenessPassed ? 'success' : 'danger'}
-                />
+          {identityVerificationRequired ? (
+            <View style={styles.checklistBlock}>
+              {identifierTypes.map((identifier) => (
+                <View key={identifier.type} style={styles.checklistRow}>
+                  <Text style={styles.checklistDot}>•</Text>
+                  <Text style={styles.checklistText}>{identifier.label}</Text>
+                </View>
+              ))}
+              {biometricVerificationRequired ? (
+                <View style={styles.checklistRow}>
+                  <Text style={styles.checklistDot}>•</Text>
+                  <Text style={styles.checklistText}>Live selfie photo</Text>
+                </View>
               ) : null}
             </View>
+          ) : null}
 
-            {/* Smile Identity record fields */}
-            {identityResult.verifiedProfile ? (
-              <View style={styles.profileGrid}>
-                <Text style={styles.profileLabel}>Name on record</Text>
-                <Text style={styles.profileValue}>{identityResult.verifiedProfile.fullName ?? '—'}</Text>
-                {identityResult.verifiedProfile.dateOfBirth ? (
-                  <>
-                    <Text style={styles.profileLabel}>Date of birth</Text>
-                    <Text style={styles.profileValue}>{identityResult.verifiedProfile.dateOfBirth}</Text>
-                  </>
-                ) : null}
-                {identityResult.verifiedProfile.gender ? (
-                  <>
-                    <Text style={styles.profileLabel}>Gender</Text>
-                    <Text style={styles.profileValue}>{identityResult.verifiedProfile.gender}</Text>
-                  </>
+          {requiredDocuments.length > 0 ? (
+            <View style={styles.checklistBlock}>
+              <Text style={styles.checklistHeading}>Required documents</Text>
+              {requiredDocuments.map((document) => (
+                <View key={document.slug} style={styles.checklistRow}>
+                  <Text style={styles.checklistDot}>•</Text>
+                  <Text style={styles.checklistText}>{document.name}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {driverPaysKyc ? (
+            <View style={styles.paymentNotice}>
+              <Text style={styles.paymentNoticeTitle}>₦5,000 verification fee required</Text>
+              <Text style={styles.paymentNoticeBody}>
+                Your organisation requires you to pay for your own identity verification before the process can begin.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.orgCoversNotice}>
+              <Text style={styles.orgCoversText}>Your organisation covers the verification cost.</Text>
+            </View>
+          )}
+
+          <View style={styles.badgeRow}>
+            <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
+            <Badge
+              label={`Docs: ${uploadedRequiredDocumentCount}/${documentChecklist.length}`}
+              tone={
+                documentChecklist.length > 0 && uploadedRequiredDocumentCount === documentChecklist.length
+                  ? 'success'
+                  : 'warning'
+              }
+            />
+          </View>
+        </Card>
+
+        {draftRestored ? (
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Saved progress restored</Text>
+            <Text style={styles.copy}>
+              Your last inputs were restored. Selfie capture is not saved and must be done again.
+            </Text>
+            <Button label="Clear saved draft" variant="secondary" onPress={() => void onClearDraft()} />
+          </Card>
+        ) : null}
+
+        <Card style={styles.section}>
+          {identitySubmitted ? (
+            <Button
+              label="Continue to documents"
+              onPress={() => setCurrentStep('documents')}
+            />
+          ) : driverPaysKyc && !kycPaymentVerified ? (
+            <Button
+              label="Continue to payment"
+              onPress={() => setCurrentStep('payment')}
+            />
+          ) : (
+            <Button
+              label="Start verification"
+              onPress={() => setCurrentStep('identity')}
+            />
+          )}
+        </Card>
+      </Screen>
+    );
+  }
+
+  // ─── Step: payment ─────────────────────────────────────────────────────────
+
+  if (currentStep === 'payment') {
+    return (
+      <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
+        {renderProgressBar()}
+
+        <Card style={styles.section}>
+          <Text style={styles.kicker}>Identity verification fee</Text>
+          <Text style={styles.title}>Pay before verification</Text>
+          <Text style={styles.copy}>
+            Your organisation requires you to pay ₦5,000 before your identity verification can begin. This is a one-time payment per verification.
+          </Text>
+
+          <View style={styles.breakdownCard}>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Biometric identity verification</Text>
+              <Text style={styles.breakdownAmount}>₦5,000</Text>
+            </View>
+          </View>
+
+          {kycPaymentVerified ? (
+            <View style={styles.successRow}>
+              <Badge label="Payment confirmed" tone="success" />
+              <Text style={styles.successText}>Your payment has been verified. You can now proceed to verification.</Text>
+            </View>
+          ) : null}
+
+          {!kycPaymentVerified ? (
+            <>
+              <Button
+                label="Pay now"
+                loading={initiatingPayment}
+                onPress={() => void onInitiatePayment()}
+              />
+              <Button
+                label="I've completed payment"
+                variant="secondary"
+                onPress={() => void onConfirmPayment()}
+              />
+            </>
+          ) : (
+            <Button
+              label="Continue to verification"
+              onPress={() => setCurrentStep('identity')}
+            />
+          )}
+        </Card>
+
+        <Button label="Back" variant="secondary" onPress={goBack} />
+      </Screen>
+    );
+  }
+
+  // ─── Step: identity ─────────────────────────────────────────────────────────
+
+  if (currentStep === 'identity') {
+    return (
+      <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
+        {renderProgressBar()}
+
+        {/* Country picker */}
+        <Card style={styles.section}>
+          <Text style={styles.stepLabel}>Step 1 — Country</Text>
+          <Text style={styles.sectionTitle}>Select your country</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {countryOptions.map((option: { code: string; label: string }) => (
+              <Pressable
+                key={option.code}
+                disabled={identitySubmitted}
+                onPress={() => setCountryCode(option.code)}
+              >
+                <View style={[styles.chip, countryCode === option.code ? styles.chipActive : null]}>
+                  <Text style={[styles.chipLabel, countryCode === option.code ? styles.chipLabelActive : null]}>
+                    {option.label}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Card>
+
+        {/* Identifier inputs */}
+        <Card style={styles.section}>
+          <Text style={styles.stepLabel}>Step 2 — Identification numbers</Text>
+          <Text style={styles.sectionTitle}>Enter your ID numbers</Text>
+          <Text style={styles.copy}>
+            Enter your government-issued ID numbers exactly as they appear on the document.
+          </Text>
+          {identifierTypes.map((identifier) => (
+            <Input
+              key={identifier.type}
+              keyboardType={identifier.numericOnly ? 'number-pad' : 'default'}
+              label={identifier.label}
+              editable={!identitySubmitted}
+              onChangeText={(value) =>
+                setIdentifierValues((current) => ({
+                  ...current,
+                  [identifier.type]: identifier.numericOnly ? value.replace(/\D/g, '') : value,
+                }))
+              }
+              placeholder={
+                identifier.exactLength
+                  ? `${identifier.exactLength} ${identifier.numericOnly ? 'digits' : 'characters'}`
+                  : identifier.label
+              }
+              value={
+                identitySubmitted
+                  ? maskIdentifier(identifierValues[identifier.type] ?? '')
+                  : identifierValues[identifier.type] ?? ''
+              }
+              helperText={
+                identitySubmitted
+                  ? 'Submitted — number masked for security'
+                  : identifier.required
+                    ? 'Required'
+                    : 'Optional'
+              }
+            />
+          ))}
+          {identifiersReady && !identitySubmitted ? (
+            <View style={styles.successRow}>
+              <Text style={styles.successText}>All required identifiers look good</Text>
+            </View>
+          ) : null}
+        </Card>
+
+        {/* Selfie capture */}
+        <Card style={styles.section}>
+          <Text style={styles.stepLabel}>Step 3 — {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}</Text>
+          <Text style={styles.sectionTitle}>
+            {biometricVerificationRequired ? 'Live selfie' : 'Profile photo'}
+          </Text>
+          <Text style={styles.copy}>
+            {biometricVerificationRequired
+              ? 'Look directly at the front camera in good lighting. Keep your face centred in the frame.'
+              : 'Take a clear face photo for your operator record.'}
+          </Text>
+
+          {selfiePreviewUri ? (
+            <View style={styles.selfiePreviewContainer}>
+              <Image
+                source={{ uri: selfiePreviewUri }}
+                style={styles.selfiePreview}
+                resizeMode="cover"
+              />
+              <Text style={styles.selfieCaption}>
+                {identitySubmitted ? 'Selfie submitted' : 'Selfie captured — ready to submit'}
+              </Text>
+            </View>
+          ) : null}
+
+          {!identitySubmitted ? (
+            <Button
+              label={selfiePreviewUri ? 'Retake selfie' : biometricVerificationRequired ? 'Open camera for selfie' : 'Take profile photo'}
+              variant={selfiePreviewUri ? 'secondary' : 'default'}
+              onPress={() => void onCaptureSelfie()}
+            />
+          ) : null}
+        </Card>
+
+        {/* Submit */}
+        <Card style={styles.section}>
+          <Text style={styles.stepLabel}>Step 4 — Submit</Text>
+          <Text style={styles.sectionTitle}>Submit verification</Text>
+
+          {identitySubmitted && identityResult ? (
+            <View style={[styles.resultCard, identityResult.decision === 'verified' ? styles.resultCardSuccess : styles.resultCardPending]}>
+              <View style={styles.badgeRow}>
+                <Badge
+                  label={formatDecisionLabel(identityResult.decision)}
+                  tone={identityResult.decision === 'verified' ? 'success' : identityResult.decision === 'failed' ? 'danger' : 'warning'}
+                />
+                {identityResult.livenessPassed != null ? (
+                  <Badge
+                    label={identityResult.livenessPassed ? 'Liveness passed' : 'Liveness failed'}
+                    tone={identityResult.livenessPassed ? 'success' : 'danger'}
+                  />
                 ) : null}
               </View>
-            ) : null}
 
-            {identityResult.verificationConfidence != null ? (
-              <Text style={styles.meta}>
-                Match confidence: {Math.round(identityResult.verificationConfidence * 100)}%
-              </Text>
-            ) : null}
-            {identityResult.livenessConfidenceScore != null ? (
-              <Text style={styles.meta}>
-                Liveness confidence: {Math.round(identityResult.livenessConfidenceScore * 100)}%
-              </Text>
-            ) : null}
-            {identityResult.matchedIdentifierType ? (
-              <Text style={styles.meta}>
-                Matched via: {identityResult.matchedIdentifierType}
-              </Text>
-            ) : null}
-            {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
-              <Text style={styles.copy}>
-                Your organisation will complete remaining checks internally.
-              </Text>
-            ) : identityResult.decision === 'review_needed' ? (
-              <Text style={styles.copy}>
-                Your identity is under manual review. The operator will confirm once complete.
-              </Text>
-            ) : null}
-          </View>
-        ) : identitySubmitted ? (
-          <View style={styles.resultCard}>
-            <Badge label={formatIdentityLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
-            <Text style={styles.copy}>
-              Identity already submitted. Check the readiness checklist for your current status.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.copy}>
-              {identityVerificationRequired
-                ? 'Submit once your ID numbers and selfie are ready.'
-                : 'Your organisation does not require identity verification. Upload documents and continue.'}
-            </Text>
-            {identityVerificationRequired ? (
-              <Button
-                label={governmentLookupRequired ? 'Submit identity verification' : 'Save for organisation review'}
-                disabled={!canSubmitIdentity}
-                loading={submittingIdentity}
-                onPress={() => void onSubmitIdentity()}
-              />
-            ) : (
-              <Text style={styles.meta}>
-                Upload required documents below and open the readiness checklist when done.
-              </Text>
-            )}
-            {!canSubmitIdentity && !identitySubmitted ? (
-              <Text style={styles.hintText}>
-                {!identifiersReady
-                  ? 'Enter all required ID numbers first.'
-                  : biometricVerificationRequired && !selfieBase64
-                    ? 'Capture your selfie using the camera above.'
-                    : ''}
-              </Text>
-            ) : null}
-          </>
-        )}
-      </Card>
+              {identityResult.verifiedProfile ? (
+                <View style={styles.profileGrid}>
+                  <Text style={styles.profileLabel}>Name on record</Text>
+                  <Text style={styles.profileValue}>{identityResult.verifiedProfile.fullName ?? '—'}</Text>
+                  {identityResult.verifiedProfile.dateOfBirth ? (
+                    <>
+                      <Text style={styles.profileLabel}>Date of birth</Text>
+                      <Text style={styles.profileValue}>{identityResult.verifiedProfile.dateOfBirth}</Text>
+                    </>
+                  ) : null}
+                  {identityResult.verifiedProfile.gender ? (
+                    <>
+                      <Text style={styles.profileLabel}>Gender</Text>
+                      <Text style={styles.profileValue}>{identityResult.verifiedProfile.gender}</Text>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
 
-      {/* Step 5: Documents */}
+              {identityResult.verificationConfidence != null ? (
+                <Text style={styles.meta}>
+                  Match confidence: {Math.round(identityResult.verificationConfidence * 100)}%
+                </Text>
+              ) : null}
+              {identityResult.livenessConfidenceScore != null ? (
+                <Text style={styles.meta}>
+                  Liveness confidence: {Math.round(identityResult.livenessConfidenceScore * 100)}%
+                </Text>
+              ) : null}
+              {identityResult.matchedIdentifierType ? (
+                <Text style={styles.meta}>
+                  Matched via: {identityResult.matchedIdentifierType}
+                </Text>
+              ) : null}
+              {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
+                <Text style={styles.copy}>
+                  Your organisation will complete remaining checks internally.
+                </Text>
+              ) : identityResult.decision === 'review_needed' ? (
+                <Text style={styles.copy}>
+                  Your identity is under manual review. The operator will confirm once complete.
+                </Text>
+              ) : null}
+
+              <Button label="Continue to documents" onPress={() => setCurrentStep('documents')} />
+            </View>
+          ) : identitySubmitted ? (
+            <View style={styles.resultCard}>
+              <Badge label={formatIdentityLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
+              <Text style={styles.copy}>
+                Identity already submitted. Check the readiness checklist for your current status.
+              </Text>
+              <Button label="Continue to documents" onPress={() => setCurrentStep('documents')} />
+            </View>
+          ) : (
+            <>
+              <Text style={styles.copy}>
+                {identityVerificationRequired
+                  ? 'Submit once your ID numbers and selfie are ready.'
+                  : 'Your organisation does not require identity verification. Upload documents and continue.'}
+              </Text>
+              {identityVerificationRequired ? (
+                <Button
+                  label={governmentLookupRequired ? 'Submit identity verification' : 'Save for organisation review'}
+                  disabled={!canSubmitIdentity}
+                  loading={submittingIdentity}
+                  onPress={() => void onSubmitIdentity()}
+                />
+              ) : (
+                <Button
+                  label="Continue to documents"
+                  onPress={() => setCurrentStep('documents')}
+                />
+              )}
+              {!canSubmitIdentity && !identitySubmitted ? (
+                <Text style={styles.hintText}>
+                  {!identifiersReady
+                    ? 'Enter all required ID numbers first.'
+                    : biometricVerificationRequired && !selfieBase64
+                      ? 'Capture your selfie using the camera above.'
+                      : ''}
+                </Text>
+              ) : null}
+            </>
+          )}
+        </Card>
+
+        <Button label="Back" variant="secondary" onPress={goBack} />
+      </Screen>
+    );
+  }
+
+  // ─── Step: documents ────────────────────────────────────────────────────────
+
+  return (
+    <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
+      {renderProgressBar()}
+
       <Card style={styles.section}>
-        <Text style={styles.stepLabel}>Step 5 of 5</Text>
-        <Text style={styles.sectionTitle}>Upload documents</Text>
+        <Text style={styles.kicker}>Documents</Text>
+        <Text style={styles.title}>Upload documents</Text>
         <Text style={styles.copy}>
           Upload each required document from this device. Files must be under 10 MB (PDF, JPG, PNG).
         </Text>
@@ -770,7 +959,6 @@ export function SelfServiceVerificationScreen({
         ))}
       </Card>
 
-      {/* Continue CTA */}
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Next step</Text>
         <Text style={styles.copy}>
@@ -780,16 +968,18 @@ export function SelfServiceVerificationScreen({
         </Text>
         {!driver.hasMobileAccess ? (
           <Button
-            label="Set up sign-in account"
+            label="Continue to account setup"
             onPress={() => navigation.navigate('DriverAccountSetup')}
           />
         ) : null}
         <Button
-          label="Open readiness checklist"
+          label="Check readiness"
           variant="secondary"
           onPress={() => navigation.navigate('SelfServiceReadiness')}
         />
       </Card>
+
+      <Button label="Back" variant="secondary" onPress={goBack} />
     </Screen>
   );
 }
@@ -928,6 +1118,79 @@ const styles = StyleSheet.create({
   },
   documentCopy: { flex: 1, gap: 4 },
   documentTitle: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: tokens.colors.border,
+  },
+  progressDotActive: {
+    backgroundColor: tokens.colors.primary,
+  },
+  progressLabel: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  checklistBlock: {
+    gap: 6,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    padding: tokens.spacing.sm,
+    backgroundColor: '#f8fafc',
+  },
+  checklistHeading: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  checklistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  checklistDot: { color: tokens.colors.primary, fontSize: 16, lineHeight: 20 },
+  checklistText: { color: tokens.colors.ink, fontSize: 14, flex: 1, lineHeight: 20 },
+  paymentNotice: {
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#fffbeb',
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  paymentNoticeTitle: { color: '#92400e', fontSize: 14, fontWeight: '700' },
+  paymentNoticeBody: { color: '#78350f', fontSize: 13, lineHeight: 18 },
+  orgCoversNotice: {
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#f0fdf4',
+    padding: tokens.spacing.sm,
+  },
+  orgCoversText: { color: '#15803d', fontSize: 13, fontWeight: '600' },
+  breakdownCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#f8fafc',
+    padding: tokens.spacing.sm,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breakdownLabel: { color: tokens.colors.ink, fontSize: 14 },
+  breakdownAmount: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
 });
 
 export default SelfServiceVerificationScreen;

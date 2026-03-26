@@ -52,6 +52,8 @@ export interface TenantRecord {
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
+  requireGuarantor?: boolean;
+  requireGuarantorVerification?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +80,9 @@ export interface UpdateTenantSettingsInput {
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
+  requireGuarantor?: boolean;
+  requireGuarantorVerification?: boolean;
 }
 
 export interface NotificationChannelPreferenceRecord {

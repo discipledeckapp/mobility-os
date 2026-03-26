@@ -81,4 +81,14 @@ export class UpdateTenantSettingsDto {
   @IsOptional()
   @IsBoolean()
   driverPaysKyc?: boolean;
+
+  @ApiPropertyOptional({ description: 'When false, guarantors are not required for driver onboarding.' })
+  @IsOptional()
+  @IsBoolean()
+  requireGuarantor?: boolean;
+
+  @ApiPropertyOptional({ description: 'When true, guarantors must also pass identity verification.' })
+  @IsOptional()
+  @IsBoolean()
+  requireGuarantorVerification?: boolean;
 }
