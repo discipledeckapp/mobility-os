@@ -112,13 +112,14 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
 
       <div className="mb-6 grid gap-6 xl:grid-cols-2">
         <CsvBulkImportCard
+          id="bulk-import"
           checkboxLabel="Send self-verification link after importing each driver"
           checkboxName="autoSendSelfServiceLink"
-          description="Download the import template, populate it with existing driver data, then import it in bulk. Subscription limits are enforced during import."
+          description="Use bulk import as the secondary path when you already have a prepared roster. Download the template, validate rows, and import in one pass."
           exportHref="/api/download/drivers-export"
           formAction={importDriversCsvAction}
           templateHref="/api/download/driver-import-template"
-          title="Bulk import drivers"
+          title="Add drivers in bulk"
         />
         <Card className="border-slate-200 bg-white">
           <CardContent className="space-y-3 py-6">

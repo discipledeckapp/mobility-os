@@ -47,12 +47,16 @@ async function intelligenceFetch<T>(
 
 export interface IntelligencePersonRecord {
   id: string;
+  globalPersonCode?: string | null;
   fullName?: string | null;
   dateOfBirth?: string | null;
   address?: string | null;
   gender?: string | null;
   photoUrl?: string | null;
+  selfieImageUrl?: string | null;
+  providerImageUrl?: string | null;
   globalRiskScore: number;
+  riskBand: string;
   isWatchlisted: boolean;
   hasDuplicateFlag: boolean;
   fraudSignalCount: number;
@@ -62,6 +66,74 @@ export interface IntelligencePersonRecord {
   verificationCountryCode?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PersonAssociationRecord {
+  id: string;
+  personId: string;
+  tenantId: string;
+  businessEntityId?: string | null;
+  operatingUnitId?: string | null;
+  fleetId?: string | null;
+  localEntityType: string;
+  localEntityId?: string | null;
+  roleType: string;
+  status: string;
+  source: string;
+  verifiedAt?: string | null;
+  reverificationRequired: boolean;
+  reverificationReason?: string | null;
+  staleFieldKeys?: string[] | null;
+  createdAt: string;
+}
+
+export interface LinkageEventRecord {
+  id: string;
+  personId: string;
+  eventType: string;
+  confidenceScore?: number | null;
+  actor: string;
+  reason?: string | null;
+  metadata?: Record<string, unknown> | null;
+  occurredAt: string;
+}
+
+export interface IdentityChangeEventRecord {
+  id: string;
+  personId: string;
+  eventType: string;
+  source: string;
+  verificationProvider?: string | null;
+  verificationCountryCode?: string | null;
+  tenantId?: string | null;
+  localEntityType?: string | null;
+  localEntityId?: string | null;
+  changedFields: string[];
+  previousValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  reason?: string | null;
+  verifiedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PersonRiskSummaryRecord {
+  personId: string;
+  score: number;
+  riskBand: string;
+  contributingFactors: Array<{
+    code: string;
+    label: string;
+    weight: number;
+    detail?: string;
+  }>;
+  linkedOrganisationCount: number;
+  linkedRecordCount: number;
+  staleLinkedRecordCount: number;
+  activeReviewCaseCount: number;
+  activeWatchlistCount: number;
+  guarantorLinkedDriverCount: number;
+  guarantorExposureExceeded: boolean;
+  correctiveAction?: string;
 }
 
 export interface ReviewCaseRecord {
@@ -105,18 +177,84 @@ export interface IdentifierRecord {
   id: string;
   personId: string;
   type: string;
-  value: string;
+  maskedValue: string;
   countryCode?: string | null;
   isVerified: boolean;
   createdAt: string;
+}
+
+export function listIntelligencePersons(
+  input: {
+    q?: string;
+    riskBand?: string;
+    countryCode?: string;
+    watchlistStatus?: string;
+    reviewState?: string;
+    roleType?: string;
+    reverificationRequired?: string;
+  } = {},
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (input.q) params.set('q', input.q);
+  if (input.riskBand) params.set('riskBand', input.riskBand);
+  if (input.countryCode) params.set('countryCode', input.countryCode);
+  if (input.watchlistStatus) params.set('watchlistStatus', input.watchlistStatus);
+  if (input.reviewState) params.set('reviewState', input.reviewState);
+  if (input.roleType) params.set('roleType', input.roleType);
+  if (input.reverificationRequired) params.set('reverificationRequired', input.reverificationRequired);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return intelligenceFetch<IntelligencePersonRecord[]>(`/staff/persons${query}`, {}, token);
 }
 
 export function getIntelligencePerson(personId: string, token?: string) {
   return intelligenceFetch<IntelligencePersonRecord>(`/staff/persons/${personId}`, {}, token);
 }
 
-export function listReviewCases(status?: string, token?: string) {
-  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+export function listPersonAssociations(personId: string, token?: string) {
+  return intelligenceFetch<PersonAssociationRecord[]>(
+    `/staff/persons/${personId}/associations`,
+    {},
+    token,
+  );
+}
+
+export function listPersonLinkageEvents(personId: string, token?: string) {
+  return intelligenceFetch<LinkageEventRecord[]>(
+    `/staff/persons/${personId}/linkage-events`,
+    {},
+    token,
+  );
+}
+
+export function listPersonIdentityChanges(personId: string, token?: string) {
+  return intelligenceFetch<IdentityChangeEventRecord[]>(
+    `/staff/persons/${personId}/identity-changes`,
+    {},
+    token,
+  );
+}
+
+export function getPersonRiskSummary(personId: string, token?: string) {
+  return intelligenceFetch<PersonRiskSummaryRecord>(
+    `/staff/risk-signals/persons/${personId}/summary`,
+    {},
+    token,
+  );
+}
+
+export function listReviewCases(
+  input: { status?: string; personId?: string } = {},
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (input.status) {
+    params.set('status', input.status);
+  }
+  if (input.personId) {
+    params.set('personId', input.personId);
+  }
+  const query = params.toString();
   return intelligenceFetch<ReviewCaseRecord[]>(`/staff/review-cases${query}`, {}, token);
 }
 

@@ -119,6 +119,27 @@ export interface UserNotificationRecord {
   createdAt: string;
 }
 
+export interface DataSubjectRequestRecord {
+  id: string;
+  subjectType: string;
+  subjectId?: string | null;
+  requestType: 'access' | 'correction' | 'deletion' | 'restriction';
+  status: string;
+  contactEmail?: string | null;
+  details?: string | null;
+  resolutionNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrivacySupportRecord {
+  supportEmail: string;
+  supportPhonePrimary?: string | null;
+  supportPhoneSecondary?: string | null;
+  privacyPolicyVersion: string;
+  termsVersion: string;
+}
+
 export interface ChangeTenantPasswordInput {
   currentPassword: string;
   newPassword: string;
@@ -135,8 +156,12 @@ export interface DriverRecord {
   lastName: string | null;
   phone: string | null;
   email?: string | null;
+  organisationName?: string | null;
   photoUrl?: string | null;
+  selfieImageUrl?: string | null;
+  providerImageUrl?: string | null;
   dateOfBirth?: string | null;
+  gender?: string | null;
   nationality?: string | null;
   hasResolvedIdentity: boolean;
   identityStatus: string;
@@ -266,6 +291,10 @@ export interface DriverGuarantorRecord {
   email?: string | null;
   countryCode?: string | null;
   relationship?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  selfieImageUrl?: string | null;
+  providerImageUrl?: string | null;
   status: string;
   disconnectedAt?: string | null;
   disconnectedReason?: string | null;
@@ -294,6 +323,7 @@ export interface DriverIdentityResolutionInput {
 export interface DriverIdentityResolutionResult {
   decision: string;
   personId?: string;
+  globalPersonCode?: string;
   reviewCaseId?: string;
   providerLookupStatus?: string;
   providerVerificationStatus?: string;
@@ -306,6 +336,8 @@ export interface DriverIdentityResolutionResult {
     address?: string;
     gender?: string;
     photoUrl?: string;
+    providerImageUrl?: string;
+    selfieImageUrl?: string;
   };
   globalRiskScore?: number;
   riskBand?: string;
@@ -1314,6 +1346,32 @@ export async function listUserNotifications(token?: string): Promise<UserNotific
   });
 }
 
+export async function listDataSubjectRequests(token?: string): Promise<DataSubjectRequestRecord[]> {
+  return apiCoreFetch<DataSubjectRequestRecord[]>('/privacy/data-requests', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function createDataSubjectRequest(
+  input: Pick<DataSubjectRequestRecord, 'requestType'> & { details?: string },
+  token?: string,
+): Promise<DataSubjectRequestRecord> {
+  return apiCoreFetch<DataSubjectRequestRecord>('/privacy/data-requests', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function getPrivacySupport(token?: string): Promise<PrivacySupportRecord> {
+  return apiCoreFetch<PrivacySupportRecord>('/privacy/support', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function markUserNotificationRead(
   notificationId: string,
   token?: string,
@@ -1831,6 +1889,16 @@ export async function resolveDriverSelfServiceIdentity(
   });
 }
 
+export async function recordDriverSelfServiceVerificationConsent(
+  selfServiceToken: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/driver-self-service/verification-consent', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken }),
+    cache: 'no-store',
+  });
+}
+
 export async function listDriverSelfServiceDocuments(
   selfServiceToken: string,
 ): Promise<DriverDocumentRecord[]> {
@@ -1856,6 +1924,20 @@ export async function uploadDriverSelfServiceDocument(
     body: JSON.stringify({ token: selfServiceToken, ...input }),
     cache: 'no-store',
   });
+}
+
+export async function removeDriverSelfServiceDocument(
+  selfServiceToken: string,
+  documentId: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>(
+    `/driver-self-service/documents/${documentId}/remove`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function createDriverSelfServiceAccount(
@@ -1932,8 +2014,12 @@ export async function getGuarantorSelfServiceContext(
   guarantorEmail: string | null;
   guarantorCountryCode: string | null;
   guarantorRelationship: string | null;
+  guarantorDateOfBirth: string | null;
+  guarantorGender: string | null;
   guarantorPersonId: string | null;
   guarantorStatus: string;
+  guarantorSelfieImageUrl: string | null;
+  guarantorProviderImageUrl: string | null;
   driverName: string;
   driverId: string;
   tenantId: string;
@@ -1981,6 +2067,16 @@ export async function updateGuarantorSelfServiceProfile(
   return apiCoreFetch<{ message: string }>('/guarantor-self-service/update-profile', {
     method: 'POST',
     body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function recordGuarantorSelfServiceVerificationConsent(
+  token: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/guarantor-self-service/verification-consent', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
     cache: 'no-store',
   });
 }

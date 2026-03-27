@@ -4,6 +4,15 @@ import { ConfigService } from '@nestjs/config';
 
 const LOGO_MARK_SVG = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;"><rect width="32" height="32" rx="8" fill="#2563eb"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" fill="#ffffff" letter-spacing="-0.5">M</text></svg>`;
 
+function maskEmailAddress(email: string): string {
+  const [localPart = '', domainPart = ''] = email.trim().split('@');
+  if (!localPart || !domainPart) {
+    return 'redacted';
+  }
+  const visiblePrefix = localPart.slice(0, 2);
+  return `${visiblePrefix}${'•'.repeat(Math.max(localPart.length - visiblePrefix.length, 1))}@${domainPart}`;
+}
+
 function renderAdminEmailShell(title: string, bodyHtml: string): string {
   return `
 <!DOCTYPE html>
@@ -121,7 +130,7 @@ export class StaffNotificationService {
     const apiKey = this.config.get<string>('ZEPTOMAIL_API_KEY');
     if (!apiKey) {
       this.logger.warn(
-        `Skipping staff invitation email — ZEPTOMAIL_API_KEY is not set. Invite for ${input.email}`,
+        `Skipping staff invitation email — ZEPTOMAIL_API_KEY is not set. Invite for ${maskEmailAddress(input.email)}`,
       );
       return;
     }
@@ -162,12 +171,10 @@ export class StaffNotificationService {
       });
 
       if (!response.ok) {
-        const body = await response.text();
-        this.logger.error(
-          `Staff invitation email failed — status=${response.status} body=${body}`,
-        );
+        await response.text().catch(() => '');
+        this.logger.error(`Staff invitation email failed — status=${response.status} body=[redacted]`);
       } else {
-        this.logger.log(`Staff invitation sent — email=${input.email}`);
+        this.logger.log(`Staff invitation sent — email=${maskEmailAddress(input.email)}`);
       }
     } catch (error) {
       this.logger.error(
@@ -185,7 +192,7 @@ export class StaffNotificationService {
     const apiKey = this.config.get<string>('ZEPTOMAIL_API_KEY');
     if (!apiKey) {
       this.logger.warn(
-        `Skipping platform password reset email — ZEPTOMAIL_API_KEY is not set. Reset for ${input.email}`,
+        `Skipping platform password reset email — ZEPTOMAIL_API_KEY is not set. Reset for ${maskEmailAddress(input.email)}`,
       );
       return;
     }
@@ -225,12 +232,10 @@ export class StaffNotificationService {
       });
 
       if (!response.ok) {
-        const body = await response.text();
-        this.logger.error(
-          `Platform password reset email failed — status=${response.status} body=${body}`,
-        );
+        await response.text().catch(() => '');
+        this.logger.error(`Platform password reset email failed — status=${response.status} body=[redacted]`);
       } else {
-        this.logger.log(`Platform password reset sent — email=${input.email}`);
+        this.logger.log(`Platform password reset sent — email=${maskEmailAddress(input.email)}`);
       }
     } catch (error) {
       this.logger.error(
@@ -278,10 +283,10 @@ export class StaffNotificationService {
       });
 
       if (!response.ok) {
-        const body = await response.text();
-        this.logger.error(`Admin notification email failed — status=${response.status} body=${body}`);
+        await response.text().catch(() => '');
+        this.logger.error(`Admin notification email failed — status=${response.status} body=[redacted]`);
       } else {
-        this.logger.log(`Admin notification sent — subject="${subject}" to=${notificationEmail}`);
+        this.logger.log(`Admin notification sent — subject="${subject}" to=${maskEmailAddress(notificationEmail)}`);
       }
     } catch (error) {
       this.logger.error(`Admin notification email threw — ${error instanceof Error ? error.message : String(error)}`);

@@ -64,6 +64,7 @@ export class BiometricsService {
     }
 
     const embeddingBytes = Buffer.from(dto.embeddingBase64, 'base64');
+    const embeddingHash = crypto.createHash('sha256').update(embeddingBytes).digest('hex');
     await this.detectCrossPersonConflict(dto.personId, dto.modality, embeddingBytes);
     const ciphertext = this.encrypt(embeddingBytes);
 
@@ -74,15 +75,23 @@ export class BiometricsService {
       data: { isActive: false },
     });
 
-    return this.prisma.intelBiometricProfile.create({
+    const profile = await this.prisma.intelBiometricProfile.create({
       data: {
         personId: dto.personId,
         modality: dto.modality,
         embeddingCiphertext: ciphertext,
+        embeddingHash,
         qualityScore: dto.qualityScore,
         isActive: true,
       },
     });
+
+    await this.prisma.intelPerson.update({
+      where: { id: dto.personId },
+      data: { primaryBiometricProfileId: profile.id },
+    });
+
+    return profile;
   }
 
   async listByPerson(personId: string, activeOnly = true): Promise<BiometricResponseDto[]> {
@@ -194,10 +203,12 @@ export class BiometricsService {
     candidateEmbedding: Buffer,
     excludedPersonId?: string,
   ): Promise<ExactBiometricConflict | null> {
+    const candidateHash = crypto.createHash('sha256').update(candidateEmbedding).digest('hex');
     const existingProfiles = await this.prisma.intelBiometricProfile.findMany({
       where: {
         modality,
         isActive: true,
+        embeddingHash: candidateHash,
         ...(excludedPersonId ? { personId: { not: excludedPersonId } } : {}),
       },
       select: {

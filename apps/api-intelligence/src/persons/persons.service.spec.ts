@@ -12,12 +12,15 @@ describe('PersonsService', () => {
       upsert: jest.fn(),
     },
   };
+  const linkageEventsService = {
+    listByPerson: jest.fn(),
+  };
 
   let service: PersonsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new PersonsService(prisma as never);
+    service = new PersonsService(prisma as never, linkageEventsService as never);
   });
 
   it('applies canonical identity enrichment to the person record', async () => {

@@ -1,396 +1,117 @@
 <?php
-/**
- * Theme Customizer settings.
- *
- * @package mobiris-v2
- */
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+function mv2_customizer( $wp_customize ) {
 
-/**
- * Register customizer settings, sections, and controls.
- *
- * @param WP_Customize_Manager $wp_customize Customizer object.
- */
-function mv2_customizer_register( $wp_customize ) {
+	// ── PANEL: Mobiris V2 Settings ─────────────────────────────────────
+	$wp_customize->add_panel( 'mv2_panel', array(
+		'title'    => __( 'Mobiris V2 Settings', 'mobiris-v2' ),
+		'priority' => 30,
+	) );
 
-	// -------------------------------------------------------------------------
-	// Panel: Mobiris V2 Settings
-	// -------------------------------------------------------------------------
-	$wp_customize->add_panel(
-		'mv2_panel',
-		array(
-			'title'    => __( 'Mobiris V2 Settings', 'mobiris-v2' ),
-			'priority' => 30,
-		)
+	// ── SECTION: Brand ──────────────────────────────────────────────────
+	$wp_customize->add_section( 'mv2_brand', array(
+		'title' => __( 'Brand & Contact', 'mobiris-v2' ),
+		'panel' => 'mv2_panel',
+	) );
+	$brand_fields = array(
+		'mv2_company_name'  => array( 'label' => 'Company Name',          'default' => 'Mobiris' ),
+		'mv2_tagline'       => array( 'label' => 'Brand Tagline',          'default' => 'Mobility Risk Infrastructure' ),
+		'mv2_whatsapp'      => array( 'label' => 'WhatsApp Number (digits only)', 'default' => '2348053108039' ),
+		'mv2_notify_email'  => array( 'label' => 'Lead notification email','default' => 'hello@mobiris.ng' ),
+		'mv2_signup_url'    => array( 'label' => 'App Signup URL',         'default' => 'https://app.mobiris.ng/signup' ),
+		'mv2_login_url'     => array( 'label' => 'App Login URL',          'default' => 'https://app.mobiris.ng/login' ),
+		'mv2_ios_url'       => array( 'label' => 'iOS App Store URL (leave blank = coming soon)', 'default' => '' ),
+		'mv2_android_url'   => array( 'label' => 'Android Play Store URL (leave blank = coming soon)', 'default' => '' ),
 	);
-
-	// =========================================================================
-	// SECTION: Contact & WhatsApp
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_contact',
-		array(
-			'title'    => __( 'Contact & WhatsApp', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 10,
-		)
-	);
-
-	// WhatsApp number.
-	$wp_customize->add_setting(
-		'mv2_whatsapp_number',
-		array(
-			'default'           => '2348053108039',
-			'sanitize_callback' => 'mv2_sanitize_digits',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_whatsapp_number',
-		array(
-			'label'       => __( 'WhatsApp Number (digits only, with country code)', 'mobiris-v2' ),
-			'description' => __( 'E.g. 2348053108039 — no plus sign, no spaces.', 'mobiris-v2' ),
-			'section'     => 'mv2_contact',
-			'type'        => 'text',
-		)
-	);
-
-	// Lead notification email.
-	$wp_customize->add_setting(
-		'mv2_lead_notify_email',
-		array(
-			'default'           => 'hello@mobiris.ng',
-			'sanitize_callback' => 'sanitize_email',
-			'transport'         => 'refresh',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_lead_notify_email',
-		array(
-			'label'   => __( 'Lead Notification Email', 'mobiris-v2' ),
-			'section' => 'mv2_contact',
-			'type'    => 'email',
-		)
-	);
-
-	// App URL.
-	$wp_customize->add_setting(
-		'mv2_app_url',
-		array(
-			'default'           => 'https://app.mobiris.ng/signup',
-			'sanitize_callback' => 'esc_url_raw',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_app_url',
-		array(
-			'label'   => __( 'App Signup URL', 'mobiris-v2' ),
-			'section' => 'mv2_contact',
-			'type'    => 'url',
-		)
-	);
-
-	// iOS App Store URL.
-	$wp_customize->add_setting(
-		'mv2_ios_url',
-		array(
-			'default'           => '',
-			'sanitize_callback' => 'esc_url_raw',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_ios_url',
-		array(
-			'label'       => __( 'iOS App Store URL', 'mobiris-v2' ),
-			'description' => __( 'Leave empty to show "Coming soon" badge.', 'mobiris-v2' ),
-			'section'     => 'mv2_contact',
-			'type'        => 'url',
-		)
-	);
-
-	// Android Play Store URL.
-	$wp_customize->add_setting(
-		'mv2_android_url',
-		array(
-			'default'           => '',
-			'sanitize_callback' => 'esc_url_raw',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_android_url',
-		array(
-			'label'       => __( 'Android Play Store URL', 'mobiris-v2' ),
-			'description' => __( 'Leave empty to show "Coming soon" badge.', 'mobiris-v2' ),
-			'section'     => 'mv2_contact',
-			'type'        => 'url',
-		)
-	);
-
-	// =========================================================================
-	// SECTION: WhatsApp Messages
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_wa_messages',
-		array(
-			'title'    => __( 'WhatsApp Pre-filled Messages', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 20,
-		)
-	);
-
-	$wa_messages = array(
-		'wa_msg_operators' => array(
-			'label'   => __( 'Operators Message', 'mobiris-v2' ),
-			'default' => 'I want to reduce leakage in my transport business',
-		),
-		'wa_msg_starters'  => array(
-			'label'   => __( 'Starters Message', 'mobiris-v2' ),
-			'default' => 'I want to start a keke business properly',
-		),
-		'wa_msg_investors' => array(
-			'label'   => __( 'Investors Message', 'mobiris-v2' ),
-			'default' => 'I want to see how Mobiris works for investors',
-		),
-	);
-
-	foreach ( $wa_messages as $key => $data ) {
-		$wp_customize->add_setting(
-			'mv2_' . $key,
-			array(
-				'default'           => $data['default'],
-				'sanitize_callback' => 'sanitize_text_field',
-				'transport'         => 'postMessage',
-			)
-		);
-		$wp_customize->add_control(
-			'mv2_' . $key,
-			array(
-				'label'   => $data['label'],
-				'section' => 'mv2_wa_messages',
-				'type'    => 'text',
-			)
-		);
+	foreach ( $brand_fields as $key => $args ) {
+		$wp_customize->add_setting( $key, array( 'default' => $args['default'], 'sanitize_callback' => 'sanitize_text_field', 'transport' => 'postMessage' ) );
+		$wp_customize->add_control( $key, array( 'label' => $args['label'], 'section' => 'mv2_brand', 'type' => 'text' ) );
 	}
 
-	// =========================================================================
-	// SECTION: Pricing
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_pricing',
-		array(
-			'title'    => __( 'Pricing', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 30,
-		)
+	// ── SECTION: WhatsApp Messages ───────────────────────────────────────
+	$wp_customize->add_section( 'mv2_whatsapp_msgs', array(
+		'title' => __( 'WhatsApp Pre-filled Messages', 'mobiris-v2' ),
+		'panel' => 'mv2_panel',
+	) );
+	$wa_fields = array(
+		'mv2_wa_msg_operator' => array( 'label' => 'Operators message',  'default' => 'I want to reduce leakage in my transport business' ),
+		'mv2_wa_msg_starter'  => array( 'label' => 'Starters message',   'default' => 'I want to start a keke business properly' ),
+		'mv2_wa_msg_investor' => array( 'label' => 'Investors message',  'default' => 'I want to see how Mobiris works for investors' ),
 	);
+	foreach ( $wa_fields as $key => $args ) {
+		$wp_customize->add_setting( $key, array( 'default' => $args['default'], 'sanitize_callback' => 'sanitize_text_field' ) );
+		$wp_customize->add_control( $key, array( 'label' => $args['label'], 'section' => 'mv2_whatsapp_msgs', 'type' => 'text' ) );
+	}
 
+	// ── SECTION: Pricing ─────────────────────────────────────────────────
+	$wp_customize->add_section( 'mv2_pricing', array(
+		'title' => __( 'Pricing', 'mobiris-v2' ),
+		'panel' => 'mv2_panel',
+	) );
 	$pricing_fields = array(
-		'price_starter'             => array( 'label' => __( 'Starter Plan (₦/month)', 'mobiris-v2' ),       'default' => '15000' ),
-		'price_starter_vehicles'    => array( 'label' => __( 'Starter — Max Vehicles', 'mobiris-v2' ),        'default' => '10' ),
-		'price_growth'              => array( 'label' => __( 'Growth Plan (₦/month)', 'mobiris-v2' ),         'default' => '35000' ),
-		'price_growth_vehicles'     => array( 'label' => __( 'Growth — Min Vehicles', 'mobiris-v2' ),         'default' => '20' ),
-		'price_verification'        => array( 'label' => __( 'Verification Fee (₦/check)', 'mobiris-v2' ),    'default' => '1000' ),
-		'price_trial_days'          => array( 'label' => __( 'Free Trial Days', 'mobiris-v2' ),               'default' => '14' ),
+		'mv2_price_starter'    => array( 'label' => 'Starter plan price',    'default' => '₦15,000/month' ),
+		'mv2_price_growth'     => array( 'label' => 'Growth plan price',     'default' => '₦35,000/month' ),
+		'mv2_price_enterprise' => array( 'label' => 'Enterprise plan label', 'default' => 'Custom' ),
+		'mv2_price_verify'     => array( 'label' => 'Verification fee',      'default' => '₦1,000/check' ),
 	);
-
-	foreach ( $pricing_fields as $key => $data ) {
-		$wp_customize->add_setting(
-			'mv2_' . $key,
-			array(
-				'default'           => $data['default'],
-				'sanitize_callback' => 'absint',
-				'transport'         => 'postMessage',
-			)
-		);
-		$wp_customize->add_control(
-			'mv2_' . $key,
-			array(
-				'label'   => $data['label'],
-				'section' => 'mv2_pricing',
-				'type'    => 'number',
-			)
-		);
+	foreach ( $pricing_fields as $key => $args ) {
+		$wp_customize->add_setting( $key, array( 'default' => $args['default'], 'sanitize_callback' => 'sanitize_text_field' ) );
+		$wp_customize->add_control( $key, array( 'label' => $args['label'], 'section' => 'mv2_pricing', 'type' => 'text' ) );
 	}
 
-	// =========================================================================
-	// SECTION: Hero Content
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_hero',
-		array(
-			'title'    => __( 'Hero Section', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 40,
-		)
+	// ── SECTION: Hero ─────────────────────────────────────────────────
+	$wp_customize->add_section( 'mv2_hero', array(
+		'title' => __( 'Homepage Hero', 'mobiris-v2' ),
+		'panel' => 'mv2_panel',
+	) );
+	$hero_fields = array(
+		'mv2_hero_h1_en'      => array( 'label' => 'Hero H1 (English)',   'default' => "Driver say 'today slow'...\nbut your money no add up." ),
+		'mv2_hero_h1_fr'      => array( 'label' => 'Hero H1 (French)',    'default' => "Le chauffeur dit 'aujourd'hui c'est calme'...\nmais votre argent ne correspond pas." ),
+		'mv2_hero_sub_en'     => array( 'label' => 'Hero Subheading (EN)','default' => 'Mobiris gives transport operators visibility, control, and accountability — from driver verification to daily remittance.' ),
+		'mv2_hero_sub_fr'     => array( 'label' => 'Hero Subheading (FR)','default' => 'Mobiris donne aux opérateurs de transport visibilité, contrôle et responsabilité — de la vérification des conducteurs au suivi quotidien.' ),
+		'mv2_hero_cta_en'     => array( 'label' => 'Hero CTA (EN)',       'default' => 'Start Free — 14 Days' ),
+		'mv2_hero_cta_fr'     => array( 'label' => 'Hero CTA (FR)',       'default' => 'Commencer Gratuitement — 14 Jours' ),
 	);
-
-	$wp_customize->add_setting(
-		'mv2_hero_headline_en',
-		array(
-			'default'           => "Driver say 'today slow'... but your money no add up.",
-			'sanitize_callback' => 'sanitize_text_field',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_hero_headline_en',
-		array(
-			'label'   => __( 'Hero Headline (English)', 'mobiris-v2' ),
-			'section' => 'mv2_hero',
-			'type'    => 'text',
-		)
-	);
-
-	$wp_customize->add_setting(
-		'mv2_hero_headline_fr',
-		array(
-			'default'           => "Le chauffeur dit 'aujourd'hui c'est calme'... mais votre argent ne correspond pas.",
-			'sanitize_callback' => 'sanitize_text_field',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_hero_headline_fr',
-		array(
-			'label'   => __( 'Hero Headline (French)', 'mobiris-v2' ),
-			'section' => 'mv2_hero',
-			'type'    => 'text',
-		)
-	);
-
-	$wp_customize->add_setting(
-		'mv2_hero_cta1_text',
-		array(
-			'default'           => 'Start Free — 14 Days',
-			'sanitize_callback' => 'sanitize_text_field',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_hero_cta1_text',
-		array(
-			'label'   => __( 'Hero CTA 1 Text', 'mobiris-v2' ),
-			'section' => 'mv2_hero',
-			'type'    => 'text',
-		)
-	);
-
-	// =========================================================================
-	// SECTION: Section Visibility
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_visibility',
-		array(
-			'title'    => __( 'Section Visibility', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 50,
-		)
-	);
-
-	$sections = array(
-		'show_profit_opportunity' => __( 'Show Profit Opportunity Section', 'mobiris-v2' ),
-		'show_leakage_exposure'   => __( 'Show Leakage Exposure Section', 'mobiris-v2' ),
-		'show_pain_amplification' => __( 'Show Pain Amplification Section', 'mobiris-v2' ),
-		'show_product_intro'      => __( 'Show Product Intro Section', 'mobiris-v2' ),
-		'show_how_it_works'       => __( 'Show How It Works Section', 'mobiris-v2' ),
-		'show_before_after'       => __( 'Show Before/After Section', 'mobiris-v2' ),
-		'show_calculator'         => __( 'Show Calculator Section', 'mobiris-v2' ),
-		'show_use_cases'          => __( 'Show Use Cases Section', 'mobiris-v2' ),
-		'show_lead_capture'       => __( 'Show Lead Capture Section', 'mobiris-v2' ),
-		'show_whatsapp_cta'       => __( 'Show WhatsApp CTA Section', 'mobiris-v2' ),
-		'show_pricing'            => __( 'Show Pricing Section', 'mobiris-v2' ),
-		'show_final_cta'          => __( 'Show Final CTA Section', 'mobiris-v2' ),
-	);
-
-	foreach ( $sections as $key => $label ) {
-		$wp_customize->add_setting(
-			'mv2_' . $key,
-			array(
-				'default'           => true,
-				'sanitize_callback' => 'mv2_sanitize_checkbox',
-				'transport'         => 'postMessage',
-			)
-		);
-		$wp_customize->add_control(
-			'mv2_' . $key,
-			array(
-				'label'   => $label,
-				'section' => 'mv2_visibility',
-				'type'    => 'checkbox',
-			)
-		);
+	foreach ( $hero_fields as $key => $args ) {
+		$wp_customize->add_setting( $key, array( 'default' => $args['default'], 'sanitize_callback' => 'sanitize_textarea_field' ) );
+		$type = strpos( $key, '_sub_' ) !== false ? 'textarea' : 'text';
+		$wp_customize->add_control( $key, array( 'label' => $args['label'], 'section' => 'mv2_hero', 'type' => $type ) );
 	}
 
-	// =========================================================================
-	// SECTION: Brand
-	// =========================================================================
-	$wp_customize->add_section(
-		'mv2_brand',
-		array(
-			'title'    => __( 'Brand & Identity', 'mobiris-v2' ),
-			'panel'    => 'mv2_panel',
-			'priority' => 60,
-		)
+	// ── SECTION: Section Visibility ──────────────────────────────────────
+	$wp_customize->add_section( 'mv2_visibility', array(
+		'title' => __( 'Section Visibility', 'mobiris-v2' ),
+		'panel' => 'mv2_panel',
+	) );
+	$vis_fields = array(
+		'mv2_show_profit_opp'  => 'Show: Profit Opportunity',
+		'mv2_show_leakage'     => 'Show: Leakage Exposure',
+		'mv2_show_pain'        => 'Show: Pain Amplification',
+		'mv2_show_before_after'=> 'Show: Before vs After',
+		'mv2_show_calculator'  => 'Show: Calculator',
+		'mv2_show_use_cases'   => 'Show: Use Case Scenarios',
+		'mv2_show_pricing'     => 'Show: Pricing on Homepage',
+		'mv2_show_blog_preview'=> 'Show: Blog Preview',
 	);
-
-	$wp_customize->add_setting(
-		'mv2_company_name',
-		array(
-			'default'           => 'Mobiris',
-			'sanitize_callback' => 'sanitize_text_field',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_company_name',
-		array(
-			'label'   => __( 'Company Name', 'mobiris-v2' ),
-			'section' => 'mv2_brand',
-			'type'    => 'text',
-		)
-	);
-
-	$wp_customize->add_setting(
-		'mv2_tagline',
-		array(
-			'default'           => 'Mobility Risk Infrastructure',
-			'sanitize_callback' => 'sanitize_text_field',
-			'transport'         => 'postMessage',
-		)
-	);
-	$wp_customize->add_control(
-		'mv2_tagline',
-		array(
-			'label'   => __( 'Tagline', 'mobiris-v2' ),
-			'section' => 'mv2_brand',
-			'type'    => 'text',
-		)
-	);
+	foreach ( $vis_fields as $key => $label ) {
+		$wp_customize->add_setting( $key, array( 'default' => '1', 'sanitize_callback' => 'absint' ) );
+		$wp_customize->add_control( $key, array( 'label' => $label, 'section' => 'mv2_visibility', 'type' => 'checkbox' ) );
+	}
 }
-add_action( 'customize_register', 'mv2_customizer_register' );
+add_action( 'customize_register', 'mv2_customizer' );
 
-/**
- * Sanitize digits-only field.
- *
- * @param string $value Input value.
- * @return string
- */
-function mv2_sanitize_digits( $value ) {
-	return preg_replace( '/\D/', '', $value );
+// Helper
+function mv2_opt( $key, $fallback = '' ) {
+	return get_theme_mod( $key, $fallback );
 }
 
-/**
- * Sanitize checkbox value.
- *
- * @param mixed $value Checkbox value.
- * @return bool
- */
-function mv2_sanitize_checkbox( $value ) {
-	return (bool) $value;
+function mv2_wa_url( $msg_key ) {
+	$num = mv2_opt( 'mv2_whatsapp', '2348053108039' );
+	$msg = mv2_opt( $msg_key, 'I want to learn about Mobiris' );
+	return 'https://wa.me/' . rawurlencode( $num ) . '?text=' . rawurlencode( $msg );
+}
+
+function mv2_signup_url() {
+	return esc_url( mv2_opt( 'mv2_signup_url', 'https://app.mobiris.ng/signup' ) );
 }

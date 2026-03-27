@@ -36,11 +36,26 @@ export class DriverResponseDto {
   @ApiPropertyOptional()
   email?: string | null;
 
+  @ApiPropertyOptional({
+    description:
+      'Display name of the tenant or branded organisation running this onboarding flow.',
+  })
+  organisationName?: string | null;
+
   @ApiPropertyOptional({ description: 'Proxied URL to the driver portrait image, populated when a portrait has been captured.' })
   photoUrl?: string | null;
 
+  @ApiPropertyOptional({ description: 'Stored object URL for the captured live-selfie image.' })
+  selfieImageUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Stored object URL for the provider or government-record identity image.' })
+  providerImageUrl?: string | null;
+
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
   dateOfBirth?: string | null;
+
+  @ApiPropertyOptional()
+  gender?: string | null;
 
   @ApiPropertyOptional({ description: 'ISO 3166-1 alpha-2' })
   nationality?: string | null;
@@ -114,6 +129,14 @@ export class DriverResponseDto {
   })
   duplicateIdentityFlag?: boolean | null;
 
+  @ApiPropertyOptional({
+    description: 'True when the linked canonical identity indicates tenant records require reverification.',
+  })
+  reverificationRequired?: boolean | null;
+
+  @ApiPropertyOptional()
+  reverificationReason?: string | null;
+
   @ApiProperty()
   hasGuarantor!: boolean;
 
@@ -139,6 +162,12 @@ export class DriverResponseDto {
     description: "True when the guarantor's canonical person is on the watchlist.",
   })
   guarantorIsWatchlisted?: boolean | null;
+
+  @ApiPropertyOptional()
+  guarantorReverificationRequired?: boolean | null;
+
+  @ApiPropertyOptional()
+  guarantorReverificationReason?: string | null;
 
   @ApiPropertyOptional({
     description:

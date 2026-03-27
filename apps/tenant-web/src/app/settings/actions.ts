@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  createDataSubjectRequest,
   changeTenantPassword,
   deactivateTeamMember,
   resendTeamInvite,
@@ -209,6 +210,36 @@ export async function changePasswordAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to change password.',
+    };
+  }
+}
+
+export async function createDataSubjectRequestAction(
+  _previousState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const requestType = String(formData.get('requestType') ?? '').trim();
+  const details = String(formData.get('details') ?? '').trim();
+
+  if (
+    requestType !== 'access' &&
+    requestType !== 'correction' &&
+    requestType !== 'deletion' &&
+    requestType !== 'restriction'
+  ) {
+    return { error: 'Choose the type of privacy request you want to submit.' };
+  }
+
+  try {
+    await createDataSubjectRequest({
+      requestType,
+      ...(details ? { details } : {}),
+    });
+    revalidatePath('/settings');
+    return { success: 'Privacy request submitted. Our support team will review it.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to submit your privacy request.',
     };
   }
 }

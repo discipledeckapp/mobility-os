@@ -169,11 +169,11 @@ export default async function DriverDetailsPage({
             <div className="flex items-start gap-4">
               {/* Avatar */}
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--mobiris-primary)]/10 ring-2 ring-white shadow-sm">
-                {driver.photoUrl ? (
+                {driver.providerImageUrl ?? driver.photoUrl ? (
                   <img
                     alt={`${driver.firstName} ${driver.lastName}`}
                     className="h-14 w-14 rounded-full object-cover"
-                    src={driver.photoUrl}
+                    src={driver.providerImageUrl ?? driver.photoUrl ?? ''}
                   />
                 ) : (
                   <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">
@@ -452,6 +452,46 @@ export default async function DriverDetailsPage({
                   driver={driver}
                   orgDriverPaysKyc={tenant?.driverPaysKyc ?? false}
                 />
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 bg-white">
+              <CardHeader>
+                <CardTitle>Identity images</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Text tone="muted">Live Selfie</Text>
+                  <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
+                    {driver.selfieImageUrl ?? driver.photoUrl ? (
+                      <img
+                        alt={`${driver.firstName} ${driver.lastName} live selfie`}
+                        className="aspect-[4/3] w-full object-cover"
+                        src={driver.selfieImageUrl ?? driver.photoUrl ?? ''}
+                      />
+                    ) : (
+                      <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                        <Text tone="muted">No stored live-selfie image yet.</Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Text tone="muted">Government record image</Text>
+                  <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
+                    {driver.providerImageUrl ? (
+                      <img
+                        alt={`${driver.firstName} ${driver.lastName} government record`}
+                        className="aspect-[4/3] w-full object-cover"
+                        src={driver.providerImageUrl}
+                      />
+                    ) : (
+                      <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                        <Text tone="muted">No government-record image has been stored yet.</Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

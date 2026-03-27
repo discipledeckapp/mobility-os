@@ -11,7 +11,7 @@ export class IdentifierResponseDto {
   type!: string;
 
   @ApiProperty()
-  value!: string;
+  maskedValue!: string;
 
   @ApiPropertyOptional()
   countryCode?: string | null;

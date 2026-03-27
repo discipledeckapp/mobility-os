@@ -22,12 +22,17 @@ import {
   Text,
 } from '@mobility-os/ui';
 import {
+  DocumentScope,
   getCountryConfig,
+  getDocumentTypesByScope,
   getDocumentType,
   getRequiredDocuments,
   isCountrySupported,
 } from '@mobility-os/domain-config';
-import type { DriverDocumentRecord } from '../../lib/api-core';
+import {
+  removeDriverSelfServiceDocument,
+  type DriverDocumentRecord,
+} from '../../lib/api-core';
 import {
   reviewDriverDocumentAction,
   uploadDriverDocumentAction,
@@ -179,6 +184,8 @@ export function DriverDocumentsPanel({
   onUploadSuccess?: () => void;
 }) {
   const [documentType, setDocumentType] = useState('');
+  const [removingDocumentId, setRemovingDocumentId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const requiredDriverDocumentSlugs =
     requiredDocumentSlugs?.length
       ? requiredDocumentSlugs
@@ -188,6 +195,10 @@ export function DriverDocumentsPanel({
   const requiredDocumentOptions = getRequiredDocuments(
     requiredDriverDocumentSlugs,
   ).map((document) => ({
+    value: document.slug,
+    label: document.name,
+  }));
+  const allDocumentOptions = getDocumentTypesByScope(DocumentScope.Driver).map((document) => ({
     value: document.slug,
     label: document.name,
   }));
@@ -202,6 +213,24 @@ export function DriverDocumentsPanel({
       onUploadSuccess();
     }
   }, [onUploadSuccess, state.success]);
+
+  async function handleRemoveDocument(documentId: string) {
+    if (!selfServiceToken) {
+      return;
+    }
+    setRemovingDocumentId(documentId);
+    setRemoveError(null);
+    try {
+      await removeDriverSelfServiceDocument(selfServiceToken, documentId);
+      onUploadSuccess?.();
+    } catch (error) {
+      setRemoveError(
+        error instanceof Error ? error.message : 'Unable to remove this document right now.',
+      );
+    } finally {
+      setRemovingDocumentId(null);
+    }
+  }
 
   return (
     <Card className="border-slate-200 bg-white">
@@ -220,7 +249,7 @@ export function DriverDocumentsPanel({
             label="Document type"
             name="documentType"
             onChange={setDocumentType}
-            options={requiredDocumentOptions}
+            options={mode === 'self_service' ? allDocumentOptions : requiredDocumentOptions}
             placeholder="Select document type"
             required
             value={documentType}
@@ -255,6 +284,7 @@ export function DriverDocumentsPanel({
           />
         ) : null}
         {state.error ? <Text tone="danger">{state.error}</Text> : null}
+        {removeError ? <Text tone="danger">{removeError}</Text> : null}
         {state.success ? <Text tone="success">{state.success}</Text> : null}
         <div className="space-y-3">
           {documents.length === 0 ? (
@@ -274,6 +304,17 @@ export function DriverDocumentsPanel({
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <Text tone="strong">{getDocumentType(document.documentType).name}</Text>
+                        <Badge
+                          tone={
+                            requiredDriverDocumentSlugs.includes(document.documentType)
+                              ? 'warning'
+                              : 'neutral'
+                          }
+                        >
+                          {requiredDriverDocumentSlugs.includes(document.documentType)
+                            ? 'Required'
+                            : 'Optional'}
+                        </Badge>
                         <Text tone="muted">{document.fileName}</Text>
                         <Text tone="muted">Uploaded by {getUploadedByLabel(document.uploadedBy)}</Text>
                       </div>
@@ -297,6 +338,16 @@ export function DriverDocumentsPanel({
                       ) : (
                         <Text tone="muted">Preview unavailable</Text>
                       )}
+                      {mode === 'self_service' ? (
+                        <Button
+                          disabled={removingDocumentId === document.id}
+                          onClick={() => void handleRemoveDocument(document.id)}
+                          type="button"
+                          variant="ghost"
+                        >
+                          {removingDocumentId === document.id ? 'Removing…' : 'Remove'}
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -327,6 +378,17 @@ export function DriverDocumentsPanel({
                           <TableCell>
                             <div className="space-y-1">
                               <Text tone="strong">{getDocumentType(document.documentType).name}</Text>
+                              <Badge
+                                tone={
+                                  requiredDriverDocumentSlugs.includes(document.documentType)
+                                    ? 'warning'
+                                    : 'neutral'
+                                }
+                              >
+                                {requiredDriverDocumentSlugs.includes(document.documentType)
+                                  ? 'Required'
+                                  : 'Optional'}
+                              </Badge>
                               <Text tone="muted">Uploaded by {getUploadedByLabel(document.uploadedBy)}</Text>
                               <Text tone="muted">{document.fileName}</Text>
                             </div>
@@ -354,6 +416,16 @@ export function DriverDocumentsPanel({
                             ) : (
                               <Text tone="muted">Preview unavailable</Text>
                             )}
+                            {mode === 'self_service' ? (
+                              <Button
+                                disabled={removingDocumentId === document.id}
+                                onClick={() => void handleRemoveDocument(document.id)}
+                                type="button"
+                                variant="ghost"
+                              >
+                                {removingDocumentId === document.id ? 'Removing…' : 'Remove'}
+                              </Button>
+                            ) : null}
                           </TableCell>
                         </TableRow>
                       ),

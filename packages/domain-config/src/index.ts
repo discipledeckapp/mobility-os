@@ -98,3 +98,12 @@ export {
   PROCESSING_CONTENT,
   getProcessingContent,
 } from './processing-content/index';
+
+export {
+  type ConsentScope,
+  type LegalDocumentDefinition,
+  type LegalDocumentKind,
+  LEGAL_DOCUMENTS,
+  LEGAL_DOCUMENT_VERSIONS,
+  CONSENT_SCOPES,
+} from './legal/index';

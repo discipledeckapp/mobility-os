@@ -16,6 +16,7 @@ import {
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
   listDriverSelfServiceDocuments,
+  recordDriverSelfServiceVerificationConsent,
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
   type DriverDocumentRecord,
@@ -436,6 +437,7 @@ function PaymentStep({
     setLoading(true);
     setError(null);
     try {
+      await recordDriverSelfServiceVerificationConsent(token);
       const checkout = await initiateDriverKycCheckout(
         token,
         'paystack',
@@ -467,6 +469,22 @@ function PaymentStep({
           {driver.verificationPaymentMessage ??
             'Verification cannot continue until the payment requirement is resolved.'}
         </Text>
+        <Text tone="muted">
+          By continuing you agree to the{' '}
+          <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
+            Terms of Use
+          </a>{' '}
+          and{' '}
+          <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
+            Privacy Policy
+          </a>
+          .
+        </Text>
+        {driver.organisationName ? (
+          <Text tone="muted">
+            This onboarding is being completed for {driver.organisationName}.
+          </Text>
+        ) : null}
         {driver.verificationPayer === 'driver' ? (
           <>
             <Text>Required amount: {amount}</Text>
@@ -598,6 +616,8 @@ function DriverVerificationFlow({ token }: { token: string }) {
     driver.firstName && driver.lastName
       ? `${driver.firstName} ${driver.lastName}`
       : driver.email ?? 'Welcome';
+  const organisationName = driver.organisationName ?? 'your organisation';
+  const hasOptionalDocumentStep = documents.length > 0 || (driver.requiredDriverDocumentSlugs?.length ?? 0) === 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
@@ -606,11 +626,29 @@ function DriverVerificationFlow({ token }: { token: string }) {
           <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
             Mobiris driver onboarding
           </Text>
-          <div className="space-y-2">
+          <div className="flex flex-wrap items-start justify-between gap-3 space-y-2">
+            <div className="space-y-2">
             <Heading size="h1">{driverDisplayName}</Heading>
             <Text tone="muted">
-              Complete the remaining onboarding steps below. Only the fields required by your organisation are shown here.
+              Complete the remaining onboarding steps for {organisationName}. Your progress is saved as you go, so you can safely leave and continue later.
             </Text>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                href="/driver-self-service"
+              >
+                Save and exit
+              </a>
+              {driver.hasMobileAccess ? (
+                <a
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+                  href="/login"
+                >
+                  Sign in later
+                </a>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -666,10 +704,26 @@ function DriverVerificationFlow({ token }: { token: string }) {
             {missingDocumentSlugs.length === 0 ? (
               <Card className="border-slate-200 bg-white">
                 <CardContent className="space-y-3 pt-6">
-                  <Text tone="success">All required documents have been uploaded.</Text>
-                  <Button onClick={() => setCurrentStep(!driver.hasMobileAccess ? 'account' : 'complete')} type="button">
-                    Continue
-                  </Button>
+                  <Text tone="success">
+                    {hasOptionalDocumentStep
+                      ? 'All required documents are complete. You can finish onboarding now or upload any optional documents first.'
+                      : 'No documents are required for this onboarding flow.'}
+                  </Text>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => setCurrentStep(!driver.hasMobileAccess ? 'account' : 'complete')}
+                      type="button"
+                    >
+                      Finish onboarding
+                    </Button>
+                    <Button
+                      onClick={() => setCurrentStep(!driver.hasMobileAccess ? 'account' : 'complete')}
+                      type="button"
+                      variant="secondary"
+                    >
+                      Skip optional documents
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : null}

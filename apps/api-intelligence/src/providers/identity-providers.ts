@@ -38,6 +38,7 @@ export interface IdentityProviderAdapter {
         dateOfBirth?: string;
       };
       selfieImageBase64?: string;
+      selfieImageUrl?: string;
     },
   ): Promise<IdentityVerificationResult>;
 }
@@ -206,16 +207,17 @@ const LOCAL_NIGERIA_MOCK_IDENTITIES: Record<string, NigeriaMockIdentity> = {
 
 function getLocalNigeriaMockVerification(
   identifier: VerificationIdentifierInput,
-  providerVerification?: {
-    subjectConsent?: boolean;
-    validationData?: {
-      firstName?: string;
-      lastName?: string;
-      dateOfBirth?: string;
-    };
-    selfieImageBase64?: string;
-  },
-): IdentityVerificationResult | null {
+    providerVerification?: {
+      subjectConsent?: boolean;
+      validationData?: {
+        firstName?: string;
+        lastName?: string;
+        dateOfBirth?: string;
+      };
+      selfieImageBase64?: string;
+      selfieImageUrl?: string;
+    },
+  ): IdentityVerificationResult | null {
   if ((identifier.countryCode ?? 'NG').toUpperCase() !== 'NG') {
     return null;
   }
@@ -293,6 +295,7 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
         dateOfBirth?: string;
       };
       selfieImageBase64?: string;
+      selfieImageUrl?: string;
     },
   ): Promise<IdentityVerificationResult> {
     const identifier = firstIdentifier(identifiers);
@@ -505,6 +508,7 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
         dateOfBirth?: string;
       };
       selfieImageBase64?: string;
+      selfieImageUrl?: string;
     },
   ): Promise<IdentityVerificationResult> {
     const identifier = firstIdentifier(identifiers);

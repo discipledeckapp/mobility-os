@@ -7,6 +7,15 @@ interface ZeptoMailRecipient {
   name?: string;
 }
 
+function maskEmailAddress(email: string): string {
+  const [localPart = '', domainPart = ''] = email.trim().split('@');
+  if (!localPart || !domainPart) {
+    return 'redacted';
+  }
+  const visiblePrefix = localPart.slice(0, 2);
+  return `${visiblePrefix}${'•'.repeat(Math.max(localPart.length - visiblePrefix.length, 1))}@${domainPart}`;
+}
+
 export interface SendEmailInput {
   to: ZeptoMailRecipient[];
   subject: string;
@@ -35,7 +44,7 @@ export class ZeptoMailService {
     const apiUrl = this.config.getOrThrow<string>('ZEPTOMAIL_API_URL');
 
     this.logger.log(
-      `Sending email → to=${input.to.map((r) => r.address).join(',')} subject="${input.subject}" from=${fromAddress}`,
+      `Sending email → to=${input.to.map((r) => maskEmailAddress(r.address)).join(',')} subject="${input.subject}" from=${fromAddress}`,
     );
 
     const response = await fetch(apiUrl, {
@@ -61,9 +70,9 @@ export class ZeptoMailService {
     const responseBody = await response.text();
 
     if (!response.ok) {
-      this.logger.error(`ZeptoMail error — status=${response.status} body=${responseBody}`);
+      this.logger.error(`ZeptoMail error — status=${response.status} body=[redacted]`);
       throw new Error(
-        `ZeptoMail returned status ${response.status}: ${responseBody || 'unknown error'}`,
+        `ZeptoMail returned status ${response.status}: ${responseBody ? 'provider error' : 'unknown error'}`,
       );
     }
 

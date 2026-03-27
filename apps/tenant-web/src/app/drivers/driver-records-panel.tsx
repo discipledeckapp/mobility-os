@@ -198,12 +198,20 @@ export function DriverRecordsPanel({
     <div className="space-y-6">
       <RegistryTable
         actions={
-          <Link
-            className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-            href="/drivers/new"
-          >
-            Add driver
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+              href="/drivers/new"
+            >
+              Add driver
+            </Link>
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4.5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-primary-dark)] transition-all duration-150 hover:bg-slate-50"
+              href="/drivers#bulk-import"
+            >
+              Add in bulk
+            </Link>
+          </div>
         }
         description="Search, filter, and open driver records by name, phone, fleet, or identity status."
         emptyState={
@@ -496,7 +504,21 @@ export function DriverRecordsPanel({
                       Upgrade to unlock
                     </button>
                   ) : (
-                    <DriverStatusActions driver={driver} />
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                        href={`/drivers/${driver.id}?tab=verification`}
+                      >
+                        Request verification
+                      </Link>
+                      <Link
+                        className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                        href={`/drivers/${driver.id}?tab=documents`}
+                      >
+                        Documents
+                      </Link>
+                      <DriverStatusActions driver={driver} />
+                    </div>
                   )}
                 </TableCell>
               </TableRow>

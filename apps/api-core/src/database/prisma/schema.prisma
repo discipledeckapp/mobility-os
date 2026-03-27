@@ -233,8 +233,11 @@ model Driver {
   email       String?
   // ISO 8601 date string (YYYY-MM-DD). Not DateTime — avoids tz ambiguity.
   dateOfBirth String?
+  gender      String?
   // ISO 3166-1 alpha-2
   nationality String?
+  selfieImageUrl   String?
+  providerImageUrl String?
 
   // Cross-schema reference to intel_persons.id in api-intelligence.
   // Null until identity resolution has produced a canonical person record.
@@ -298,6 +301,10 @@ model DriverGuarantor {
   email        String?
   countryCode  String?
   relationship String?
+  dateOfBirth  String?
+  gender       String?
+  selfieImageUrl   String?
+  providerImageUrl String?
   status       String @default("active")
   disconnectedAt DateTime?
   disconnectedReason String?
@@ -1069,6 +1076,8 @@ model User {
   refreshTokens AuthRefreshToken[]
   notifications UserNotification[]
   pushDevices UserPushDevice[]
+  consents UserConsent[]
+  dataSubjectRequests DataSubjectRequest[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -1076,6 +1085,49 @@ model User {
   @@index([tenantId])
   @@index([driverId])
   @@map("users")
+}
+
+model UserConsent {
+  id            String @id @default(cuid())
+  tenantId      String
+  userId        String
+  subjectType   String
+  subjectId     String?
+  policyDocument String
+  policyVersion String
+  consentScope  String
+  granted       Boolean @default(true)
+  grantedAt     DateTime @default(now())
+  metadata      Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, policyDocument, policyVersion])
+  @@index([subjectType, subjectId])
+  @@map("user_consents")
+}
+
+model DataSubjectRequest {
+  id              String   @id @default(cuid())
+  tenantId        String
+  userId          String
+  subjectType     String
+  subjectId       String?
+  requestType     String
+  status          String   @default("open")
+  contactEmail    String?
+  details         String?
+  resolutionNotes String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, createdAt])
+  @@index([tenantId, subjectType, subjectId])
+  @@index([tenantId, status, requestType])
+  @@map("data_subject_requests")
 }
 
 model UserNotification {

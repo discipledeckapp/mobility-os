@@ -124,6 +124,7 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
 
 exports.Prisma.IntelPersonScalarFieldEnum = {
   id: 'id',
+  globalPersonCode: 'globalPersonCode',
   globalRiskScore: 'globalRiskScore',
   isWatchlisted: 'isWatchlisted',
   hasDuplicateFlag: 'hasDuplicateFlag',
@@ -134,9 +135,12 @@ exports.Prisma.IntelPersonScalarFieldEnum = {
   address: 'address',
   gender: 'gender',
   photoUrl: 'photoUrl',
+  selfieImageUrl: 'selfieImageUrl',
+  providerImageUrl: 'providerImageUrl',
   verificationStatus: 'verificationStatus',
   verificationProvider: 'verificationProvider',
   verificationCountryCode: 'verificationCountryCode',
+  primaryBiometricProfileId: 'primaryBiometricProfileId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -156,6 +160,7 @@ exports.Prisma.IntelBiometricProfileScalarFieldEnum = {
   personId: 'personId',
   modality: 'modality',
   embeddingCiphertext: 'embeddingCiphertext',
+  embeddingHash: 'embeddingHash',
   qualityScore: 'qualityScore',
   isActive: 'isActive',
   enrolledAt: 'enrolledAt'
@@ -176,7 +181,36 @@ exports.Prisma.IntelPersonTenantPresenceScalarFieldEnum = {
   id: 'id',
   personId: 'personId',
   tenantId: 'tenantId',
+  businessEntityId: 'businessEntityId',
+  operatingUnitId: 'operatingUnitId',
+  fleetId: 'fleetId',
+  localEntityType: 'localEntityType',
+  localEntityId: 'localEntityId',
   roleType: 'roleType',
+  status: 'status',
+  source: 'source',
+  verifiedAt: 'verifiedAt',
+  reverificationRequired: 'reverificationRequired',
+  reverificationReason: 'reverificationReason',
+  staleFieldKeys: 'staleFieldKeys',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.IntelIdentityChangeEventScalarFieldEnum = {
+  id: 'id',
+  personId: 'personId',
+  eventType: 'eventType',
+  source: 'source',
+  verificationProvider: 'verificationProvider',
+  verificationCountryCode: 'verificationCountryCode',
+  tenantId: 'tenantId',
+  localEntityType: 'localEntityType',
+  localEntityId: 'localEntityId',
+  changedFields: 'changedFields',
+  previousValues: 'previousValues',
+  newValues: 'newValues',
+  reason: 'reason',
+  verifiedAt: 'verifiedAt',
   createdAt: 'createdAt'
 };
 
@@ -254,6 +288,7 @@ exports.Prisma.ModelName = {
   IntelBiometricProfile: 'IntelBiometricProfile',
   IntelRiskSignal: 'IntelRiskSignal',
   IntelPersonTenantPresence: 'IntelPersonTenantPresence',
+  IntelIdentityChangeEvent: 'IntelIdentityChangeEvent',
   IntelReviewCase: 'IntelReviewCase',
   IntelWatchlistEntry: 'IntelWatchlistEntry',
   IntelLinkageEvent: 'IntelLinkageEvent'

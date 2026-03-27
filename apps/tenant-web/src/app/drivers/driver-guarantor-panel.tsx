@@ -109,6 +109,14 @@ export function DriverGuarantorPanel({
               <Text>{guarantor.relationship || 'Not recorded'}</Text>
             </div>
             <div className="space-y-1">
+              <Text tone="muted">Date of birth</Text>
+              <Text>{guarantor.dateOfBirth || 'Not recorded'}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Gender</Text>
+              <Text>{guarantor.gender || 'Not recorded'}</Text>
+            </div>
+            <div className="space-y-1">
               <Text tone="muted">Linked on</Text>
               <Text>{formatDate(guarantor.createdAt)}</Text>
             </div>
@@ -123,6 +131,40 @@ export function DriverGuarantorPanel({
             <div className="space-y-1 md:col-span-2">
               <Text tone="muted">Disconnect note</Text>
               <Text>{guarantor.disconnectedReason || 'No disconnect note recorded.'}</Text>
+            </div>
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+              <div className="space-y-2">
+                <Text tone="muted">Live Selfie</Text>
+                <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white">
+                  {guarantor.selfieImageUrl ? (
+                    <img
+                      alt={`${guarantor.name} live selfie`}
+                      className="aspect-[4/3] w-full object-cover"
+                      src={guarantor.selfieImageUrl}
+                    />
+                  ) : (
+                    <div className="flex aspect-[4/3] items-center justify-center p-4 text-center">
+                      <Text tone="muted">No stored live-selfie image yet.</Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Text tone="muted">Government Record Image</Text>
+                <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white">
+                  {guarantor.providerImageUrl ? (
+                    <img
+                      alt={`${guarantor.name} government record`}
+                      className="aspect-[4/3] w-full object-cover"
+                      src={guarantor.providerImageUrl}
+                    />
+                  ) : (
+                    <div className="flex aspect-[4/3] items-center justify-center p-4 text-center">
+                      <Text tone="muted">No provider record image stored yet.</Text>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ) : (

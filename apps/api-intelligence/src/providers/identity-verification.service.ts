@@ -34,6 +34,7 @@ export interface VerifyEnrollmentIdentityInput {
       dateOfBirth?: string;
     };
     selfieImageBase64?: string;
+    selfieImageUrl?: string;
     livenessCheck?: {
       provider?: string;
       sessionId?: string;

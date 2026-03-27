@@ -157,6 +157,16 @@ export class MatchingService {
       const person = await this.personsService.create({});
       personId = person.id;
       decision = ResolutionDecision.NewPerson;
+      await this.linkageEventsService.record({
+        personId,
+        eventType: 'person_created',
+        actor: 'system',
+        reason: 'new canonical person created during enrollment',
+        metadata: {
+          tenantId: dto.tenantId,
+          roleType: dto.roleType ?? 'driver',
+        },
+      });
     }
 
     const providerVerification = await this.identityVerificationService.verifyForEnrollment({
@@ -173,29 +183,49 @@ export class MatchingService {
       verification?.status === 'verified' &&
       isSuccessfulVerificationMessage(verification.verificationStatus);
 
-    if (isVerifiedMatch) {
+    if (verification?.enrichment || dto.providerVerification?.selfieImageUrl) {
       await this.personsService.applyIdentityEnrichment({
         personId,
-        ...(verification?.enrichment?.fullName
+        ...(isVerifiedMatch && verification?.enrichment?.fullName
           ? { fullName: verification.enrichment.fullName }
           : {}),
-        ...(verification?.enrichment?.dateOfBirth
+        ...(isVerifiedMatch && verification?.enrichment?.dateOfBirth
           ? {
               dateOfBirth: verification.enrichment.dateOfBirth,
             }
           : {}),
-        ...(verification?.enrichment?.address ? { address: verification.enrichment.address } : {}),
-        ...(verification?.enrichment?.gender ? { gender: verification.enrichment.gender } : {}),
+        ...(isVerifiedMatch && verification?.enrichment?.address
+          ? { address: verification.enrichment.address }
+          : {}),
+        ...(isVerifiedMatch && verification?.enrichment?.gender
+          ? { gender: verification.enrichment.gender }
+          : {}),
         ...(verification?.enrichment?.photoUrl
           ? { photoUrl: verification.enrichment.photoUrl }
+          : {}),
+        ...(dto.providerVerification?.selfieImageUrl
+          ? { selfieImageUrl: dto.providerVerification.selfieImageUrl }
+          : {}),
+        ...(verification?.enrichment?.photoUrl
+          ? { providerImageUrl: verification.enrichment.photoUrl }
           : {}),
         ...(verification?.verificationStatus
           ? {
               verificationStatus: verification.verificationStatus,
             }
           : {}),
-        verificationProvider: verification.providerName,
+        ...(verification?.providerName
+          ? { verificationProvider: verification.providerName }
+          : {}),
         ...(dto.countryCode ? { verificationCountryCode: dto.countryCode } : {}),
+        ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
+        ...(dto.association?.localEntityType
+          ? { localEntityType: dto.association.localEntityType }
+          : {}),
+        ...(dto.association?.localEntityId
+          ? { localEntityId: dto.association.localEntityId }
+          : {}),
+        source: 'verified_enrollment',
         verificationConfidence: 0.95,
       });
     }
@@ -227,11 +257,49 @@ export class MatchingService {
       });
     }
 
-    const { crossRoleConflict } = await this.personsService.recordTenantPresence(
+    const { crossRoleConflict } = await this.personsService.recordTenantPresence({
       personId,
-      dto.tenantId,
-      dto.roleType ?? 'driver',
-    );
+      tenantId: dto.tenantId,
+      roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
+      localEntityType: dto.association?.localEntityType ?? (dto.roleType ?? 'driver'),
+      localEntityId: dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
+      ...(dto.association?.businessEntityId
+        ? { businessEntityId: dto.association.businessEntityId }
+        : {}),
+      ...(dto.association?.operatingUnitId
+        ? { operatingUnitId: dto.association.operatingUnitId }
+        : {}),
+      ...(dto.association?.fleetId ? { fleetId: dto.association.fleetId } : {}),
+      status: dto.association?.status ?? 'active',
+      source: dto.association?.source ?? 'identity_resolution',
+      ...(isVerifiedMatch ? { verifiedAt: new Date() } : {}),
+    });
+
+    let globalPersonCode: string | undefined;
+    if (isVerifiedMatch) {
+      const person = await this.personsService.ensureGlobalPersonCode(personId, dto.countryCode);
+      globalPersonCode = person.globalPersonCode ?? undefined;
+      await this.linkageEventsService.record({
+        personId,
+        eventType:
+          (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'guarantor'
+            ? 'linked_to_guarantor'
+            : (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'driver'
+              ? 'linked_to_driver'
+              : 'linked_to_owner',
+        actor: 'system',
+        confidenceScore: 0.95,
+        reason: 'verified enrollment linked canonical person to local record',
+        metadata: {
+          tenantId: dto.tenantId,
+          roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
+          localEntityType: dto.association?.localEntityType ?? (dto.roleType ?? 'driver'),
+          localEntityId:
+            dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
+          globalPersonCode,
+        },
+      });
+    }
     await this.linkageEventsService.record({
       personId,
       eventType: decision === ResolutionDecision.NewPerson ? 'manual_linked' : 'auto_linked',
@@ -261,6 +329,7 @@ export class MatchingService {
 
     return {
       decision,
+      ...(globalPersonCode ? { globalPersonCode } : {}),
       ...(verification?.status ? { providerLookupStatus: verification.status } : {}),
       ...(verification?.verificationStatus
         ? { providerVerificationStatus: verification.verificationStatus }
@@ -276,7 +345,7 @@ export class MatchingService {
         ? { livenessConfidenceScore: liveness.confidenceScore }
         : {}),
       ...(liveness?.reason ? { livenessReason: liveness.reason } : {}),
-      ...(isVerifiedMatch && verification?.enrichment
+      ...(verification?.enrichment
         ? { verifiedProfile: verification.enrichment }
         : {}),
       ...(crossRoleConflict ? { crossRoleConflict: true } : {}),

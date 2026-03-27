@@ -74,6 +74,7 @@ const schema = z.object({
       return value === 'true';
     })
     .default(true),
+  BIOMETRIC_ASSET_RETENTION_DAYS: z.coerce.number().int().min(0).default(180),
 });
 
 export type ApiCoreEnv = z.infer<typeof schema>;

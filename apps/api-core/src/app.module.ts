@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
@@ -25,6 +26,7 @@ import { OperatingUnitsModule } from './operating-units/operating-units.module';
 import { OperationalWalletsModule } from './operational-wallets/operational-wallets.module';
 import { RemittanceModule } from './remittance/remittance.module';
 import { ReportsModule } from './reports/reports.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { SelfSignupModule } from './self-signup/self-signup.module';
 import { TeamModule } from './team/team.module';
 import { TenantBillingModule } from './tenant-billing/tenant-billing.module';
@@ -37,6 +39,22 @@ function createLoggerModule() {
   const isProduction = process.env.NODE_ENV === 'production';
   const pinoHttp: PinoHttpOptions = {
     level: process.env.LOG_LEVEL ?? 'info',
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.body.password',
+        'req.body.currentPassword',
+        'req.body.newPassword',
+        'req.body.confirmPassword',
+        'req.body.refreshToken',
+        'req.body.token',
+        'req.body.code',
+        'req.body.selfieImageBase64',
+        'req.body.identifiers[*].value',
+      ],
+      censor: '[Redacted]',
+    },
     genReqId: (request, response) => {
       const requestWithId = request as IncomingMessage & {
         id?: string | number;
@@ -106,6 +124,7 @@ function createLoggerModule() {
         limit: 10,
       },
     ]),
+    ScheduleModule.forRoot(),
 
     // ── Infrastructure ────────────────────────────────────────────────────────
     DatabaseModule,
@@ -125,6 +144,7 @@ function createLoggerModule() {
     VehicleRiskModule,
     MobileOpsModule,
     ReportsModule,
+    PrivacyModule,
     TenantBillingModule,
 
     // ── People ────────────────────────────────────────────────────────────────

@@ -12,6 +12,16 @@ interface ResolveEnrollmentInput {
   countryCode?: string;
   /** 'driver' | 'guarantor' — controls role-aware presence recording. */
   roleType?: 'driver' | 'guarantor';
+  association?: {
+    localEntityType: string;
+    localEntityId: string;
+    roleType: 'driver' | 'guarantor' | 'owner' | 'admin';
+    businessEntityId?: string;
+    operatingUnitId?: string;
+    fleetId?: string;
+    status?: string;
+    source?: string;
+  };
   livenessPassed?: boolean;
   identifiers?: Array<{
     type: string;
@@ -31,6 +41,7 @@ interface ResolveEnrollmentInput {
       dateOfBirth?: string;
     };
     selfieImageBase64?: string;
+    selfieImageUrl?: string;
     livenessCheck?: {
       provider?: string;
       sessionId?: string;
@@ -50,6 +61,7 @@ interface LivenessSessionResult {
 interface MatchingResult {
   decision: string;
   personId?: string;
+  globalPersonCode?: string;
   reviewCaseId?: string;
   providerLookupStatus?: string;
   providerVerificationStatus?: string;
@@ -62,6 +74,8 @@ interface MatchingResult {
     address?: string;
     gender?: string;
     photoUrl?: string;
+    providerImageUrl?: string;
+    selfieImageUrl?: string;
   };
   globalRiskScore?: number;
   riskBand?: string;
@@ -106,6 +120,8 @@ export class IntelligenceClient {
     verificationStatus?: string;
     verificationProvider?: string;
     verificationCountryCode?: string;
+    reverificationRequired?: boolean;
+    reverificationReason?: string | null;
   }> {
     return this.get<{
       globalRiskScore?: number;
@@ -116,11 +132,19 @@ export class IntelligenceClient {
       verificationStatus?: string;
       verificationProvider?: string;
       verificationCountryCode?: string;
+      reverificationRequired?: boolean;
+      reverificationReason?: string | null;
     }>(`/api/v1/query/persons/${personId}`);
   }
 
   async queryPersonRolePresence(personId: string): Promise<PersonRolePresence> {
     return this.get<PersonRolePresence>(`/api/v1/query/persons/${personId}/role-presence`);
+  }
+
+  async retireBiometricAssetUrls(urls: string[]): Promise<{ affectedPeople: number }> {
+    return this.post<{ affectedPeople: number }>('/api/v1/internal/persons/retire-biometric-assets', {
+      urls,
+    });
   }
 
   private async get<T>(path: string): Promise<T> {

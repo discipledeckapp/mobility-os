@@ -51,8 +51,19 @@ export class ReviewCasesController {
     required: false,
     enum: Object.values(ReviewCaseStatus),
   })
-  async list(@Query('status') status?: string): Promise<ReviewCaseResponseDto[]> {
-    return (await this.reviewCasesService.list(status)).map((reviewCase) =>
+  @ApiQuery({
+    name: 'personId',
+    required: false,
+    type: String,
+  })
+  async list(
+    @Query('status') status?: string,
+    @Query('personId') personId?: string,
+  ): Promise<ReviewCaseResponseDto[]> {
+    return (await this.reviewCasesService.list({
+      ...(status ? { status } : {}),
+      ...(personId ? { personId } : {}),
+    })).map((reviewCase) =>
       this.toResponseDto(reviewCase),
     );
   }

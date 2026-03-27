@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -134,6 +135,15 @@ export class DocumentStorageService {
     }
   }
 
+  async deleteByUrl(storageUrl?: string | null): Promise<void> {
+    const storageKey = this.resolveStorageKeyFromUrl(storageUrl);
+    if (!storageKey) {
+      return;
+    }
+
+    await this.deleteFile(storageKey);
+  }
+
   private buildS3StorageUrl(storageKey: string): string {
     if (this.s3PublicBaseUrl) {
       return `${this.s3PublicBaseUrl.replace(/\/$/, '')}/${storageKey}`;
@@ -151,6 +161,54 @@ export class DocumentStorageService {
 
     const endpointUrl = new URL(endpoint);
     return `${endpointUrl.protocol}//${this.s3Bucket}.${endpointUrl.host}/${encodedKey}`;
+  }
+
+  private resolveStorageKeyFromUrl(storageUrl?: string | null): string | null {
+    if (!storageUrl) {
+      return null;
+    }
+
+    if (storageUrl.startsWith('file://')) {
+      try {
+        const absolutePath = fileURLToPath(storageUrl);
+        const rootWithSlash = `${this.storageRoot.replace(/\/$/, '')}/`;
+        if (!absolutePath.startsWith(rootWithSlash)) {
+          return null;
+        }
+        return absolutePath.slice(rootWithSlash.length);
+      } catch {
+        return null;
+      }
+    }
+
+    if (this.s3PublicBaseUrl) {
+      const normalizedBase = this.s3PublicBaseUrl.replace(/\/$/, '');
+      if (storageUrl.startsWith(`${normalizedBase}/`)) {
+        return storageUrl.slice(normalizedBase.length + 1);
+      }
+    }
+
+    if (!this.s3Endpoint || !this.s3Bucket) {
+      return null;
+    }
+
+    try {
+      const storage = new URL(storageUrl);
+      const endpoint = new URL(this.s3Endpoint);
+      if (storage.host !== endpoint.host) {
+        return null;
+      }
+
+      const path = decodeURIComponent(storage.pathname.replace(/^\/+/, ''));
+      if (this.s3ForcePathStyle) {
+        const bucketPrefix = `${this.s3Bucket}/`;
+        return path.startsWith(bucketPrefix) ? path.slice(bucketPrefix.length) : null;
+      }
+
+      return path || null;
+    } catch {
+      return null;
+    }
   }
 
   private async streamToBuffer(body: unknown): Promise<Buffer> {

@@ -18,6 +18,8 @@ export function middleware(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/driver-kyc/payment-return') ||
     pathname.startsWith('/driver-self-service') ||

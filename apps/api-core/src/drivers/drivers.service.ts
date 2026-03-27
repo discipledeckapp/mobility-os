@@ -1,5 +1,7 @@
 import {
+  CONSENT_SCOPES,
   DRIVER_STATUS_CODES,
+  LEGAL_DOCUMENT_VERSIONS,
   getCountryConfig,
   getDocumentType,
   isCountrySupported,
@@ -60,6 +62,8 @@ type DriverIntelligenceSummary = {
   riskBand?: string | undefined;
   isWatchlisted?: boolean | undefined;
   duplicateIdentityFlag?: boolean | undefined;
+  reverificationRequired?: boolean | undefined;
+  reverificationReason?: string | null | undefined;
   verificationConfidence?: number | undefined;
   verificationStatus?: string | undefined;
   verificationProvider?: string | undefined;
@@ -70,6 +74,8 @@ type DriverGuarantorSummary = {
   guarantorPersonId?: string | null;
   guarantorRiskBand?: string | null;
   guarantorIsWatchlisted?: boolean | null;
+  guarantorReverificationRequired?: boolean | null;
+  guarantorReverificationReason?: string | null;
   guarantorIsAlsoDriver?: boolean;
   hasGuarantor: boolean;
   guarantorStatus?: string | null;
@@ -103,6 +109,7 @@ type DriverReadinessSummary = {
 type DriverIdentityResolutionResult = {
   decision: string;
   personId?: string;
+  globalPersonCode?: string;
   reviewCaseId?: string;
   providerLookupStatus?: string;
   providerVerificationStatus?: string;
@@ -115,6 +122,8 @@ type DriverIdentityResolutionResult = {
     address?: string;
     gender?: string;
     photoUrl?: string;
+    providerImageUrl?: string;
+    selfieImageUrl?: string;
   };
   globalRiskScore?: number;
   riskBand?: string;
@@ -138,6 +147,10 @@ type DriverGuarantorRecord = {
   email?: string | null;
   countryCode?: string | null;
   relationship?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  selfieImageUrl?: string | null;
+  providerImageUrl?: string | null;
   status: string;
   disconnectedAt?: Date | null;
   disconnectedReason?: string | null;
@@ -417,6 +430,7 @@ export class DriversService {
     findUnique(args: { where: { id: string } }): Promise<DriverDocumentRecord | null>;
     findFirst(args: {
       where: { tenantId: string; driverId: string; documentType: string; status: string };
+      orderBy?: { createdAt: 'desc' };
     }): Promise<DriverDocumentRecord | null>;
     update(args: {
       where: { id: string };
@@ -433,6 +447,7 @@ export class DriversService {
       };
       data: Pick<DriverDocumentRecord, 'status'>;
     }): Promise<{ count: number }>;
+    delete(args: { where: { id: string } }): Promise<DriverDocumentRecord>;
   } {
     // TODO: Remove this narrow delegate cast after the repo's Prisma client path
     // inconsistency is resolved. Runtime Prisma includes the driver document
@@ -456,6 +471,7 @@ export class DriversService {
           findUnique(args: { where: { id: string } }): Promise<DriverDocumentRecord | null>;
           findFirst(args: {
             where: { tenantId: string; driverId: string; documentType: string; status: string };
+            orderBy?: { createdAt: 'desc' };
           }): Promise<DriverDocumentRecord | null>;
           update(args: {
             where: { id: string };
@@ -472,6 +488,7 @@ export class DriversService {
             };
             data: Pick<DriverDocumentRecord, 'status'>;
           }): Promise<{ count: number }>;
+          delete(args: { where: { id: string } }): Promise<DriverDocumentRecord>;
         };
       }
     ).driverDocument;
@@ -1100,8 +1117,12 @@ export class DriversService {
     guarantorEmail: string | null;
     guarantorCountryCode: string | null;
     guarantorRelationship: string | null;
+    guarantorDateOfBirth: string | null;
+    guarantorGender: string | null;
     guarantorPersonId: string | null;
     guarantorStatus: string;
+    guarantorSelfieImageUrl: string | null;
+    guarantorProviderImageUrl: string | null;
     driverName: string;
     driverId: string;
     tenantId: string;
@@ -1134,8 +1155,12 @@ export class DriversService {
       guarantorEmail: guarantor.email ?? null,
       guarantorCountryCode: guarantor.countryCode ?? null,
       guarantorRelationship: guarantor.relationship ?? null,
+      guarantorDateOfBirth: guarantor.dateOfBirth ?? null,
+      guarantorGender: guarantor.gender ?? null,
       guarantorPersonId: guarantor.personId ?? null,
       guarantorStatus: guarantor.status,
+      guarantorSelfieImageUrl: guarantor.selfieImageUrl ?? null,
+      guarantorProviderImageUrl: guarantor.providerImageUrl ?? null,
       driverName: this.formatDriverName(driver),
       driverId: driver.id,
       tenantId: driver.tenantId,
@@ -1362,6 +1387,7 @@ export class DriversService {
   async hasPortrait(tenantId: string, driverId: string): Promise<boolean> {
     const doc = await this.driverDocuments.findFirst({
       where: { tenantId, driverId, documentType: 'portrait', status: 'approved' },
+      orderBy: { createdAt: 'desc' },
     });
     return Boolean(doc);
   }
@@ -1376,6 +1402,7 @@ export class DriversService {
     }
     const doc = await this.driverDocuments.findFirst({
       where: { tenantId, driverId, documentType: 'portrait', status: 'approved' },
+      orderBy: { createdAt: 'desc' },
     });
     if (!doc?.storageKey) {
       throw new NotFoundException('Portrait not found');
@@ -1647,6 +1674,25 @@ export class DriversService {
     });
   }
 
+  async removeDocument(
+    tenantId: string,
+    driverId: string,
+    documentId: string,
+  ): Promise<{ message: string }> {
+    const driver = await this.findOne(tenantId, driverId);
+    const document = await this.driverDocuments.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!document || document.driverId !== driver.id || document.tenantId !== driver.tenantId) {
+      throw new NotFoundException(`Driver document '${documentId}' not found`);
+    }
+
+    await this.documentStorageService.deleteFile(document.storageKey);
+    await this.driverDocuments.delete({ where: { id: document.id } });
+    return { message: 'Document removed.' };
+  }
+
   async reviewDocument(
     tenantId: string,
     driverId: string,
@@ -1841,10 +1887,24 @@ export class DriversService {
       );
     }
 
+    const persistedSelfieImageUrl = dto.selfieImageBase64
+      ? await this.persistSelfiePortraitForDriverGuarantor(driver.id, dto.selfieImageBase64)
+      : null;
+
     const result = await this.intelligenceClient.resolveEnrollment({
       tenantId,
       countryCode: resolvedCountryCode,
       roleType: 'guarantor',
+      association: {
+        localEntityType: 'driver_guarantor',
+        localEntityId: guarantor.id,
+        roleType: 'guarantor',
+        ...(driver.businessEntityId ? { businessEntityId: driver.businessEntityId } : {}),
+        ...(driver.operatingUnitId ? { operatingUnitId: driver.operatingUnitId } : {}),
+        ...(driver.fleetId ? { fleetId: driver.fleetId } : {}),
+        status: guarantor.status,
+        source: 'identity_resolution',
+      },
       ...(dto.livenessPassed !== undefined ? { livenessPassed: dto.livenessPassed } : {}),
       identifiers,
       ...(dto.biometric ? { biometric: dto.biometric } : {}),
@@ -1857,6 +1917,7 @@ export class DriversService {
             : {}),
         },
         ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
+        ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
       },
     });
@@ -1869,14 +1930,34 @@ export class DriversService {
       );
     }
 
+    const persistedProviderImageUrl = await this.persistIdentityReferenceImage(
+      result.verifiedProfile?.providerImageUrl ?? result.verifiedProfile?.photoUrl,
+      `guarantor-provider-${driver.id}-${Date.now()}`,
+    );
+    const verifiedProfileUpdate = this.buildVerifiedGuarantorProfileUpdate(result);
+
     await this.driverGuarantors.update({
       where: { driverId: driver.id },
       data: {
+        ...verifiedProfileUpdate,
         ...(result.personId ? { personId: result.personId } : {}),
+        ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
+        ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
       },
     });
 
-    return result;
+    return {
+      ...result,
+      ...(result.verifiedProfile || persistedSelfieImageUrl || persistedProviderImageUrl
+        ? {
+            verifiedProfile: {
+              ...(result.verifiedProfile ?? {}),
+              ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
+              ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+            },
+          }
+        : {}),
+    };
   }
 
   async listDocumentsFromSelfService(token: string) {
@@ -1887,6 +1968,14 @@ export class DriversService {
   async uploadDocumentFromSelfService(token: string, dto: CreateDriverDocumentDto) {
     const payload = await this.verifySelfServiceToken(token);
     return this.uploadDocument(payload.tenantId, payload.driverId, dto);
+  }
+
+  async removeDocumentFromSelfService(
+    token: string,
+    documentId: string,
+  ): Promise<{ message: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    return this.removeDocument(payload.tenantId, payload.driverId, documentId);
   }
 
   async getDocumentContentFromSelfService(
@@ -1917,6 +2006,43 @@ export class DriversService {
     const driver = await this.findOne(payload.tenantId, payload.driverId);
     await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
     return this.resolveIdentity(payload.tenantId, payload.driverId, dto);
+  }
+
+  async recordDriverSelfServiceVerificationConsent(token: string): Promise<{ message: string }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, driverId: driver.id },
+      select: { id: true },
+    });
+
+    if (!linkedUser) {
+      throw new ConflictException(
+        'Create your sign-in account before continuing to verification consent.',
+      );
+    }
+
+    await this.prisma.userConsent.create({
+      data: {
+        tenantId: payload.tenantId,
+        userId: linkedUser.id,
+        subjectType: 'driver',
+        subjectId: driver.id,
+        policyDocument: 'verification_sensitive_processing',
+        policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+        consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+        granted: true,
+        metadata: {
+          legalDocuments: {
+            privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+            terms: LEGAL_DOCUMENT_VERSIONS.terms,
+          },
+          channel: 'driver_self_service',
+        },
+      },
+    });
+
+    return { message: 'Verification consent recorded.' };
   }
 
   async createDriverMobileAccountFromSelfService(
@@ -2123,6 +2249,49 @@ export class DriversService {
     return { message: 'Contact details updated.' };
   }
 
+  async recordGuarantorSelfServiceVerificationConsent(
+    token: string,
+  ): Promise<{ message: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: payload.driverId },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const linkedUser = await this.findGuarantorSelfServiceUser(payload.tenantId, driver.id);
+    if (!linkedUser) {
+      throw new ConflictException(
+        'Create your sign-in account before continuing to verification consent.',
+      );
+    }
+
+    await this.prisma.userConsent.create({
+      data: {
+        tenantId: payload.tenantId,
+        userId: linkedUser.id,
+        subjectType: 'guarantor',
+        subjectId: guarantor.id,
+        policyDocument: 'verification_sensitive_processing',
+        policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+        consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+        granted: true,
+        metadata: {
+          legalDocuments: {
+            privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+            terms: LEGAL_DOCUMENT_VERSIONS.terms,
+          },
+          channel: 'guarantor_self_service',
+        },
+      },
+    });
+
+    return { message: 'Verification consent recorded.' };
+  }
+
   async updateGuarantorProfileFromSelfService(
     token: string,
     profile: {
@@ -2254,6 +2423,8 @@ export class DriversService {
         riskBand: result.value.riskBand,
         isWatchlisted: result.value.isWatchlisted,
         duplicateIdentityFlag: result.value.hasDuplicateIdentityFlag,
+        reverificationRequired: result.value.reverificationRequired,
+        reverificationReason: result.value.reverificationReason,
         verificationConfidence: result.value.verificationConfidence,
         verificationStatus: result.value.verificationStatus,
         verificationProvider: result.value.verificationProvider,
@@ -2283,6 +2454,8 @@ export class DriversService {
         riskBand: risk.riskBand,
         isWatchlisted: risk.isWatchlisted,
         duplicateIdentityFlag: risk.hasDuplicateIdentityFlag,
+        reverificationRequired: risk.reverificationRequired,
+        reverificationReason: risk.reverificationReason,
         verificationConfidence: risk.verificationConfidence,
         verificationStatus: risk.verificationStatus,
         verificationProvider: risk.verificationProvider,
@@ -2606,6 +2779,8 @@ export class DriversService {
       address?: string;
       gender?: string;
       photoUrl?: string;
+      providerImageUrl?: string;
+      selfieImageUrl?: string;
     };
     globalRiskScore?: number;
     riskBand?: string;
@@ -2633,10 +2808,24 @@ export class DriversService {
       ...(driver.email ? [{ type: 'EMAIL', value: driver.email }] : []),
     ];
 
+    const persistedSelfieImageUrl = dto.selfieImageBase64
+      ? await this.persistSelfiePortraitForDriver(tenantId, driver.id, dto.selfieImageBase64)
+      : null;
+
     const result: DriverIdentityResolutionResult = await this.intelligenceClient.resolveEnrollment({
       tenantId,
       countryCode: resolvedCountryCode,
       roleType: 'driver',
+      association: {
+        localEntityType: 'driver',
+        localEntityId: driver.id,
+        roleType: 'driver',
+        ...(driver.businessEntityId ? { businessEntityId: driver.businessEntityId } : {}),
+        ...(driver.operatingUnitId ? { operatingUnitId: driver.operatingUnitId } : {}),
+        ...(driver.fleetId ? { fleetId: driver.fleetId } : {}),
+        status: driver.status,
+        source: 'identity_resolution',
+      },
       ...(dto.livenessPassed !== undefined ? { livenessPassed: dto.livenessPassed } : {}),
       identifiers,
       ...(dto.biometric ? { biometric: dto.biometric } : {}),
@@ -2648,6 +2837,7 @@ export class DriversService {
           ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
         },
         ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
+        ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
       },
     });
@@ -2657,15 +2847,23 @@ export class DriversService {
       result.isVerifiedMatch === true,
       result.providerLookupStatus,
     );
+    const verifiedProfileUpdate = this.buildVerifiedDriverProfileUpdate(result);
+    const persistedProviderImageUrl = await this.persistIdentityReferenceImage(
+      result.verifiedProfile?.providerImageUrl ?? result.verifiedProfile?.photoUrl,
+      `driver-provider-${driver.id}-${Date.now()}`,
+    );
 
     // Canonical enrichment (verified name, DOB, etc.) is stored on intel_persons
     // by the intelligence plane — see person-graph.md Principle 4. Only operational
     // identity state and the cross-plane personId FK are written back here.
     await this.prisma.driver.update({
       where: { id: driver.id },
-      data: {
-        ...(result.personId ? { personId: result.personId } : {}),
-        identityStatus: nextIdentityStatus,
+        data: {
+          ...verifiedProfileUpdate,
+          ...(result.personId ? { personId: result.personId } : {}),
+          ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
+          ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+          identityStatus: nextIdentityStatus,
         identityReviewCaseId: result.reviewCaseId ?? null,
         identityReviewStatus: result.reviewCaseId ? 'open' : null,
         identityLastDecision:
@@ -2676,38 +2874,21 @@ export class DriversService {
         identityLivenessProvider: result.livenessProviderName ?? null,
         identityLivenessConfidence: result.livenessConfidenceScore ?? null,
         identityLivenessReason: result.livenessReason ?? null,
-      } as never,
-    });
+        } as never,
+      });
 
-    // Store selfie as portrait document in S3 (no base64 in DB).
-    if (dto.selfieImageBase64) {
-      try {
-        const buffer = Buffer.from(dto.selfieImageBase64, 'base64');
-        const stored = await this.documentStorageService.uploadFile(
-          buffer,
-          `portrait-${driver.id}-${Date.now()}.jpg`,
-          'image/jpeg',
-        );
-        await this.driverDocuments.create({
-          data: {
-            tenantId,
-            driverId: driver.id,
-            documentType: 'portrait',
-            fileName: `portrait-${Date.now()}.jpg`,
-            contentType: 'image/jpeg',
-            storageKey: stored.storageKey,
-            storageUrl: stored.storageUrl,
-            uploadedBy: 'identity_resolution',
-            status: 'approved',
-          },
-        });
-      } catch (err) {
-        // Portrait storage is best-effort — never block identity resolution on it.
-        this.logger.warn(`Portrait upload failed for driver ${driver.id}: ${String(err)}`);
-      }
-    }
-
-    return result;
+    return {
+      ...result,
+      ...(result.verifiedProfile || persistedSelfieImageUrl || persistedProviderImageUrl
+        ? {
+            verifiedProfile: {
+              ...(result.verifiedProfile ?? {}),
+              ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
+              ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+            },
+          }
+        : {}),
+    };
   }
 
   private mapIdentityStatus(
@@ -2732,6 +2913,178 @@ export class DriversService {
     }
 
     return 'pending_verification';
+  }
+
+  private buildVerifiedDriverProfileUpdate(
+    result: DriverIdentityResolutionResult,
+  ): { firstName?: string; lastName?: string; dateOfBirth?: string; gender?: string } {
+    if (result.isVerifiedMatch !== true || !result.verifiedProfile) {
+      return {};
+    }
+
+    const updates: { firstName?: string; lastName?: string; dateOfBirth?: string; gender?: string } = {};
+    const fullName = result.verifiedProfile.fullName?.trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) {
+        const firstName = parts[0];
+        if (firstName) {
+          updates.firstName = firstName;
+        }
+      } else if (parts.length > 1) {
+        updates.firstName = parts.slice(0, -1).join(' ');
+        const lastName = parts.at(-1);
+        if (lastName) {
+          updates.lastName = lastName;
+        }
+      }
+    }
+
+    if (result.verifiedProfile.dateOfBirth?.trim()) {
+      updates.dateOfBirth = result.verifiedProfile.dateOfBirth.trim();
+    }
+
+    if (result.verifiedProfile.gender?.trim()) {
+      updates.gender = result.verifiedProfile.gender.trim();
+    }
+
+    return updates;
+  }
+
+  private buildVerifiedGuarantorProfileUpdate(
+    result: DriverIdentityResolutionResult,
+  ): { name?: string; dateOfBirth?: string; gender?: string } {
+    if (result.isVerifiedMatch !== true || !result.verifiedProfile) {
+      return {};
+    }
+
+    const updates: { name?: string; dateOfBirth?: string; gender?: string } = {};
+
+    if (result.verifiedProfile.fullName?.trim()) {
+      updates.name = result.verifiedProfile.fullName.trim();
+    }
+
+    if (result.verifiedProfile.dateOfBirth?.trim()) {
+      updates.dateOfBirth = result.verifiedProfile.dateOfBirth.trim();
+    }
+
+    if (result.verifiedProfile.gender?.trim()) {
+      updates.gender = result.verifiedProfile.gender.trim();
+    }
+
+    return updates;
+  }
+
+  private async persistSelfiePortraitForDriver(
+    tenantId: string,
+    driverId: string,
+    selfieImageBase64: string,
+  ): Promise<string | null> {
+    try {
+      const buffer = Buffer.from(selfieImageBase64, 'base64');
+      const timestamp = Date.now();
+      const stored = await this.documentStorageService.uploadFile(
+        buffer,
+        `portrait-${driverId}-${timestamp}.jpg`,
+        'image/jpeg',
+      );
+      await this.driverDocuments.create({
+        data: {
+          tenantId,
+          driverId,
+          documentType: 'portrait',
+          fileName: `portrait-${timestamp}.jpg`,
+          contentType: 'image/jpeg',
+          storageKey: stored.storageKey,
+          storageUrl: stored.storageUrl,
+          uploadedBy: 'identity_resolution',
+          status: 'approved',
+        },
+      });
+      return stored.storageUrl;
+    } catch (err) {
+      this.logger.warn(`Portrait upload failed for driver ${driverId}: ${String(err)}`);
+      return null;
+    }
+  }
+
+  private async persistSelfiePortraitForDriverGuarantor(
+    driverId: string,
+    selfieImageBase64: string,
+  ): Promise<string | null> {
+    try {
+      const buffer = Buffer.from(selfieImageBase64, 'base64');
+      const stored = await this.documentStorageService.uploadFile(
+        buffer,
+        `guarantor-selfie-${driverId}-${Date.now()}.jpg`,
+        'image/jpeg',
+      );
+      return stored.storageUrl;
+    } catch (err) {
+      this.logger.warn(`Portrait upload failed for guarantor on driver ${driverId}: ${String(err)}`);
+      return null;
+    }
+  }
+
+  private async persistIdentityReferenceImage(
+    source: string | undefined,
+    fileNamePrefix: string,
+  ): Promise<string | null> {
+    if (!source?.trim()) {
+      return null;
+    }
+
+    try {
+      const trimmedSource = source.trim();
+      const dataUrlMatch = trimmedSource.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (dataUrlMatch) {
+        const contentType = dataUrlMatch[1];
+        const base64Payload = dataUrlMatch[2];
+        if (!contentType || !base64Payload) {
+          return null;
+        }
+        const extension = this.getImageExtension(contentType);
+        const stored = await this.documentStorageService.uploadFile(
+          Buffer.from(base64Payload, 'base64'),
+          `${fileNamePrefix}.${extension}`,
+          contentType,
+        );
+        return stored.storageUrl;
+      }
+
+      if (/^https?:\/\//i.test(trimmedSource)) {
+        const response = await fetch(trimmedSource);
+        if (!response.ok) {
+          throw new Error(`image fetch returned ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') ?? 'image/jpeg';
+        const extension = this.getImageExtension(contentType);
+        const stored = await this.documentStorageService.uploadFile(
+          Buffer.from(arrayBuffer),
+          `${fileNamePrefix}.${extension}`,
+          contentType,
+        );
+        return stored.storageUrl;
+      }
+
+      const stored = await this.documentStorageService.uploadFile(
+        Buffer.from(trimmedSource, 'base64'),
+        `${fileNamePrefix}.jpg`,
+        'image/jpeg',
+      );
+      return stored.storageUrl;
+    } catch (err) {
+      this.logger.warn(`Identity reference image upload failed: ${String(err)}`);
+      return null;
+    }
+  }
+
+  private getImageExtension(contentType: string): string {
+    if (contentType.includes('png')) return 'png';
+    if (contentType.includes('webp')) return 'webp';
+    if (contentType.includes('svg')) return 'svg';
+    return 'jpg';
   }
 
   private formatDriverName(driver: { firstName?: string | null; lastName?: string | null }): string {
@@ -3098,7 +3451,12 @@ export class DriversService {
 
     const guarantorRiskByPersonId = new Map<
       string,
-      { riskBand?: string; isWatchlisted?: boolean }
+      {
+        riskBand?: string;
+        isWatchlisted?: boolean;
+        reverificationRequired?: boolean;
+        reverificationReason?: string | null;
+      }
     >();
     const guarantorRoleByPersonId = new Map<string, { isDriver: boolean }>();
 
@@ -3112,6 +3470,12 @@ export class DriversService {
           ...(riskResult.value.riskBand ? { riskBand: riskResult.value.riskBand } : {}),
           ...(typeof riskResult.value.isWatchlisted === 'boolean'
             ? { isWatchlisted: riskResult.value.isWatchlisted }
+            : {}),
+          ...(typeof riskResult.value.reverificationRequired === 'boolean'
+            ? { reverificationRequired: riskResult.value.reverificationRequired }
+            : {}),
+          ...(riskResult.value.reverificationReason
+            ? { reverificationReason: riskResult.value.reverificationReason }
             : {}),
         });
       }
@@ -3136,6 +3500,8 @@ export class DriversService {
         guarantorPersonId: personId,
         guarantorRiskBand: risk?.riskBand ?? null,
         guarantorIsWatchlisted: risk?.isWatchlisted ?? null,
+        guarantorReverificationRequired: risk?.reverificationRequired ?? null,
+        guarantorReverificationReason: risk?.reverificationReason ?? null,
         guarantorIsAlsoDriver: role?.isDriver ?? false,
       };
     });

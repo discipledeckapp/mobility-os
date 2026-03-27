@@ -1,8 +1,10 @@
+import { randomBytes } from 'node:crypto';
 import { RiskScore } from '@mobility-os/intelligence-domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { IntelPerson } from '../generated/prisma';
+import { LinkageEventsService } from '../linkage-events/linkage-events.service';
 import type { CreatePersonDto } from './dto/create-person.dto';
 import type { IntelligenceQueryResultDto } from './dto/person-response.dto';
 
@@ -13,15 +15,38 @@ interface CanonicalIdentityEnrichmentInput {
   address?: string;
   gender?: string;
   photoUrl?: string;
+  selfieImageUrl?: string;
+  providerImageUrl?: string;
   verificationStatus?: string;
   verificationProvider?: string;
   verificationCountryCode?: string;
   verificationConfidence?: number;
+  tenantId?: string;
+  localEntityType?: string;
+  localEntityId?: string;
+  source?: string;
+}
+
+interface RecordPersonAssociationInput {
+  personId: string;
+  tenantId: string;
+  roleType: 'driver' | 'guarantor' | 'owner' | 'admin';
+  businessEntityId?: string;
+  operatingUnitId?: string;
+  fleetId?: string;
+  localEntityType: string;
+  localEntityId: string;
+  status?: string;
+  source?: string;
+  verifiedAt?: Date;
 }
 
 @Injectable()
 export class PersonsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly linkageEventsService: LinkageEventsService,
+  ) {}
 
   async create(dto: CreatePersonDto): Promise<IntelPerson> {
     return this.prisma.intelPerson.create({
@@ -41,6 +66,58 @@ export class PersonsService {
     return person;
   }
 
+  async listForStaff(input: {
+    q?: string;
+    limit?: number;
+    riskBand?: string;
+    countryCode?: string;
+    watchlistStatus?: 'flagged' | 'clear';
+    reviewState?: 'open' | 'in_review' | 'resolved' | 'escalated';
+    roleType?: 'driver' | 'guarantor' | 'owner' | 'admin';
+    reverificationRequired?: boolean;
+  } = {}): Promise<IntelPerson[]> {
+    const q = input.q?.trim();
+    const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+    const riskScoreWhere = this.riskBandToScoreWhere(input.riskBand);
+    const where: Record<string, unknown> = {};
+
+    if (q) {
+      where.OR = [
+        { id: { contains: q, mode: 'insensitive' } },
+        { globalPersonCode: { contains: q, mode: 'insensitive' } },
+        { fullName: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    if (riskScoreWhere) {
+      where.globalRiskScore = riskScoreWhere;
+    }
+    if (input.countryCode) {
+      where.verificationCountryCode = input.countryCode.toUpperCase();
+    }
+    if (input.watchlistStatus) {
+      where.isWatchlisted = input.watchlistStatus === 'flagged';
+    }
+    if (input.reviewState) {
+      where.reviewCases = { some: { status: input.reviewState } };
+    }
+    if (input.roleType || input.reverificationRequired !== undefined) {
+      where.tenantPresences = {
+        some: {
+          ...(input.roleType ? { roleType: input.roleType } : {}),
+          ...(input.reverificationRequired !== undefined
+            ? { reverificationRequired: input.reverificationRequired }
+            : {}),
+        },
+      };
+    }
+
+    return this.prisma.intelPerson.findMany({
+      where,
+      orderBy: [{ updatedAt: 'desc' }],
+      take: limit,
+    });
+  }
+
   /**
    * Returns the derived intelligence result for a given person ID.
    * This is the only view exposed to tenant callers — no raw cross-tenant
@@ -48,6 +125,13 @@ export class PersonsService {
    */
   async queryForTenant(personId: string): Promise<IntelligenceQueryResultDto> {
     const person = await this.findById(personId);
+    const stalePresence = await this.prisma.intelPersonTenantPresence.findFirst({
+      where: {
+        personId,
+        reverificationRequired: true,
+      },
+      orderBy: [{ verifiedAt: 'desc' }, { createdAt: 'desc' }],
+    });
 
     const riskScore = RiskScore.of(person.globalRiskScore);
 
@@ -62,6 +146,8 @@ export class PersonsService {
       verificationStatus: person.verificationStatus,
       verificationProvider: person.verificationProvider,
       verificationCountryCode: person.verificationCountryCode,
+      reverificationRequired: Boolean(stalePresence),
+      reverificationReason: stalePresence?.reverificationReason ?? null,
     };
   }
 
@@ -104,33 +190,54 @@ export class PersonsService {
    * automatically. The signal is idempotent — a second enrollment in the same
    * role at the same tenant is a no-op and does not produce a duplicate signal.
    */
-  async recordTenantPresence(
-    personId: string,
-    tenantId: string,
-    roleType: 'driver' | 'guarantor' = 'driver',
-  ): Promise<{ crossRoleConflict: boolean }> {
-    const oppositeRole = roleType === 'driver' ? 'guarantor' : 'driver';
+  async recordTenantPresence(input: RecordPersonAssociationInput): Promise<{ crossRoleConflict: boolean }> {
+    const oppositeRole = input.roleType === 'driver' ? 'guarantor' : input.roleType === 'guarantor' ? 'driver' : null;
 
     const [, oppositePresence] = await Promise.all([
       this.prisma.intelPersonTenantPresence.upsert({
         where: {
-          personId_tenantId_roleType: { personId, tenantId, roleType },
-        },
-        create: { personId, tenantId, roleType },
-        update: {},
-      }),
-      this.prisma.intelPersonTenantPresence.findUnique({
-        where: {
-          personId_tenantId_roleType: {
-            personId,
-            tenantId,
-            roleType: oppositeRole,
+          personId_tenantId_roleType_localEntityType_localEntityId: {
+            personId: input.personId,
+            tenantId: input.tenantId,
+            roleType: input.roleType,
+            localEntityType: input.localEntityType,
+            localEntityId: input.localEntityId,
           },
         },
+        create: {
+          personId: input.personId,
+          tenantId: input.tenantId,
+          roleType: input.roleType,
+          localEntityType: input.localEntityType,
+          localEntityId: input.localEntityId,
+          ...(input.businessEntityId ? { businessEntityId: input.businessEntityId } : {}),
+          ...(input.operatingUnitId ? { operatingUnitId: input.operatingUnitId } : {}),
+          ...(input.fleetId ? { fleetId: input.fleetId } : {}),
+          status: input.status ?? 'active',
+          source: input.source ?? 'identity_resolution',
+          verifiedAt: input.verifiedAt ?? new Date(),
+        },
+        update: {
+          ...(input.businessEntityId ? { businessEntityId: input.businessEntityId } : {}),
+          ...(input.operatingUnitId ? { operatingUnitId: input.operatingUnitId } : {}),
+          ...(input.fleetId ? { fleetId: input.fleetId } : {}),
+          status: input.status ?? 'active',
+          source: input.source ?? 'identity_resolution',
+          verifiedAt: input.verifiedAt ?? new Date(),
+        },
       }),
+      oppositeRole
+        ? this.prisma.intelPersonTenantPresence.findFirst({
+            where: {
+              personId: input.personId,
+              tenantId: input.tenantId,
+              roleType: oppositeRole,
+            },
+          })
+        : Promise.resolve(null),
     ]);
 
-    const crossRoleConflict = oppositePresence !== null;
+    const crossRoleConflict = Boolean(oppositePresence);
 
     if (crossRoleConflict) {
       // Emit a risk signal for cross-role presence. Idempotent — if one
@@ -138,14 +245,16 @@ export class PersonsService {
       // but acceptable; duplicate detection is handled upstream if needed.
       await this.prisma.intelRiskSignal.create({
         data: {
-          personId,
+          personId: input.personId,
           type: 'cross_role_presence',
           severity: 'medium',
           source: 'system',
           metadata: {
-            tenantId,
-            roles: [roleType, oppositeRole],
-            detectedDuring: roleType,
+            tenantId: input.tenantId,
+            roles: [input.roleType, oppositeRole],
+            detectedDuring: input.roleType,
+            localEntityType: input.localEntityType,
+            localEntityId: input.localEntityId,
           },
         },
       });
@@ -185,26 +294,201 @@ export class PersonsService {
     };
   }
 
-  async applyIdentityEnrichment(input: CanonicalIdentityEnrichmentInput): Promise<IntelPerson> {
-    await this.findById(input.personId);
+  async listAssociations(personId: string) {
+    await this.findById(personId);
 
-    return this.prisma.intelPerson.update({
-      where: { id: input.personId },
-      data: {
-        ...(input.fullName ? { fullName: input.fullName } : {}),
-        ...(input.dateOfBirth ? { dateOfBirth: input.dateOfBirth } : {}),
-        ...(input.address ? { address: input.address } : {}),
-        ...(input.gender ? { gender: input.gender } : {}),
-        ...(input.photoUrl ? { photoUrl: input.photoUrl } : {}),
-        ...(input.verificationStatus ? { verificationStatus: input.verificationStatus } : {}),
-        ...(input.verificationProvider ? { verificationProvider: input.verificationProvider } : {}),
-        ...(input.verificationCountryCode
-          ? { verificationCountryCode: input.verificationCountryCode }
-          : {}),
-        ...(input.verificationConfidence !== undefined
-          ? { verificationConfidence: input.verificationConfidence }
-          : {}),
-      },
+    return this.prisma.intelPersonTenantPresence.findMany({
+      where: { personId },
+      orderBy: [{ verifiedAt: 'desc' }, { createdAt: 'desc' }],
     });
+  }
+
+  async listLinkageEvents(personId: string) {
+    await this.findById(personId);
+    return this.linkageEventsService.listByPerson(personId);
+  }
+
+  async listIdentityChanges(personId: string) {
+    await this.findById(personId);
+    return this.prisma.intelIdentityChangeEvent.findMany({
+      where: { personId },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+  }
+
+  async ensureGlobalPersonCode(personId: string, countryCode?: string): Promise<IntelPerson> {
+    const person = await this.findById(personId);
+    if (person.globalPersonCode) {
+      return person;
+    }
+
+    const region = (countryCode ?? person.verificationCountryCode ?? 'XX').toUpperCase();
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const candidate = `MPS-${region}-${randomBytes(4).toString('hex').toUpperCase()}`;
+      try {
+        return await this.prisma.intelPerson.update({
+          where: { id: personId },
+          data: { globalPersonCode: candidate },
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    throw new BadRequestException('Unable to allocate a unique global person code');
+  }
+
+  async retireBiometricAssets(urls: string[]): Promise<{ affectedPeople: number }> {
+    const normalized = Array.from(
+      new Set(urls.map((value) => value.trim()).filter((value) => value.length > 0)),
+    );
+
+    if (normalized.length === 0) {
+      return { affectedPeople: 0 };
+    }
+
+    const [selfieResult, providerResult] = await Promise.all([
+      this.prisma.intelPerson.updateMany({
+        where: { selfieImageUrl: { in: normalized } },
+        data: { selfieImageUrl: null },
+      }),
+      this.prisma.intelPerson.updateMany({
+        where: { providerImageUrl: { in: normalized } },
+        data: {
+          providerImageUrl: null,
+          photoUrl: null,
+        },
+      }),
+    ]);
+
+    return {
+      affectedPeople: selfieResult.count + providerResult.count,
+    };
+  }
+
+  async applyIdentityEnrichment(input: CanonicalIdentityEnrichmentInput): Promise<IntelPerson> {
+    const person = await this.findById(input.personId);
+
+    const nextValues = {
+      ...(input.fullName ? { fullName: input.fullName } : {}),
+      ...(input.dateOfBirth ? { dateOfBirth: input.dateOfBirth } : {}),
+      ...(input.address ? { address: input.address } : {}),
+      ...(input.gender ? { gender: input.gender } : {}),
+      ...(input.photoUrl ? { photoUrl: input.photoUrl } : {}),
+      ...(!input.photoUrl && input.providerImageUrl ? { photoUrl: input.providerImageUrl } : {}),
+      ...(input.selfieImageUrl ? { selfieImageUrl: input.selfieImageUrl } : {}),
+      ...(input.providerImageUrl ? { providerImageUrl: input.providerImageUrl } : {}),
+      ...(input.verificationStatus ? { verificationStatus: input.verificationStatus } : {}),
+      ...(input.verificationProvider ? { verificationProvider: input.verificationProvider } : {}),
+      ...(input.verificationCountryCode
+        ? { verificationCountryCode: input.verificationCountryCode }
+        : {}),
+      ...(input.verificationConfidence !== undefined
+        ? { verificationConfidence: input.verificationConfidence }
+        : {}),
+    };
+
+    const changedFields = this.detectCanonicalChanges(person, nextValues);
+
+    const updated = await this.prisma.intelPerson.update({
+      where: { id: input.personId },
+      data: nextValues,
+    });
+
+    if (changedFields.length > 0) {
+      const previousValues = Object.fromEntries(changedFields.map((field) => [field, person[field]]));
+      const newValues = Object.fromEntries(changedFields.map((field) => [field, updated[field]]));
+      const reverificationReason = `Canonical verified identity changed: ${changedFields.join(', ')}`;
+
+      await Promise.all([
+        this.prisma.intelIdentityChangeEvent.create({
+          data: {
+            personId: input.personId,
+            source: input.source ?? 'verified_enrichment',
+            ...(input.verificationProvider ? { verificationProvider: input.verificationProvider } : {}),
+            ...(input.verificationCountryCode
+              ? { verificationCountryCode: input.verificationCountryCode }
+              : {}),
+            ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+            ...(input.localEntityType ? { localEntityType: input.localEntityType } : {}),
+            ...(input.localEntityId ? { localEntityId: input.localEntityId } : {}),
+            changedFields,
+            previousValues,
+            newValues,
+            reason: reverificationReason,
+            verifiedAt: new Date(),
+          },
+        }),
+        this.prisma.intelPersonTenantPresence.updateMany({
+          where: {
+            personId: input.personId,
+            ...(input.localEntityType && input.localEntityId
+              ? {
+                  NOT: {
+                    localEntityType: input.localEntityType,
+                    localEntityId: input.localEntityId,
+                  },
+                }
+              : {}),
+          },
+          data: {
+            reverificationRequired: true,
+            reverificationReason,
+            staleFieldKeys: changedFields,
+          },
+        }),
+        this.linkageEventsService.record({
+          personId: input.personId,
+          eventType: 'canonical_identity_updated',
+          actor: 'system',
+          reason: reverificationReason,
+          metadata: {
+            changedFields,
+            ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+            ...(input.localEntityType ? { localEntityType: input.localEntityType } : {}),
+            ...(input.localEntityId ? { localEntityId: input.localEntityId } : {}),
+          },
+        }),
+      ]);
+    }
+
+    return updated;
+  }
+
+  private detectCanonicalChanges(
+    person: IntelPerson,
+    nextValues: Partial<IntelPerson>,
+  ): Array<keyof IntelPerson> {
+    const trackedFields: Array<keyof IntelPerson> = [
+      'fullName',
+      'dateOfBirth',
+      'address',
+      'gender',
+      'photoUrl',
+      'providerImageUrl',
+    ];
+
+    return trackedFields.filter((field) => {
+      const nextValue = nextValues[field];
+      return nextValue !== undefined && nextValue !== person[field];
+    });
+  }
+
+  private riskBandToScoreWhere(riskBand?: string):
+    | { lte?: number; gt?: number }
+    | undefined {
+    switch (riskBand) {
+      case 'low':
+        return { lte: 30 };
+      case 'medium':
+        return { gt: 30, lte: 60 };
+      case 'high':
+        return { gt: 60, lte: 80 };
+      case 'critical':
+        return { gt: 80 };
+      default:
+        return undefined;
+    }
   }
 }

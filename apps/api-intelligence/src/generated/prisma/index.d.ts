@@ -39,6 +39,11 @@ export type IntelRiskSignal = $Result.DefaultSelection<Prisma.$IntelRiskSignalPa
  */
 export type IntelPersonTenantPresence = $Result.DefaultSelection<Prisma.$IntelPersonTenantPresencePayload>
 /**
+ * Model IntelIdentityChangeEvent
+ * 
+ */
+export type IntelIdentityChangeEvent = $Result.DefaultSelection<Prisma.$IntelIdentityChangeEventPayload>
+/**
  * Model IntelReviewCase
  * 
  */
@@ -226,6 +231,16 @@ export class PrismaClient<
     * ```
     */
   get intelPersonTenantPresence(): Prisma.IntelPersonTenantPresenceDelegate<ExtArgs>;
+
+  /**
+   * `prisma.intelIdentityChangeEvent`: Exposes CRUD operations for the **IntelIdentityChangeEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more IntelIdentityChangeEvents
+    * const intelIdentityChangeEvents = await prisma.intelIdentityChangeEvent.findMany()
+    * ```
+    */
+  get intelIdentityChangeEvent(): Prisma.IntelIdentityChangeEventDelegate<ExtArgs>;
 
   /**
    * `prisma.intelReviewCase`: Exposes CRUD operations for the **IntelReviewCase** model.
@@ -702,6 +717,7 @@ export namespace Prisma {
     IntelBiometricProfile: 'IntelBiometricProfile',
     IntelRiskSignal: 'IntelRiskSignal',
     IntelPersonTenantPresence: 'IntelPersonTenantPresence',
+    IntelIdentityChangeEvent: 'IntelIdentityChangeEvent',
     IntelReviewCase: 'IntelReviewCase',
     IntelWatchlistEntry: 'IntelWatchlistEntry',
     IntelLinkageEvent: 'IntelLinkageEvent'
@@ -720,7 +736,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "intelPerson" | "intelPersonIdentifier" | "intelBiometricProfile" | "intelRiskSignal" | "intelPersonTenantPresence" | "intelReviewCase" | "intelWatchlistEntry" | "intelLinkageEvent"
+      modelProps: "intelPerson" | "intelPersonIdentifier" | "intelBiometricProfile" | "intelRiskSignal" | "intelPersonTenantPresence" | "intelIdentityChangeEvent" | "intelReviewCase" | "intelWatchlistEntry" | "intelLinkageEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1071,6 +1087,76 @@ export namespace Prisma {
           count: {
             args: Prisma.IntelPersonTenantPresenceCountArgs<ExtArgs>
             result: $Utils.Optional<IntelPersonTenantPresenceCountAggregateOutputType> | number
+          }
+        }
+      }
+      IntelIdentityChangeEvent: {
+        payload: Prisma.$IntelIdentityChangeEventPayload<ExtArgs>
+        fields: Prisma.IntelIdentityChangeEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.IntelIdentityChangeEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.IntelIdentityChangeEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          findFirst: {
+            args: Prisma.IntelIdentityChangeEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.IntelIdentityChangeEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          findMany: {
+            args: Prisma.IntelIdentityChangeEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>[]
+          }
+          create: {
+            args: Prisma.IntelIdentityChangeEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          createMany: {
+            args: Prisma.IntelIdentityChangeEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.IntelIdentityChangeEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>[]
+          }
+          delete: {
+            args: Prisma.IntelIdentityChangeEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          update: {
+            args: Prisma.IntelIdentityChangeEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.IntelIdentityChangeEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.IntelIdentityChangeEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.IntelIdentityChangeEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IntelIdentityChangeEventPayload>
+          }
+          aggregate: {
+            args: Prisma.IntelIdentityChangeEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateIntelIdentityChangeEvent>
+          }
+          groupBy: {
+            args: Prisma.IntelIdentityChangeEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<IntelIdentityChangeEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.IntelIdentityChangeEventCountArgs<ExtArgs>
+            result: $Utils.Optional<IntelIdentityChangeEventCountAggregateOutputType> | number
           }
         }
       }
@@ -1450,6 +1536,7 @@ export namespace Prisma {
     riskSignals: number
     tenantPresences: number
     reviewCases: number
+    identityChanges: number
   }
 
   export type IntelPersonCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -1458,6 +1545,7 @@ export namespace Prisma {
     riskSignals?: boolean | IntelPersonCountOutputTypeCountRiskSignalsArgs
     tenantPresences?: boolean | IntelPersonCountOutputTypeCountTenantPresencesArgs
     reviewCases?: boolean | IntelPersonCountOutputTypeCountReviewCasesArgs
+    identityChanges?: boolean | IntelPersonCountOutputTypeCountIdentityChangesArgs
   }
 
   // Custom InputTypes
@@ -1506,6 +1594,13 @@ export namespace Prisma {
     where?: IntelReviewCaseWhereInput
   }
 
+  /**
+   * IntelPersonCountOutputType without action
+   */
+  export type IntelPersonCountOutputTypeCountIdentityChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IntelIdentityChangeEventWhereInput
+  }
+
 
   /**
    * Models
@@ -1537,6 +1632,7 @@ export namespace Prisma {
 
   export type IntelPersonMinAggregateOutputType = {
     id: string | null
+    globalPersonCode: string | null
     globalRiskScore: number | null
     isWatchlisted: boolean | null
     hasDuplicateFlag: boolean | null
@@ -1547,15 +1643,19 @@ export namespace Prisma {
     address: string | null
     gender: string | null
     photoUrl: string | null
+    selfieImageUrl: string | null
+    providerImageUrl: string | null
     verificationStatus: string | null
     verificationProvider: string | null
     verificationCountryCode: string | null
+    primaryBiometricProfileId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
 
   export type IntelPersonMaxAggregateOutputType = {
     id: string | null
+    globalPersonCode: string | null
     globalRiskScore: number | null
     isWatchlisted: boolean | null
     hasDuplicateFlag: boolean | null
@@ -1566,15 +1666,19 @@ export namespace Prisma {
     address: string | null
     gender: string | null
     photoUrl: string | null
+    selfieImageUrl: string | null
+    providerImageUrl: string | null
     verificationStatus: string | null
     verificationProvider: string | null
     verificationCountryCode: string | null
+    primaryBiometricProfileId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
 
   export type IntelPersonCountAggregateOutputType = {
     id: number
+    globalPersonCode: number
     globalRiskScore: number
     isWatchlisted: number
     hasDuplicateFlag: number
@@ -1585,9 +1689,12 @@ export namespace Prisma {
     address: number
     gender: number
     photoUrl: number
+    selfieImageUrl: number
+    providerImageUrl: number
     verificationStatus: number
     verificationProvider: number
     verificationCountryCode: number
+    primaryBiometricProfileId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -1608,6 +1715,7 @@ export namespace Prisma {
 
   export type IntelPersonMinAggregateInputType = {
     id?: true
+    globalPersonCode?: true
     globalRiskScore?: true
     isWatchlisted?: true
     hasDuplicateFlag?: true
@@ -1618,15 +1726,19 @@ export namespace Prisma {
     address?: true
     gender?: true
     photoUrl?: true
+    selfieImageUrl?: true
+    providerImageUrl?: true
     verificationStatus?: true
     verificationProvider?: true
     verificationCountryCode?: true
+    primaryBiometricProfileId?: true
     createdAt?: true
     updatedAt?: true
   }
 
   export type IntelPersonMaxAggregateInputType = {
     id?: true
+    globalPersonCode?: true
     globalRiskScore?: true
     isWatchlisted?: true
     hasDuplicateFlag?: true
@@ -1637,15 +1749,19 @@ export namespace Prisma {
     address?: true
     gender?: true
     photoUrl?: true
+    selfieImageUrl?: true
+    providerImageUrl?: true
     verificationStatus?: true
     verificationProvider?: true
     verificationCountryCode?: true
+    primaryBiometricProfileId?: true
     createdAt?: true
     updatedAt?: true
   }
 
   export type IntelPersonCountAggregateInputType = {
     id?: true
+    globalPersonCode?: true
     globalRiskScore?: true
     isWatchlisted?: true
     hasDuplicateFlag?: true
@@ -1656,9 +1772,12 @@ export namespace Prisma {
     address?: true
     gender?: true
     photoUrl?: true
+    selfieImageUrl?: true
+    providerImageUrl?: true
     verificationStatus?: true
     verificationProvider?: true
     verificationCountryCode?: true
+    primaryBiometricProfileId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -1752,6 +1871,7 @@ export namespace Prisma {
 
   export type IntelPersonGroupByOutputType = {
     id: string
+    globalPersonCode: string | null
     globalRiskScore: number
     isWatchlisted: boolean
     hasDuplicateFlag: boolean
@@ -1762,9 +1882,12 @@ export namespace Prisma {
     address: string | null
     gender: string | null
     photoUrl: string | null
+    selfieImageUrl: string | null
+    providerImageUrl: string | null
     verificationStatus: string | null
     verificationProvider: string | null
     verificationCountryCode: string | null
+    primaryBiometricProfileId: string | null
     createdAt: Date
     updatedAt: Date
     _count: IntelPersonCountAggregateOutputType | null
@@ -1790,6 +1913,7 @@ export namespace Prisma {
 
   export type IntelPersonSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    globalPersonCode?: boolean
     globalRiskScore?: boolean
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -1800,9 +1924,12 @@ export namespace Prisma {
     address?: boolean
     gender?: boolean
     photoUrl?: boolean
+    selfieImageUrl?: boolean
+    providerImageUrl?: boolean
     verificationStatus?: boolean
     verificationProvider?: boolean
     verificationCountryCode?: boolean
+    primaryBiometricProfileId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     identifiers?: boolean | IntelPerson$identifiersArgs<ExtArgs>
@@ -1810,11 +1937,13 @@ export namespace Prisma {
     riskSignals?: boolean | IntelPerson$riskSignalsArgs<ExtArgs>
     tenantPresences?: boolean | IntelPerson$tenantPresencesArgs<ExtArgs>
     reviewCases?: boolean | IntelPerson$reviewCasesArgs<ExtArgs>
+    identityChanges?: boolean | IntelPerson$identityChangesArgs<ExtArgs>
     _count?: boolean | IntelPersonCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["intelPerson"]>
 
   export type IntelPersonSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    globalPersonCode?: boolean
     globalRiskScore?: boolean
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -1825,15 +1954,19 @@ export namespace Prisma {
     address?: boolean
     gender?: boolean
     photoUrl?: boolean
+    selfieImageUrl?: boolean
+    providerImageUrl?: boolean
     verificationStatus?: boolean
     verificationProvider?: boolean
     verificationCountryCode?: boolean
+    primaryBiometricProfileId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["intelPerson"]>
 
   export type IntelPersonSelectScalar = {
     id?: boolean
+    globalPersonCode?: boolean
     globalRiskScore?: boolean
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -1844,9 +1977,12 @@ export namespace Prisma {
     address?: boolean
     gender?: boolean
     photoUrl?: boolean
+    selfieImageUrl?: boolean
+    providerImageUrl?: boolean
     verificationStatus?: boolean
     verificationProvider?: boolean
     verificationCountryCode?: boolean
+    primaryBiometricProfileId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -1857,6 +1993,7 @@ export namespace Prisma {
     riskSignals?: boolean | IntelPerson$riskSignalsArgs<ExtArgs>
     tenantPresences?: boolean | IntelPerson$tenantPresencesArgs<ExtArgs>
     reviewCases?: boolean | IntelPerson$reviewCasesArgs<ExtArgs>
+    identityChanges?: boolean | IntelPerson$identityChangesArgs<ExtArgs>
     _count?: boolean | IntelPersonCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type IntelPersonIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -1869,9 +2006,11 @@ export namespace Prisma {
       riskSignals: Prisma.$IntelRiskSignalPayload<ExtArgs>[]
       tenantPresences: Prisma.$IntelPersonTenantPresencePayload<ExtArgs>[]
       reviewCases: Prisma.$IntelReviewCasePayload<ExtArgs>[]
+      identityChanges: Prisma.$IntelIdentityChangeEventPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
+      globalPersonCode: string | null
       globalRiskScore: number
       isWatchlisted: boolean
       hasDuplicateFlag: boolean
@@ -1882,9 +2021,12 @@ export namespace Prisma {
       address: string | null
       gender: string | null
       photoUrl: string | null
+      selfieImageUrl: string | null
+      providerImageUrl: string | null
       verificationStatus: string | null
       verificationProvider: string | null
       verificationCountryCode: string | null
+      primaryBiometricProfileId: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["intelPerson"]>
@@ -2256,6 +2398,7 @@ export namespace Prisma {
     riskSignals<T extends IntelPerson$riskSignalsArgs<ExtArgs> = {}>(args?: Subset<T, IntelPerson$riskSignalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelRiskSignalPayload<ExtArgs>, T, "findMany"> | Null>
     tenantPresences<T extends IntelPerson$tenantPresencesArgs<ExtArgs> = {}>(args?: Subset<T, IntelPerson$tenantPresencesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelPersonTenantPresencePayload<ExtArgs>, T, "findMany"> | Null>
     reviewCases<T extends IntelPerson$reviewCasesArgs<ExtArgs> = {}>(args?: Subset<T, IntelPerson$reviewCasesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelReviewCasePayload<ExtArgs>, T, "findMany"> | Null>
+    identityChanges<T extends IntelPerson$identityChangesArgs<ExtArgs> = {}>(args?: Subset<T, IntelPerson$identityChangesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2286,6 +2429,7 @@ export namespace Prisma {
    */ 
   interface IntelPersonFieldRefs {
     readonly id: FieldRef<"IntelPerson", 'String'>
+    readonly globalPersonCode: FieldRef<"IntelPerson", 'String'>
     readonly globalRiskScore: FieldRef<"IntelPerson", 'Int'>
     readonly isWatchlisted: FieldRef<"IntelPerson", 'Boolean'>
     readonly hasDuplicateFlag: FieldRef<"IntelPerson", 'Boolean'>
@@ -2296,9 +2440,12 @@ export namespace Prisma {
     readonly address: FieldRef<"IntelPerson", 'String'>
     readonly gender: FieldRef<"IntelPerson", 'String'>
     readonly photoUrl: FieldRef<"IntelPerson", 'String'>
+    readonly selfieImageUrl: FieldRef<"IntelPerson", 'String'>
+    readonly providerImageUrl: FieldRef<"IntelPerson", 'String'>
     readonly verificationStatus: FieldRef<"IntelPerson", 'String'>
     readonly verificationProvider: FieldRef<"IntelPerson", 'String'>
     readonly verificationCountryCode: FieldRef<"IntelPerson", 'String'>
+    readonly primaryBiometricProfileId: FieldRef<"IntelPerson", 'String'>
     readonly createdAt: FieldRef<"IntelPerson", 'DateTime'>
     readonly updatedAt: FieldRef<"IntelPerson", 'DateTime'>
   }
@@ -2712,6 +2859,26 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: IntelReviewCaseScalarFieldEnum | IntelReviewCaseScalarFieldEnum[]
+  }
+
+  /**
+   * IntelPerson.identityChanges
+   */
+  export type IntelPerson$identityChangesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    where?: IntelIdentityChangeEventWhereInput
+    orderBy?: IntelIdentityChangeEventOrderByWithRelationInput | IntelIdentityChangeEventOrderByWithRelationInput[]
+    cursor?: IntelIdentityChangeEventWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IntelIdentityChangeEventScalarFieldEnum | IntelIdentityChangeEventScalarFieldEnum[]
   }
 
   /**
@@ -3711,6 +3878,7 @@ export namespace Prisma {
     personId: string | null
     modality: string | null
     embeddingCiphertext: Buffer | null
+    embeddingHash: string | null
     qualityScore: number | null
     isActive: boolean | null
     enrolledAt: Date | null
@@ -3721,6 +3889,7 @@ export namespace Prisma {
     personId: string | null
     modality: string | null
     embeddingCiphertext: Buffer | null
+    embeddingHash: string | null
     qualityScore: number | null
     isActive: boolean | null
     enrolledAt: Date | null
@@ -3731,6 +3900,7 @@ export namespace Prisma {
     personId: number
     modality: number
     embeddingCiphertext: number
+    embeddingHash: number
     qualityScore: number
     isActive: number
     enrolledAt: number
@@ -3751,6 +3921,7 @@ export namespace Prisma {
     personId?: true
     modality?: true
     embeddingCiphertext?: true
+    embeddingHash?: true
     qualityScore?: true
     isActive?: true
     enrolledAt?: true
@@ -3761,6 +3932,7 @@ export namespace Prisma {
     personId?: true
     modality?: true
     embeddingCiphertext?: true
+    embeddingHash?: true
     qualityScore?: true
     isActive?: true
     enrolledAt?: true
@@ -3771,6 +3943,7 @@ export namespace Prisma {
     personId?: true
     modality?: true
     embeddingCiphertext?: true
+    embeddingHash?: true
     qualityScore?: true
     isActive?: true
     enrolledAt?: true
@@ -3868,6 +4041,7 @@ export namespace Prisma {
     personId: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive: boolean
     enrolledAt: Date
@@ -3897,6 +4071,7 @@ export namespace Prisma {
     personId?: boolean
     modality?: boolean
     embeddingCiphertext?: boolean
+    embeddingHash?: boolean
     qualityScore?: boolean
     isActive?: boolean
     enrolledAt?: boolean
@@ -3908,6 +4083,7 @@ export namespace Prisma {
     personId?: boolean
     modality?: boolean
     embeddingCiphertext?: boolean
+    embeddingHash?: boolean
     qualityScore?: boolean
     isActive?: boolean
     enrolledAt?: boolean
@@ -3919,6 +4095,7 @@ export namespace Prisma {
     personId?: boolean
     modality?: boolean
     embeddingCiphertext?: boolean
+    embeddingHash?: boolean
     qualityScore?: boolean
     isActive?: boolean
     enrolledAt?: boolean
@@ -3941,6 +4118,7 @@ export namespace Prisma {
       personId: string
       modality: string
       embeddingCiphertext: Buffer
+      embeddingHash: string
       qualityScore: number
       isActive: boolean
       enrolledAt: Date
@@ -4342,6 +4520,7 @@ export namespace Prisma {
     readonly personId: FieldRef<"IntelBiometricProfile", 'String'>
     readonly modality: FieldRef<"IntelBiometricProfile", 'String'>
     readonly embeddingCiphertext: FieldRef<"IntelBiometricProfile", 'Bytes'>
+    readonly embeddingHash: FieldRef<"IntelBiometricProfile", 'String'>
     readonly qualityScore: FieldRef<"IntelBiometricProfile", 'Float'>
     readonly isActive: FieldRef<"IntelBiometricProfile", 'Boolean'>
     readonly enrolledAt: FieldRef<"IntelBiometricProfile", 'DateTime'>
@@ -5656,7 +5835,17 @@ export namespace Prisma {
     id: string | null
     personId: string | null
     tenantId: string | null
+    businessEntityId: string | null
+    operatingUnitId: string | null
+    fleetId: string | null
+    localEntityType: string | null
+    localEntityId: string | null
     roleType: string | null
+    status: string | null
+    source: string | null
+    verifiedAt: Date | null
+    reverificationRequired: boolean | null
+    reverificationReason: string | null
     createdAt: Date | null
   }
 
@@ -5664,7 +5853,17 @@ export namespace Prisma {
     id: string | null
     personId: string | null
     tenantId: string | null
+    businessEntityId: string | null
+    operatingUnitId: string | null
+    fleetId: string | null
+    localEntityType: string | null
+    localEntityId: string | null
     roleType: string | null
+    status: string | null
+    source: string | null
+    verifiedAt: Date | null
+    reverificationRequired: boolean | null
+    reverificationReason: string | null
     createdAt: Date | null
   }
 
@@ -5672,7 +5871,18 @@ export namespace Prisma {
     id: number
     personId: number
     tenantId: number
+    businessEntityId: number
+    operatingUnitId: number
+    fleetId: number
+    localEntityType: number
+    localEntityId: number
     roleType: number
+    status: number
+    source: number
+    verifiedAt: number
+    reverificationRequired: number
+    reverificationReason: number
+    staleFieldKeys: number
     createdAt: number
     _all: number
   }
@@ -5682,7 +5892,17 @@ export namespace Prisma {
     id?: true
     personId?: true
     tenantId?: true
+    businessEntityId?: true
+    operatingUnitId?: true
+    fleetId?: true
+    localEntityType?: true
+    localEntityId?: true
     roleType?: true
+    status?: true
+    source?: true
+    verifiedAt?: true
+    reverificationRequired?: true
+    reverificationReason?: true
     createdAt?: true
   }
 
@@ -5690,7 +5910,17 @@ export namespace Prisma {
     id?: true
     personId?: true
     tenantId?: true
+    businessEntityId?: true
+    operatingUnitId?: true
+    fleetId?: true
+    localEntityType?: true
+    localEntityId?: true
     roleType?: true
+    status?: true
+    source?: true
+    verifiedAt?: true
+    reverificationRequired?: true
+    reverificationReason?: true
     createdAt?: true
   }
 
@@ -5698,7 +5928,18 @@ export namespace Prisma {
     id?: true
     personId?: true
     tenantId?: true
+    businessEntityId?: true
+    operatingUnitId?: true
+    fleetId?: true
+    localEntityType?: true
+    localEntityId?: true
     roleType?: true
+    status?: true
+    source?: true
+    verifiedAt?: true
+    reverificationRequired?: true
+    reverificationReason?: true
+    staleFieldKeys?: true
     createdAt?: true
     _all?: true
   }
@@ -5779,7 +6020,18 @@ export namespace Prisma {
     id: string
     personId: string
     tenantId: string
+    businessEntityId: string | null
+    operatingUnitId: string | null
+    fleetId: string | null
+    localEntityType: string
+    localEntityId: string | null
     roleType: string
+    status: string
+    source: string
+    verifiedAt: Date | null
+    reverificationRequired: boolean
+    reverificationReason: string | null
+    staleFieldKeys: JsonValue | null
     createdAt: Date
     _count: IntelPersonTenantPresenceCountAggregateOutputType | null
     _min: IntelPersonTenantPresenceMinAggregateOutputType | null
@@ -5804,7 +6056,18 @@ export namespace Prisma {
     id?: boolean
     personId?: boolean
     tenantId?: boolean
+    businessEntityId?: boolean
+    operatingUnitId?: boolean
+    fleetId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
     roleType?: boolean
+    status?: boolean
+    source?: boolean
+    verifiedAt?: boolean
+    reverificationRequired?: boolean
+    reverificationReason?: boolean
+    staleFieldKeys?: boolean
     createdAt?: boolean
     person?: boolean | IntelPersonDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["intelPersonTenantPresence"]>
@@ -5813,7 +6076,18 @@ export namespace Prisma {
     id?: boolean
     personId?: boolean
     tenantId?: boolean
+    businessEntityId?: boolean
+    operatingUnitId?: boolean
+    fleetId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
     roleType?: boolean
+    status?: boolean
+    source?: boolean
+    verifiedAt?: boolean
+    reverificationRequired?: boolean
+    reverificationReason?: boolean
+    staleFieldKeys?: boolean
     createdAt?: boolean
     person?: boolean | IntelPersonDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["intelPersonTenantPresence"]>
@@ -5822,7 +6096,18 @@ export namespace Prisma {
     id?: boolean
     personId?: boolean
     tenantId?: boolean
+    businessEntityId?: boolean
+    operatingUnitId?: boolean
+    fleetId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
     roleType?: boolean
+    status?: boolean
+    source?: boolean
+    verifiedAt?: boolean
+    reverificationRequired?: boolean
+    reverificationReason?: boolean
+    staleFieldKeys?: boolean
     createdAt?: boolean
   }
 
@@ -5842,7 +6127,18 @@ export namespace Prisma {
       id: string
       personId: string
       tenantId: string
+      businessEntityId: string | null
+      operatingUnitId: string | null
+      fleetId: string | null
+      localEntityType: string
+      localEntityId: string | null
       roleType: string
+      status: string
+      source: string
+      verifiedAt: Date | null
+      reverificationRequired: boolean
+      reverificationReason: string | null
+      staleFieldKeys: Prisma.JsonValue | null
       createdAt: Date
     }, ExtArgs["result"]["intelPersonTenantPresence"]>
     composites: {}
@@ -6241,7 +6537,18 @@ export namespace Prisma {
     readonly id: FieldRef<"IntelPersonTenantPresence", 'String'>
     readonly personId: FieldRef<"IntelPersonTenantPresence", 'String'>
     readonly tenantId: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly businessEntityId: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly operatingUnitId: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly fleetId: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly localEntityType: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly localEntityId: FieldRef<"IntelPersonTenantPresence", 'String'>
     readonly roleType: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly status: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly source: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly verifiedAt: FieldRef<"IntelPersonTenantPresence", 'DateTime'>
+    readonly reverificationRequired: FieldRef<"IntelPersonTenantPresence", 'Boolean'>
+    readonly reverificationReason: FieldRef<"IntelPersonTenantPresence", 'String'>
+    readonly staleFieldKeys: FieldRef<"IntelPersonTenantPresence", 'Json'>
     readonly createdAt: FieldRef<"IntelPersonTenantPresence", 'DateTime'>
   }
     
@@ -6572,6 +6879,1047 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: IntelPersonTenantPresenceInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model IntelIdentityChangeEvent
+   */
+
+  export type AggregateIntelIdentityChangeEvent = {
+    _count: IntelIdentityChangeEventCountAggregateOutputType | null
+    _min: IntelIdentityChangeEventMinAggregateOutputType | null
+    _max: IntelIdentityChangeEventMaxAggregateOutputType | null
+  }
+
+  export type IntelIdentityChangeEventMinAggregateOutputType = {
+    id: string | null
+    personId: string | null
+    eventType: string | null
+    source: string | null
+    verificationProvider: string | null
+    verificationCountryCode: string | null
+    tenantId: string | null
+    localEntityType: string | null
+    localEntityId: string | null
+    reason: string | null
+    verifiedAt: Date | null
+    createdAt: Date | null
+  }
+
+  export type IntelIdentityChangeEventMaxAggregateOutputType = {
+    id: string | null
+    personId: string | null
+    eventType: string | null
+    source: string | null
+    verificationProvider: string | null
+    verificationCountryCode: string | null
+    tenantId: string | null
+    localEntityType: string | null
+    localEntityId: string | null
+    reason: string | null
+    verifiedAt: Date | null
+    createdAt: Date | null
+  }
+
+  export type IntelIdentityChangeEventCountAggregateOutputType = {
+    id: number
+    personId: number
+    eventType: number
+    source: number
+    verificationProvider: number
+    verificationCountryCode: number
+    tenantId: number
+    localEntityType: number
+    localEntityId: number
+    changedFields: number
+    previousValues: number
+    newValues: number
+    reason: number
+    verifiedAt: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type IntelIdentityChangeEventMinAggregateInputType = {
+    id?: true
+    personId?: true
+    eventType?: true
+    source?: true
+    verificationProvider?: true
+    verificationCountryCode?: true
+    tenantId?: true
+    localEntityType?: true
+    localEntityId?: true
+    reason?: true
+    verifiedAt?: true
+    createdAt?: true
+  }
+
+  export type IntelIdentityChangeEventMaxAggregateInputType = {
+    id?: true
+    personId?: true
+    eventType?: true
+    source?: true
+    verificationProvider?: true
+    verificationCountryCode?: true
+    tenantId?: true
+    localEntityType?: true
+    localEntityId?: true
+    reason?: true
+    verifiedAt?: true
+    createdAt?: true
+  }
+
+  export type IntelIdentityChangeEventCountAggregateInputType = {
+    id?: true
+    personId?: true
+    eventType?: true
+    source?: true
+    verificationProvider?: true
+    verificationCountryCode?: true
+    tenantId?: true
+    localEntityType?: true
+    localEntityId?: true
+    changedFields?: true
+    previousValues?: true
+    newValues?: true
+    reason?: true
+    verifiedAt?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type IntelIdentityChangeEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IntelIdentityChangeEvent to aggregate.
+     */
+    where?: IntelIdentityChangeEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IntelIdentityChangeEvents to fetch.
+     */
+    orderBy?: IntelIdentityChangeEventOrderByWithRelationInput | IntelIdentityChangeEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: IntelIdentityChangeEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IntelIdentityChangeEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IntelIdentityChangeEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned IntelIdentityChangeEvents
+    **/
+    _count?: true | IntelIdentityChangeEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: IntelIdentityChangeEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: IntelIdentityChangeEventMaxAggregateInputType
+  }
+
+  export type GetIntelIdentityChangeEventAggregateType<T extends IntelIdentityChangeEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateIntelIdentityChangeEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateIntelIdentityChangeEvent[P]>
+      : GetScalarType<T[P], AggregateIntelIdentityChangeEvent[P]>
+  }
+
+
+
+
+  export type IntelIdentityChangeEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IntelIdentityChangeEventWhereInput
+    orderBy?: IntelIdentityChangeEventOrderByWithAggregationInput | IntelIdentityChangeEventOrderByWithAggregationInput[]
+    by: IntelIdentityChangeEventScalarFieldEnum[] | IntelIdentityChangeEventScalarFieldEnum
+    having?: IntelIdentityChangeEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: IntelIdentityChangeEventCountAggregateInputType | true
+    _min?: IntelIdentityChangeEventMinAggregateInputType
+    _max?: IntelIdentityChangeEventMaxAggregateInputType
+  }
+
+  export type IntelIdentityChangeEventGroupByOutputType = {
+    id: string
+    personId: string
+    eventType: string
+    source: string
+    verificationProvider: string | null
+    verificationCountryCode: string | null
+    tenantId: string | null
+    localEntityType: string | null
+    localEntityId: string | null
+    changedFields: JsonValue
+    previousValues: JsonValue | null
+    newValues: JsonValue | null
+    reason: string | null
+    verifiedAt: Date | null
+    createdAt: Date
+    _count: IntelIdentityChangeEventCountAggregateOutputType | null
+    _min: IntelIdentityChangeEventMinAggregateOutputType | null
+    _max: IntelIdentityChangeEventMaxAggregateOutputType | null
+  }
+
+  type GetIntelIdentityChangeEventGroupByPayload<T extends IntelIdentityChangeEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<IntelIdentityChangeEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof IntelIdentityChangeEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], IntelIdentityChangeEventGroupByOutputType[P]>
+            : GetScalarType<T[P], IntelIdentityChangeEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type IntelIdentityChangeEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    personId?: boolean
+    eventType?: boolean
+    source?: boolean
+    verificationProvider?: boolean
+    verificationCountryCode?: boolean
+    tenantId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
+    changedFields?: boolean
+    previousValues?: boolean
+    newValues?: boolean
+    reason?: boolean
+    verifiedAt?: boolean
+    createdAt?: boolean
+    person?: boolean | IntelPersonDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["intelIdentityChangeEvent"]>
+
+  export type IntelIdentityChangeEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    personId?: boolean
+    eventType?: boolean
+    source?: boolean
+    verificationProvider?: boolean
+    verificationCountryCode?: boolean
+    tenantId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
+    changedFields?: boolean
+    previousValues?: boolean
+    newValues?: boolean
+    reason?: boolean
+    verifiedAt?: boolean
+    createdAt?: boolean
+    person?: boolean | IntelPersonDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["intelIdentityChangeEvent"]>
+
+  export type IntelIdentityChangeEventSelectScalar = {
+    id?: boolean
+    personId?: boolean
+    eventType?: boolean
+    source?: boolean
+    verificationProvider?: boolean
+    verificationCountryCode?: boolean
+    tenantId?: boolean
+    localEntityType?: boolean
+    localEntityId?: boolean
+    changedFields?: boolean
+    previousValues?: boolean
+    newValues?: boolean
+    reason?: boolean
+    verifiedAt?: boolean
+    createdAt?: boolean
+  }
+
+  export type IntelIdentityChangeEventInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    person?: boolean | IntelPersonDefaultArgs<ExtArgs>
+  }
+  export type IntelIdentityChangeEventIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    person?: boolean | IntelPersonDefaultArgs<ExtArgs>
+  }
+
+  export type $IntelIdentityChangeEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "IntelIdentityChangeEvent"
+    objects: {
+      person: Prisma.$IntelPersonPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      personId: string
+      eventType: string
+      source: string
+      verificationProvider: string | null
+      verificationCountryCode: string | null
+      tenantId: string | null
+      localEntityType: string | null
+      localEntityId: string | null
+      changedFields: Prisma.JsonValue
+      previousValues: Prisma.JsonValue | null
+      newValues: Prisma.JsonValue | null
+      reason: string | null
+      verifiedAt: Date | null
+      createdAt: Date
+    }, ExtArgs["result"]["intelIdentityChangeEvent"]>
+    composites: {}
+  }
+
+  type IntelIdentityChangeEventGetPayload<S extends boolean | null | undefined | IntelIdentityChangeEventDefaultArgs> = $Result.GetResult<Prisma.$IntelIdentityChangeEventPayload, S>
+
+  type IntelIdentityChangeEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<IntelIdentityChangeEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: IntelIdentityChangeEventCountAggregateInputType | true
+    }
+
+  export interface IntelIdentityChangeEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['IntelIdentityChangeEvent'], meta: { name: 'IntelIdentityChangeEvent' } }
+    /**
+     * Find zero or one IntelIdentityChangeEvent that matches the filter.
+     * @param {IntelIdentityChangeEventFindUniqueArgs} args - Arguments to find a IntelIdentityChangeEvent
+     * @example
+     * // Get one IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends IntelIdentityChangeEventFindUniqueArgs>(args: SelectSubset<T, IntelIdentityChangeEventFindUniqueArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one IntelIdentityChangeEvent that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {IntelIdentityChangeEventFindUniqueOrThrowArgs} args - Arguments to find a IntelIdentityChangeEvent
+     * @example
+     * // Get one IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends IntelIdentityChangeEventFindUniqueOrThrowArgs>(args: SelectSubset<T, IntelIdentityChangeEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first IntelIdentityChangeEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventFindFirstArgs} args - Arguments to find a IntelIdentityChangeEvent
+     * @example
+     * // Get one IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends IntelIdentityChangeEventFindFirstArgs>(args?: SelectSubset<T, IntelIdentityChangeEventFindFirstArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first IntelIdentityChangeEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventFindFirstOrThrowArgs} args - Arguments to find a IntelIdentityChangeEvent
+     * @example
+     * // Get one IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends IntelIdentityChangeEventFindFirstOrThrowArgs>(args?: SelectSubset<T, IntelIdentityChangeEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more IntelIdentityChangeEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all IntelIdentityChangeEvents
+     * const intelIdentityChangeEvents = await prisma.intelIdentityChangeEvent.findMany()
+     * 
+     * // Get first 10 IntelIdentityChangeEvents
+     * const intelIdentityChangeEvents = await prisma.intelIdentityChangeEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const intelIdentityChangeEventWithIdOnly = await prisma.intelIdentityChangeEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends IntelIdentityChangeEventFindManyArgs>(args?: SelectSubset<T, IntelIdentityChangeEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a IntelIdentityChangeEvent.
+     * @param {IntelIdentityChangeEventCreateArgs} args - Arguments to create a IntelIdentityChangeEvent.
+     * @example
+     * // Create one IntelIdentityChangeEvent
+     * const IntelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.create({
+     *   data: {
+     *     // ... data to create a IntelIdentityChangeEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends IntelIdentityChangeEventCreateArgs>(args: SelectSubset<T, IntelIdentityChangeEventCreateArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many IntelIdentityChangeEvents.
+     * @param {IntelIdentityChangeEventCreateManyArgs} args - Arguments to create many IntelIdentityChangeEvents.
+     * @example
+     * // Create many IntelIdentityChangeEvents
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends IntelIdentityChangeEventCreateManyArgs>(args?: SelectSubset<T, IntelIdentityChangeEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many IntelIdentityChangeEvents and returns the data saved in the database.
+     * @param {IntelIdentityChangeEventCreateManyAndReturnArgs} args - Arguments to create many IntelIdentityChangeEvents.
+     * @example
+     * // Create many IntelIdentityChangeEvents
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many IntelIdentityChangeEvents and only return the `id`
+     * const intelIdentityChangeEventWithIdOnly = await prisma.intelIdentityChangeEvent.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends IntelIdentityChangeEventCreateManyAndReturnArgs>(args?: SelectSubset<T, IntelIdentityChangeEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a IntelIdentityChangeEvent.
+     * @param {IntelIdentityChangeEventDeleteArgs} args - Arguments to delete one IntelIdentityChangeEvent.
+     * @example
+     * // Delete one IntelIdentityChangeEvent
+     * const IntelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.delete({
+     *   where: {
+     *     // ... filter to delete one IntelIdentityChangeEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends IntelIdentityChangeEventDeleteArgs>(args: SelectSubset<T, IntelIdentityChangeEventDeleteArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one IntelIdentityChangeEvent.
+     * @param {IntelIdentityChangeEventUpdateArgs} args - Arguments to update one IntelIdentityChangeEvent.
+     * @example
+     * // Update one IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends IntelIdentityChangeEventUpdateArgs>(args: SelectSubset<T, IntelIdentityChangeEventUpdateArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more IntelIdentityChangeEvents.
+     * @param {IntelIdentityChangeEventDeleteManyArgs} args - Arguments to filter IntelIdentityChangeEvents to delete.
+     * @example
+     * // Delete a few IntelIdentityChangeEvents
+     * const { count } = await prisma.intelIdentityChangeEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends IntelIdentityChangeEventDeleteManyArgs>(args?: SelectSubset<T, IntelIdentityChangeEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IntelIdentityChangeEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many IntelIdentityChangeEvents
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends IntelIdentityChangeEventUpdateManyArgs>(args: SelectSubset<T, IntelIdentityChangeEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one IntelIdentityChangeEvent.
+     * @param {IntelIdentityChangeEventUpsertArgs} args - Arguments to update or create a IntelIdentityChangeEvent.
+     * @example
+     * // Update or create a IntelIdentityChangeEvent
+     * const intelIdentityChangeEvent = await prisma.intelIdentityChangeEvent.upsert({
+     *   create: {
+     *     // ... data to create a IntelIdentityChangeEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the IntelIdentityChangeEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends IntelIdentityChangeEventUpsertArgs>(args: SelectSubset<T, IntelIdentityChangeEventUpsertArgs<ExtArgs>>): Prisma__IntelIdentityChangeEventClient<$Result.GetResult<Prisma.$IntelIdentityChangeEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of IntelIdentityChangeEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventCountArgs} args - Arguments to filter IntelIdentityChangeEvents to count.
+     * @example
+     * // Count the number of IntelIdentityChangeEvents
+     * const count = await prisma.intelIdentityChangeEvent.count({
+     *   where: {
+     *     // ... the filter for the IntelIdentityChangeEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends IntelIdentityChangeEventCountArgs>(
+      args?: Subset<T, IntelIdentityChangeEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], IntelIdentityChangeEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a IntelIdentityChangeEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends IntelIdentityChangeEventAggregateArgs>(args: Subset<T, IntelIdentityChangeEventAggregateArgs>): Prisma.PrismaPromise<GetIntelIdentityChangeEventAggregateType<T>>
+
+    /**
+     * Group by IntelIdentityChangeEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IntelIdentityChangeEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends IntelIdentityChangeEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: IntelIdentityChangeEventGroupByArgs['orderBy'] }
+        : { orderBy?: IntelIdentityChangeEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, IntelIdentityChangeEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetIntelIdentityChangeEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the IntelIdentityChangeEvent model
+   */
+  readonly fields: IntelIdentityChangeEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for IntelIdentityChangeEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__IntelIdentityChangeEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    person<T extends IntelPersonDefaultArgs<ExtArgs> = {}>(args?: Subset<T, IntelPersonDefaultArgs<ExtArgs>>): Prisma__IntelPersonClient<$Result.GetResult<Prisma.$IntelPersonPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the IntelIdentityChangeEvent model
+   */ 
+  interface IntelIdentityChangeEventFieldRefs {
+    readonly id: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly personId: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly eventType: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly source: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly verificationProvider: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly verificationCountryCode: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly tenantId: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly localEntityType: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly localEntityId: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly changedFields: FieldRef<"IntelIdentityChangeEvent", 'Json'>
+    readonly previousValues: FieldRef<"IntelIdentityChangeEvent", 'Json'>
+    readonly newValues: FieldRef<"IntelIdentityChangeEvent", 'Json'>
+    readonly reason: FieldRef<"IntelIdentityChangeEvent", 'String'>
+    readonly verifiedAt: FieldRef<"IntelIdentityChangeEvent", 'DateTime'>
+    readonly createdAt: FieldRef<"IntelIdentityChangeEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * IntelIdentityChangeEvent findUnique
+   */
+  export type IntelIdentityChangeEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter, which IntelIdentityChangeEvent to fetch.
+     */
+    where: IntelIdentityChangeEventWhereUniqueInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent findUniqueOrThrow
+   */
+  export type IntelIdentityChangeEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter, which IntelIdentityChangeEvent to fetch.
+     */
+    where: IntelIdentityChangeEventWhereUniqueInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent findFirst
+   */
+  export type IntelIdentityChangeEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter, which IntelIdentityChangeEvent to fetch.
+     */
+    where?: IntelIdentityChangeEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IntelIdentityChangeEvents to fetch.
+     */
+    orderBy?: IntelIdentityChangeEventOrderByWithRelationInput | IntelIdentityChangeEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IntelIdentityChangeEvents.
+     */
+    cursor?: IntelIdentityChangeEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IntelIdentityChangeEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IntelIdentityChangeEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IntelIdentityChangeEvents.
+     */
+    distinct?: IntelIdentityChangeEventScalarFieldEnum | IntelIdentityChangeEventScalarFieldEnum[]
+  }
+
+  /**
+   * IntelIdentityChangeEvent findFirstOrThrow
+   */
+  export type IntelIdentityChangeEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter, which IntelIdentityChangeEvent to fetch.
+     */
+    where?: IntelIdentityChangeEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IntelIdentityChangeEvents to fetch.
+     */
+    orderBy?: IntelIdentityChangeEventOrderByWithRelationInput | IntelIdentityChangeEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IntelIdentityChangeEvents.
+     */
+    cursor?: IntelIdentityChangeEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IntelIdentityChangeEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IntelIdentityChangeEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IntelIdentityChangeEvents.
+     */
+    distinct?: IntelIdentityChangeEventScalarFieldEnum | IntelIdentityChangeEventScalarFieldEnum[]
+  }
+
+  /**
+   * IntelIdentityChangeEvent findMany
+   */
+  export type IntelIdentityChangeEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter, which IntelIdentityChangeEvents to fetch.
+     */
+    where?: IntelIdentityChangeEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IntelIdentityChangeEvents to fetch.
+     */
+    orderBy?: IntelIdentityChangeEventOrderByWithRelationInput | IntelIdentityChangeEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing IntelIdentityChangeEvents.
+     */
+    cursor?: IntelIdentityChangeEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IntelIdentityChangeEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IntelIdentityChangeEvents.
+     */
+    skip?: number
+    distinct?: IntelIdentityChangeEventScalarFieldEnum | IntelIdentityChangeEventScalarFieldEnum[]
+  }
+
+  /**
+   * IntelIdentityChangeEvent create
+   */
+  export type IntelIdentityChangeEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * The data needed to create a IntelIdentityChangeEvent.
+     */
+    data: XOR<IntelIdentityChangeEventCreateInput, IntelIdentityChangeEventUncheckedCreateInput>
+  }
+
+  /**
+   * IntelIdentityChangeEvent createMany
+   */
+  export type IntelIdentityChangeEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many IntelIdentityChangeEvents.
+     */
+    data: IntelIdentityChangeEventCreateManyInput | IntelIdentityChangeEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * IntelIdentityChangeEvent createManyAndReturn
+   */
+  export type IntelIdentityChangeEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many IntelIdentityChangeEvents.
+     */
+    data: IntelIdentityChangeEventCreateManyInput | IntelIdentityChangeEventCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * IntelIdentityChangeEvent update
+   */
+  export type IntelIdentityChangeEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * The data needed to update a IntelIdentityChangeEvent.
+     */
+    data: XOR<IntelIdentityChangeEventUpdateInput, IntelIdentityChangeEventUncheckedUpdateInput>
+    /**
+     * Choose, which IntelIdentityChangeEvent to update.
+     */
+    where: IntelIdentityChangeEventWhereUniqueInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent updateMany
+   */
+  export type IntelIdentityChangeEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update IntelIdentityChangeEvents.
+     */
+    data: XOR<IntelIdentityChangeEventUpdateManyMutationInput, IntelIdentityChangeEventUncheckedUpdateManyInput>
+    /**
+     * Filter which IntelIdentityChangeEvents to update
+     */
+    where?: IntelIdentityChangeEventWhereInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent upsert
+   */
+  export type IntelIdentityChangeEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * The filter to search for the IntelIdentityChangeEvent to update in case it exists.
+     */
+    where: IntelIdentityChangeEventWhereUniqueInput
+    /**
+     * In case the IntelIdentityChangeEvent found by the `where` argument doesn't exist, create a new IntelIdentityChangeEvent with this data.
+     */
+    create: XOR<IntelIdentityChangeEventCreateInput, IntelIdentityChangeEventUncheckedCreateInput>
+    /**
+     * In case the IntelIdentityChangeEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<IntelIdentityChangeEventUpdateInput, IntelIdentityChangeEventUncheckedUpdateInput>
+  }
+
+  /**
+   * IntelIdentityChangeEvent delete
+   */
+  export type IntelIdentityChangeEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
+    /**
+     * Filter which IntelIdentityChangeEvent to delete.
+     */
+    where: IntelIdentityChangeEventWhereUniqueInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent deleteMany
+   */
+  export type IntelIdentityChangeEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IntelIdentityChangeEvents to delete
+     */
+    where?: IntelIdentityChangeEventWhereInput
+  }
+
+  /**
+   * IntelIdentityChangeEvent without action
+   */
+  export type IntelIdentityChangeEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IntelIdentityChangeEvent
+     */
+    select?: IntelIdentityChangeEventSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IntelIdentityChangeEventInclude<ExtArgs> | null
   }
 
 
@@ -9496,6 +10844,7 @@ export namespace Prisma {
 
   export const IntelPersonScalarFieldEnum: {
     id: 'id',
+    globalPersonCode: 'globalPersonCode',
     globalRiskScore: 'globalRiskScore',
     isWatchlisted: 'isWatchlisted',
     hasDuplicateFlag: 'hasDuplicateFlag',
@@ -9506,9 +10855,12 @@ export namespace Prisma {
     address: 'address',
     gender: 'gender',
     photoUrl: 'photoUrl',
+    selfieImageUrl: 'selfieImageUrl',
+    providerImageUrl: 'providerImageUrl',
     verificationStatus: 'verificationStatus',
     verificationProvider: 'verificationProvider',
     verificationCountryCode: 'verificationCountryCode',
+    primaryBiometricProfileId: 'primaryBiometricProfileId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -9534,6 +10886,7 @@ export namespace Prisma {
     personId: 'personId',
     modality: 'modality',
     embeddingCiphertext: 'embeddingCiphertext',
+    embeddingHash: 'embeddingHash',
     qualityScore: 'qualityScore',
     isActive: 'isActive',
     enrolledAt: 'enrolledAt'
@@ -9560,11 +10913,43 @@ export namespace Prisma {
     id: 'id',
     personId: 'personId',
     tenantId: 'tenantId',
+    businessEntityId: 'businessEntityId',
+    operatingUnitId: 'operatingUnitId',
+    fleetId: 'fleetId',
+    localEntityType: 'localEntityType',
+    localEntityId: 'localEntityId',
     roleType: 'roleType',
+    status: 'status',
+    source: 'source',
+    verifiedAt: 'verifiedAt',
+    reverificationRequired: 'reverificationRequired',
+    reverificationReason: 'reverificationReason',
+    staleFieldKeys: 'staleFieldKeys',
     createdAt: 'createdAt'
   };
 
   export type IntelPersonTenantPresenceScalarFieldEnum = (typeof IntelPersonTenantPresenceScalarFieldEnum)[keyof typeof IntelPersonTenantPresenceScalarFieldEnum]
+
+
+  export const IntelIdentityChangeEventScalarFieldEnum: {
+    id: 'id',
+    personId: 'personId',
+    eventType: 'eventType',
+    source: 'source',
+    verificationProvider: 'verificationProvider',
+    verificationCountryCode: 'verificationCountryCode',
+    tenantId: 'tenantId',
+    localEntityType: 'localEntityType',
+    localEntityId: 'localEntityId',
+    changedFields: 'changedFields',
+    previousValues: 'previousValues',
+    newValues: 'newValues',
+    reason: 'reason',
+    verifiedAt: 'verifiedAt',
+    createdAt: 'createdAt'
+  };
+
+  export type IntelIdentityChangeEventScalarFieldEnum = (typeof IntelIdentityChangeEventScalarFieldEnum)[keyof typeof IntelIdentityChangeEventScalarFieldEnum]
 
 
   export const IntelReviewCaseScalarFieldEnum: {
@@ -9758,6 +11143,7 @@ export namespace Prisma {
     OR?: IntelPersonWhereInput[]
     NOT?: IntelPersonWhereInput | IntelPersonWhereInput[]
     id?: StringFilter<"IntelPerson"> | string
+    globalPersonCode?: StringNullableFilter<"IntelPerson"> | string | null
     globalRiskScore?: IntFilter<"IntelPerson"> | number
     isWatchlisted?: BoolFilter<"IntelPerson"> | boolean
     hasDuplicateFlag?: BoolFilter<"IntelPerson"> | boolean
@@ -9768,9 +11154,12 @@ export namespace Prisma {
     address?: StringNullableFilter<"IntelPerson"> | string | null
     gender?: StringNullableFilter<"IntelPerson"> | string | null
     photoUrl?: StringNullableFilter<"IntelPerson"> | string | null
+    selfieImageUrl?: StringNullableFilter<"IntelPerson"> | string | null
+    providerImageUrl?: StringNullableFilter<"IntelPerson"> | string | null
     verificationStatus?: StringNullableFilter<"IntelPerson"> | string | null
     verificationProvider?: StringNullableFilter<"IntelPerson"> | string | null
     verificationCountryCode?: StringNullableFilter<"IntelPerson"> | string | null
+    primaryBiometricProfileId?: StringNullableFilter<"IntelPerson"> | string | null
     createdAt?: DateTimeFilter<"IntelPerson"> | Date | string
     updatedAt?: DateTimeFilter<"IntelPerson"> | Date | string
     identifiers?: IntelPersonIdentifierListRelationFilter
@@ -9778,10 +11167,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalListRelationFilter
     tenantPresences?: IntelPersonTenantPresenceListRelationFilter
     reviewCases?: IntelReviewCaseListRelationFilter
+    identityChanges?: IntelIdentityChangeEventListRelationFilter
   }
 
   export type IntelPersonOrderByWithRelationInput = {
     id?: SortOrder
+    globalPersonCode?: SortOrderInput | SortOrder
     globalRiskScore?: SortOrder
     isWatchlisted?: SortOrder
     hasDuplicateFlag?: SortOrder
@@ -9792,9 +11183,12 @@ export namespace Prisma {
     address?: SortOrderInput | SortOrder
     gender?: SortOrderInput | SortOrder
     photoUrl?: SortOrderInput | SortOrder
+    selfieImageUrl?: SortOrderInput | SortOrder
+    providerImageUrl?: SortOrderInput | SortOrder
     verificationStatus?: SortOrderInput | SortOrder
     verificationProvider?: SortOrderInput | SortOrder
     verificationCountryCode?: SortOrderInput | SortOrder
+    primaryBiometricProfileId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     identifiers?: IntelPersonIdentifierOrderByRelationAggregateInput
@@ -9802,10 +11196,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalOrderByRelationAggregateInput
     tenantPresences?: IntelPersonTenantPresenceOrderByRelationAggregateInput
     reviewCases?: IntelReviewCaseOrderByRelationAggregateInput
+    identityChanges?: IntelIdentityChangeEventOrderByRelationAggregateInput
   }
 
   export type IntelPersonWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    globalPersonCode?: string
     AND?: IntelPersonWhereInput | IntelPersonWhereInput[]
     OR?: IntelPersonWhereInput[]
     NOT?: IntelPersonWhereInput | IntelPersonWhereInput[]
@@ -9819,9 +11215,12 @@ export namespace Prisma {
     address?: StringNullableFilter<"IntelPerson"> | string | null
     gender?: StringNullableFilter<"IntelPerson"> | string | null
     photoUrl?: StringNullableFilter<"IntelPerson"> | string | null
+    selfieImageUrl?: StringNullableFilter<"IntelPerson"> | string | null
+    providerImageUrl?: StringNullableFilter<"IntelPerson"> | string | null
     verificationStatus?: StringNullableFilter<"IntelPerson"> | string | null
     verificationProvider?: StringNullableFilter<"IntelPerson"> | string | null
     verificationCountryCode?: StringNullableFilter<"IntelPerson"> | string | null
+    primaryBiometricProfileId?: StringNullableFilter<"IntelPerson"> | string | null
     createdAt?: DateTimeFilter<"IntelPerson"> | Date | string
     updatedAt?: DateTimeFilter<"IntelPerson"> | Date | string
     identifiers?: IntelPersonIdentifierListRelationFilter
@@ -9829,10 +11228,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalListRelationFilter
     tenantPresences?: IntelPersonTenantPresenceListRelationFilter
     reviewCases?: IntelReviewCaseListRelationFilter
-  }, "id">
+    identityChanges?: IntelIdentityChangeEventListRelationFilter
+  }, "id" | "globalPersonCode">
 
   export type IntelPersonOrderByWithAggregationInput = {
     id?: SortOrder
+    globalPersonCode?: SortOrderInput | SortOrder
     globalRiskScore?: SortOrder
     isWatchlisted?: SortOrder
     hasDuplicateFlag?: SortOrder
@@ -9843,9 +11244,12 @@ export namespace Prisma {
     address?: SortOrderInput | SortOrder
     gender?: SortOrderInput | SortOrder
     photoUrl?: SortOrderInput | SortOrder
+    selfieImageUrl?: SortOrderInput | SortOrder
+    providerImageUrl?: SortOrderInput | SortOrder
     verificationStatus?: SortOrderInput | SortOrder
     verificationProvider?: SortOrderInput | SortOrder
     verificationCountryCode?: SortOrderInput | SortOrder
+    primaryBiometricProfileId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: IntelPersonCountOrderByAggregateInput
@@ -9860,6 +11264,7 @@ export namespace Prisma {
     OR?: IntelPersonScalarWhereWithAggregatesInput[]
     NOT?: IntelPersonScalarWhereWithAggregatesInput | IntelPersonScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"IntelPerson"> | string
+    globalPersonCode?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     globalRiskScore?: IntWithAggregatesFilter<"IntelPerson"> | number
     isWatchlisted?: BoolWithAggregatesFilter<"IntelPerson"> | boolean
     hasDuplicateFlag?: BoolWithAggregatesFilter<"IntelPerson"> | boolean
@@ -9870,9 +11275,12 @@ export namespace Prisma {
     address?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     gender?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     photoUrl?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
+    selfieImageUrl?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
+    providerImageUrl?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     verificationStatus?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     verificationProvider?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     verificationCountryCode?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
+    primaryBiometricProfileId?: StringNullableWithAggregatesFilter<"IntelPerson"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"IntelPerson"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"IntelPerson"> | Date | string
   }
@@ -9951,6 +11359,7 @@ export namespace Prisma {
     personId?: StringFilter<"IntelBiometricProfile"> | string
     modality?: StringFilter<"IntelBiometricProfile"> | string
     embeddingCiphertext?: BytesFilter<"IntelBiometricProfile"> | Buffer
+    embeddingHash?: StringFilter<"IntelBiometricProfile"> | string
     qualityScore?: FloatFilter<"IntelBiometricProfile"> | number
     isActive?: BoolFilter<"IntelBiometricProfile"> | boolean
     enrolledAt?: DateTimeFilter<"IntelBiometricProfile"> | Date | string
@@ -9962,6 +11371,7 @@ export namespace Prisma {
     personId?: SortOrder
     modality?: SortOrder
     embeddingCiphertext?: SortOrder
+    embeddingHash?: SortOrder
     qualityScore?: SortOrder
     isActive?: SortOrder
     enrolledAt?: SortOrder
@@ -9976,6 +11386,7 @@ export namespace Prisma {
     personId?: StringFilter<"IntelBiometricProfile"> | string
     modality?: StringFilter<"IntelBiometricProfile"> | string
     embeddingCiphertext?: BytesFilter<"IntelBiometricProfile"> | Buffer
+    embeddingHash?: StringFilter<"IntelBiometricProfile"> | string
     qualityScore?: FloatFilter<"IntelBiometricProfile"> | number
     isActive?: BoolFilter<"IntelBiometricProfile"> | boolean
     enrolledAt?: DateTimeFilter<"IntelBiometricProfile"> | Date | string
@@ -9987,6 +11398,7 @@ export namespace Prisma {
     personId?: SortOrder
     modality?: SortOrder
     embeddingCiphertext?: SortOrder
+    embeddingHash?: SortOrder
     qualityScore?: SortOrder
     isActive?: SortOrder
     enrolledAt?: SortOrder
@@ -10005,6 +11417,7 @@ export namespace Prisma {
     personId?: StringWithAggregatesFilter<"IntelBiometricProfile"> | string
     modality?: StringWithAggregatesFilter<"IntelBiometricProfile"> | string
     embeddingCiphertext?: BytesWithAggregatesFilter<"IntelBiometricProfile"> | Buffer
+    embeddingHash?: StringWithAggregatesFilter<"IntelBiometricProfile"> | string
     qualityScore?: FloatWithAggregatesFilter<"IntelBiometricProfile"> | number
     isActive?: BoolWithAggregatesFilter<"IntelBiometricProfile"> | boolean
     enrolledAt?: DateTimeWithAggregatesFilter<"IntelBiometricProfile"> | Date | string
@@ -10087,7 +11500,18 @@ export namespace Prisma {
     id?: StringFilter<"IntelPersonTenantPresence"> | string
     personId?: StringFilter<"IntelPersonTenantPresence"> | string
     tenantId?: StringFilter<"IntelPersonTenantPresence"> | string
+    businessEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    operatingUnitId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    fleetId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    localEntityType?: StringFilter<"IntelPersonTenantPresence"> | string
+    localEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
     roleType?: StringFilter<"IntelPersonTenantPresence"> | string
+    status?: StringFilter<"IntelPersonTenantPresence"> | string
+    source?: StringFilter<"IntelPersonTenantPresence"> | string
+    verifiedAt?: DateTimeNullableFilter<"IntelPersonTenantPresence"> | Date | string | null
+    reverificationRequired?: BoolFilter<"IntelPersonTenantPresence"> | boolean
+    reverificationReason?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    staleFieldKeys?: JsonNullableFilter<"IntelPersonTenantPresence">
     createdAt?: DateTimeFilter<"IntelPersonTenantPresence"> | Date | string
     person?: XOR<IntelPersonRelationFilter, IntelPersonWhereInput>
   }
@@ -10096,29 +11520,62 @@ export namespace Prisma {
     id?: SortOrder
     personId?: SortOrder
     tenantId?: SortOrder
+    businessEntityId?: SortOrderInput | SortOrder
+    operatingUnitId?: SortOrderInput | SortOrder
+    fleetId?: SortOrderInput | SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrderInput | SortOrder
     roleType?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    verifiedAt?: SortOrderInput | SortOrder
+    reverificationRequired?: SortOrder
+    reverificationReason?: SortOrderInput | SortOrder
+    staleFieldKeys?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     person?: IntelPersonOrderByWithRelationInput
   }
 
   export type IntelPersonTenantPresenceWhereUniqueInput = Prisma.AtLeast<{
     id?: string
-    personId_tenantId_roleType?: IntelPersonTenantPresencePersonIdTenantIdRoleTypeCompoundUniqueInput
+    personId_tenantId_roleType_localEntityType_localEntityId?: IntelPersonTenantPresencePersonIdTenantIdRoleTypeLocalEntityTypeLocalEntityIdCompoundUniqueInput
     AND?: IntelPersonTenantPresenceWhereInput | IntelPersonTenantPresenceWhereInput[]
     OR?: IntelPersonTenantPresenceWhereInput[]
     NOT?: IntelPersonTenantPresenceWhereInput | IntelPersonTenantPresenceWhereInput[]
     personId?: StringFilter<"IntelPersonTenantPresence"> | string
     tenantId?: StringFilter<"IntelPersonTenantPresence"> | string
+    businessEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    operatingUnitId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    fleetId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    localEntityType?: StringFilter<"IntelPersonTenantPresence"> | string
+    localEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
     roleType?: StringFilter<"IntelPersonTenantPresence"> | string
+    status?: StringFilter<"IntelPersonTenantPresence"> | string
+    source?: StringFilter<"IntelPersonTenantPresence"> | string
+    verifiedAt?: DateTimeNullableFilter<"IntelPersonTenantPresence"> | Date | string | null
+    reverificationRequired?: BoolFilter<"IntelPersonTenantPresence"> | boolean
+    reverificationReason?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    staleFieldKeys?: JsonNullableFilter<"IntelPersonTenantPresence">
     createdAt?: DateTimeFilter<"IntelPersonTenantPresence"> | Date | string
     person?: XOR<IntelPersonRelationFilter, IntelPersonWhereInput>
-  }, "id" | "personId_tenantId_roleType">
+  }, "id" | "personId_tenantId_roleType_localEntityType_localEntityId">
 
   export type IntelPersonTenantPresenceOrderByWithAggregationInput = {
     id?: SortOrder
     personId?: SortOrder
     tenantId?: SortOrder
+    businessEntityId?: SortOrderInput | SortOrder
+    operatingUnitId?: SortOrderInput | SortOrder
+    fleetId?: SortOrderInput | SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrderInput | SortOrder
     roleType?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    verifiedAt?: SortOrderInput | SortOrder
+    reverificationRequired?: SortOrder
+    reverificationReason?: SortOrderInput | SortOrder
+    staleFieldKeys?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: IntelPersonTenantPresenceCountOrderByAggregateInput
     _max?: IntelPersonTenantPresenceMaxOrderByAggregateInput
@@ -10132,8 +11589,124 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
     personId?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
     tenantId?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
+    businessEntityId?: StringNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | string | null
+    operatingUnitId?: StringNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | string | null
+    fleetId?: StringNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | string | null
+    localEntityType?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
+    localEntityId?: StringNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | string | null
     roleType?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
+    status?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
+    source?: StringWithAggregatesFilter<"IntelPersonTenantPresence"> | string
+    verifiedAt?: DateTimeNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | Date | string | null
+    reverificationRequired?: BoolWithAggregatesFilter<"IntelPersonTenantPresence"> | boolean
+    reverificationReason?: StringNullableWithAggregatesFilter<"IntelPersonTenantPresence"> | string | null
+    staleFieldKeys?: JsonNullableWithAggregatesFilter<"IntelPersonTenantPresence">
     createdAt?: DateTimeWithAggregatesFilter<"IntelPersonTenantPresence"> | Date | string
+  }
+
+  export type IntelIdentityChangeEventWhereInput = {
+    AND?: IntelIdentityChangeEventWhereInput | IntelIdentityChangeEventWhereInput[]
+    OR?: IntelIdentityChangeEventWhereInput[]
+    NOT?: IntelIdentityChangeEventWhereInput | IntelIdentityChangeEventWhereInput[]
+    id?: StringFilter<"IntelIdentityChangeEvent"> | string
+    personId?: StringFilter<"IntelIdentityChangeEvent"> | string
+    eventType?: StringFilter<"IntelIdentityChangeEvent"> | string
+    source?: StringFilter<"IntelIdentityChangeEvent"> | string
+    verificationProvider?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verificationCountryCode?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    tenantId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityType?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    changedFields?: JsonFilter<"IntelIdentityChangeEvent">
+    previousValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    newValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    reason?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verifiedAt?: DateTimeNullableFilter<"IntelIdentityChangeEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"IntelIdentityChangeEvent"> | Date | string
+    person?: XOR<IntelPersonRelationFilter, IntelPersonWhereInput>
+  }
+
+  export type IntelIdentityChangeEventOrderByWithRelationInput = {
+    id?: SortOrder
+    personId?: SortOrder
+    eventType?: SortOrder
+    source?: SortOrder
+    verificationProvider?: SortOrderInput | SortOrder
+    verificationCountryCode?: SortOrderInput | SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    localEntityType?: SortOrderInput | SortOrder
+    localEntityId?: SortOrderInput | SortOrder
+    changedFields?: SortOrder
+    previousValues?: SortOrderInput | SortOrder
+    newValues?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    verifiedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    person?: IntelPersonOrderByWithRelationInput
+  }
+
+  export type IntelIdentityChangeEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: IntelIdentityChangeEventWhereInput | IntelIdentityChangeEventWhereInput[]
+    OR?: IntelIdentityChangeEventWhereInput[]
+    NOT?: IntelIdentityChangeEventWhereInput | IntelIdentityChangeEventWhereInput[]
+    personId?: StringFilter<"IntelIdentityChangeEvent"> | string
+    eventType?: StringFilter<"IntelIdentityChangeEvent"> | string
+    source?: StringFilter<"IntelIdentityChangeEvent"> | string
+    verificationProvider?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verificationCountryCode?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    tenantId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityType?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    changedFields?: JsonFilter<"IntelIdentityChangeEvent">
+    previousValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    newValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    reason?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verifiedAt?: DateTimeNullableFilter<"IntelIdentityChangeEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"IntelIdentityChangeEvent"> | Date | string
+    person?: XOR<IntelPersonRelationFilter, IntelPersonWhereInput>
+  }, "id">
+
+  export type IntelIdentityChangeEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    personId?: SortOrder
+    eventType?: SortOrder
+    source?: SortOrder
+    verificationProvider?: SortOrderInput | SortOrder
+    verificationCountryCode?: SortOrderInput | SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    localEntityType?: SortOrderInput | SortOrder
+    localEntityId?: SortOrderInput | SortOrder
+    changedFields?: SortOrder
+    previousValues?: SortOrderInput | SortOrder
+    newValues?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    verifiedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: IntelIdentityChangeEventCountOrderByAggregateInput
+    _max?: IntelIdentityChangeEventMaxOrderByAggregateInput
+    _min?: IntelIdentityChangeEventMinOrderByAggregateInput
+  }
+
+  export type IntelIdentityChangeEventScalarWhereWithAggregatesInput = {
+    AND?: IntelIdentityChangeEventScalarWhereWithAggregatesInput | IntelIdentityChangeEventScalarWhereWithAggregatesInput[]
+    OR?: IntelIdentityChangeEventScalarWhereWithAggregatesInput[]
+    NOT?: IntelIdentityChangeEventScalarWhereWithAggregatesInput | IntelIdentityChangeEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"IntelIdentityChangeEvent"> | string
+    personId?: StringWithAggregatesFilter<"IntelIdentityChangeEvent"> | string
+    eventType?: StringWithAggregatesFilter<"IntelIdentityChangeEvent"> | string
+    source?: StringWithAggregatesFilter<"IntelIdentityChangeEvent"> | string
+    verificationProvider?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    verificationCountryCode?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    tenantId?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityType?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityId?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    changedFields?: JsonWithAggregatesFilter<"IntelIdentityChangeEvent">
+    previousValues?: JsonNullableWithAggregatesFilter<"IntelIdentityChangeEvent">
+    newValues?: JsonNullableWithAggregatesFilter<"IntelIdentityChangeEvent">
+    reason?: StringNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | string | null
+    verifiedAt?: DateTimeNullableWithAggregatesFilter<"IntelIdentityChangeEvent"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"IntelIdentityChangeEvent"> | Date | string
   }
 
   export type IntelReviewCaseWhereInput = {
@@ -10366,6 +11939,7 @@ export namespace Prisma {
 
   export type IntelPersonCreateInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -10376,9 +11950,12 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
@@ -10386,10 +11963,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUncheckedCreateInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -10400,9 +11979,12 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
@@ -10410,10 +11992,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -10424,9 +12008,12 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
@@ -10434,10 +12021,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -10448,9 +12037,12 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
@@ -10458,10 +12050,12 @@ export namespace Prisma {
     riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonCreateManyInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -10472,15 +12066,19 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
 
   export type IntelPersonUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -10491,15 +12089,19 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IntelPersonUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -10510,9 +12112,12 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -10590,6 +12195,7 @@ export namespace Prisma {
     id?: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -10601,6 +12207,7 @@ export namespace Prisma {
     personId: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -10610,6 +12217,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10621,6 +12229,7 @@ export namespace Prisma {
     personId?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10631,6 +12240,7 @@ export namespace Prisma {
     personId: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -10640,6 +12250,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10650,6 +12261,7 @@ export namespace Prisma {
     personId?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -10734,7 +12346,18 @@ export namespace Prisma {
   export type IntelPersonTenantPresenceCreateInput = {
     id?: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     person: IntelPersonCreateNestedOneWithoutTenantPresencesInput
   }
@@ -10743,14 +12366,36 @@ export namespace Prisma {
     id?: string
     personId: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
   }
 
   export type IntelPersonTenantPresenceUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     person?: IntelPersonUpdateOneRequiredWithoutTenantPresencesNestedInput
   }
@@ -10759,7 +12404,18 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     personId?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -10767,14 +12423,36 @@ export namespace Prisma {
     id?: string
     personId: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
   }
 
   export type IntelPersonTenantPresenceUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -10782,7 +12460,143 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     personId?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IntelIdentityChangeEventCreateInput = {
+    id?: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
+    person: IntelPersonCreateNestedOneWithoutIdentityChangesInput
+  }
+
+  export type IntelIdentityChangeEventUncheckedCreateInput = {
+    id?: string
+    personId: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
+  }
+
+  export type IntelIdentityChangeEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    person?: IntelPersonUpdateOneRequiredWithoutIdentityChangesNestedInput
+  }
+
+  export type IntelIdentityChangeEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    personId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IntelIdentityChangeEventCreateManyInput = {
+    id?: string
+    personId: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
+  }
+
+  export type IntelIdentityChangeEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IntelIdentityChangeEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    personId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -11059,6 +12873,21 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type StringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -11084,21 +12913,6 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
-  export type StringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type DateTimeFilter<$PrismaModel = never> = {
@@ -11142,6 +12956,12 @@ export namespace Prisma {
     none?: IntelReviewCaseWhereInput
   }
 
+  export type IntelIdentityChangeEventListRelationFilter = {
+    every?: IntelIdentityChangeEventWhereInput
+    some?: IntelIdentityChangeEventWhereInput
+    none?: IntelIdentityChangeEventWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -11167,8 +12987,13 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type IntelIdentityChangeEventOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type IntelPersonCountOrderByAggregateInput = {
     id?: SortOrder
+    globalPersonCode?: SortOrder
     globalRiskScore?: SortOrder
     isWatchlisted?: SortOrder
     hasDuplicateFlag?: SortOrder
@@ -11179,9 +13004,12 @@ export namespace Prisma {
     address?: SortOrder
     gender?: SortOrder
     photoUrl?: SortOrder
+    selfieImageUrl?: SortOrder
+    providerImageUrl?: SortOrder
     verificationStatus?: SortOrder
     verificationProvider?: SortOrder
     verificationCountryCode?: SortOrder
+    primaryBiometricProfileId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -11194,6 +13022,7 @@ export namespace Prisma {
 
   export type IntelPersonMaxOrderByAggregateInput = {
     id?: SortOrder
+    globalPersonCode?: SortOrder
     globalRiskScore?: SortOrder
     isWatchlisted?: SortOrder
     hasDuplicateFlag?: SortOrder
@@ -11204,15 +13033,19 @@ export namespace Prisma {
     address?: SortOrder
     gender?: SortOrder
     photoUrl?: SortOrder
+    selfieImageUrl?: SortOrder
+    providerImageUrl?: SortOrder
     verificationStatus?: SortOrder
     verificationProvider?: SortOrder
     verificationCountryCode?: SortOrder
+    primaryBiometricProfileId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type IntelPersonMinOrderByAggregateInput = {
     id?: SortOrder
+    globalPersonCode?: SortOrder
     globalRiskScore?: SortOrder
     isWatchlisted?: SortOrder
     hasDuplicateFlag?: SortOrder
@@ -11223,9 +13056,12 @@ export namespace Prisma {
     address?: SortOrder
     gender?: SortOrder
     photoUrl?: SortOrder
+    selfieImageUrl?: SortOrder
+    providerImageUrl?: SortOrder
     verificationStatus?: SortOrder
     verificationProvider?: SortOrder
     verificationCountryCode?: SortOrder
+    primaryBiometricProfileId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -11252,6 +13088,24 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -11292,24 +13146,6 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
-  }
-
-  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -11378,6 +13214,7 @@ export namespace Prisma {
     personId?: SortOrder
     modality?: SortOrder
     embeddingCiphertext?: SortOrder
+    embeddingHash?: SortOrder
     qualityScore?: SortOrder
     isActive?: SortOrder
     enrolledAt?: SortOrder
@@ -11392,6 +13229,7 @@ export namespace Prisma {
     personId?: SortOrder
     modality?: SortOrder
     embeddingCiphertext?: SortOrder
+    embeddingHash?: SortOrder
     qualityScore?: SortOrder
     isActive?: SortOrder
     enrolledAt?: SortOrder
@@ -11402,6 +13240,7 @@ export namespace Prisma {
     personId?: SortOrder
     modality?: SortOrder
     embeddingCiphertext?: SortOrder
+    embeddingHash?: SortOrder
     qualityScore?: SortOrder
     isActive?: SortOrder
     enrolledAt?: SortOrder
@@ -11499,17 +13338,41 @@ export namespace Prisma {
     _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
-  export type IntelPersonTenantPresencePersonIdTenantIdRoleTypeCompoundUniqueInput = {
+  export type DateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type IntelPersonTenantPresencePersonIdTenantIdRoleTypeLocalEntityTypeLocalEntityIdCompoundUniqueInput = {
     personId: string
     tenantId: string
     roleType: string
+    localEntityType: string
+    localEntityId: string
   }
 
   export type IntelPersonTenantPresenceCountOrderByAggregateInput = {
     id?: SortOrder
     personId?: SortOrder
     tenantId?: SortOrder
+    businessEntityId?: SortOrder
+    operatingUnitId?: SortOrder
+    fleetId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
     roleType?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    verifiedAt?: SortOrder
+    reverificationRequired?: SortOrder
+    reverificationReason?: SortOrder
+    staleFieldKeys?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -11517,7 +13380,17 @@ export namespace Prisma {
     id?: SortOrder
     personId?: SortOrder
     tenantId?: SortOrder
+    businessEntityId?: SortOrder
+    operatingUnitId?: SortOrder
+    fleetId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
     roleType?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    verifiedAt?: SortOrder
+    reverificationRequired?: SortOrder
+    reverificationReason?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -11525,8 +13398,32 @@ export namespace Prisma {
     id?: SortOrder
     personId?: SortOrder
     tenantId?: SortOrder
+    businessEntityId?: SortOrder
+    operatingUnitId?: SortOrder
+    fleetId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
     roleType?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    verifiedAt?: SortOrder
+    reverificationRequired?: SortOrder
+    reverificationReason?: SortOrder
     createdAt?: SortOrder
+  }
+
+  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
   export type JsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
@@ -11551,15 +13448,77 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
-  export type DateTimeNullableFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  export type IntelIdentityChangeEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    personId?: SortOrder
+    eventType?: SortOrder
+    source?: SortOrder
+    verificationProvider?: SortOrder
+    verificationCountryCode?: SortOrder
+    tenantId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
+    changedFields?: SortOrder
+    previousValues?: SortOrder
+    newValues?: SortOrder
+    reason?: SortOrder
+    verifiedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type IntelIdentityChangeEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    personId?: SortOrder
+    eventType?: SortOrder
+    source?: SortOrder
+    verificationProvider?: SortOrder
+    verificationCountryCode?: SortOrder
+    tenantId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
+    reason?: SortOrder
+    verifiedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type IntelIdentityChangeEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    personId?: SortOrder
+    eventType?: SortOrder
+    source?: SortOrder
+    verificationProvider?: SortOrder
+    verificationCountryCode?: SortOrder
+    tenantId?: SortOrder
+    localEntityType?: SortOrder
+    localEntityId?: SortOrder
+    reason?: SortOrder
+    verifiedAt?: SortOrder
+    createdAt?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type IntelReviewCaseCountOrderByAggregateInput = {
@@ -11608,45 +13567,6 @@ export namespace Prisma {
 
   export type IntelReviewCaseSumOrderByAggregateInput = {
     confidenceScore?: SortOrder
-  }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
-    | PatchUndefined<
-        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedJsonFilter<$PrismaModel>
-    _max?: NestedJsonFilter<$PrismaModel>
-  }
-
-  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedDateTimeNullableFilter<$PrismaModel>
-    _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
   export type IntelWatchlistEntryCountOrderByAggregateInput = {
@@ -11786,6 +13706,13 @@ export namespace Prisma {
     connect?: IntelReviewCaseWhereUniqueInput | IntelReviewCaseWhereUniqueInput[]
   }
 
+  export type IntelIdentityChangeEventCreateNestedManyWithoutPersonInput = {
+    create?: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput> | IntelIdentityChangeEventCreateWithoutPersonInput[] | IntelIdentityChangeEventUncheckedCreateWithoutPersonInput[]
+    connectOrCreate?: IntelIdentityChangeEventCreateOrConnectWithoutPersonInput | IntelIdentityChangeEventCreateOrConnectWithoutPersonInput[]
+    createMany?: IntelIdentityChangeEventCreateManyPersonInputEnvelope
+    connect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+  }
+
   export type IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput = {
     create?: XOR<IntelPersonIdentifierCreateWithoutPersonInput, IntelPersonIdentifierUncheckedCreateWithoutPersonInput> | IntelPersonIdentifierCreateWithoutPersonInput[] | IntelPersonIdentifierUncheckedCreateWithoutPersonInput[]
     connectOrCreate?: IntelPersonIdentifierCreateOrConnectWithoutPersonInput | IntelPersonIdentifierCreateOrConnectWithoutPersonInput[]
@@ -11821,8 +13748,19 @@ export namespace Prisma {
     connect?: IntelReviewCaseWhereUniqueInput | IntelReviewCaseWhereUniqueInput[]
   }
 
+  export type IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput = {
+    create?: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput> | IntelIdentityChangeEventCreateWithoutPersonInput[] | IntelIdentityChangeEventUncheckedCreateWithoutPersonInput[]
+    connectOrCreate?: IntelIdentityChangeEventCreateOrConnectWithoutPersonInput | IntelIdentityChangeEventCreateOrConnectWithoutPersonInput[]
+    createMany?: IntelIdentityChangeEventCreateManyPersonInputEnvelope
+    connect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
+  }
+
+  export type NullableStringFieldUpdateOperationsInput = {
+    set?: string | null
   }
 
   export type IntFieldUpdateOperationsInput = {
@@ -11843,10 +13781,6 @@ export namespace Prisma {
     decrement?: number
     multiply?: number
     divide?: number
-  }
-
-  export type NullableStringFieldUpdateOperationsInput = {
-    set?: string | null
   }
 
   export type DateTimeFieldUpdateOperationsInput = {
@@ -11923,6 +13857,20 @@ export namespace Prisma {
     deleteMany?: IntelReviewCaseScalarWhereInput | IntelReviewCaseScalarWhereInput[]
   }
 
+  export type IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput = {
+    create?: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput> | IntelIdentityChangeEventCreateWithoutPersonInput[] | IntelIdentityChangeEventUncheckedCreateWithoutPersonInput[]
+    connectOrCreate?: IntelIdentityChangeEventCreateOrConnectWithoutPersonInput | IntelIdentityChangeEventCreateOrConnectWithoutPersonInput[]
+    upsert?: IntelIdentityChangeEventUpsertWithWhereUniqueWithoutPersonInput | IntelIdentityChangeEventUpsertWithWhereUniqueWithoutPersonInput[]
+    createMany?: IntelIdentityChangeEventCreateManyPersonInputEnvelope
+    set?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    disconnect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    delete?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    connect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    update?: IntelIdentityChangeEventUpdateWithWhereUniqueWithoutPersonInput | IntelIdentityChangeEventUpdateWithWhereUniqueWithoutPersonInput[]
+    updateMany?: IntelIdentityChangeEventUpdateManyWithWhereWithoutPersonInput | IntelIdentityChangeEventUpdateManyWithWhereWithoutPersonInput[]
+    deleteMany?: IntelIdentityChangeEventScalarWhereInput | IntelIdentityChangeEventScalarWhereInput[]
+  }
+
   export type IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput = {
     create?: XOR<IntelPersonIdentifierCreateWithoutPersonInput, IntelPersonIdentifierUncheckedCreateWithoutPersonInput> | IntelPersonIdentifierCreateWithoutPersonInput[] | IntelPersonIdentifierUncheckedCreateWithoutPersonInput[]
     connectOrCreate?: IntelPersonIdentifierCreateOrConnectWithoutPersonInput | IntelPersonIdentifierCreateOrConnectWithoutPersonInput[]
@@ -11993,6 +13941,20 @@ export namespace Prisma {
     deleteMany?: IntelReviewCaseScalarWhereInput | IntelReviewCaseScalarWhereInput[]
   }
 
+  export type IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput = {
+    create?: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput> | IntelIdentityChangeEventCreateWithoutPersonInput[] | IntelIdentityChangeEventUncheckedCreateWithoutPersonInput[]
+    connectOrCreate?: IntelIdentityChangeEventCreateOrConnectWithoutPersonInput | IntelIdentityChangeEventCreateOrConnectWithoutPersonInput[]
+    upsert?: IntelIdentityChangeEventUpsertWithWhereUniqueWithoutPersonInput | IntelIdentityChangeEventUpsertWithWhereUniqueWithoutPersonInput[]
+    createMany?: IntelIdentityChangeEventCreateManyPersonInputEnvelope
+    set?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    disconnect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    delete?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    connect?: IntelIdentityChangeEventWhereUniqueInput | IntelIdentityChangeEventWhereUniqueInput[]
+    update?: IntelIdentityChangeEventUpdateWithWhereUniqueWithoutPersonInput | IntelIdentityChangeEventUpdateWithWhereUniqueWithoutPersonInput[]
+    updateMany?: IntelIdentityChangeEventUpdateManyWithWhereWithoutPersonInput | IntelIdentityChangeEventUpdateManyWithWhereWithoutPersonInput[]
+    deleteMany?: IntelIdentityChangeEventScalarWhereInput | IntelIdentityChangeEventScalarWhereInput[]
+  }
+
   export type IntelPersonCreateNestedOneWithoutIdentifiersInput = {
     create?: XOR<IntelPersonCreateWithoutIdentifiersInput, IntelPersonUncheckedCreateWithoutIdentifiersInput>
     connectOrCreate?: IntelPersonCreateOrConnectWithoutIdentifiersInput
@@ -12045,6 +14007,10 @@ export namespace Prisma {
     connect?: IntelPersonWhereUniqueInput
   }
 
+  export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null
+  }
+
   export type IntelPersonUpdateOneRequiredWithoutTenantPresencesNestedInput = {
     create?: XOR<IntelPersonCreateWithoutTenantPresencesInput, IntelPersonUncheckedCreateWithoutTenantPresencesInput>
     connectOrCreate?: IntelPersonCreateOrConnectWithoutTenantPresencesInput
@@ -12053,14 +14019,24 @@ export namespace Prisma {
     update?: XOR<XOR<IntelPersonUpdateToOneWithWhereWithoutTenantPresencesInput, IntelPersonUpdateWithoutTenantPresencesInput>, IntelPersonUncheckedUpdateWithoutTenantPresencesInput>
   }
 
+  export type IntelPersonCreateNestedOneWithoutIdentityChangesInput = {
+    create?: XOR<IntelPersonCreateWithoutIdentityChangesInput, IntelPersonUncheckedCreateWithoutIdentityChangesInput>
+    connectOrCreate?: IntelPersonCreateOrConnectWithoutIdentityChangesInput
+    connect?: IntelPersonWhereUniqueInput
+  }
+
+  export type IntelPersonUpdateOneRequiredWithoutIdentityChangesNestedInput = {
+    create?: XOR<IntelPersonCreateWithoutIdentityChangesInput, IntelPersonUncheckedCreateWithoutIdentityChangesInput>
+    connectOrCreate?: IntelPersonCreateOrConnectWithoutIdentityChangesInput
+    upsert?: IntelPersonUpsertWithoutIdentityChangesInput
+    connect?: IntelPersonWhereUniqueInput
+    update?: XOR<XOR<IntelPersonUpdateToOneWithWhereWithoutIdentityChangesInput, IntelPersonUpdateWithoutIdentityChangesInput>, IntelPersonUncheckedUpdateWithoutIdentityChangesInput>
+  }
+
   export type IntelPersonCreateNestedOneWithoutReviewCasesInput = {
     create?: XOR<IntelPersonCreateWithoutReviewCasesInput, IntelPersonUncheckedCreateWithoutReviewCasesInput>
     connectOrCreate?: IntelPersonCreateOrConnectWithoutReviewCasesInput
     connect?: IntelPersonWhereUniqueInput
-  }
-
-  export type NullableDateTimeFieldUpdateOperationsInput = {
-    set?: Date | string | null
   }
 
   export type IntelPersonUpdateOneRequiredWithoutReviewCasesNestedInput = {
@@ -12093,6 +14069,20 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type NestedStringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type NestedIntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -12118,20 +14108,6 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
-  export type NestedStringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
@@ -12160,6 +14136,34 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
+  export type NestedIntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
@@ -12200,34 +14204,6 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
-  }
-
-  export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
-  }
-
-  export type NestedIntNullableFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -12293,6 +14269,20 @@ export namespace Prisma {
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
+
+  export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
   export type NestedJsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
@@ -12314,20 +14304,6 @@ export namespace Prisma {
     gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
     gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
-
-  export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedDateTimeNullableFilter<$PrismaModel>
-    _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
   export type NestedFloatNullableFilter<$PrismaModel = never> = {
@@ -12389,6 +14365,7 @@ export namespace Prisma {
     id?: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -12398,6 +14375,7 @@ export namespace Prisma {
     id?: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -12446,14 +14424,36 @@ export namespace Prisma {
   export type IntelPersonTenantPresenceCreateWithoutPersonInput = {
     id?: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
   }
 
   export type IntelPersonTenantPresenceUncheckedCreateWithoutPersonInput = {
     id?: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
   }
 
@@ -12500,6 +14500,50 @@ export namespace Prisma {
 
   export type IntelReviewCaseCreateManyPersonInputEnvelope = {
     data: IntelReviewCaseCreateManyPersonInput | IntelReviewCaseCreateManyPersonInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type IntelIdentityChangeEventCreateWithoutPersonInput = {
+    id?: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
+  }
+
+  export type IntelIdentityChangeEventUncheckedCreateWithoutPersonInput = {
+    id?: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
+  }
+
+  export type IntelIdentityChangeEventCreateOrConnectWithoutPersonInput = {
+    where: IntelIdentityChangeEventWhereUniqueInput
+    create: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput>
+  }
+
+  export type IntelIdentityChangeEventCreateManyPersonInputEnvelope = {
+    data: IntelIdentityChangeEventCreateManyPersonInput | IntelIdentityChangeEventCreateManyPersonInput[]
     skipDuplicates?: boolean
   }
 
@@ -12556,6 +14600,7 @@ export namespace Prisma {
     personId?: StringFilter<"IntelBiometricProfile"> | string
     modality?: StringFilter<"IntelBiometricProfile"> | string
     embeddingCiphertext?: BytesFilter<"IntelBiometricProfile"> | Buffer
+    embeddingHash?: StringFilter<"IntelBiometricProfile"> | string
     qualityScore?: FloatFilter<"IntelBiometricProfile"> | number
     isActive?: BoolFilter<"IntelBiometricProfile"> | boolean
     enrolledAt?: DateTimeFilter<"IntelBiometricProfile"> | Date | string
@@ -12614,7 +14659,18 @@ export namespace Prisma {
     id?: StringFilter<"IntelPersonTenantPresence"> | string
     personId?: StringFilter<"IntelPersonTenantPresence"> | string
     tenantId?: StringFilter<"IntelPersonTenantPresence"> | string
+    businessEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    operatingUnitId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    fleetId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    localEntityType?: StringFilter<"IntelPersonTenantPresence"> | string
+    localEntityId?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
     roleType?: StringFilter<"IntelPersonTenantPresence"> | string
+    status?: StringFilter<"IntelPersonTenantPresence"> | string
+    source?: StringFilter<"IntelPersonTenantPresence"> | string
+    verifiedAt?: DateTimeNullableFilter<"IntelPersonTenantPresence"> | Date | string | null
+    reverificationRequired?: BoolFilter<"IntelPersonTenantPresence"> | boolean
+    reverificationReason?: StringNullableFilter<"IntelPersonTenantPresence"> | string | null
+    staleFieldKeys?: JsonNullableFilter<"IntelPersonTenantPresence">
     createdAt?: DateTimeFilter<"IntelPersonTenantPresence"> | Date | string
   }
 
@@ -12651,8 +14707,46 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"IntelReviewCase"> | Date | string
   }
 
+  export type IntelIdentityChangeEventUpsertWithWhereUniqueWithoutPersonInput = {
+    where: IntelIdentityChangeEventWhereUniqueInput
+    update: XOR<IntelIdentityChangeEventUpdateWithoutPersonInput, IntelIdentityChangeEventUncheckedUpdateWithoutPersonInput>
+    create: XOR<IntelIdentityChangeEventCreateWithoutPersonInput, IntelIdentityChangeEventUncheckedCreateWithoutPersonInput>
+  }
+
+  export type IntelIdentityChangeEventUpdateWithWhereUniqueWithoutPersonInput = {
+    where: IntelIdentityChangeEventWhereUniqueInput
+    data: XOR<IntelIdentityChangeEventUpdateWithoutPersonInput, IntelIdentityChangeEventUncheckedUpdateWithoutPersonInput>
+  }
+
+  export type IntelIdentityChangeEventUpdateManyWithWhereWithoutPersonInput = {
+    where: IntelIdentityChangeEventScalarWhereInput
+    data: XOR<IntelIdentityChangeEventUpdateManyMutationInput, IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonInput>
+  }
+
+  export type IntelIdentityChangeEventScalarWhereInput = {
+    AND?: IntelIdentityChangeEventScalarWhereInput | IntelIdentityChangeEventScalarWhereInput[]
+    OR?: IntelIdentityChangeEventScalarWhereInput[]
+    NOT?: IntelIdentityChangeEventScalarWhereInput | IntelIdentityChangeEventScalarWhereInput[]
+    id?: StringFilter<"IntelIdentityChangeEvent"> | string
+    personId?: StringFilter<"IntelIdentityChangeEvent"> | string
+    eventType?: StringFilter<"IntelIdentityChangeEvent"> | string
+    source?: StringFilter<"IntelIdentityChangeEvent"> | string
+    verificationProvider?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verificationCountryCode?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    tenantId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityType?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    localEntityId?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    changedFields?: JsonFilter<"IntelIdentityChangeEvent">
+    previousValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    newValues?: JsonNullableFilter<"IntelIdentityChangeEvent">
+    reason?: StringNullableFilter<"IntelIdentityChangeEvent"> | string | null
+    verifiedAt?: DateTimeNullableFilter<"IntelIdentityChangeEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"IntelIdentityChangeEvent"> | Date | string
+  }
+
   export type IntelPersonCreateWithoutIdentifiersInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12663,19 +14757,24 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     biometrics?: IntelBiometricProfileCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUncheckedCreateWithoutIdentifiersInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12686,15 +14785,19 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     biometrics?: IntelBiometricProfileUncheckedCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonCreateOrConnectWithoutIdentifiersInput = {
@@ -12715,6 +14818,7 @@ export namespace Prisma {
 
   export type IntelPersonUpdateWithoutIdentifiersInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12725,19 +14829,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     biometrics?: IntelBiometricProfileUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateWithoutIdentifiersInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12748,19 +14857,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     biometrics?: IntelBiometricProfileUncheckedUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonCreateWithoutBiometricsInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12771,19 +14885,24 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUncheckedCreateWithoutBiometricsInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12794,15 +14913,19 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonCreateOrConnectWithoutBiometricsInput = {
@@ -12823,6 +14946,7 @@ export namespace Prisma {
 
   export type IntelPersonUpdateWithoutBiometricsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12833,19 +14957,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateWithoutBiometricsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12856,19 +14985,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonCreateWithoutRiskSignalsInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12879,19 +15013,24 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUncheckedCreateWithoutRiskSignalsInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12902,15 +15041,19 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileUncheckedCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonCreateOrConnectWithoutRiskSignalsInput = {
@@ -12931,6 +15074,7 @@ export namespace Prisma {
 
   export type IntelPersonUpdateWithoutRiskSignalsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12941,19 +15085,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateWithoutRiskSignalsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -12964,19 +15113,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUncheckedUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonCreateWithoutTenantPresencesInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -12987,19 +15141,24 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonUncheckedCreateWithoutTenantPresencesInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -13010,15 +15169,19 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileUncheckedCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
     reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonCreateOrConnectWithoutTenantPresencesInput = {
@@ -13039,6 +15202,7 @@ export namespace Prisma {
 
   export type IntelPersonUpdateWithoutTenantPresencesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -13049,19 +15213,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateWithoutTenantPresencesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -13072,19 +15241,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUncheckedUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
     reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
-  export type IntelPersonCreateWithoutReviewCasesInput = {
+  export type IntelPersonCreateWithoutIdentityChangesInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -13095,19 +15269,24 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
+    reviewCases?: IntelReviewCaseCreateNestedManyWithoutPersonInput
   }
 
-  export type IntelPersonUncheckedCreateWithoutReviewCasesInput = {
+  export type IntelPersonUncheckedCreateWithoutIdentityChangesInput = {
     id?: string
+    globalPersonCode?: string | null
     globalRiskScore?: number
     isWatchlisted?: boolean
     hasDuplicateFlag?: boolean
@@ -13118,15 +15297,147 @@ export namespace Prisma {
     address?: string | null
     gender?: string | null
     photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
     verificationStatus?: string | null
     verificationProvider?: string | null
     verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
     biometrics?: IntelBiometricProfileUncheckedCreateNestedManyWithoutPersonInput
     riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
+    reviewCases?: IntelReviewCaseUncheckedCreateNestedManyWithoutPersonInput
+  }
+
+  export type IntelPersonCreateOrConnectWithoutIdentityChangesInput = {
+    where: IntelPersonWhereUniqueInput
+    create: XOR<IntelPersonCreateWithoutIdentityChangesInput, IntelPersonUncheckedCreateWithoutIdentityChangesInput>
+  }
+
+  export type IntelPersonUpsertWithoutIdentityChangesInput = {
+    update: XOR<IntelPersonUpdateWithoutIdentityChangesInput, IntelPersonUncheckedUpdateWithoutIdentityChangesInput>
+    create: XOR<IntelPersonCreateWithoutIdentityChangesInput, IntelPersonUncheckedCreateWithoutIdentityChangesInput>
+    where?: IntelPersonWhereInput
+  }
+
+  export type IntelPersonUpdateToOneWithWhereWithoutIdentityChangesInput = {
+    where?: IntelPersonWhereInput
+    data: XOR<IntelPersonUpdateWithoutIdentityChangesInput, IntelPersonUncheckedUpdateWithoutIdentityChangesInput>
+  }
+
+  export type IntelPersonUpdateWithoutIdentityChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
+    globalRiskScore?: IntFieldUpdateOperationsInput | number
+    isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
+    hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
+    fraudSignalCount?: IntFieldUpdateOperationsInput | number
+    verificationConfidence?: FloatFieldUpdateOperationsInput | number
+    fullName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirth?: NullableStringFieldUpdateOperationsInput | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
+    biometrics?: IntelBiometricProfileUpdateManyWithoutPersonNestedInput
+    riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
+    tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
+    reviewCases?: IntelReviewCaseUpdateManyWithoutPersonNestedInput
+  }
+
+  export type IntelPersonUncheckedUpdateWithoutIdentityChangesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
+    globalRiskScore?: IntFieldUpdateOperationsInput | number
+    isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
+    hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
+    fraudSignalCount?: IntFieldUpdateOperationsInput | number
+    verificationConfidence?: FloatFieldUpdateOperationsInput | number
+    fullName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirth?: NullableStringFieldUpdateOperationsInput | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
+    biometrics?: IntelBiometricProfileUncheckedUpdateManyWithoutPersonNestedInput
+    riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
+    tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
+    reviewCases?: IntelReviewCaseUncheckedUpdateManyWithoutPersonNestedInput
+  }
+
+  export type IntelPersonCreateWithoutReviewCasesInput = {
+    id?: string
+    globalPersonCode?: string | null
+    globalRiskScore?: number
+    isWatchlisted?: boolean
+    hasDuplicateFlag?: boolean
+    fraudSignalCount?: number
+    verificationConfidence?: number
+    fullName?: string | null
+    dateOfBirth?: string | null
+    address?: string | null
+    gender?: string | null
+    photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
+    verificationStatus?: string | null
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    identifiers?: IntelPersonIdentifierCreateNestedManyWithoutPersonInput
+    biometrics?: IntelBiometricProfileCreateNestedManyWithoutPersonInput
+    riskSignals?: IntelRiskSignalCreateNestedManyWithoutPersonInput
+    tenantPresences?: IntelPersonTenantPresenceCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventCreateNestedManyWithoutPersonInput
+  }
+
+  export type IntelPersonUncheckedCreateWithoutReviewCasesInput = {
+    id?: string
+    globalPersonCode?: string | null
+    globalRiskScore?: number
+    isWatchlisted?: boolean
+    hasDuplicateFlag?: boolean
+    fraudSignalCount?: number
+    verificationConfidence?: number
+    fullName?: string | null
+    dateOfBirth?: string | null
+    address?: string | null
+    gender?: string | null
+    photoUrl?: string | null
+    selfieImageUrl?: string | null
+    providerImageUrl?: string | null
+    verificationStatus?: string | null
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    primaryBiometricProfileId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    identifiers?: IntelPersonIdentifierUncheckedCreateNestedManyWithoutPersonInput
+    biometrics?: IntelBiometricProfileUncheckedCreateNestedManyWithoutPersonInput
+    riskSignals?: IntelRiskSignalUncheckedCreateNestedManyWithoutPersonInput
+    tenantPresences?: IntelPersonTenantPresenceUncheckedCreateNestedManyWithoutPersonInput
+    identityChanges?: IntelIdentityChangeEventUncheckedCreateNestedManyWithoutPersonInput
   }
 
   export type IntelPersonCreateOrConnectWithoutReviewCasesInput = {
@@ -13147,6 +15458,7 @@ export namespace Prisma {
 
   export type IntelPersonUpdateWithoutReviewCasesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -13157,19 +15469,24 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonUncheckedUpdateWithoutReviewCasesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    globalPersonCode?: NullableStringFieldUpdateOperationsInput | string | null
     globalRiskScore?: IntFieldUpdateOperationsInput | number
     isWatchlisted?: BoolFieldUpdateOperationsInput | boolean
     hasDuplicateFlag?: BoolFieldUpdateOperationsInput | boolean
@@ -13180,15 +15497,19 @@ export namespace Prisma {
     address?: NullableStringFieldUpdateOperationsInput | string | null
     gender?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    selfieImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    providerImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     verificationStatus?: NullableStringFieldUpdateOperationsInput | string | null
     verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
     verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    primaryBiometricProfileId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     identifiers?: IntelPersonIdentifierUncheckedUpdateManyWithoutPersonNestedInput
     biometrics?: IntelBiometricProfileUncheckedUpdateManyWithoutPersonNestedInput
     riskSignals?: IntelRiskSignalUncheckedUpdateManyWithoutPersonNestedInput
     tenantPresences?: IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonNestedInput
+    identityChanges?: IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonNestedInput
   }
 
   export type IntelPersonIdentifierCreateManyPersonInput = {
@@ -13204,6 +15525,7 @@ export namespace Prisma {
     id?: string
     modality: string
     embeddingCiphertext: Buffer
+    embeddingHash: string
     qualityScore: number
     isActive?: boolean
     enrolledAt?: Date | string
@@ -13222,7 +15544,18 @@ export namespace Prisma {
   export type IntelPersonTenantPresenceCreateManyPersonInput = {
     id?: string
     tenantId: string
+    businessEntityId?: string | null
+    operatingUnitId?: string | null
+    fleetId?: string | null
+    localEntityType?: string
+    localEntityId?: string | null
     roleType?: string
+    status?: string
+    source?: string
+    verifiedAt?: Date | string | null
+    reverificationRequired?: boolean
+    reverificationReason?: string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
   }
 
@@ -13237,6 +15570,23 @@ export namespace Prisma {
     notes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+  }
+
+  export type IntelIdentityChangeEventCreateManyPersonInput = {
+    id?: string
+    eventType?: string
+    source: string
+    verificationProvider?: string | null
+    verificationCountryCode?: string | null
+    tenantId?: string | null
+    localEntityType?: string | null
+    localEntityId?: string | null
+    changedFields: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: string | null
+    verifiedAt?: Date | string | null
+    createdAt?: Date | string
   }
 
   export type IntelPersonIdentifierUpdateWithoutPersonInput = {
@@ -13270,6 +15620,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13279,6 +15630,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13288,6 +15640,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     modality?: StringFieldUpdateOperationsInput | string
     embeddingCiphertext?: BytesFieldUpdateOperationsInput | Buffer
+    embeddingHash?: StringFieldUpdateOperationsInput | string
     qualityScore?: FloatFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     enrolledAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -13326,21 +15679,54 @@ export namespace Prisma {
   export type IntelPersonTenantPresenceUpdateWithoutPersonInput = {
     id?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IntelPersonTenantPresenceUncheckedUpdateWithoutPersonInput = {
     id?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IntelPersonTenantPresenceUncheckedUpdateManyWithoutPersonInput = {
     id?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
+    businessEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    operatingUnitId?: NullableStringFieldUpdateOperationsInput | string | null
+    fleetId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: StringFieldUpdateOperationsInput | string
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
     roleType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    reverificationRequired?: BoolFieldUpdateOperationsInput | boolean
+    reverificationReason?: NullableStringFieldUpdateOperationsInput | string | null
+    staleFieldKeys?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -13383,6 +15769,57 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type IntelIdentityChangeEventUpdateWithoutPersonInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IntelIdentityChangeEventUncheckedUpdateWithoutPersonInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IntelIdentityChangeEventUncheckedUpdateManyWithoutPersonInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    verificationProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    verificationCountryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    localEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    changedFields?: JsonNullValueInput | InputJsonValue
+    previousValues?: NullableJsonNullValueInput | InputJsonValue
+    newValues?: NullableJsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -13412,6 +15849,10 @@ export namespace Prisma {
      * @deprecated Use IntelPersonTenantPresenceDefaultArgs instead
      */
     export type IntelPersonTenantPresenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = IntelPersonTenantPresenceDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use IntelIdentityChangeEventDefaultArgs instead
+     */
+    export type IntelIdentityChangeEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = IntelIdentityChangeEventDefaultArgs<ExtArgs>
     /**
      * @deprecated Use IntelReviewCaseDefaultArgs instead
      */

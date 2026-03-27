@@ -4,6 +4,7 @@ import { PlatformAuthGuard } from '../auth/guards/platform-auth.guard';
 import type { Prisma } from '../generated/prisma';
 import { AddRiskSignalDto } from './dto/add-risk-signal.dto';
 import { RiskSignalResponseDto } from './dto/risk-signal-response.dto';
+import { PersonRiskSummaryResponseDto } from './dto/risk-summary-response.dto';
 import { RiskService } from './risk.service';
 
 @ApiTags('Risk Signals (Staff)')
@@ -44,6 +45,12 @@ export class RiskController {
     return this.riskService
       .listSignals(personId, activeOnly !== 'false')
       .then((signals) => signals.map((signal) => this.mapSignal(signal)));
+  }
+
+  @Get('persons/:personId/summary')
+  @ApiOkResponse({ type: PersonRiskSummaryResponseDto })
+  getSummary(@Param('personId') personId: string): Promise<PersonRiskSummaryResponseDto> {
+    return this.riskService.getSummary(personId);
   }
 
   @Post()

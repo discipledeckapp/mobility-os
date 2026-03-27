@@ -8,6 +8,7 @@ import { AssignmentDetailScreen } from '../features/assignments/screens/Assignme
 import { AssignmentsScreen } from '../features/assignments/screens/AssignmentsScreen';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { ForgotPasswordScreen } from '../features/auth/screens/ForgotPasswordScreen';
+import { LegalDocumentScreen } from '../features/auth/screens/LegalDocumentScreen';
 import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScreen';
 import { SignupOtpScreen } from '../features/auth/screens/SignupOtpScreen';
 import { SignupScreen } from '../features/auth/screens/SignupScreen';
@@ -115,6 +116,11 @@ export function RootNavigator() {
           isGuarantorSelfServiceSession ? (
           <>
             <Stack.Screen
+              name="LegalDocument"
+              component={LegalDocumentScreen}
+              options={{ title: 'Legal document' }}
+            />
+            <Stack.Screen
               name="GuarantorSelfService"
               component={GuarantorSelfServiceScreen}
               options={{ title: 'Guarantor onboarding' }}
@@ -128,6 +134,11 @@ export function RootNavigator() {
           </>
           ) : isDriverMode ? (
           <>
+            <Stack.Screen
+              name="LegalDocument"
+              component={LegalDocumentScreen}
+              options={{ title: 'Legal document' }}
+            />
             <Stack.Screen
               name="SelfServiceResume"
               component={SelfServiceResumeScreen}
@@ -190,6 +201,11 @@ export function RootNavigator() {
           </>
           ) : (
             <>
+              <Stack.Screen
+                name="LegalDocument"
+                component={LegalDocumentScreen}
+                options={{ title: 'Legal document' }}
+              />
               <Stack.Screen
                 name="OperatorDashboard"
                 component={OperatorDashboardScreen}
@@ -295,6 +311,11 @@ export function RootNavigator() {
         ) : selfServiceToken ? (
           <>
             <Stack.Screen
+              name="LegalDocument"
+              component={LegalDocumentScreen}
+              options={{ title: 'Legal document' }}
+            />
+            <Stack.Screen
               name="SelfServiceResume"
               component={SelfServiceResumeScreen}
               options={{ title: 'Driver verification' }}
@@ -338,6 +359,11 @@ export function RootNavigator() {
           </>
         ) : (
           <>
+            <Stack.Screen
+              name="LegalDocument"
+              component={LegalDocumentScreen}
+              options={{ title: 'Legal document' }}
+            />
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Create organisation' }} />
             <Stack.Screen

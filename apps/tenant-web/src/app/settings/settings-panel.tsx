@@ -15,6 +15,7 @@ import {
 import type { FleetRecord, TenantAuthSessionRecord, TenantRecord, TeamMemberRecord, VehicleRecord } from '../../lib/api-core';
 import {
   changePasswordAction,
+  createDataSubjectRequestAction,
   syncMaintenanceRemindersAction,
   syncRemittanceRemindersAction,
   updateProfileAction,
@@ -23,7 +24,9 @@ import {
   type SettingsActionState,
 } from './actions';
 import type {
+  DataSubjectRequestRecord,
   NotificationPreferencesRecord,
+  PrivacySupportRecord,
   UserNotificationRecord,
 } from '../../lib/api-core';
 import { TeamPanel } from './team-panel';
@@ -46,7 +49,7 @@ const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> =
   marketing_updates: 'Campaigns, offers, and optional marketing updates',
 };
 
-type SettingsSection = 'account' | 'organisation' | 'drivers' | 'fleet' | 'notifications' | 'team';
+type SettingsSection = 'account' | 'organisation' | 'drivers' | 'fleet' | 'notifications' | 'team' | 'privacy';
 
 const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'account', label: 'Account' },
@@ -55,6 +58,7 @@ const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'fleet', label: 'Fleet' },
   { id: 'team', label: 'Team' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'privacy', label: 'Privacy' },
 ];
 
 function EyeIcon() {
@@ -214,19 +218,23 @@ export function SettingsPanel({
   tenant,
   notificationPreferences,
   notifications,
+  privacySupport,
   members,
   fleets,
   vehicles,
   canManage,
+  dataRequests,
 }: {
   session: TenantAuthSessionRecord;
   tenant: TenantRecord;
   notificationPreferences: NotificationPreferencesRecord | null;
   notifications: UserNotificationRecord[];
+  privacySupport: PrivacySupportRecord | null;
   members: TeamMemberRecord[];
   fleets: FleetRecord[];
   vehicles: VehicleRecord[];
   canManage: boolean;
+  dataRequests: DataSubjectRequestRecord[];
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
 
@@ -250,6 +258,10 @@ export function SettingsPanel({
     useActionState(syncMaintenanceRemindersAction, initialState);
   const [passwordState, passwordAction, passwordPending] = useActionState(
     changePasswordAction,
+    initialState,
+  );
+  const [privacyRequestState, privacyRequestAction, privacyRequestPending] = useActionState(
+    createDataSubjectRequestAction,
     initialState,
   );
 
@@ -858,6 +870,126 @@ export function SettingsPanel({
                   <Text tone="muted">
                     No notifications have been delivered to this account yet.
                   </Text>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeSection === 'privacy' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Privacy and data requests</CardTitle>
+                <CardDescription>
+                  Submit access, correction, deletion, or processing-restriction requests without leaving your account workflow.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={privacyRequestAction} className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="requestType">Request type</Label>
+                      <select
+                        className="flex h-10 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mobiris-primary)]"
+                        defaultValue="access"
+                        id="requestType"
+                        name="requestType"
+                      >
+                        <option value="access">Access my data</option>
+                        <option value="correction">Correct my data</option>
+                        <option value="deletion">Delete my data</option>
+                        <option value="restriction">Restrict processing</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="privacySupport">Support contact</Label>
+                      <div className="rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        {privacySupport?.supportEmail ?? 'support@mobiris.ng'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="details">Details</Label>
+                    <textarea
+                      className="min-h-28 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm text-[var(--mobiris-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--mobiris-primary)]"
+                      id="details"
+                      name="details"
+                      placeholder="Tell us what you want reviewed, corrected, deleted, or restricted."
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Mobility OS records the request time, policy version, and request scope for audit. For verification-specific consent, use the dedicated verification consent step.
+                  </p>
+                  {privacyRequestState.error ? <Text tone="danger">{privacyRequestState.error}</Text> : null}
+                  {privacyRequestState.success ? <Text tone="success">{privacyRequestState.success}</Text> : null}
+                  <Button disabled={privacyRequestPending} type="submit">
+                    {privacyRequestPending ? 'Submitting…' : 'Submit privacy request'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Legal and support</CardTitle>
+                <CardDescription>
+                  Current document versions and support channels used for privacy requests.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ReadOnlyField label="Privacy policy version" value={privacySupport?.privacyPolicyVersion ?? '2026-03-27'} />
+                <ReadOnlyField label="Terms version" value={privacySupport?.termsVersion ?? '2026-03-27'} />
+                <ReadOnlyField label="Support email" value={privacySupport?.supportEmail ?? 'support@mobiris.ng'} />
+                {privacySupport?.supportPhonePrimary ? (
+                  <ReadOnlyField label="Primary support phone" value={privacySupport.supportPhonePrimary} />
+                ) : null}
+                {privacySupport?.supportPhoneSecondary ? (
+                  <ReadOnlyField label="Secondary support phone" value={privacySupport.supportPhoneSecondary} />
+                ) : null}
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <a className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline" href="/privacy">
+                    Open Privacy Policy
+                  </a>
+                  <a className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline" href="/terms">
+                    Open Terms of Use
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Submitted requests</CardTitle>
+                <CardDescription>
+                  Track your current privacy and data-protection requests from the same workspace.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dataRequests.length === 0 ? (
+                  <Text tone="muted">No data requests have been submitted from this account yet.</Text>
+                ) : (
+                  dataRequests.map((request) => (
+                    <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 px-4 py-3" key={request.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold capitalize text-[var(--mobiris-ink)]">
+                          {request.requestType.replace(/_/g, ' ')}
+                        </p>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                          {request.status}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Submitted {new Date(request.createdAt).toLocaleString()}
+                      </p>
+                      {request.details ? (
+                        <p className="mt-2 text-sm text-slate-600">{request.details}</p>
+                      ) : null}
+                      {request.resolutionNotes ? (
+                        <p className="mt-2 text-sm text-slate-600">Resolution: {request.resolutionNotes}</p>
+                      ) : null}
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>

@@ -115,6 +115,27 @@ export interface UserNotificationRecord {
   createdAt: string;
 }
 
+export interface DataSubjectRequestRecord {
+  id: string;
+  subjectType: string;
+  subjectId?: string | null;
+  requestType: 'access' | 'correction' | 'deletion' | 'restriction';
+  status: string;
+  contactEmail?: string | null;
+  details?: string | null;
+  resolutionNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrivacySupportRecord {
+  supportEmail: string;
+  supportPhonePrimary?: string | null;
+  supportPhoneSecondary?: string | null;
+  privacyPolicyVersion: string;
+  termsVersion: string;
+}
+
 export interface TenantRecord {
   id: string;
   slug: string;
@@ -204,7 +225,12 @@ export interface DriverRecord {
   lastName: string | null;
   phone: string | null;
   email?: string | null;
+  organisationName?: string | null;
+  photoUrl?: string | null;
+  selfieImageUrl?: string | null;
+  providerImageUrl?: string | null;
   dateOfBirth?: string | null;
+  gender?: string | null;
   nationality?: string | null;
   identityStatus: string;
   identityReviewCaseId?: string | null;
@@ -245,9 +271,15 @@ export interface DriverRecord {
 
 export interface DriverSelfServiceDocumentRecord {
   id: string;
+  tenantId?: string;
+  driverId?: string;
   documentType: string;
+  fileName?: string | null;
+  contentType?: string | null;
+  previewUrl?: string | null;
   status: string;
   uploadedAt?: string | null;
+  createdAt?: string | null;
   reviewedAt?: string | null;
   expiresAt?: string | null;
   rejectionReason?: string | null;
@@ -263,8 +295,12 @@ export interface GuarantorSelfServiceContextRecord {
   guarantorEmail?: string | null;
   guarantorCountryCode?: string | null;
   guarantorRelationship?: string | null;
+  guarantorDateOfBirth?: string | null;
+  guarantorGender?: string | null;
   guarantorPersonId?: string | null;
   guarantorStatus: string;
+  guarantorSelfieImageUrl?: string | null;
+  guarantorProviderImageUrl?: string | null;
   driverName: string;
   driverId: string;
   tenantId: string;
@@ -300,6 +336,7 @@ export interface DriverIdentityResolutionInput {
 export interface DriverIdentityResolutionResult {
   decision: string;
   personId?: string;
+  globalPersonCode?: string;
   reviewCaseId?: string;
   providerLookupStatus?: string;
   providerVerificationStatus?: string;
@@ -318,6 +355,8 @@ export interface DriverIdentityResolutionResult {
     gender?: string;
     address?: string;
     photoUrl?: string;
+    providerImageUrl?: string;
+    selfieImageUrl?: string;
   };
 }
 
@@ -1078,6 +1117,24 @@ export function updateProfile(input: {
   });
 }
 
+export function listDataSubjectRequests(): Promise<DataSubjectRequestRecord[]> {
+  return apiFetch<DataSubjectRequestRecord[]>('/privacy/data-requests');
+}
+
+export function createDataSubjectRequest(input: {
+  requestType: 'access' | 'correction' | 'deletion' | 'restriction';
+  details?: string;
+}): Promise<DataSubjectRequestRecord> {
+  return apiFetch<DataSubjectRequestRecord>('/privacy/data-requests', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPrivacySupport(): Promise<PrivacySupportRecord> {
+  return apiFetch<PrivacySupportRecord>('/privacy/support');
+}
+
 export function getTenantMe(): Promise<TenantRecord> {
   return apiFetch<TenantRecord>(`${API_PATHS.tenants}/me`);
 }
@@ -1174,6 +1231,16 @@ export function listDriverSelfServiceDocuments(
       body: JSON.stringify({ token: selfServiceToken }),
     },
     false,
+  ).then((documents) =>
+    documents.map((document) => ({
+      ...document,
+      previewUrl:
+        document.previewUrl && document.previewUrl.startsWith('http')
+          ? document.previewUrl
+          : document.previewUrl
+            ? `${mobileEnv.apiUrl}${document.previewUrl}`
+            : document.previewUrl,
+    })),
   );
 }
 
@@ -1205,6 +1272,19 @@ export function resolveDriverSelfServiceIdentity(
   );
 }
 
+export function recordDriverSelfServiceVerificationConsent(
+  selfServiceToken: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/verification-consent',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+    },
+    false,
+  );
+}
+
 export function uploadDriverSelfServiceDocument(
   selfServiceToken: string,
   input: {
@@ -1220,6 +1300,20 @@ export function uploadDriverSelfServiceDocument(
     {
       method: 'POST',
       body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function removeDriverSelfServiceDocument(
+  token: string,
+  documentId: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/driver-self-service/documents/${documentId}/remove`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     },
     false,
   );
@@ -1349,6 +1443,19 @@ export function resolveGuarantorSelfServiceIdentity(
     {
       method: 'POST',
       body: JSON.stringify({ token, ...input }),
+    },
+    false,
+  );
+}
+
+export function recordGuarantorSelfServiceVerificationConsent(
+  token: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/guarantor-self-service/verification-consent',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     },
     false,
   );

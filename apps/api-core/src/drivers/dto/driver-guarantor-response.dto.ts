@@ -25,6 +25,18 @@ export class DriverGuarantorResponseDto {
   @ApiPropertyOptional()
   relationship?: string | null;
 
+  @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
+  dateOfBirth?: string | null;
+
+  @ApiPropertyOptional()
+  gender?: string | null;
+
+  @ApiPropertyOptional({ description: 'Stored object URL for the captured live-selfie image.' })
+  selfieImageUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Stored object URL for the provider or government-record identity image.' })
+  providerImageUrl?: string | null;
+
   @ApiProperty()
   status!: string;
 

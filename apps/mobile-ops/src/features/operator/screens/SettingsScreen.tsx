@@ -1,13 +1,17 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import { Alert, StyleSheet, Switch, Text } from 'react-native';
 import {
+  createDataSubjectRequest,
   deactivateTeamMember,
   changeTenantBillingPlan,
+  getPrivacySupport,
   getNotificationPreferences,
   getTenantBillingSummary,
   getTenantMe,
+  listDataSubjectRequests,
   listFleets,
   listVehicles,
   listTenantBillingPlans,
@@ -27,10 +31,13 @@ import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
+import type { RootStackParamList } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 import { useState } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export function SettingsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
     session,
     logout,
@@ -77,6 +84,8 @@ export function SettingsScreen() {
   const [requiredVehicleDocuments, setRequiredVehicleDocuments] = useState(
     (session?.requiredVehicleDocumentSlugs ?? ['vehicle-license', 'insurance']).join(', '),
   );
+  const [privacyRequestType, setPrivacyRequestType] = useState<'access' | 'correction' | 'deletion' | 'restriction'>('access');
+  const [privacyRequestDetails, setPrivacyRequestDetails] = useState('');
   const teamQuery = useQuery({
     queryKey: ['operator-team'],
     queryFn: listTeamMembers,
@@ -108,6 +117,14 @@ export function SettingsScreen() {
   const prefsQuery = useQuery({
     queryKey: ['operator-settings', 'prefs'],
     queryFn: getNotificationPreferences,
+  });
+  const privacySupportQuery = useQuery({
+    queryKey: ['operator-settings', 'privacy-support'],
+    queryFn: getPrivacySupport,
+  });
+  const privacyRequestsQuery = useQuery({
+    queryKey: ['operator-settings', 'privacy-requests'],
+    queryFn: listDataSubjectRequests,
   });
   const inviteMutation = useMutation({
     mutationFn: () =>
@@ -191,6 +208,21 @@ export function SettingsScreen() {
     },
     onError: (error) => {
       Alert.alert('Settings', error instanceof Error ? error.message : 'Unable to update your profile.');
+    },
+  });
+  const privacyRequestMutation = useMutation({
+    mutationFn: () =>
+      createDataSubjectRequest({
+        requestType: privacyRequestType,
+        details: privacyRequestDetails.trim() || undefined,
+      }),
+    onSuccess: async () => {
+      setPrivacyRequestDetails('');
+      await privacyRequestsQuery.refetch();
+      Alert.alert('Privacy', 'Your privacy request has been submitted for review.');
+    },
+    onError: (error) => {
+      Alert.alert('Privacy', error instanceof Error ? error.message : 'Unable to submit this request.');
     },
   });
   const organisationMutation = useMutation({
@@ -380,6 +412,16 @@ export function SettingsScreen() {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
         <Button
+          label="Privacy Policy"
+          variant="secondary"
+          onPress={() => navigation.navigate('LegalDocument', { document: 'privacy' })}
+        />
+        <Button
+          label="Terms of Use"
+          variant="secondary"
+          onPress={() => navigation.navigate('LegalDocument', { document: 'terms' })}
+        />
+        <Button
           label="Refresh remittance reminders"
           variant="secondary"
           loading={reminderMutation.isPending}
@@ -421,6 +463,56 @@ export function SettingsScreen() {
             <Text style={styles.memberName}>{notification.title}</Text>
             <Text style={styles.meta}>{notification.body}</Text>
             <Text style={styles.meta}>{notification.readAt ? 'Read' : 'New'}</Text>
+          </Card>
+        ))}
+      </Card>
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Privacy and data rights</Text>
+        <Text style={styles.meta}>
+          Submit access, correction, deletion, or processing-restriction requests without leaving the app.
+        </Text>
+        <Input
+          label="Request type"
+          helperText="Use access, correction, deletion, or restriction"
+          onChangeText={(value) => {
+            const normalized = value.trim().toLowerCase();
+            setPrivacyRequestType(
+              normalized === 'correction' ||
+                normalized === 'deletion' ||
+                normalized === 'restriction'
+                ? normalized
+                : 'access',
+            );
+          }}
+          value={privacyRequestType}
+        />
+        <Input
+          label="Details"
+          helperText="Explain what you want us to review or correct."
+          multiline
+          onChangeText={setPrivacyRequestDetails}
+          style={styles.multilineInput}
+          textAlignVertical="top"
+          value={privacyRequestDetails}
+        />
+        <Text style={styles.meta}>
+          Support: {privacySupportQuery.data?.supportEmail ?? 'support@mobiris.ng'}
+        </Text>
+        <Text style={styles.meta}>
+          Policy version: {privacySupportQuery.data?.privacyPolicyVersion ?? '2026-03-27'}
+        </Text>
+        <Button
+          label="Submit privacy request"
+          loading={privacyRequestMutation.isPending}
+          onPress={() => privacyRequestMutation.mutate()}
+        />
+        {(privacyRequestsQuery.data ?? []).map((request) => (
+          <Card key={request.id} style={styles.innerCard}>
+            <Text style={styles.memberName}>{request.requestType.toUpperCase()}</Text>
+            <Text style={styles.meta}>Status: {request.status}</Text>
+            <Text style={styles.meta}>Submitted: {new Date(request.createdAt).toLocaleString()}</Text>
+            {request.details ? <Text style={styles.meta}>{request.details}</Text> : null}
+            {request.resolutionNotes ? <Text style={styles.meta}>Resolution: {request.resolutionNotes}</Text> : null}
           </Card>
         ))}
       </Card>
@@ -582,6 +674,10 @@ const styles = StyleSheet.create({
   },
   memberName: { color: tokens.colors.ink, fontSize: 16, fontWeight: '700' },
   meta: { color: tokens.colors.inkSoft, lineHeight: 20 },
+  multilineInput: {
+    minHeight: 112,
+    paddingTop: 12,
+  },
 });
 
 export default SettingsScreen;

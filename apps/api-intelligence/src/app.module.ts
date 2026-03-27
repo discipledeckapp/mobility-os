@@ -22,6 +22,16 @@ function createLoggerModule() {
   const isProduction = process.env.NODE_ENV === 'production';
   const pinoHttp: PinoHttpOptions = {
     level: process.env.LOG_LEVEL ?? 'info',
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.body.selfieImageBase64',
+        'req.body.biometric.embeddingBase64',
+        'req.body.identifiers[*].value',
+      ],
+      censor: '[Redacted]',
+    },
     genReqId: (request, response) => {
       const requestWithId = request as IncomingMessage & {
         id?: string | number;

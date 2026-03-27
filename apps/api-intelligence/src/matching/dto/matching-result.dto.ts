@@ -9,6 +9,9 @@ export class MatchingResultDto {
   personId?: string;
 
   @ApiPropertyOptional()
+  globalPersonCode?: string;
+
+  @ApiPropertyOptional()
   reviewCaseId?: string;
 
   @ApiPropertyOptional()
@@ -36,6 +39,8 @@ export class MatchingResultDto {
     address?: string;
     gender?: string;
     photoUrl?: string;
+    providerImageUrl?: string;
+    selfieImageUrl?: string;
   };
 
   @ApiPropertyOptional({ minimum: 0, maximum: 100 })

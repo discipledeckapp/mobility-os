@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -7,17 +8,25 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { RiskScore } from '@mobility-os/intelligence-domain';
 import { IntelligenceApiKeyGuard } from '../auth/guards/intelligence-api-key.guard';
 import { PlatformAuthGuard } from '../auth/guards/platform-auth.guard';
 // biome-ignore lint/style/useImportType: NestJS @Body DTOs are referenced at runtime.
 import { CreatePersonDto } from './dto/create-person.dto';
 import {
+  IdentityChangeEventResponseDto,
   IntelligenceQueryResultDto,
+  LinkageEventResponseDto,
+  PersonAssociationResponseDto,
   PersonResponseDto,
   RolePresenceDto,
   // biome-ignore lint/style/useImportType: NestJS @Body DTOs are referenced at runtime.
   UpdateWatchlistedDto,
 } from './dto/person-response.dto';
+import {
+  RetireBiometricAssetsDto,
+  RetireBiometricAssetsResponseDto,
+} from './dto/retire-biometric-assets.dto';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { PersonsService } from './persons.service';
 
@@ -36,16 +45,105 @@ import { PersonsService } from './persons.service';
 export class PersonsStaffController {
   constructor(private readonly personsService: PersonsService) {}
 
+  private toPersonResponse(person: {
+    globalRiskScore: number;
+  } & Omit<PersonResponseDto, 'riskBand'>): PersonResponseDto {
+    return {
+      ...person,
+      riskBand: RiskScore.of(person.globalRiskScore).band,
+    };
+  }
+
+  @Get()
+  @ApiOkResponse({ type: PersonResponseDto, isArray: true })
+  list(
+    @Query('q') q?: string,
+    @Query('riskBand') riskBand?: string,
+    @Query('countryCode') countryCode?: string,
+    @Query('watchlistStatus') watchlistStatus?: 'flagged' | 'clear',
+    @Query('reviewState') reviewState?: 'open' | 'in_review' | 'resolved' | 'escalated',
+    @Query('roleType') roleType?: 'driver' | 'guarantor' | 'owner' | 'admin',
+    @Query('reverificationRequired') reverificationRequired?: string,
+  ): Promise<PersonResponseDto[]> {
+    return this.personsService
+      .listForStaff({
+        ...(q ? { q } : {}),
+        ...(riskBand ? { riskBand } : {}),
+        ...(countryCode ? { countryCode } : {}),
+        ...(watchlistStatus ? { watchlistStatus } : {}),
+        ...(reviewState ? { reviewState } : {}),
+        ...(roleType ? { roleType } : {}),
+        ...(reverificationRequired !== undefined
+          ? { reverificationRequired: reverificationRequired === 'true' }
+          : {}),
+      })
+      .then((people) => people.map((person) => this.toPersonResponse(person as never)));
+  }
+
   @Post()
   @ApiCreatedResponse({ type: PersonResponseDto })
   create(@Body() dto: CreatePersonDto): Promise<PersonResponseDto> {
-    return this.personsService.create(dto);
+    return this.personsService.create(dto).then((person) => this.toPersonResponse(person as never));
   }
 
   @Get(':id')
   @ApiOkResponse({ type: PersonResponseDto })
   findById(@Param('id') id: string): Promise<PersonResponseDto> {
-    return this.personsService.findById(id);
+    return this.personsService.findById(id).then((person) => this.toPersonResponse(person as never));
+  }
+
+  @Get(':id/associations')
+  @ApiOkResponse({ type: PersonAssociationResponseDto, isArray: true })
+  listAssociations(@Param('id') id: string): Promise<PersonAssociationResponseDto[]> {
+    return this.personsService.listAssociations(id).then((associations) =>
+      associations.map((association) => ({
+        ...association,
+        staleFieldKeys:
+          Array.isArray(association.staleFieldKeys) &&
+          association.staleFieldKeys.every((value) => typeof value === 'string')
+            ? (association.staleFieldKeys as string[])
+            : null,
+      })),
+    );
+  }
+
+  @Get(':id/linkage-events')
+  @ApiOkResponse({ type: LinkageEventResponseDto, isArray: true })
+  listLinkageEvents(@Param('id') id: string): Promise<LinkageEventResponseDto[]> {
+    return this.personsService.listLinkageEvents(id).then((events) =>
+      events.map((event) => ({
+        ...event,
+        metadata:
+          event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
+            ? (event.metadata as Record<string, unknown>)
+            : null,
+      })),
+    );
+  }
+
+  @Get(':id/identity-changes')
+  @ApiOkResponse({ type: IdentityChangeEventResponseDto, isArray: true })
+  listIdentityChanges(@Param('id') id: string): Promise<IdentityChangeEventResponseDto[]> {
+    return this.personsService.listIdentityChanges(id).then((events) =>
+      events.map((event) => ({
+        ...event,
+        changedFields: Array.isArray(event.changedFields)
+          ? event.changedFields.filter((value: unknown): value is string => typeof value === 'string')
+          : [],
+        previousValues:
+          event.previousValues &&
+          typeof event.previousValues === 'object' &&
+          !Array.isArray(event.previousValues)
+            ? (event.previousValues as Record<string, unknown>)
+            : null,
+        newValues:
+          event.newValues &&
+          typeof event.newValues === 'object' &&
+          !Array.isArray(event.newValues)
+            ? (event.newValues as Record<string, unknown>)
+            : null,
+      })),
+    );
   }
 
   @Patch(':id/risk-score')
@@ -54,7 +152,7 @@ export class PersonsStaffController {
     @Param('id') id: string,
     @Body('score') score: number,
   ): Promise<PersonResponseDto> {
-    return this.personsService.updateRiskScore(id, score);
+    return this.personsService.updateRiskScore(id, score).then((person) => this.toPersonResponse(person as never));
   }
 
   @Patch(':id/watchlisted')
@@ -63,7 +161,9 @@ export class PersonsStaffController {
     @Param('id') id: string,
     @Body() dto: UpdateWatchlistedDto,
   ): Promise<PersonResponseDto> {
-    return this.personsService.setWatchlisted(id, dto.isWatchlisted);
+    return this.personsService
+      .setWatchlisted(id, dto.isWatchlisted)
+      .then((person) => this.toPersonResponse(person as never));
   }
 }
 
@@ -97,5 +197,22 @@ export class PersonsQueryController {
   @ApiOkResponse({ type: RolePresenceDto })
   queryRolePresence(@Param('personId') personId: string): Promise<RolePresenceDto> {
     return this.personsService.queryRolePresence(personId);
+  }
+}
+
+@ApiTags('Persons (Internal)')
+@ApiSecurity('x-api-key')
+@ApiHeader({ name: 'x-api-key', required: true })
+@UseGuards(IntelligenceApiKeyGuard)
+@Controller('internal/persons')
+export class PersonsInternalController {
+  constructor(private readonly personsService: PersonsService) {}
+
+  @Post('retire-biometric-assets')
+  @ApiCreatedResponse({ type: RetireBiometricAssetsResponseDto })
+  retireBiometricAssets(
+    @Body() dto: RetireBiometricAssetsDto,
+  ): Promise<RetireBiometricAssetsResponseDto> {
+    return this.personsService.retireBiometricAssets(dto.urls);
   }
 }

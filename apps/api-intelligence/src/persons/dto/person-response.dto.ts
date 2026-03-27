@@ -6,6 +6,9 @@ export class PersonResponseDto {
   id!: string;
 
   @ApiPropertyOptional()
+  globalPersonCode?: string | null;
+
+  @ApiPropertyOptional()
   fullName?: string | null;
 
   @ApiPropertyOptional({ description: 'ISO-8601 date string from provider enrichment' })
@@ -20,8 +23,17 @@ export class PersonResponseDto {
   @ApiPropertyOptional()
   photoUrl?: string | null;
 
+  @ApiPropertyOptional()
+  selfieImageUrl?: string | null;
+
+  @ApiPropertyOptional()
+  providerImageUrl?: string | null;
+
   @ApiProperty({ minimum: 0, maximum: 100 })
   globalRiskScore!: number;
+
+  @ApiProperty({ description: 'low | medium | high | critical' })
+  riskBand!: string;
 
   @ApiProperty()
   isWatchlisted!: boolean;
@@ -49,6 +61,129 @@ export class PersonResponseDto {
 
   @ApiProperty()
   updatedAt!: Date;
+}
+
+export class PersonAssociationResponseDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  personId!: string;
+
+  @ApiProperty()
+  tenantId!: string;
+
+  @ApiPropertyOptional()
+  businessEntityId?: string | null;
+
+  @ApiPropertyOptional()
+  operatingUnitId?: string | null;
+
+  @ApiPropertyOptional()
+  fleetId?: string | null;
+
+  @ApiProperty()
+  localEntityType!: string;
+
+  @ApiPropertyOptional()
+  localEntityId?: string | null;
+
+  @ApiProperty()
+  roleType!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  source!: string;
+
+  @ApiPropertyOptional()
+  verifiedAt?: Date | null;
+
+  @ApiProperty()
+  reverificationRequired!: boolean;
+
+  @ApiPropertyOptional()
+  reverificationReason?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  staleFieldKeys?: string[] | null;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class LinkageEventResponseDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  personId!: string;
+
+  @ApiProperty()
+  eventType!: string;
+
+  @ApiPropertyOptional()
+  confidenceScore?: number | null;
+
+  @ApiProperty()
+  actor!: string;
+
+  @ApiPropertyOptional()
+  reason?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  metadata?: Record<string, unknown> | null;
+
+  @ApiProperty()
+  occurredAt!: Date;
+}
+
+export class IdentityChangeEventResponseDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  personId!: string;
+
+  @ApiProperty()
+  eventType!: string;
+
+  @ApiProperty()
+  source!: string;
+
+  @ApiPropertyOptional()
+  verificationProvider?: string | null;
+
+  @ApiPropertyOptional()
+  verificationCountryCode?: string | null;
+
+  @ApiPropertyOptional()
+  tenantId?: string | null;
+
+  @ApiPropertyOptional()
+  localEntityType?: string | null;
+
+  @ApiPropertyOptional()
+  localEntityId?: string | null;
+
+  @ApiProperty({ type: [String] })
+  changedFields!: string[];
+
+  @ApiPropertyOptional({ type: Object })
+  previousValues?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({ type: Object })
+  newValues?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional()
+  reason?: string | null;
+
+  @ApiPropertyOptional()
+  verifiedAt?: Date | null;
+
+  @ApiProperty()
+  createdAt!: Date;
 }
 
 // Tenant-facing view — only derived signals, never raw cross-tenant data.
@@ -83,6 +218,12 @@ export class IntelligenceQueryResultDto {
 
   @ApiPropertyOptional({ description: 'ISO 3166-1 alpha-2 country code of verification context' })
   verificationCountryCode?: string | null;
+
+  @ApiProperty()
+  reverificationRequired!: boolean;
+
+  @ApiPropertyOptional()
+  reverificationReason?: string | null;
 }
 
 // Tenant-facing role presence summary — aggregate role signals only.

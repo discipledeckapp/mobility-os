@@ -10,8 +10,9 @@ export function middleware(request: NextRequest) {
   const isPublicInviteRoute = pathname === '/staff/accept';
   const isForgotPasswordRoute = pathname === '/forgot-password';
   const isResetPasswordRoute = pathname === '/reset-password';
+  const isLegalRoute = pathname === '/privacy' || pathname === '/terms';
   const isPublicRoute =
-    isLoginRoute || isPublicInviteRoute || isForgotPasswordRoute || isResetPasswordRoute;
+    isLoginRoute || isPublicInviteRoute || isForgotPasswordRoute || isResetPasswordRoute || isLegalRoute;
 
   if (!hasUsableSession && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);

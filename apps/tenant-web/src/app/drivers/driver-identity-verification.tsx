@@ -662,6 +662,20 @@ export function DriverIdentityVerification({
                 </span>
               </label>
 
+              {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
+                <Text tone="muted">
+                  By continuing you agree to the{' '}
+                  <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
+                    Terms of Use
+                  </a>{' '}
+                  and{' '}
+                  <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
+                    Privacy Policy
+                  </a>
+                  .
+                </Text>
+              ) : null}
+
               <Button
                 disabled={!livenessDone || !idPhaseComplete || isResolving || !session}
                 type="submit"

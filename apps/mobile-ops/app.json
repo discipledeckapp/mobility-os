@@ -9,7 +9,7 @@
     "version": "1.1.0",
     "icon": "../../docs/ux/mobiris-brand/icons/png/icon-1024.png",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -19,7 +19,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Mobiris to access photos for driver verification documents.",
-          "cameraPermission": "Allow Mobiris to use the camera for driver selfie verification."
+          "cameraPermission": "Allow Mobiris to use the camera for live selfie and liveness verification during onboarding."
         }
       ],
       "@react-native-community/datetimepicker"
@@ -34,10 +34,7 @@
         "backgroundColor": "#0F172A"
       },
       "package": "com.mobiris.mobileops",
-      "versionCode": 4,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "versionCode": 4
     },
     "extra": {
       "apiUrl": "https://api.mobiris.ng/api/v1",

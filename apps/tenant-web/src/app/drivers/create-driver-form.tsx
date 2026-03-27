@@ -122,43 +122,43 @@ export function CreateDriverForm({
             </HelperDisclosure>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              name="phone"
-              placeholder="08012345678 or +2348012345678"
-            />
-            <HelperDisclosure summary="Phone entry help">
-              Optional at creation. The driver can provide their phone during
-              self-service onboarding.
-            </HelperDisclosure>
-          </div>
+          <div className="md:col-span-2">
+            <HelperDisclosure summary="Add optional profile details now">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    placeholder="08012345678 or +2348012345678"
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First name</Label>
-            <Input id="firstName" name="firstName" placeholder="Emeka" />
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input id="firstName" name="firstName" placeholder="Emeka" />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last name</Label>
-            <Input id="lastName" name="lastName" placeholder="Okonkwo" />
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input id="lastName" name="lastName" placeholder="Okonkwo" />
+                </div>
 
-          <SearchableSelect
-            inputId="nationality"
-            label="Country"
-            name="nationality"
-            onChange={setCountryCode}
-            options={countryOptions}
-            placeholder="Select country"
-            value={countryCode}
-          />
-          <div className="-mt-2 md:col-span-2">
-            <HelperDisclosure summary="Country selection help">
-              Driver country defaults to the organisation country. Change it
-              here when the driver should follow a different country profile for
-              identity verification.
+                <SearchableSelect
+                  inputId="nationality"
+                  label="Country"
+                  name="nationality"
+                  onChange={setCountryCode}
+                  options={countryOptions}
+                  placeholder="Select country"
+                  value={countryCode}
+                />
+              </div>
+              <div className="pt-3">
+                <Text tone="muted">
+                  These fields are optional. The fastest path is still: choose fleet, enter email, send invite.
+                </Text>
+              </div>
             </HelperDisclosure>
           </div>
 

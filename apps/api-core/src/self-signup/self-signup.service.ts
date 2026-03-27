@@ -183,7 +183,7 @@ export class SelfSignupService {
 
     // Log OTP to console in non-production for easy dev access
     if (this.config.get('NODE_ENV') !== 'production') {
-      this.logger.log(`[DEV] Signup OTP for ${dto.adminEmail}: ${code}`);
+      this.logger.log('[DEV] Signup OTP generated for organisation verification. Check the database or mail stub for the code.');
     }
 
     // Send branded OTP email

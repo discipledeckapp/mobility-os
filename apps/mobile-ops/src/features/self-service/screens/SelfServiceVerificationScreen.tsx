@@ -25,6 +25,8 @@ import {
 import {
   createDriverSelfServiceLivenessSession,
   initiateDriverKycCheckout,
+  recordDriverSelfServiceVerificationConsent,
+  removeDriverSelfServiceDocument,
   resolveDriverSelfServiceIdentity,
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
@@ -40,6 +42,7 @@ import { FullScreenBlockingLoader, InlineProcessingCard } from '../../../compone
 import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
 import { useSelfService } from '../../../contexts/self-service-context';
+import { useAuth } from '../../../contexts/auth-context';
 import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
@@ -80,12 +83,14 @@ export function SelfServiceVerificationScreen({
   navigation,
 }: ScreenProps<'SelfServiceVerification'>) {
   const { showToast } = useToast();
+  const { logout } = useAuth();
   const {
     token,
     driver,
     documents,
     isRefreshing,
     refreshSelfService,
+    clearSelfService,
   } = useSelfService();
 
   const driverPaysKyc = driver?.driverPaysKyc ?? false;
@@ -104,10 +109,13 @@ export function SelfServiceVerificationScreen({
   const [submittingIdentity, setSubmittingIdentity] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [removingDocumentId, setRemovingDocumentId] = useState<string | null>(null);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [initiatingPayment, setInitiatingPayment] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [recordingConsent, setRecordingConsent] = useState(false);
   const previousCountryCodeRef = useRef(countryCode);
   const [firstName, setFirstName] = useState(driver?.firstName ?? '');
   const [lastName, setLastName] = useState(driver?.lastName ?? '');
@@ -115,7 +123,11 @@ export function SelfServiceVerificationScreen({
   const [phone, setPhone] = useState(driver?.phone ?? '');
   const [email, setEmail] = useState(driver?.email ?? '');
   const isProcessing =
-    submittingIdentity || uploadingDocument || initiatingPayment || savingProfile;
+    submittingIdentity ||
+    uploadingDocument ||
+    initiatingPayment ||
+    savingProfile ||
+    recordingConsent;
   const processingVariant = submittingIdentity
     ? 'verification'
     : uploadingDocument
@@ -129,16 +141,21 @@ export function SelfServiceVerificationScreen({
       ? 'Uploading document'
       : initiatingPayment
         ? 'Starting payment'
-        : 'Saving onboarding details';
+        : recordingConsent
+          ? 'Recording consent'
+          : 'Saving onboarding details';
   const processingMessage = submittingIdentity
     ? 'Validating your live selfie, checking identity records, and recording the verification result.'
     : uploadingDocument
       ? 'Preparing your document, uploading it securely, and attaching it to your onboarding record.'
       : initiatingPayment
         ? 'Preparing your checkout and linking it to the next verification step.'
-        : 'Saving your profile details and preserving your onboarding progress.';
+        : recordingConsent
+          ? 'Saving your verification consent, policy version, and onboarding audit trail.'
+          : 'Saving your profile details and preserving your onboarding progress.';
 
   const profileComplete = Boolean(firstName.trim() && lastName.trim() && dateOfBirth.trim());
+  const organisationName = driver?.organisationName ?? 'your organisation';
 
   const identitySubmitted = useMemo(
     () =>
@@ -600,6 +617,59 @@ export function SelfServiceVerificationScreen({
     }
   };
 
+  const onRemoveDocument = async (documentId: string) => {
+    if (!token) return;
+    try {
+      setRemovingDocumentId(documentId);
+      await removeDriverSelfServiceDocument(token, documentId);
+      await refreshSelfService();
+      showToast('Document removed.', 'success');
+    } catch (error) {
+      Alert.alert(
+        'Driver documents',
+        error instanceof Error ? error.message : 'Unable to remove the document.',
+      );
+    } finally {
+      setRemovingDocumentId(null);
+    }
+  };
+
+  const onExitOnboarding = async () => {
+    await clearSelfService();
+    if (driver?.hasMobileAccess) {
+      await logout();
+    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: driver?.hasMobileAccess ? 'Login' : 'SelfServiceOtp' }],
+    });
+  };
+
+  const proceedFromOverview = async (nextStep: WizardStep) => {
+    if (!token) {
+      showToast('Verification session is missing. Restart from your invitation link.', 'error');
+      return;
+    }
+
+    if (!consentAccepted) {
+      showToast('Confirm the verification consent before continuing.', 'error');
+      return;
+    }
+
+    setRecordingConsent(true);
+    try {
+      await recordDriverSelfServiceVerificationConsent(token);
+      setCurrentStep(nextStep);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Unable to record consent right now.',
+        'error',
+      );
+    } finally {
+      setRecordingConsent(false);
+    }
+  };
+
   if (!token || !driver) {
     return (
       <Screen contentContainerStyle={styles.centered}>
@@ -654,7 +724,7 @@ export function SelfServiceVerificationScreen({
           <Text style={styles.kicker}>Driver verification</Text>
           <Text style={styles.title}>What to expect</Text>
           <Text style={styles.copy}>
-            Complete the steps below to finish your onboarding. Here's what we'll collect:
+            Complete onboarding for {organisationName}. Mobiris uses identity checks, document controls, and guarantor accountability to reduce fraud and create trusted onboarding.
           </Text>
 
           {identityVerificationRequired ? (
@@ -690,14 +760,39 @@ export function SelfServiceVerificationScreen({
             <View style={styles.paymentNotice}>
               <Text style={styles.paymentNoticeTitle}>Verification fee required</Text>
               <Text style={styles.paymentNoticeBody}>
-                Your organisation requires you to pay for your own identity verification before the process can begin.
+                {organisationName} requires a verification payment before NIN and live selfie checks can begin. Failed verification from a wrong NIN or another person&apos;s face is not refundable.
               </Text>
             </View>
           ) : (
             <View style={styles.orgCoversNotice}>
-              <Text style={styles.orgCoversText}>Your organisation covers the verification cost.</Text>
+              <Text style={styles.orgCoversText}>{organisationName} covers the verification cost.</Text>
             </View>
           )}
+
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: consentAccepted }}
+            onPress={() => setConsentAccepted((current) => !current)}
+            style={styles.consentRow}
+          >
+            <View style={[styles.checkbox, consentAccepted ? styles.checkboxActive : null]} />
+            <Text style={styles.consentText}>
+              I understand Mobiris will collect my NIN details, live selfie, and identity match result, and that failed verification is not refundable.
+            </Text>
+          </Pressable>
+          <Text style={styles.legalText}>
+            By continuing you agree to the Mobiris Terms of Use and Privacy Policy.
+          </Text>
+          <View style={styles.legalLinkRow}>
+            <Pressable onPress={() => navigation.navigate('LegalDocument', { document: 'terms' })}>
+              <Text style={styles.legalLink}>View Terms</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate('LegalDocument', { document: 'privacy' })}
+            >
+              <Text style={styles.legalLink}>View Privacy Policy</Text>
+            </Pressable>
+          </View>
 
           <View style={styles.badgeRow}>
             <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
@@ -723,10 +818,12 @@ export function SelfServiceVerificationScreen({
         ) : null}
 
         <Card style={styles.section}>
+          <Button label="Save and exit" variant="secondary" onPress={() => void onExitOnboarding()} />
           {!profileComplete ? (
             <Button
               label="Continue to profile"
-              onPress={() => setCurrentStep('profile')}
+              disabled={!consentAccepted}
+              onPress={() => void proceedFromOverview('profile')}
             />
           ) : identitySubmitted ? (
             <Button
@@ -736,12 +833,14 @@ export function SelfServiceVerificationScreen({
           ) : driverPaysKyc && !kycPaymentVerified ? (
             <Button
               label="Continue to payment"
-              onPress={() => setCurrentStep('payment')}
+              disabled={!consentAccepted}
+              onPress={() => void proceedFromOverview('payment')}
             />
           ) : (
             <Button
               label="Start verification"
-              onPress={() => setCurrentStep('identity')}
+              disabled={!consentAccepted}
+              onPress={() => void proceedFromOverview('identity')}
             />
           )}
         </Card>
@@ -826,7 +925,7 @@ export function SelfServiceVerificationScreen({
           <Text style={styles.kicker}>Identity verification fee</Text>
           <Text style={styles.title}>Pay before verification</Text>
           <Text style={styles.copy}>
-            Your organisation requires you to pay the verification fee before your identity verification can begin. This is a one-time payment per verification.
+            {organisationName} requires the verification fee before identity checks can begin. This fee is tied to this onboarding flow and will not be charged twice once confirmed.
           </Text>
 
           <View style={styles.breakdownCard}>
@@ -919,7 +1018,7 @@ export function SelfServiceVerificationScreen({
           <Text style={styles.stepLabel}>Step 2 — Identification numbers</Text>
           <Text style={styles.sectionTitle}>Enter your ID numbers</Text>
           <Text style={styles.copy}>
-            Enter your government-issued ID numbers exactly as they appear on the document.
+            Enter the identifier requested by {organisationName}. Mobiris will use your live selfie and NIN-linked records to verify and then auto-fill available identity details.
           </Text>
           {identifierTypes.map((identifier) => (
             <Input
@@ -1058,6 +1157,7 @@ export function SelfServiceVerificationScreen({
               ) : null}
 
               <Button label="Continue to documents" onPress={() => setCurrentStep('documents')} />
+              <Button label="Add guarantor next" variant="secondary" onPress={() => navigation.navigate('DriverGuarantor')} />
             </View>
           ) : identitySubmitted ? (
             <View style={styles.resultCard}>
@@ -1132,7 +1232,7 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.kicker}>Documents</Text>
         <Text style={styles.title}>Upload documents</Text>
         <Text style={styles.copy}>
-          Upload each required document from this device. Files must be under 10 MB (PDF, JPG, PNG).
+          Upload the documents {organisationName} requires. Optional documents can be skipped. Files must be under 10 MB (PDF, JPG, PNG, or WEBP).
         </Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -1159,16 +1259,33 @@ export function SelfServiceVerificationScreen({
           <View key={document.slug} style={styles.documentRow}>
             <View style={styles.documentCopy}>
               <Text style={styles.documentTitle}>{document.name}</Text>
+              <Text style={styles.meta}>{document.uploaded ? 'Uploaded' : 'Not uploaded yet'}</Text>
               <Text style={styles.meta}>
                 {document.latestDocument
                   ? `Status: ${formatDocumentStatus(document.latestDocument.status)}`
                   : 'Not uploaded yet'}
               </Text>
             </View>
-            <Badge
-              label={document.latestDocument ? formatDocumentStatus(document.latestDocument.status) : 'Missing'}
-              tone={documentStatusTone(document.latestDocument?.status)}
-            />
+            <View style={styles.documentActionColumn}>
+              <Badge
+                label={document.latestDocument ? formatDocumentStatus(document.latestDocument.status) : 'Missing'}
+                tone={documentStatusTone(document.latestDocument?.status)}
+              />
+              {document.latestDocument?.previewUrl ? (
+                <Button
+                  label="Open"
+                  variant="secondary"
+                  onPress={() => void Linking.openURL(document.latestDocument?.previewUrl ?? '')}
+                />
+              ) : null}
+              {document.latestDocument ? (
+                <Button
+                  label={removingDocumentId === document.latestDocument.id ? 'Removing…' : 'Remove'}
+                  variant="secondary"
+                  onPress={() => void onRemoveDocument(document.latestDocument!.id)}
+                />
+              ) : null}
+            </View>
           </View>
         ))}
       </Card>
@@ -1177,8 +1294,10 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.sectionTitle}>Next step</Text>
         <Text style={styles.copy}>
           {!driver.hasMobileAccess
-            ? 'Set up your sign-in email and password so you can log into the app once approved.'
-            : "Check your readiness status to see what's still needed for activation."}
+            ? 'Set up your sign-in email and password so you can resume onboarding and log in once approved.'
+            : documentChecklist.every((document) => document.uploaded)
+              ? 'Your onboarding is complete for now. Check readiness to see any remaining operator review steps.'
+              : 'Upload any remaining required documents, or skip optional ones and finish onboarding.'}
         </Text>
         {!driver.hasMobileAccess ? (
           <Button
@@ -1187,7 +1306,7 @@ export function SelfServiceVerificationScreen({
           />
         ) : null}
         <Button
-          label="Check readiness"
+          label={documentChecklist.every((document) => document.uploaded) ? 'Finish onboarding' : 'Check readiness'}
           variant="secondary"
           onPress={() => navigation.navigate('SelfServiceReadiness')}
         />
@@ -1347,6 +1466,7 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
   },
   documentCopy: { flex: 1, gap: 4 },
+  documentActionColumn: { alignItems: 'flex-end', gap: tokens.spacing.xs },
   documentTitle: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
   progressRow: {
     flexDirection: 'row',
@@ -1407,6 +1527,49 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
   },
   orgCoversText: { color: '#15803d', fontSize: 13, fontWeight: '600' },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: tokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#ffffff',
+    padding: tokens.spacing.sm,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: tokens.colors.border,
+    backgroundColor: '#ffffff',
+    marginTop: 2,
+  },
+  checkboxActive: {
+    borderColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primary,
+  },
+  consentText: {
+    color: tokens.colors.ink,
+    fontSize: 13,
+    lineHeight: 19,
+    flex: 1,
+  },
+  legalText: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  legalLinkRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.md,
+  },
+  legalLink: {
+    color: tokens.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   breakdownCard: {
     borderWidth: 1,
     borderColor: tokens.colors.border,

@@ -10,6 +10,7 @@ export type RootStackParamList = {
   };
   ForgotPassword: undefined;
   ResetPassword: { email?: string } | undefined;
+  LegalDocument: { document: 'privacy' | 'terms' };
   SelfServiceOtp: undefined;
   SelfServiceResume: { token?: string } | undefined;
   SelfServiceVerification: undefined;

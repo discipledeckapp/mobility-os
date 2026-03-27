@@ -37,7 +37,8 @@ datasource db {
 // See docs/intelligence/person-graph.md.
 
 model IntelPerson {
-  id String @id @default(cuid())
+  id               String  @id @default(cuid())
+  globalPersonCode String? @unique
 
   // Aggregate risk score 0–100. Recomputed when any contributing signal changes.
   globalRiskScore  Int     @default(0)
@@ -48,15 +49,18 @@ model IntelPerson {
   fraudSignalCount Int     @default(0)
 
   // Confidence of the most recent successful identity verification (0.0–1.0).
-  verificationConfidence  Float   @default(0)
-  fullName                String?
-  dateOfBirth             String?
-  address                 String?
-  gender                  String?
-  photoUrl                String?
-  verificationStatus      String?
-  verificationProvider    String?
-  verificationCountryCode String?
+  verificationConfidence    Float   @default(0)
+  fullName                  String?
+  dateOfBirth               String?
+  address                   String?
+  gender                    String?
+  photoUrl                  String?
+  selfieImageUrl            String?
+  providerImageUrl          String?
+  verificationStatus        String?
+  verificationProvider      String?
+  verificationCountryCode   String?
+  primaryBiometricProfileId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,6 +70,7 @@ model IntelPerson {
   riskSignals     IntelRiskSignal[]
   tenantPresences IntelPersonTenantPresence[]
   reviewCases     IntelReviewCase[]
+  identityChanges IntelIdentityChangeEvent[]
 
   @@map("intel_persons")
 }
@@ -117,6 +122,7 @@ model IntelBiometricProfile {
   // AES-256-GCM ciphertext of the embedding vector (Bytes, not vector type).
   // The nonce / IV is prepended to the ciphertext (first 12 bytes).
   embeddingCiphertext Bytes
+  embeddingHash       String
   // Quality score of the source image at enrollment time (0.0–1.0).
   qualityScore        Float
   // False after a superseding enrollment or erasure request.
@@ -127,6 +133,7 @@ model IntelBiometricProfile {
   person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
 
   @@index([personId, modality, isActive])
+  @@index([embeddingHash, modality, isActive])
   @@map("intel_biometric_profiles")
 }
 
@@ -164,25 +171,60 @@ model IntelRiskSignal {
 // Tenants do not see each other's records; used internally for risk aggregation.
 
 model IntelPersonTenantPresence {
-  id       String @id @default(cuid())
-  personId String
+  id                     String    @id @default(cuid())
+  personId               String
   // References tenants.id in api-core (cross-schema, no Prisma relation).
-  tenantId String
+  tenantId               String
+  businessEntityId       String?
+  operatingUnitId        String?
+  fleetId                String?
+  localEntityType        String    @default("driver")
+  localEntityId          String?
   // Operational role: 'driver' | 'guarantor'
   // Defaults to 'driver' so existing rows retain their meaning without migration.
-  roleType String @default("driver")
+  roleType               String    @default("driver")
+  status                 String    @default("active")
+  source                 String    @default("identity_resolution")
+  verifiedAt             DateTime?
+  reverificationRequired Boolean   @default(false)
+  reverificationReason   String?
+  staleFieldKeys         Json?
 
   createdAt DateTime @default(now())
 
   person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
 
-  // A person appears once per (tenant, role) pair.
-  // The same person CAN appear as both driver and guarantor at the same tenant —
-  // which is a valid state (surfaced as a cross_role_presence risk signal).
-  @@unique([personId, tenantId, roleType])
+  // A person appears once per (tenant, role, local record) tuple.
+  // This supports the same human appearing as driver, guarantor, or other
+  // contextual roles across the platform without duplicating the canonical person.
+  @@unique([personId, tenantId, roleType, localEntityType, localEntityId])
   @@index([tenantId])
   @@index([personId, roleType])
+  @@index([personId, localEntityType])
   @@map("intel_person_tenant_presences")
+}
+
+model IntelIdentityChangeEvent {
+  id                      String    @id @default(cuid())
+  personId                String
+  eventType               String    @default("canonical_identity_updated")
+  source                  String
+  verificationProvider    String?
+  verificationCountryCode String?
+  tenantId                String?
+  localEntityType         String?
+  localEntityId           String?
+  changedFields           Json
+  previousValues          Json?
+  newValues               Json?
+  reason                  String?
+  verifiedAt              DateTime?
+  createdAt               DateTime  @default(now())
+
+  person IntelPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([personId, createdAt])
+  @@map("intel_identity_change_events")
 }
 
 // ── Review Cases ──────────────────────────────────────────────────────────────

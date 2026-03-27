@@ -10,6 +10,6 @@ import { DriversService } from './drivers.service';
   imports: [AuthModule, TenantBillingModule],
   controllers: [DriversController, DriverSelfServiceController, GuarantorSelfServiceController],
   providers: [DriversService, IntelligenceClient, DocumentStorageService],
-  exports: [DriversService],
+  exports: [DriversService, IntelligenceClient, DocumentStorageService],
 })
 export class DriversModule {}

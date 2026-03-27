@@ -92,6 +92,14 @@ export class ProviderVerificationContextDto {
   selfieImageBase64?: string;
 
   @ApiPropertyOptional({
+    description: 'Stored object URL for the captured live-selfie image',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  selfieImageUrl?: string;
+
+  @ApiPropertyOptional({
     description:
       'Provider-produced liveness evidence, such as a Rekognition session id or vendor-scored outcome',
     type: Object,
@@ -105,6 +113,47 @@ export class ProviderVerificationContextDto {
     passed?: boolean;
     confidenceScore?: number;
   };
+}
+
+export class PersonAssociationContextDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  localEntityType!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  localEntityId!: string;
+
+  @ApiProperty({ enum: ['driver', 'guarantor', 'owner', 'admin'] })
+  @IsIn(['driver', 'guarantor', 'owner', 'admin'])
+  roleType!: 'driver' | 'guarantor' | 'owner' | 'admin';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  businessEntityId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  operatingUnitId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fleetId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  source?: string;
 }
 
 export class ResolveEnrollmentDto {
@@ -156,4 +205,11 @@ export class ResolveEnrollmentDto {
   @ValidateNested()
   @Type(() => ProviderVerificationContextDto)
   providerVerification?: ProviderVerificationContextDto;
+
+  @ApiPropertyOptional({ type: PersonAssociationContextDto })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PersonAssociationContextDto)
+  association?: PersonAssociationContextDto;
 }

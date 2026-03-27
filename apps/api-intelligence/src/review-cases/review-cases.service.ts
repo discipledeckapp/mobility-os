@@ -29,9 +29,16 @@ export class ReviewCasesService {
     });
   }
 
-  async list(status?: string): Promise<IntelReviewCase[]> {
+  async list(input: { status?: string; personId?: string } = {}): Promise<IntelReviewCase[]> {
     return this.prisma.intelReviewCase.findMany({
-      ...(status ? { where: { status } } : {}),
+      ...((input.status || input.personId)
+        ? {
+            where: {
+              ...(input.status ? { status: input.status } : {}),
+              ...(input.personId ? { personId: input.personId } : {}),
+            },
+          }
+        : {}),
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     });
   }

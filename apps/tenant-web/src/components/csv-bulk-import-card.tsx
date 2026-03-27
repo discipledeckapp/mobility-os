@@ -9,6 +9,7 @@ type CsvActionState = {
 };
 
 export function CsvBulkImportCard({
+  id,
   title,
   description,
   formAction,
@@ -17,6 +18,7 @@ export function CsvBulkImportCard({
   checkboxName,
   checkboxLabel,
 }: {
+  id?: string;
   title: string;
   description: string;
   formAction: (
@@ -31,7 +33,7 @@ export function CsvBulkImportCard({
   const [state, action, isPending] = useActionState(formAction, {});
 
   return (
-    <Card className="border-slate-200 bg-white">
+    <Card className="border-slate-200 bg-white" {...(id ? { id } : {})}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

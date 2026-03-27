@@ -1,104 +1,59 @@
 <?php
 /**
- * Mobiris V2 Theme Functions
- * Transport risk infrastructure for Nigerian operators.
+ * Mobiris V2 — functions.php
+ * Loads all theme modules in dependency order.
  *
- * @package mobiris-v2
+ * @package MobirisV2
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'MV2_VERSION', '2.0.0' );
-define( 'MV2_DIR', get_template_directory() );
-define( 'MV2_URI', get_template_directory_uri() );
-define( 'MV2_TEXT_DOMAIN', 'mobiris-v2' );
+define( 'MV2_DIR',     get_template_directory() );
+define( 'MV2_URI',     get_template_directory_uri() );
+define( 'MV2_TEXT',    'mobiris-v2' );
+
+require_once MV2_DIR . '/inc/setup.php';
+require_once MV2_DIR . '/inc/enqueue.php';
+require_once MV2_DIR . '/inc/customizer.php';
+require_once MV2_DIR . '/inc/post-types.php';
+require_once MV2_DIR . '/inc/page-creation.php';
+require_once MV2_DIR . '/inc/ajax.php';
 
 /**
- * Load all inc/ files.
+ * Load a homepage part safely.
  */
-$mv2_includes = array(
-	'inc/setup.php',
-	'inc/enqueue.php',
-	'inc/post-types.php',
-	'inc/page-creation.php',
-	'inc/ajax.php',
-	'inc/customizer.php',
-);
-
-foreach ( $mv2_includes as $file ) {
-	$filepath = MV2_DIR . '/' . $file;
-	if ( file_exists( $filepath ) ) {
-		require_once $filepath;
-	}
-}
-
-/**
- * Helper: get customizer setting with fallback.
- *
- * @param string $key     Customizer key without mv2_ prefix.
- * @param mixed  $default Default value.
- * @return mixed
- */
-function mv2_option( $key, $default = '' ) {
-	return get_theme_mod( 'mv2_' . $key, $default );
-}
-
-/**
- * Build a WhatsApp URL with a pre-filled message.
- *
- * @param string $message Pre-filled message.
- * @return string
- */
-function mv2_wa_url( $message = '' ) {
-	$number = mv2_option( 'whatsapp_number', '2348053108039' );
-	$number = preg_replace( '/\D/', '', $number );
-	if ( $message ) {
-		return 'https://wa.me/' . $number . '?text=' . rawurlencode( $message );
-	}
-	return 'https://wa.me/' . $number;
-}
-
-/**
- * Format Nigerian Naira amount.
- *
- * @param int|float $amount Amount in NGN.
- * @return string
- */
-function mv2_naira( $amount ) {
-	return '&#8358;' . number_format( (float) $amount, 0, '.', ',' );
-}
-
-/**
- * Get app signup URL.
- *
- * @return string
- */
-function mv2_app_url() {
-	return mv2_option( 'app_url', 'https://app.mobiris.ng/signup' );
-}
-
-/**
- * Render inline SVG safely.
- *
- * @param string $name SVG name in assets/svg/.
- * @return string
- */
-function mv2_svg( $name ) {
-	$path = MV2_DIR . '/assets/svg/' . sanitize_file_name( $name ) . '.svg';
+function mv2_part( $name ) {
+	$path = MV2_DIR . '/parts/home/' . $name . '.php';
 	if ( file_exists( $path ) ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		return file_get_contents( $path );
+		include $path;
 	}
-	return '';
 }
 
 /**
- * Check if current page is front page.
- *
- * @return bool
+ * Load a global part safely.
  */
-function mv2_is_front() {
-	return is_front_page() && ! is_home();
+function mv2_global( $name ) {
+	$path = MV2_DIR . '/parts/global/' . $name . '.php';
+	if ( file_exists( $path ) ) {
+		include $path;
+	}
 }
+
+/**
+ * Excerpt length.
+ */
+function mv2_excerpt_length( $l ) { return 22; }
+add_filter( 'excerpt_length', 'mv2_excerpt_length' );
+
+function mv2_excerpt_more( $m ) { return '…'; }
+add_filter( 'excerpt_more', 'mv2_excerpt_more' );
+
+/**
+ * Body classes.
+ */
+function mv2_body_classes( $classes ) {
+	if ( is_singular() ) $classes[] = 'mv2-singular';
+	return $classes;
+}
+add_filter( 'body_class', 'mv2_body_classes' );

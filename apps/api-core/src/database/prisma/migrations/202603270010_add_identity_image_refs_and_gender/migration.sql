@@ -1,0 +1,10 @@
+ALTER TABLE "drivers"
+  ADD COLUMN IF NOT EXISTS "gender" TEXT,
+  ADD COLUMN IF NOT EXISTS "selfieImageUrl" TEXT,
+  ADD COLUMN IF NOT EXISTS "providerImageUrl" TEXT;
+
+ALTER TABLE "driver_guarantors"
+  ADD COLUMN IF NOT EXISTS "dateOfBirth" TEXT,
+  ADD COLUMN IF NOT EXISTS "gender" TEXT,
+  ADD COLUMN IF NOT EXISTS "selfieImageUrl" TEXT,
+  ADD COLUMN IF NOT EXISTS "providerImageUrl" TEXT;

@@ -83,6 +83,8 @@ type DriverIntelligenceSummary = {
   riskBand?: string | undefined;
   isWatchlisted?: boolean | undefined;
   duplicateIdentityFlag?: boolean | undefined;
+  reverificationRequired?: boolean | undefined;
+  reverificationReason?: string | null | undefined;
   verificationConfidence?: number | undefined;
   verificationStatus?: string | undefined;
   verificationProvider?: string | undefined;
@@ -96,6 +98,8 @@ type DriverGuarantorSummary = {
   guarantorPersonId?: string | null;
   guarantorRiskBand?: string | null;
   guarantorIsWatchlisted?: boolean | null;
+  guarantorReverificationRequired?: boolean | null;
+  guarantorReverificationReason?: string | null;
   guarantorIsAlsoDriver?: boolean;
 };
 
@@ -379,6 +383,8 @@ export class DriversController {
     return {
       ...this.toResponse(driver),
       photoUrl: hasPortrait ? `/api/drivers/${id}/portrait` : null,
+      selfieImageUrl: driver.selfieImageUrl ?? null,
+      providerImageUrl: driver.providerImageUrl ?? null,
     };
   }
 
@@ -604,7 +610,11 @@ export class DriversController {
       lastName: driver.lastName,
       phone: driver.phone,
       email: driver.email,
+      organisationName: (driver as { organisationName?: string | null }).organisationName ?? null,
+      selfieImageUrl: driver.selfieImageUrl ?? null,
+      providerImageUrl: driver.providerImageUrl ?? null,
       dateOfBirth: driver.dateOfBirth,
+      gender: driver.gender ?? null,
       nationality: driver.nationality,
       hasResolvedIdentity: Boolean(driver.personId),
       identityStatus: driver.identityStatus,
@@ -624,12 +634,18 @@ export class DriversController {
       riskBand: driver.riskBand ?? null,
       isWatchlisted: driver.isWatchlisted ?? null,
       duplicateIdentityFlag: driver.duplicateIdentityFlag ?? null,
+      reverificationRequired: (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
+      reverificationReason: (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
       hasGuarantor: driver.hasGuarantor ?? false,
       guarantorStatus: driver.guarantorStatus ?? null,
       guarantorDisconnectedAt: driver.guarantorDisconnectedAt ?? null,
       guarantorPersonId: driver.guarantorPersonId ?? null,
       guarantorRiskBand: driver.guarantorRiskBand ?? null,
       guarantorIsWatchlisted: driver.guarantorIsWatchlisted ?? null,
+      guarantorReverificationRequired:
+        (driver as { guarantorReverificationRequired?: boolean | null }).guarantorReverificationRequired ?? null,
+      guarantorReverificationReason:
+        (driver as { guarantorReverificationReason?: string | null }).guarantorReverificationReason ?? null,
       guarantorIsAlsoDriver: driver.guarantorIsAlsoDriver ?? false,
       hasApprovedLicence: driver.hasApprovedLicence ?? false,
       hasMobileAccess: driver.hasMobileAccess ?? false,
@@ -715,7 +731,12 @@ export class DriverSelfServiceController {
       lastName: driver.lastName,
       phone: driver.phone,
       email: driver.email,
+      organisationName: (driver as { organisationName?: string | null }).organisationName ?? null,
+      photoUrl: driver.selfieImageUrl ? `/api/drivers/${driver.id}/portrait` : null,
+      selfieImageUrl: driver.selfieImageUrl ?? null,
+      providerImageUrl: driver.providerImageUrl ?? null,
       dateOfBirth: driver.dateOfBirth,
+      gender: driver.gender ?? null,
       nationality: driver.nationality,
       hasResolvedIdentity: Boolean(driver.personId),
       identityStatus: driver.identityStatus,
@@ -735,12 +756,16 @@ export class DriverSelfServiceController {
       riskBand: driver.riskBand ?? null,
       isWatchlisted: driver.isWatchlisted ?? null,
       duplicateIdentityFlag: driver.duplicateIdentityFlag ?? null,
+      reverificationRequired: (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
+      reverificationReason: (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
       hasGuarantor: guarantorSummary.hasGuarantor ?? false,
       guarantorStatus: guarantorSummary.guarantorStatus ?? null,
       guarantorDisconnectedAt: guarantorSummary.guarantorDisconnectedAt ?? null,
       guarantorPersonId: guarantorSummary.guarantorPersonId ?? null,
       guarantorRiskBand: guarantorSummary.guarantorRiskBand ?? null,
       guarantorIsWatchlisted: guarantorSummary.guarantorIsWatchlisted ?? null,
+      guarantorReverificationRequired: guarantorSummary.guarantorReverificationRequired ?? null,
+      guarantorReverificationReason: guarantorSummary.guarantorReverificationReason ?? null,
       guarantorIsAlsoDriver: guarantorSummary.guarantorIsAlsoDriver ?? false,
       hasApprovedLicence: (driver as Partial<DriverDocumentSummary>).hasApprovedLicence ?? false,
       hasMobileAccess: (driver as Partial<DriverMobileAccessSummary>).hasMobileAccess ?? false,
@@ -818,6 +843,15 @@ export class DriverSelfServiceController {
     return this.service.resolveIdentityFromSelfService(token, payload);
   }
 
+  @Post('verification-consent')
+  @ApiCreatedResponse({ type: Object })
+  recordVerificationConsent(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.recordDriverSelfServiceVerificationConsent(token);
+  }
+
   @Post('documents')
   @ApiCreatedResponse({ type: DriverDocumentResponseDto })
   uploadDocument(
@@ -826,6 +860,15 @@ export class DriverSelfServiceController {
   ) {
     const { token: _ignored, ...payload } = dto;
     return this.service.uploadDocumentFromSelfService(token, payload);
+  }
+
+  @Post('documents/:documentId/remove')
+  @ApiCreatedResponse({ type: Object })
+  removeDocument(
+    @Body('token') token: string,
+    @Param('documentId') documentId: string,
+  ) {
+    return this.service.removeDocumentFromSelfService(token, documentId);
   }
 
   @Post('create-account')
@@ -980,6 +1023,15 @@ export class GuarantorSelfServiceController {
   ) {
     const { token: _ignored, ...payload } = dto;
     return this.service.resolveGuarantorIdentityFromSelfService(token, payload);
+  }
+
+  @Post('verification-consent')
+  @ApiCreatedResponse({ type: Object })
+  recordVerificationConsent(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.recordGuarantorSelfServiceVerificationConsent(token);
   }
 
   @Post('create-account')
