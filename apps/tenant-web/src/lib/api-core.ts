@@ -1,4 +1,9 @@
-import { TENANT_AUTH_COOKIE_NAME, parseTenantJwtPayload } from './auth';
+import {
+  TENANT_AUTH_COOKIE_NAME,
+  TENANT_REFRESH_COOKIE_NAME,
+  isTenantJwtUsable,
+  parseTenantJwtPayload,
+} from './auth';
 
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
 
@@ -7,6 +12,11 @@ if (process.env.NODE_ENV === 'production' && !configuredApiBaseUrl) {
 }
 
 const apiBaseUrl = configuredApiBaseUrl ?? 'http://localhost:3001/api/v1';
+
+type TenantTokenPair = {
+  accessToken: string;
+  refreshToken: string;
+};
 
 export interface ApiCoreRequestOptions extends RequestInit {
   token?: string;
@@ -34,6 +44,57 @@ export interface TenantApiContext {
   customPermissions?: string[] | undefined;
 }
 
+async function refreshTenantTokens(refreshToken: string): Promise<TenantTokenPair> {
+  const response = await apiCoreFetch<{
+    accessToken?: string;
+    refreshToken?: string;
+    token?: string;
+    jwt?: string;
+  }>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+    cache: 'no-store',
+  });
+
+  const accessToken = response.accessToken ?? response.token ?? response.jwt;
+  if (!accessToken || !response.refreshToken) {
+    throw new Error('Unable to refresh the tenant session. Please log in again.');
+  }
+
+  return {
+    accessToken,
+    refreshToken: response.refreshToken,
+  };
+}
+
+async function fetchBrowserTenantToken(): Promise<string> {
+  const response = await fetch('/api/auth/token', {
+    method: 'GET',
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    let message = 'No tenant auth token is available. Log in to continue.';
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload.error) {
+        message = payload.error;
+      }
+    } catch {
+      // Keep default message when the response is not JSON.
+    }
+    throw new Error(message);
+  }
+
+  const payload = (await response.json()) as { accessToken?: string };
+  if (!payload.accessToken) {
+    throw new Error('No tenant auth token is available. Log in to continue.');
+  }
+
+  return payload.accessToken;
+}
+
 export interface TenantRecord {
   id: string;
   slug: string;
@@ -49,6 +110,7 @@ export interface TenantRecord {
   requireIdentityVerificationForActivation?: boolean;
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;
+  customDriverDocumentTypes?: string[];
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
@@ -79,11 +141,13 @@ export interface UpdateTenantSettingsInput {
   requireIdentityVerificationForActivation?: boolean;
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;
+  customDriverDocumentTypes?: string[];
   requiredDriverDocumentSlugs?: string[];
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   requireGuarantor?: boolean;
   requireGuarantorVerification?: boolean;
+  allowAdminAssignmentOverride?: boolean;
 }
 
 export interface NotificationChannelPreferenceRecord {
@@ -196,6 +260,33 @@ export interface DriverRecord {
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   kycPaymentVerified?: boolean;
+  verificationPaymentState?:
+    | 'not_required'
+    | 'required'
+    | 'pending'
+    | 'paid'
+    | 'reconciled';
+  verificationEntitlementState?:
+    | 'none'
+    | 'paid'
+    | 'reserved'
+    | 'consumed'
+    | 'expired'
+    | 'refunded'
+    | 'cancelled';
+  verificationState?:
+    | 'not_started'
+    | 'in_progress'
+    | 'provider_called'
+    | 'success'
+    | 'failed'
+    | 'abandoned'
+    | 'blocked';
+  verificationEntitlementCode?: string | null;
+  verificationPaymentReference?: string | null;
+  verificationConsumedAt?: string | null;
+  verificationAttemptCount?: number;
+  verificationBlockedReason?: string | null;
   requireIdentityVerificationForActivation?: boolean;
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;
@@ -216,6 +307,17 @@ export interface DriverRecord {
   activationReadinessReasons: string[];
   assignmentReadiness: string;
   assignmentReadinessReasons: string[];
+  remittanceReadiness?: string;
+  remittanceReadinessReasons?: string[];
+  enforcementStatus?: string;
+  enforcementActions?: Array<{
+    id: string;
+    actionType: string;
+    reason: string;
+    status: string;
+    triggeredAt: string;
+    policyRuleId?: string | null;
+  }>;
   adminAssignmentOverride?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -724,7 +826,7 @@ export interface AssignmentRecord {
   driverId: string;
   vehicleId: string;
   status: string;
-  startedAt: string;
+  startedAt?: string | null;
   endedAt?: string | null;
   notes?: string | null;
   remittanceModel?: string | null;
@@ -733,6 +835,26 @@ export interface AssignmentRecord {
   remittanceCurrency?: string | null;
   remittanceStartDate?: string | null;
   remittanceCollectionDay?: number | null;
+  contractVersion?: string | null;
+  contractSnapshot?: {
+    paymentStructure?: string | null;
+    expectedRemittanceTerms?: string | null;
+    obligations?: string[];
+  } | null;
+  contractStatus?: string;
+  driverAcceptedTermsAt?: string | null;
+  driverAcceptanceEvidence?: {
+    acceptedFrom?: string;
+    acceptedAt?: string;
+    note?: string;
+  } | null;
+  driverConfirmedAt?: string | null;
+  driverConfirmationMethod?: string | null;
+  driverConfirmationEvidence?: Record<string, unknown> | null;
+  acceptanceSnapshotHash?: string | null;
+  returnedAt?: string | null;
+  returnedBy?: string | null;
+  returnEvidence?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -773,8 +895,110 @@ export interface RemittanceRecord {
   dueDate: string;
   paidDate?: string | null;
   notes?: string | null;
+  clientReferenceId?: string | null;
+  submissionSource?: string;
+  syncStatus?: string;
+  originalCapturedAt?: string | null;
+  syncedAt?: string | null;
+  evidence?: {
+    note?: string;
+    localEvidenceUri?: string;
+    capturedOffline?: boolean;
+  } | null;
+  shiftCode?: string | null;
+  checkpointLabel?: string | null;
+  shortfallAmountMinorUnits?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RecordDocumentRecord {
+  id: string;
+  tenantId: string;
+  documentNumber: string;
+  documentType: string;
+  status: string;
+  issuerType: string;
+  issuerId?: string | null;
+  recipientType?: string | null;
+  recipientId?: string | null;
+  relatedEntityType: string;
+  relatedEntityId: string;
+  fingerprint: string;
+  signatureVersion: string;
+  signedAt: string;
+  signedBySystem: string;
+  verificationReference: string;
+  fileName: string;
+  contentType: string;
+  storageKey: string;
+  fileUrl: string;
+  fileHash: string;
+  canonicalPayload: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecordDisputeEvidenceRecord {
+  id: string;
+  disputeId: string;
+  tenantId: string;
+  uploadedByType: string;
+  uploadedById?: string | null;
+  evidenceType: string;
+  description?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  storageKey?: string | null;
+  fileUrl: string;
+  fileHash: string;
+  integrityHash: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface RecordDisputeTimelineRecord {
+  id: string;
+  disputeId: string;
+  tenantId: string;
+  actorType: string;
+  actorId?: string | null;
+  actionType: string;
+  message: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface RecordDisputeRecord {
+  id: string;
+  disputeCode: string;
+  tenantId: string;
+  driverId?: string | null;
+  disputeType: string;
+  relatedEntityType: string;
+  relatedEntityId: string;
+  claimantType: string;
+  claimantId: string;
+  respondentType: string;
+  respondentId?: string | null;
+  title: string;
+  reasonCode: string;
+  narrative: string;
+  status: string;
+  priority: string;
+  assignedTo?: string | null;
+  resolvedAt?: string | null;
+  resolvedByType?: string | null;
+  resolvedById?: string | null;
+  resolutionSummary?: Record<string, unknown> | null;
+  finalAmountMinorUnits?: number | null;
+  currency?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  timeline: RecordDisputeTimelineRecord[];
+  evidence: RecordDisputeEvidenceRecord[];
 }
 
 export interface RecordRemittanceInput {
@@ -784,6 +1008,17 @@ export interface RecordRemittanceInput {
   currency?: string;
   dueDate?: string;
   notes?: string;
+  clientReferenceId?: string;
+  submissionSource?: 'online' | 'offline_queue';
+  syncStatus?: 'offline_submitted' | 'synced';
+  originalCapturedAt?: string;
+  evidence?: {
+    note?: string;
+    localEvidenceUri?: string;
+    capturedOffline?: boolean;
+  };
+  shiftCode?: string;
+  checkpointLabel?: string;
 }
 
 export interface WalletBalanceRecord {
@@ -1007,14 +1242,20 @@ export async function getTenantApiToken(explicitToken?: string): Promise<string>
   }
 
   if (typeof window !== 'undefined') {
-    throw new Error('No tenant auth token is available. Log in to continue.');
+    return fetchBrowserTenantToken();
   }
 
   const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(TENANT_AUTH_COOKIE_NAME)?.value;
-  if (cookieToken) {
-    return cookieToken;
+  if (isTenantJwtUsable(cookieToken)) {
+    return cookieToken as string;
+  }
+
+  const refreshToken = cookieStore.get(TENANT_REFRESH_COOKIE_NAME)?.value;
+  if (refreshToken) {
+    const tokens = await refreshTenantTokens(refreshToken);
+    return tokens.accessToken;
   }
 
   throw new Error('No tenant auth token is available. Log in to continue.');
@@ -1550,13 +1791,49 @@ export async function getDriver(driverId: string, token?: string): Promise<Drive
 export async function setDriverAdminOverride(
   driverId: string,
   override: boolean,
+  token?: string,
 ): Promise<{ adminAssignmentOverride: boolean }> {
   return apiCoreFetch<{ adminAssignmentOverride: boolean }>(
     `/drivers/${driverId}/admin-override`,
     {
       method: 'PATCH',
       body: JSON.stringify({ override }),
-      token: await getTenantApiToken(),
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function requestDriverAdminOverride(
+  driverId: string,
+  input: { reason: string; evidenceImageDataUrl?: string },
+  token?: string,
+): Promise<{ destination: string; expiresAt: string }> {
+  return apiCoreFetch<{ destination: string; expiresAt: string }>(
+    `/drivers/${driverId}/admin-override/request`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        reason: input.reason,
+        ...(input.evidenceImageDataUrl
+          ? { evidenceImageDataUrl: input.evidenceImageDataUrl }
+          : {}),
+      }),
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function confirmDriverAdminOverride(
+  driverId: string,
+  otpCode: string,
+  token?: string,
+): Promise<{ adminAssignmentOverride: boolean }> {
+  return apiCoreFetch<{ adminAssignmentOverride: boolean }>(
+    `/drivers/${driverId}/admin-override/confirm`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ otpCode }),
+      token: await getTenantApiToken(token),
     },
   );
 }
@@ -2500,6 +2777,35 @@ export async function startAssignment(
   });
 }
 
+export async function acceptAssignmentTerms(
+  assignmentId: string,
+  input: { acceptedFrom?: string; note?: string } = {},
+  token?: string,
+): Promise<AssignmentRecord> {
+  return apiCoreFetch<AssignmentRecord>(`/assignments/${assignmentId}/accept-terms`, {
+    method: 'POST',
+    body: JSON.stringify({
+      acceptedFrom: input.acceptedFrom ?? 'operator_console',
+      ...(input.note ? { note: input.note } : {}),
+    }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function declineAssignment(
+  assignmentId: string,
+  notes?: string,
+  token?: string,
+): Promise<AssignmentRecord> {
+  return apiCoreFetch<AssignmentRecord>(`/assignments/${assignmentId}/decline`, {
+    method: 'POST',
+    body: JSON.stringify(notes ? { notes } : {}),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function completeAssignment(
   assignmentId: string,
   notes?: string,
@@ -2592,6 +2898,19 @@ export async function confirmRemittance(
   });
 }
 
+export async function confirmManyRemittances(
+  ids: string[],
+  paidDate: string,
+  token?: string,
+): Promise<RemittanceRecord[]> {
+  return apiCoreFetch<RemittanceRecord[]>('/remittance/actions/bulk-confirm', {
+    method: 'POST',
+    body: JSON.stringify({ ids, paidDate }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function disputeRemittance(
   remittanceId: string,
   notes: string,
@@ -2616,6 +2935,75 @@ export async function waiveRemittance(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function resolveManyRemittanceDisputes(
+  ids: string[],
+  paidDate: string,
+  token?: string,
+): Promise<RemittanceRecord[]> {
+  return apiCoreFetch<RemittanceRecord[]>('/remittance/actions/bulk-resolve-disputes', {
+    method: 'POST',
+    body: JSON.stringify({ ids, paidDate }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export function listOperationalDocuments(
+  input: {
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+    documentType?: string;
+  } = {},
+  token?: string,
+): Promise<RecordDocumentRecord[]> {
+  const params = new URLSearchParams();
+  if (input.relatedEntityType) {
+    params.set('relatedEntityType', input.relatedEntityType);
+  }
+  if (input.relatedEntityId) {
+    params.set('relatedEntityId', input.relatedEntityId);
+  }
+  if (input.documentType) {
+    params.set('documentType', input.documentType);
+  }
+  const query = params.toString();
+
+  return getTenantApiToken(token).then((resolvedToken) =>
+    apiCoreFetch<RecordDocumentRecord[]>(`/records/documents${query ? `?${query}` : ''}`, {
+      cache: 'no-store',
+      token: resolvedToken,
+    }),
+  );
+}
+
+export function listOperationalDisputes(
+  input: {
+    status?: string;
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+  } = {},
+  token?: string,
+): Promise<RecordDisputeRecord[]> {
+  const params = new URLSearchParams();
+  if (input.status) {
+    params.set('status', input.status);
+  }
+  if (input.relatedEntityType) {
+    params.set('relatedEntityType', input.relatedEntityType);
+  }
+  if (input.relatedEntityId) {
+    params.set('relatedEntityId', input.relatedEntityId);
+  }
+  const query = params.toString();
+
+  return getTenantApiToken(token).then((resolvedToken) =>
+    apiCoreFetch<RecordDisputeRecord[]>(`/records/disputes${query ? `?${query}` : ''}`, {
+      cache: 'no-store',
+      token: resolvedToken,
+    }),
+  );
 }
 
 export async function getOperationalWalletBalance(

@@ -2,13 +2,14 @@ import { TenantDashboardShell } from '../features/dashboard/tenant-dashboard-she
 import {
   getDashboardData,
 } from '../features/dashboard/tenant-dashboard-data';
-import { getTenantMe, getTenantSession } from '../lib/api-core';
+import { getTenantApiToken, getTenantMe, getTenantSession } from '../lib/api-core';
 
 export default async function HomePage() {
+  const token = await getTenantApiToken().catch(() => undefined);
   const [dashboardData, tenant, session] = await Promise.all([
-    getDashboardData(),
-    getTenantMe().catch(() => null),
-    getTenantSession().catch(() => null),
+    getDashboardData(token),
+    getTenantMe(token).catch(() => null),
+    getTenantSession(token).catch(() => null),
   ]);
 
   return (

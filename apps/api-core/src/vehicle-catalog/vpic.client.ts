@@ -66,14 +66,33 @@ function getBaseUrl(): string {
 
 async function fetchVpicEnvelope<T>(path: string): Promise<VpicResponseEnvelope<T>> {
   const response = await fetch(`${getBaseUrl()}${path}`);
+  const rawBody = await response.text().catch(() => '');
 
   if (!response.ok) {
-    throw new Error(
-      `vPIC request failed for '${path}' from '${getBaseUrl()}' with status ${response.status}`,
-    );
+    if (response.status === 404) {
+      throw new Error(
+        path.includes('/DecodeVinValues/')
+          ? 'VIN decoding is unavailable for this VIN right now. Enter the vehicle details manually.'
+          : 'Vehicle catalog data is unavailable for this lookup right now. Continue manually.',
+      );
+    }
+
+    throw new Error('Vehicle catalog lookup is temporarily unavailable. Continue manually.');
   }
 
-  return (await response.json()) as VpicResponseEnvelope<T>;
+  if (!rawBody.trim()) {
+    throw new Error('Vehicle catalog lookup returned no data. Continue manually.');
+  }
+
+  try {
+    const payload = JSON.parse(rawBody) as VpicResponseEnvelope<T>;
+    if (!Array.isArray(payload.Results)) {
+      throw new Error('Vehicle catalog lookup returned an unexpected response.');
+    }
+    return payload;
+  } catch {
+    throw new Error('Vehicle catalog lookup returned an unreadable response. Continue manually.');
+  }
 }
 
 export async function fetchVpicMakesForVehicleType(vehicleType: string): Promise<VpicMakeRecord[]> {

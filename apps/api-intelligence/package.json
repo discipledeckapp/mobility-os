@@ -15,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "bash migrate-safe.sh",
     "db:migrate:dev": "prisma migrate dev",
+    "diag:provider": "ts-node src/cli/provider-diagnostic.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

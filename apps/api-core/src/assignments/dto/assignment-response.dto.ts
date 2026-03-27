@@ -23,12 +23,13 @@ export class AssignmentResponseDto {
   vehicleId!: string;
 
   @ApiProperty({
-    description: 'AssignmentStatus: created | assigned | active | completed | cancelled',
+    description:
+      'AssignmentStatus: created | pending_driver_confirmation | active | declined | ended | cancelled',
   })
   status!: string;
 
-  @ApiProperty()
-  startedAt!: Date;
+  @ApiPropertyOptional()
+  startedAt?: Date | null;
 
   @ApiPropertyOptional({ description: 'Null while the assignment is active' })
   endedAt?: Date | null;
@@ -53,6 +54,42 @@ export class AssignmentResponseDto {
 
   @ApiPropertyOptional()
   remittanceCollectionDay?: number | null;
+
+  @ApiPropertyOptional()
+  contractVersion?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  contractSnapshot?: unknown | null;
+
+  @ApiPropertyOptional()
+  contractStatus?: string;
+
+  @ApiPropertyOptional()
+  driverAcceptedTermsAt?: Date | null;
+
+  @ApiPropertyOptional({ type: Object })
+  driverAcceptanceEvidence?: unknown | null;
+
+  @ApiPropertyOptional()
+  driverConfirmedAt?: Date | null;
+
+  @ApiPropertyOptional()
+  driverConfirmationMethod?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  driverConfirmationEvidence?: unknown | null;
+
+  @ApiPropertyOptional()
+  acceptanceSnapshotHash?: string | null;
+
+  @ApiPropertyOptional()
+  returnedAt?: Date | null;
+
+  @ApiPropertyOptional()
+  returnedBy?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  returnEvidence?: unknown | null;
 
   @ApiProperty()
   createdAt!: Date;

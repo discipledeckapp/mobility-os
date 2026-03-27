@@ -2,8 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  getOptionsToken,
+  getStorageToken,
+} from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
 import { AssignmentsModule } from './assignments/assignments.module';
@@ -27,6 +33,8 @@ import { OperationalWalletsModule } from './operational-wallets/operational-wall
 import { RemittanceModule } from './remittance/remittance.module';
 import { ReportsModule } from './reports/reports.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { PolicyModule } from './policy/policy.module';
+import { RecordsModule } from './records/records.module';
 import { SelfSignupModule } from './self-signup/self-signup.module';
 import { TeamModule } from './team/team.module';
 import { TenantBillingModule } from './tenant-billing/tenant-billing.module';
@@ -145,6 +153,8 @@ function createLoggerModule() {
     MobileOpsModule,
     ReportsModule,
     PrivacyModule,
+    PolicyModule,
+    RecordsModule,
     TenantBillingModule,
 
     // ── People ────────────────────────────────────────────────────────────────
@@ -172,6 +182,17 @@ function createLoggerModule() {
     AuditModule,
     // CountryConfigModule,
   ],
-  providers: [ThrottlerGuard],
+  providers: [
+    {
+      provide: ThrottlerGuard,
+      useFactory: (options: object, storage: object) =>
+        new ThrottlerGuard(options as never, storage as never, new Reflector()),
+      inject: [getOptionsToken(), getStorageToken()],
+    },
+    {
+      provide: APP_GUARD,
+      useExisting: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

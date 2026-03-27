@@ -11,6 +11,7 @@ import {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
+  const refreshCookie = request.cookies.get(TENANT_REFRESH_COOKIE_NAME)?.value;
   const hasUsableSession = isTenantJwtUsable(authCookie);
   const payload = parseTenantJwtPayload(authCookie);
   const continuationPath = getSelfServiceContinuationPath(payload);
@@ -26,6 +27,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/guarantor-self-service');
 
   if (!hasUsableSession && !isPublicRoute) {
+    if (refreshCookie) {
+      return NextResponse.next();
+    }
     const loginUrl = new URL('/login', request.url);
     const response = NextResponse.redirect(loginUrl);
     if (authCookie) {
@@ -36,7 +40,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (!hasUsableSession && isPublicRoute) {
-    if (!authCookie) {
+    if (!authCookie || refreshCookie) {
       return NextResponse.next();
     }
 

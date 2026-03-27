@@ -21,6 +21,7 @@ export interface OrganisationOperationsSettings {
   requireGovernmentVerificationLookup: boolean;
   enabledDriverIdentifierTypes: string[];
   requiredDriverIdentifierTypes: string[];
+  customDriverDocumentTypes: string[];
   requiredDriverDocumentSlugs: string[];
   requiredVehicleDocumentSlugs: string[];
   /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
@@ -104,14 +105,14 @@ function getCountryDocumentDefaults(countryCode?: string | null): {
 } {
   if (!countryCode || !isCountrySupported(countryCode)) {
     return {
-      requiredDriverDocumentSlugs: ['national-id', 'drivers-license'],
+      requiredDriverDocumentSlugs: [],
       requiredVehicleDocumentSlugs: ['vehicle-license', 'insurance'],
     };
   }
 
   const country = getCountryConfig(countryCode as string);
   return {
-    requiredDriverDocumentSlugs: country.requiredDriverDocumentSlugs,
+    requiredDriverDocumentSlugs: [],
     requiredVehicleDocumentSlugs: country.requiredVehicleDocumentSlugs,
   };
 }
@@ -120,6 +121,10 @@ function normalizeDocumentSlugList(
   value: unknown,
   allowedSlugs: Set<string>,
   fallback: string[],
+  options: {
+    allowCustom?: boolean;
+    preserveEmpty?: boolean;
+  } = {},
 ): string[] {
   if (!Array.isArray(value)) {
     return fallback;
@@ -127,10 +132,17 @@ function normalizeDocumentSlugList(
 
   const normalized = value
     .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0 && allowedSlugs.has(item));
+    .map((item) => item.trim().toLowerCase())
+    .filter(
+      (item) =>
+        item.length > 0 && (allowedSlugs.has(item) || Boolean(options.allowCustom)),
+    );
 
-  return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
+  if (normalized.length > 0) {
+    return Array.from(new Set(normalized));
+  }
+
+  return options.preserveEmpty ? [] : fallback;
 }
 
 function normalizeIdentifierTypeList(
@@ -236,10 +248,17 @@ export function readOrganisationSettings(
           : true,
       enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes,
+      customDriverDocumentTypes: normalizeDocumentSlugList(
+        operations.customDriverDocumentTypes,
+        DRIVER_DOCUMENT_SLUGS,
+        [],
+        { allowCustom: true, preserveEmpty: true },
+      ).filter((slug) => !DRIVER_DOCUMENT_SLUGS.has(slug)),
       requiredDriverDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredDriverDocumentSlugs,
         DRIVER_DOCUMENT_SLUGS,
         documentDefaults.requiredDriverDocumentSlugs,
+        { allowCustom: true, preserveEmpty: true },
       ),
       requiredVehicleDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredVehicleDocumentSlugs,
@@ -275,6 +294,7 @@ export function writeOrganisationSettings(
     requireGovernmentVerificationLookup: boolean;
     enabledDriverIdentifierTypes: string[];
     requiredDriverIdentifierTypes: string[];
+    customDriverDocumentTypes: string[];
     requiredDriverDocumentSlugs: string[];
     requiredVehicleDocumentSlugs: string[];
     driverPaysKyc: boolean;
@@ -314,6 +334,8 @@ export function writeOrganisationSettings(
       input.enabledDriverIdentifierTypes ?? settings.operations.enabledDriverIdentifierTypes,
     requiredDriverIdentifierTypes:
       input.requiredDriverIdentifierTypes ?? settings.operations.requiredDriverIdentifierTypes,
+    customDriverDocumentTypes:
+      input.customDriverDocumentTypes ?? settings.operations.customDriverDocumentTypes,
     requiredDriverDocumentSlugs:
       input.requiredDriverDocumentSlugs ?? settings.operations.requiredDriverDocumentSlugs,
     requiredVehicleDocumentSlugs:

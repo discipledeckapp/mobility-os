@@ -66,6 +66,11 @@ describe('DriversService', () => {
     enforceVehicleCapacity: jest.fn(),
     getCapInfo: jest.fn(),
   };
+  const policyService = {
+    evaluateDriverPolicies: jest.fn(),
+    listActiveActionsByEntityIds: jest.fn(),
+    applyDriverEnforcement: jest.fn((readiness: unknown) => readiness),
+  };
 
   let service: DriversService;
 
@@ -102,6 +107,9 @@ describe('DriversService', () => {
     });
     subscriptionEntitlementsService.getCapInfo.mockResolvedValue({ driverCap: null });
     subscriptionEntitlementsService.enforceDriverCapacity.mockResolvedValue(undefined);
+    policyService.evaluateDriverPolicies.mockResolvedValue([]);
+    policyService.listActiveActionsByEntityIds.mockResolvedValue(new Map());
+    const auditService = { recordTenantAction: jest.fn() };
     service = new DriversService(
       prisma as never,
       intelligenceClient as never,
@@ -111,6 +119,8 @@ describe('DriversService', () => {
       subscriptionEntitlementsService as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
+      policyService as never,
+      auditService as never,
     );
   });
 

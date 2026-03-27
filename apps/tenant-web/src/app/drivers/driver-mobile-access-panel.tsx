@@ -4,7 +4,6 @@ import { useActionState } from 'react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Text } from '@mobility-os/ui';
 import type { DriverMobileAccessRecord } from '../../lib/api-core';
 import {
-  linkDriverMobileAccessAction,
   unlinkDriverMobileAccessAction,
   type DriverMobileAccessActionState,
 } from './actions';
@@ -22,10 +21,7 @@ export function DriverMobileAccessPanel({
   driverId: string;
   mobileAccess: DriverMobileAccessRecord;
 }) {
-  const [linkState, linkAction, linkPending] = useActionState(
-    linkDriverMobileAccessAction,
-    EMPTY_STATE,
-  );
+  const linkState = EMPTY_STATE;
   const [unlinkState, unlinkAction, unlinkPending] = useActionState(
     unlinkDriverMobileAccessAction,
     EMPTY_STATE,
@@ -75,48 +71,11 @@ export function DriverMobileAccessPanel({
             </Text>
           </div>
         )}
-
-        <div className="space-y-3">
-          <Text className="font-semibold text-[var(--mobiris-ink)]">Suggested organisation users</Text>
-          {mobileAccess.suggestedUsers.length === 0 ? (
-            <Text tone="muted">
-              No organisation users currently match this driver by email or phone.
-            </Text>
-          ) : (
-            mobileAccess.suggestedUsers.map((user) => (
-              <form
-                action={linkAction}
-                className="space-y-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/65 p-4"
-                key={user.id}
-              >
-                <input name="driverId" type="hidden" value={driverId} />
-                <input name="userId" type="hidden" value={user.id} />
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <Text className="font-semibold text-[var(--mobiris-ink)]">{user.name}</Text>
-                    <Text tone="muted">{user.email}</Text>
-                    {user.phone ? <Text tone="muted">{user.phone}</Text> : null}
-                    {user.matchReason ? <Text tone="muted">{user.matchReason}</Text> : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={user.isActive ? 'neutral' : 'warning'}>
-                      {user.isActive ? 'Available' : 'Inactive'}
-                    </Badge>
-                    <Badge tone="neutral">{roleLabel(user.role)}</Badge>
-                  </div>
-                </div>
-                <Button disabled={linkPending || !user.isActive} type="submit">
-                  {linkPending ? 'Linking…' : 'Link mobile access'}
-                </Button>
-              </form>
-            ))
-          )}
-          {linkState.error ? (
-            <Text tone="danger">{linkState.error}</Text>
-          ) : linkState.success ? (
-            <Text tone="success">{linkState.success}</Text>
-          ) : null}
-        </div>
+        {linkState.error ? (
+          <Text tone="danger">{linkState.error}</Text>
+        ) : linkState.success ? (
+          <Text tone="success">{linkState.success}</Text>
+        ) : null}
       </CardContent>
     </Card>
   );

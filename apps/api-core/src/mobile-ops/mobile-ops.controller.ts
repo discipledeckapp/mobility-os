@@ -87,6 +87,45 @@ export class MobileOpsController {
     return this.toMobileAssignment(ctx.tenantId, updated);
   }
 
+  @Post('assignments/:id/accept-terms')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: MobileAssignmentResponseDto })
+  async acceptAssignmentTerms(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('note') note?: string,
+  ): Promise<MobileAssignmentResponseDto> {
+    const driver = await this.getLinkedDriver(ctx);
+    const assignment = await this.assignmentsService.findOne(ctx.tenantId, id);
+    this.assertAssignmentOwnership(assignment.driverId, driver.id);
+    const updated = await this.assignmentsService.acceptDriverTerms(ctx.tenantId, id, {
+      acceptedFrom: 'driver_mobile',
+      confirmationMethod: 'app',
+      ...(note ? { note } : {}),
+    });
+    return this.toMobileAssignment(ctx.tenantId, updated);
+  }
+
+  @Post('assignments/:id/decline')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: MobileAssignmentResponseDto })
+  async declineAssignment(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('notes') notes?: string,
+  ): Promise<MobileAssignmentResponseDto> {
+    const driver = await this.getLinkedDriver(ctx);
+    const assignment = await this.assignmentsService.findOne(ctx.tenantId, id);
+    this.assertAssignmentOwnership(assignment.driverId, driver.id);
+    const updated = await this.assignmentsService.decline(ctx.tenantId, id, {
+      declinedFrom: 'driver_mobile',
+      ...(notes ? { note: notes } : {}),
+    });
+    return this.toMobileAssignment(ctx.tenantId, updated);
+  }
+
   @Post('assignments/:id/complete')
   @RequirePermissions(Permission.AssignmentsWrite)
   @UseGuards(PermissionsGuard)
@@ -99,7 +138,11 @@ export class MobileOpsController {
     const driver = await this.getLinkedDriver(ctx);
     const assignment = await this.assignmentsService.findOne(ctx.tenantId, id);
     this.assertAssignmentOwnership(assignment.driverId, driver.id);
-    const updated = await this.assignmentsService.end(ctx.tenantId, id, 'completed', notes);
+    const updated = await this.assignmentsService.end(ctx.tenantId, id, 'ended', {
+      ...(notes ? { notes } : {}),
+      returnedBy: driver.id,
+      closeCurrentRemittanceAs: 'partially_settled',
+    });
     return this.toMobileAssignment(ctx.tenantId, updated);
   }
 
@@ -115,7 +158,11 @@ export class MobileOpsController {
     const driver = await this.getLinkedDriver(ctx);
     const assignment = await this.assignmentsService.findOne(ctx.tenantId, id);
     this.assertAssignmentOwnership(assignment.driverId, driver.id);
-    const updated = await this.assignmentsService.end(ctx.tenantId, id, 'cancelled', notes);
+    const updated = await this.assignmentsService.end(ctx.tenantId, id, 'cancelled', {
+      ...(notes ? { notes } : {}),
+      returnedBy: driver.id,
+      closeCurrentRemittanceAs: 'cancelled_due_to_assignment_end',
+    });
     return this.toMobileAssignment(ctx.tenantId, updated);
   }
 
@@ -222,9 +269,27 @@ export class MobileOpsController {
       driverId: string;
       vehicleId: string;
       status: string;
-      startedAt: Date;
+      startedAt?: Date | null;
       endedAt?: Date | null;
       notes?: string | null;
+      remittanceModel?: string | null;
+      remittanceFrequency?: string | null;
+      remittanceAmountMinorUnits?: number | null;
+      remittanceCurrency?: string | null;
+      remittanceStartDate?: string | null;
+      remittanceCollectionDay?: number | null;
+      contractVersion?: string | null;
+      contractSnapshot?: unknown | null;
+      contractStatus?: string | null;
+      driverAcceptedTermsAt?: Date | null;
+      driverAcceptanceEvidence?: unknown | null;
+      driverConfirmedAt?: Date | null;
+      driverConfirmationMethod?: string | null;
+      driverConfirmationEvidence?: unknown | null;
+      acceptanceSnapshotHash?: string | null;
+      returnedAt?: Date | null;
+      returnedBy?: string | null;
+      returnEvidence?: unknown | null;
       createdAt: Date;
       updatedAt: Date;
     },
@@ -291,6 +356,8 @@ export class MobileOpsController {
       authenticationAccessReasons: driver.authenticationAccessReasons ?? [],
       remittanceReadiness: driver.remittanceReadiness ?? 'not_ready',
       remittanceReadinessReasons: driver.remittanceReadinessReasons ?? [],
+      enforcementStatus: driver.enforcementStatus ?? 'clear',
+      enforcementActions: driver.enforcementActions ?? [],
       adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,

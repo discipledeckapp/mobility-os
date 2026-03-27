@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   if (!hasUsableSession && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);
     const response = NextResponse.redirect(loginUrl);
-    if (authCookie) {
+    if (authCookie && pathname !== '/login') {
       response.cookies.delete(PLATFORM_AUTH_COOKIE_NAME);
     }
     return response;

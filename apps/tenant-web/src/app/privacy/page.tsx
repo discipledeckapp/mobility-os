@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, Text } from '@mobility-os/ui';
 import { LEGAL_DOCUMENTS } from '@mobility-os/domain-config';
 
+const PLATFORM_ISSUER = 'Mobiris is a product of Growth Figures Limited, registered in Nigeria. growthfigures.com';
+
 export default function PrivacyPage() {
   const document = LEGAL_DOCUMENTS.privacy;
 
@@ -14,6 +16,9 @@ export default function PrivacyPage() {
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950">{document.title}</h1>
           <Text tone="muted">
             Version {document.version}. {document.summary}
+          </Text>
+          <Text tone="muted">
+            {PLATFORM_ISSUER}
           </Text>
         </div>
         <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.2)]">

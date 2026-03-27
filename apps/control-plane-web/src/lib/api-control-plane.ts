@@ -68,6 +68,94 @@ export interface InvoiceRecord {
   updatedAt: string;
 }
 
+export interface ControlPlaneDocumentRecord {
+  id: string;
+  tenantId?: string | null;
+  documentNumber: string;
+  documentType: string;
+  status: string;
+  issuerType: string;
+  issuerId?: string | null;
+  recipientType?: string | null;
+  recipientId?: string | null;
+  relatedEntityType: string;
+  relatedEntityId: string;
+  fingerprint: string;
+  signatureVersion: string;
+  signedAt: string;
+  signedBySystem: string;
+  verificationReference: string;
+  fileName: string;
+  contentType: string;
+  storageKey: string;
+  fileUrl: string;
+  fileHash: string;
+  canonicalPayload: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ControlPlaneDisputeEvidenceRecord {
+  id: string;
+  disputeId: string;
+  tenantId?: string | null;
+  uploadedByType: string;
+  uploadedById?: string | null;
+  evidenceType: string;
+  description?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  storageKey?: string | null;
+  fileUrl: string;
+  fileHash: string;
+  integrityHash: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ControlPlaneDisputeTimelineRecord {
+  id: string;
+  disputeId: string;
+  tenantId?: string | null;
+  actorType: string;
+  actorId?: string | null;
+  actionType: string;
+  message: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ControlPlaneDisputeRecord {
+  id: string;
+  disputeCode: string;
+  tenantId?: string | null;
+  disputeType: string;
+  relatedEntityType: string;
+  relatedEntityId: string;
+  claimantType: string;
+  claimantId: string;
+  respondentType: string;
+  respondentId?: string | null;
+  title: string;
+  reasonCode: string;
+  narrative: string;
+  status: string;
+  priority: string;
+  assignedTo?: string | null;
+  resolvedAt?: string | null;
+  resolvedByType?: string | null;
+  resolvedById?: string | null;
+  resolutionSummary?: Record<string, unknown> | null;
+  finalAmountMinorUnits?: number | null;
+  currency?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  timeline: ControlPlaneDisputeTimelineRecord[];
+  evidence: ControlPlaneDisputeEvidenceRecord[];
+}
+
 export interface PlatformWalletSummary {
   walletId: string;
   tenantId: string;
@@ -297,7 +385,7 @@ export interface TenantDetailRecord {
   } | null;
 }
 
-async function getPlatformApiToken(explicitToken?: string): Promise<string> {
+export async function getPlatformApiToken(explicitToken?: string): Promise<string> {
   if (explicitToken) {
     return explicitToken;
   }
@@ -413,6 +501,70 @@ export async function listInvoices(token?: string): Promise<InvoiceRecord[]> {
   return apiControlPlaneFetch<InvoiceRecord[]>('/billing/invoices', {
     token: await getPlatformApiToken(token),
   });
+}
+
+export async function listControlPlaneDocuments(
+  input: {
+    tenantId?: string;
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+    documentType?: string;
+  } = {},
+  token?: string,
+): Promise<ControlPlaneDocumentRecord[]> {
+  const params = new URLSearchParams();
+  if (input.tenantId) {
+    params.set('tenantId', input.tenantId);
+  }
+  if (input.relatedEntityType) {
+    params.set('relatedEntityType', input.relatedEntityType);
+  }
+  if (input.relatedEntityId) {
+    params.set('relatedEntityId', input.relatedEntityId);
+  }
+  if (input.documentType) {
+    params.set('documentType', input.documentType);
+  }
+  const query = params.toString();
+
+  return apiControlPlaneFetch<ControlPlaneDocumentRecord[]>(
+    `/records/documents${query ? `?${query}` : ''}`,
+    {
+      token: await getPlatformApiToken(token),
+    },
+  );
+}
+
+export async function listControlPlaneDisputes(
+  input: {
+    tenantId?: string;
+    status?: string;
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+  } = {},
+  token?: string,
+): Promise<ControlPlaneDisputeRecord[]> {
+  const params = new URLSearchParams();
+  if (input.tenantId) {
+    params.set('tenantId', input.tenantId);
+  }
+  if (input.status) {
+    params.set('status', input.status);
+  }
+  if (input.relatedEntityType) {
+    params.set('relatedEntityType', input.relatedEntityType);
+  }
+  if (input.relatedEntityId) {
+    params.set('relatedEntityId', input.relatedEntityId);
+  }
+  const query = params.toString();
+
+  return apiControlPlaneFetch<ControlPlaneDisputeRecord[]>(
+    `/records/disputes${query ? `?${query}` : ''}`,
+    {
+      token: await getPlatformApiToken(token),
+    },
+  );
 }
 
 export async function listPlatformWallets(token?: string): Promise<PlatformWalletSummary[]> {

@@ -30,6 +30,19 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value));
 }
 
+function getGuarantorBadge(status: string | null | undefined, hasVerifiedIdentity: boolean) {
+  if (!status) {
+    return { label: 'Missing', tone: 'danger' as const };
+  }
+  if (status === 'disconnected') {
+    return { label: 'Disconnected', tone: 'warning' as const };
+  }
+  if (hasVerifiedIdentity) {
+    return { label: 'Verified', tone: 'success' as const };
+  }
+  return { label: 'Pending verification', tone: 'warning' as const };
+}
+
 export function DriverGuarantorPanel({
   driverId,
   guarantor,
@@ -61,6 +74,7 @@ export function DriverGuarantorPanel({
     initialSendLinkState,
   );
   const isDisconnected = guarantor?.status === 'disconnected';
+  const guarantorBadge = getGuarantorBadge(guarantor?.status, Boolean(guarantor?.personId));
 
   return (
     <Card className={isDisconnected ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-white'}>
@@ -68,12 +82,10 @@ export function DriverGuarantorPanel({
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle>Guarantor</CardTitle>
-            <Badge tone={guarantor ? (isDisconnected ? 'warning' : 'success') : 'danger'}>
-              {guarantor ? (isDisconnected ? 'Disconnected' : 'Linked') : 'Missing'}
-            </Badge>
+            <Badge tone={guarantorBadge.tone}>{guarantorBadge.label}</Badge>
           </div>
           <Text tone="muted">
-            Guarantors are contacted if a driver defaults on remittance commitments. A guarantor must be linked before the driver can be activated.
+            Guarantors are contacted if a driver defaults on remittance commitments. Save the guarantor profile first, then complete guarantor verification before the driver is treated as fully ready.
           </Text>
         </div>
         <Button
@@ -98,7 +110,7 @@ export function DriverGuarantorPanel({
             </div>
             <div className="space-y-1">
               <Text tone="muted">Email</Text>
-              <Text>{guarantor.email || 'Not recorded'}</Text>
+              <Text>{guarantor.email || 'Not collected yet'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Phone country</Text>
@@ -106,15 +118,15 @@ export function DriverGuarantorPanel({
             </div>
             <div className="space-y-1">
               <Text tone="muted">Relationship</Text>
-              <Text>{guarantor.relationship || 'Not recorded'}</Text>
+              <Text>{guarantor.relationship || 'Not collected yet'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Date of birth</Text>
-              <Text>{guarantor.dateOfBirth || 'Not recorded'}</Text>
+              <Text>{guarantor.dateOfBirth || 'Will be captured during verification if available'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Gender</Text>
-              <Text>{guarantor.gender || 'Not recorded'}</Text>
+              <Text>{guarantor.gender || 'Will be captured during verification if available'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Linked on</Text>
@@ -122,7 +134,7 @@ export function DriverGuarantorPanel({
             </div>
             <div className="space-y-1">
               <Text tone="muted">Status</Text>
-              <Text>{isDisconnected ? 'Disconnected' : 'Active'}</Text>
+              <Text>{guarantorBadge.label}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Disconnected on</Text>

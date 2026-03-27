@@ -272,6 +272,7 @@ export function DriverDocumentsPanel({
               label="Upload document"
               pending={isPending}
               pendingLabel="Uploading securely"
+              type="submit"
             />
           </div>
         </form>

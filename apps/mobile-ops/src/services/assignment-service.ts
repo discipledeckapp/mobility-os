@@ -1,7 +1,9 @@
 import {
+  acceptAssignmentTerms,
   type AssignmentRecord,
   cancelAssignment,
   completeAssignment,
+  declineAssignment,
   getAssignment,
   listAssignments,
   startAssignment,
@@ -22,6 +24,14 @@ export async function fetchAssignmentDetail(assignmentId: string) {
 
 export async function startDriverAssignment(assignmentId: string) {
   return startAssignment(assignmentId);
+}
+
+export async function acceptDriverAssignmentTerms(assignmentId: string, note?: string) {
+  return acceptAssignmentTerms(assignmentId, note ? { note } : {});
+}
+
+export async function declineDriverAssignment(assignmentId: string, notes?: string) {
+  return declineAssignment(assignmentId, notes);
 }
 
 export async function completeDriverAssignment(assignmentId: string, notes?: string) {
@@ -69,9 +79,10 @@ export function filterAssignments(
 export function groupAssignments(assignments: AssignmentRecord[]) {
   const statusOrder: AssignmentStatus[] = [
     ASSIGNMENT_STATUS.active,
-    ASSIGNMENT_STATUS.assigned,
+    ASSIGNMENT_STATUS.pendingDriverConfirmation,
     ASSIGNMENT_STATUS.created,
-    ASSIGNMENT_STATUS.completed,
+    ASSIGNMENT_STATUS.ended,
+    ASSIGNMENT_STATUS.declined,
     ASSIGNMENT_STATUS.cancelled,
   ];
 

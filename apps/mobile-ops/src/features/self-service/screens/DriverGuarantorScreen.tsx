@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { submitDriverSelfServiceGuarantor } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -13,23 +13,30 @@ import { tokens } from '../../../theme/tokens';
 
 export function DriverGuarantorScreen({ navigation }: ScreenProps<'DriverGuarantor'>) {
   const { token, driver, refreshSelfService } = useSelfService();
+  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [relationship, setRelationship] = useState('');
+  const [showExtraFields, setShowExtraFields] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async () => {
-    if (!name.trim()) {
-      Alert.alert('Guarantor', 'Enter the guarantor\'s full name.');
+    if (!email.trim()) {
+      Alert.alert('Guarantor', 'Enter your guarantor’s email address.');
       return;
     }
-    if (!phone.trim()) {
-      Alert.alert('Guarantor', 'Enter the guarantor\'s phone number.');
+
+    if (!name.trim() || !phone.trim()) {
+      Alert.alert(
+        'Guarantor',
+        'Add the guarantor’s full name and phone number so the invite can be verified correctly.',
+      );
+      setShowExtraFields(true);
       return;
     }
+
     if (!token) {
-      Alert.alert('Session expired', 'Your verification session has expired. Please start again.');
+      Alert.alert('Session expired', 'Your onboarding session has expired. Please start again.');
       navigation.replace('SelfServiceOtp');
       return;
     }
@@ -39,14 +46,14 @@ export function DriverGuarantorScreen({ navigation }: ScreenProps<'DriverGuarant
       await submitDriverSelfServiceGuarantor(token, {
         name: name.trim(),
         phone: phone.trim(),
-        email: email.trim() || undefined,
+        email: email.trim().toLowerCase(),
         relationship: relationship.trim() || undefined,
       });
       await refreshSelfService();
       Alert.alert(
-        'Guarantor submitted',
-        'Your guarantor details have been submitted. Your organisation will review and verify them.',
-        [{ text: 'Back to checklist', onPress: () => navigation.goBack() }],
+        'Invite sent',
+        `${driver?.organisationName ?? 'Your organisation'} will contact your guarantor using this invite.`,
+        [{ text: 'Continue', onPress: () => navigation.navigate('SelfServiceReadiness') }],
       );
     } catch (error) {
       Alert.alert(
@@ -61,64 +68,59 @@ export function DriverGuarantorScreen({ navigation }: ScreenProps<'DriverGuarant
   return (
     <Screen contentContainerStyle={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Guarantor details</Text>
+        <Text style={styles.kicker}>Guarantor</Text>
         <Text style={styles.title}>Add your guarantor</Text>
         <Text style={styles.copy}>
-          A guarantor vouches for your character and reliability. Provide contact details for
-          someone who can be reached by your fleet operator.
+          Start with their email. We will use it to send the invite and continue verification.
         </Text>
       </View>
 
       <Card style={styles.card}>
         <Input
-          label="Full name"
-          onChangeText={setName}
-          placeholder="Guarantor's full name"
-          value={name}
-        />
-        <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="phone-pad"
-          label="Phone number"
-          onChangeText={setPhone}
-          placeholder="08012345678"
-          value={phone}
-        />
-        <Input
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
-          label="Email address (optional)"
+          label="Guarantor email"
+          helperText="This is the main detail we need first."
           onChangeText={setEmail}
           placeholder="guarantor@email.com"
           value={email}
         />
-        <Input
-          label="Relationship (optional)"
-          onChangeText={setRelationship}
-          placeholder="e.g. Sibling, Friend, Employer"
-          value={relationship}
-        />
-        <Button
-          disabled={!name.trim() || !phone.trim()}
-          label="Submit guarantor"
-          loading={submitting}
-          onPress={onSubmit}
-        />
-        <Button
-          label="Back"
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-        />
+
+        {!showExtraFields ? (
+          <Pressable onPress={() => setShowExtraFields(true)}>
+            <Text style={styles.expandText}>Add name and phone</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.extraFields}>
+            <Input
+              label="Full name"
+              onChangeText={setName}
+              placeholder="Guarantor's full name"
+              value={name}
+            />
+            <Input
+              keyboardType="phone-pad"
+              label="Phone number"
+              onChangeText={setPhone}
+              placeholder="08012345678"
+              value={phone}
+            />
+            <Input
+              label="Relationship (optional)"
+              onChangeText={setRelationship}
+              placeholder="Friend, sibling, employer"
+              value={relationship}
+            />
+          </View>
+        )}
+
+        <Button label="Send guarantor invite" loading={submitting} onPress={onSubmit} />
       </Card>
 
-      <View style={styles.note}>
-        <Text style={styles.noteText}>
-          Your guarantor will receive a verification link if your organisation requires it. Their
-          details are kept confidential.
-        </Text>
-      </View>
+      <Pressable onPress={() => navigation.goBack()}>
+        <Text style={styles.backText}>Back</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -150,13 +152,18 @@ const styles = StyleSheet.create({
   card: {
     gap: tokens.spacing.md,
   },
-  note: {
-    paddingHorizontal: tokens.spacing.xs,
+  expandText: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
-  noteText: {
-    color: tokens.colors.inkSoft,
-    fontSize: 13,
-    lineHeight: 18,
+  extraFields: {
+    gap: tokens.spacing.md,
+  },
+  backText: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

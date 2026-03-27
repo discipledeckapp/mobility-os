@@ -1,8 +1,11 @@
-import { request as httpsRequest } from 'node:https';
-import { URL } from 'node:url';
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
+import {
+  isPlaceholderCredential,
+  requestProviderJson,
+  summarizeProviderFailure,
+} from './provider-http';
 
 export interface VerificationIdentifierInput {
   type: string;
@@ -105,52 +108,6 @@ function normalizeYouVerifyResponse(
     },
     ...(typeof data.reason === 'string' ? { reason: data.reason } : {}),
   };
-}
-
-function postJson(
-  urlString: string,
-  headers: Record<string, string>,
-  body: Record<string, unknown>,
-): Promise<{ statusCode: number; payload: unknown }> {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const serializedBody = JSON.stringify(body);
-    const request = httpsRequest(
-      {
-        protocol: url.protocol,
-        hostname: url.hostname,
-        port: url.port || undefined,
-        path: `${url.pathname}${url.search}`,
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'content-length': Buffer.byteLength(serializedBody).toString(),
-          ...headers,
-        },
-      },
-      (response) => {
-        let responseBody = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          responseBody += chunk;
-        });
-        response.on('end', () => {
-          try {
-            resolve({
-              statusCode: response.statusCode ?? 500,
-              payload: responseBody.length > 0 ? JSON.parse(responseBody) : {},
-            });
-          } catch (error) {
-            reject(error);
-          }
-        });
-      },
-    );
-
-    request.on('error', reject);
-    request.write(serializedBody);
-    request.end();
-  });
 }
 
 type NigeriaMockIdentity = {
@@ -324,7 +281,7 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
     const baseUrl = this.configService.get<string>('YOUVERIFY_BASE_URL');
 
     // No live credentials — fall back to local mock only in non-production
-    if (!apiKey || !baseUrl) {
+    if (!apiKey || !baseUrl || isPlaceholderCredential(apiKey)) {
       const localMockMode =
         this.configService.get<string>('IDENTITY_PROVIDER_MOCK_MODE') === 'true' ||
         this.configService.get<string>('NODE_ENV') !== 'production';
@@ -353,11 +310,23 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
 
     try {
       const endpointPath = `/v2/api/identity/${countrySlug}/${identifierSlug}`;
-      const response = await postJson(
-        `${baseUrl.replace(/\/$/, '')}${endpointPath}`,
-        { token: apiKey },
-        this.buildRequestBody(identifier, providerVerification),
-      );
+      const response = await requestProviderJson({
+        providerName: this.name,
+        operation: `lookup:${identifierSlug}`,
+        method: 'POST',
+        url: `${baseUrl.replace(/\/$/, '')}${endpointPath}`,
+        headers: { token: apiKey },
+        body: this.buildRequestBody(identifier, providerVerification),
+      });
+
+      const httpFailure = summarizeProviderFailure(this.name, `lookup:${identifierSlug}`, response);
+      if (httpFailure) {
+        return {
+          status: 'provider_error',
+          providerName: this.name,
+          reason: httpFailure,
+        };
+      }
 
       if (!isRecord(response.payload)) {
         return {
@@ -529,7 +498,7 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
     const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
     const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
 
-    if (!apiKey || !partnerId || !baseUrl) {
+    if (!apiKey || !partnerId || !baseUrl || isPlaceholderCredential(apiKey)) {
       return {
         status: 'provider_unavailable',
         providerName: this.name,
@@ -559,10 +528,12 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
     const signature = smileIdentitySignature(apiKey, partnerId, timestamp);
 
     try {
-      const response = await postJson(
-        `${baseUrl.replace(/\/$/, '')}/v1/id_verification`,
-        {},
-        {
+      const response = await requestProviderJson({
+        providerName: this.name,
+        operation: `lookup:${idTypeSlug}`,
+        method: 'POST',
+        url: `${baseUrl.replace(/\/$/, '')}/v1/id_verification`,
+        body: {
           partner_id: partnerId,
           timestamp,
           signature,
@@ -579,7 +550,16 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
             ? { dob: providerVerification.validationData.dateOfBirth }
             : {}),
         },
-      );
+      });
+
+      const httpFailure = summarizeProviderFailure(this.name, `lookup:${idTypeSlug}`, response);
+      if (httpFailure) {
+        return {
+          status: 'provider_error',
+          providerName: this.name,
+          reason: httpFailure,
+        };
+      }
 
       if (!isRecord(response.payload)) {
         return {

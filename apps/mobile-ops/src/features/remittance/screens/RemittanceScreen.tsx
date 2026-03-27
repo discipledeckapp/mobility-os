@@ -21,7 +21,7 @@ import { useToast } from '../../../contexts/toast-context';
 import { useAssignments } from '../../../hooks/use-assignments';
 import { getCurrencyLabel } from '../../../lib/currency';
 import type { ScreenProps } from '../../../navigation/types';
-import { enqueueOfflineAction } from '../../../services/offline-queue-service';
+import { enqueueOfflineAction, getQueuedActions } from '../../../services/offline-queue-service';
 import {
   convertMajorToMinorUnits,
   getCurrencyMultiplier,
@@ -40,13 +40,16 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState(new Date());
   const [notes, setNotes] = useState('');
+  const [shiftCode, setShiftCode] = useState('');
+  const [checkpointLabel, setCheckpointLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [history, setHistory] = useState<RemittanceRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [queuedRemittanceCount, setQueuedRemittanceCount] = useState(0);
 
   const eligibleAssignments = useMemo(
-    () => assignments.filter((assignment) => ['active', 'completed'].includes(assignment.status)),
+    () => assignments.filter((assignment) => assignment.status === 'active'),
     [assignments],
   );
   const filteredAssignments = useMemo(() => {
@@ -76,6 +79,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       try {
         const records = await listRemittanceHistory();
         setHistory(records);
+        const queued = await getQueuedActions();
+        setQueuedRemittanceCount(
+          queued.filter((action) => action.type === OFFLINE_ACTION_TYPE.remittanceRecord).length,
+        );
       } catch {
         // Keep history best-effort on this screen.
       } finally {
@@ -130,8 +137,15 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
   const onRefresh = async () => {
     try {
-      const [records] = await Promise.all([listRemittanceHistory().catch(() => history), refreshAssignments()]);
+      const [records, queued] = await Promise.all([
+        listRemittanceHistory().catch(() => history),
+        getQueuedActions(),
+        refreshAssignments(),
+      ]);
       setHistory(records);
+      setQueuedRemittanceCount(
+        queued.filter((action) => action.type === OFFLINE_ACTION_TYPE.remittanceRecord).length,
+      );
       showToast('Assignments refreshed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -158,26 +172,53 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     }
 
     setSubmitting(true);
+    const clientReferenceId = `remittance-${selectedAssignment.id}-${Date.now()}`;
     const payload = {
       assignmentId: selectedAssignment.id,
       amountMinorUnits,
       currency: session.defaultCurrency,
       dueDate: dueDate.toISOString().slice(0, 10),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
+      ...(shiftCode.trim() ? { shiftCode: shiftCode.trim() } : {}),
+      ...(checkpointLabel.trim() ? { checkpointLabel: checkpointLabel.trim() } : {}),
+      clientReferenceId,
+      submissionSource: 'online' as const,
+      syncStatus: 'synced' as const,
+      originalCapturedAt: new Date().toISOString(),
+      evidence: notes.trim()
+        ? {
+            note: notes.trim(),
+            capturedOffline: false,
+          }
+        : undefined,
     };
 
     try {
       await submitRemittance(payload);
       const records = await listRemittanceHistory().catch(() => history);
       setHistory(records);
+      setQueuedRemittanceCount(0);
       showToast('The collection has been recorded successfully.', 'success');
       navigation.goBack();
     } catch (error) {
       if (mobileEnv.enableOfflineQueue && isNetworkError(error)) {
         await enqueueOfflineAction({
           type: OFFLINE_ACTION_TYPE.remittanceRecord,
-          payload,
+          payload: {
+            ...payload,
+            submissionSource: 'offline_queue',
+            syncStatus: 'offline_submitted',
+            evidence: {
+              ...(payload.evidence ?? {}),
+              note: notes.trim() || undefined,
+              capturedOffline: true,
+            },
+          },
         });
+        const queued = await getQueuedActions();
+        setQueuedRemittanceCount(
+          queued.filter((action) => action.type === OFFLINE_ACTION_TYPE.remittanceRecord).length,
+        );
         showToast(
           'You are offline. The remittance has been queued and will sync when you reconnect.',
           'info',
@@ -259,6 +300,14 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
             </View>
           ))
         )}
+        {queuedRemittanceCount > 0 ? (
+          <View style={styles.queueNote}>
+            <Text style={styles.queueTitle}>Offline queue</Text>
+            <Text style={styles.muted}>
+              {queuedRemittanceCount} remittance submission{queuedRemittanceCount === 1 ? '' : 's'} waiting to sync.
+            </Text>
+          </View>
+        ) : null}
       </Card>
 
       <Card style={styles.section}>
@@ -279,7 +328,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
             actionLabel="Refresh assignments"
             message={
               eligibleAssignments.length === 0
-                ? 'No active or completed assignments are ready for remittance recording yet.'
+                ? 'No active assignments are ready for remittance recording yet.'
                 : 'No assignments match your current search.'
             }
             title="No assignments available"
@@ -303,12 +352,16 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
                     Assignment {assignment.id.slice(-6).toUpperCase()}
                   </Text>
                   <Text style={styles.muted}>
-                    Started {formatDateTime(assignment.startedAt, session?.formattingLocale)}
+                    Confirmed{' '}
+                    {formatDateTime(
+                      assignment.driverConfirmedAt ?? assignment.startedAt,
+                      session?.formattingLocale,
+                    )}
                   </Text>
                 </View>
                 <Badge
                   label={assignment.status.toUpperCase()}
-                  tone={assignment.status === 'completed' ? 'success' : 'warning'}
+                  tone="warning"
                 />
               </View>
             </Pressable>
@@ -373,6 +426,20 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           style={styles.notesInput}
           value={notes}
         />
+        <Input
+          accessibilityHint="Optional shift label for later cash reconciliation"
+          label="Shift code"
+          onChangeText={setShiftCode}
+          value={shiftCode}
+          helperText="Optional. Use a simple code like MORNING, PM, or DEPOT-A."
+        />
+        <Input
+          accessibilityHint="Optional mid-day or route checkpoint label"
+          label="Checkpoint"
+          onChangeText={setCheckpointLabel}
+          value={checkpointLabel}
+          helperText="Optional. Useful for mid-day cash visibility or partial-day returns."
+        />
         <Button
           accessibilityHint="Submit this remittance record"
           label="Submit remittance"
@@ -406,7 +473,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
   );
 }
 
-function formatDateTime(value: string, locale?: string | null) {
+function formatDateTime(value?: string | null, locale?: string | null) {
+  if (!value) {
+    return 'Not recorded';
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -434,10 +504,10 @@ function formatMajorAmount(amountMinorUnits: number, minorUnit?: number | null) 
 }
 
 function historyTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'confirmed') {
+  if (status === 'completed' || status === 'partially_settled') {
     return 'success';
   }
-  if (status === 'disputed') {
+  if (status === 'disputed' || status === 'cancelled_due_to_assignment_end') {
     return 'danger';
   }
   if (status === 'pending') {
@@ -533,6 +603,18 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 88,
     textAlignVertical: 'top',
+  },
+  queueNote: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#F8FAFC',
+    padding: tokens.spacing.md,
+    gap: tokens.spacing.xs,
+  },
+  queueTitle: {
+    color: tokens.colors.ink,
+    fontWeight: '700',
   },
 });
 

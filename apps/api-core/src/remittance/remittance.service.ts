@@ -12,13 +12,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { OperationalWalletEntry, Remittance } from '@prisma/client';
+import { Prisma, type OperationalWalletEntry, type Remittance } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { OperationalWalletsService } from '../operational-wallets/operational-wallets.service';
+import { PolicyService } from '../policy/policy.service';
+import { RecordsService } from '../records/records.service';
 import type { RecordRemittanceDto } from './dto/record-remittance.dto';
 
 type RemittanceWithWalletEntry = Remittance & { walletEntry?: OperationalWalletEntry };
@@ -28,6 +30,8 @@ export class RemittanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly operationalWalletsService: OperationalWalletsService,
+    private readonly policyService: PolicyService,
+    private readonly recordsService: RecordsService,
   ) {}
 
   async list(
@@ -171,7 +175,20 @@ export class RemittanceService {
 
     assertTenantOwnership(asTenantId(assignment.tenantId), asTenantId(tenantId));
 
-    if (!['active', 'completed'].includes(assignment.status)) {
+    if (!assignment.driverConfirmedAt) {
+      throw new BadRequestException(
+        `Cannot record remittance against assignment '${dto.assignmentId}' because the driver never acknowledged it.`,
+      );
+    }
+
+    const assignmentEndedOn =
+      assignment.returnedAt?.toISOString().slice(0, 10) ?? assignment.endedAt?.toISOString().slice(0, 10);
+    const isSameDayFinalSubmission =
+      assignment.status === 'ended' &&
+      Boolean(assignmentEndedOn) &&
+      (dto.dueDate ? dto.dueDate === assignmentEndedOn : true);
+
+    if (!(assignment.status === 'active' || isSameDayFinalSubmission)) {
       throw new BadRequestException(
         `Cannot record remittance against assignment '${dto.assignmentId}' ` +
           `with status '${assignment.status}'`,
@@ -179,16 +196,20 @@ export class RemittanceService {
     }
 
     const existingRemittance = await this.prisma.remittance.findFirst({
-      where: {
-        tenantId,
-        assignmentId: assignment.id,
-      },
+      where: dto.clientReferenceId
+        ? {
+            tenantId,
+            clientReferenceId: dto.clientReferenceId,
+          }
+        : {
+            tenantId,
+            assignmentId: assignment.id,
+            ...(dto.dueDate ? { dueDate: dto.dueDate } : {}),
+          },
     });
 
     if (existingRemittance) {
-      throw new BadRequestException(
-        `A remittance has already been recorded for assignment '${dto.assignmentId}'.`,
-      );
+      return existingRemittance;
     }
 
     if (dto.fleetId && dto.fleetId !== assignment.fleetId) {
@@ -235,7 +256,12 @@ export class RemittanceService {
       );
     }
 
-    return this.prisma.remittance.create({
+    const shortfallAmountMinorUnits = Math.max(
+      0,
+      (assignment.remittanceAmountMinorUnits ?? amountMinorUnits) - amountMinorUnits,
+    );
+
+    const created = await this.prisma.remittance.create({
       data: {
         tenantId,
         assignmentId: dto.assignmentId,
@@ -249,8 +275,19 @@ export class RemittanceService {
         dueDate,
         notes: dto.notes ?? null,
         status: 'pending',
+        ...(dto.clientReferenceId ? { clientReferenceId: dto.clientReferenceId } : {}),
+        submissionSource: dto.submissionSource ?? 'online',
+        syncStatus: dto.syncStatus ?? 'synced',
+        originalCapturedAt: dto.originalCapturedAt ? new Date(dto.originalCapturedAt) : new Date(),
+        syncedAt: dto.syncStatus === 'offline_submitted' ? null : new Date(),
+        ...(dto.evidence ? { evidence: dto.evidence as Prisma.InputJsonValue } : {}),
+        ...(dto.shiftCode ? { shiftCode: dto.shiftCode } : {}),
+        ...(dto.checkpointLabel ? { checkpointLabel: dto.checkpointLabel } : {}),
+        shortfallAmountMinorUnits,
       },
     });
+    await this.policyService.evaluateDriverPolicies(tenantId, assignment.driverId);
+    return created;
   }
 
   async confirm(
@@ -260,11 +297,11 @@ export class RemittanceService {
   ): Promise<RemittanceWithWalletEntry> {
     const record = await this.findOne(tenantId, id);
 
-    if (record.status === 'confirmed') {
-      throw new ConflictException(`Remittance '${record.id}' has already been confirmed.`);
+    if (record.status === 'completed') {
+      throw new ConflictException(`Remittance '${record.id}' has already been completed.`);
     }
 
-    this.ensurePendingTransition(record, 'confirmed');
+    this.ensurePendingTransition(record, 'completed');
 
     if (!paidDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       throw new BadRequestException('paidDate must be YYYY-MM-DD');
@@ -283,10 +320,10 @@ export class RemittanceService {
       ? getCountryConfig(tenant.country).currency
       : record.currency;
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updatedRemittance = await tx.remittance.update({
         where: { id },
-        data: { status: 'confirmed', paidDate },
+        data: { status: 'completed', paidDate },
       });
 
       const walletEntry = await this.operationalWalletsService.addEntryInTransaction(
@@ -299,15 +336,18 @@ export class RemittanceService {
           currency: walletCurrency,
           referenceId: record.id,
           referenceType: 'remittance',
-          description: `Remittance confirmed for assignment ${record.assignmentId}`,
-        },
-      );
+            description: `Remittance completed for assignment ${record.assignmentId}`,
+          },
+        );
 
       return {
         ...updatedRemittance,
         walletEntry,
       };
     });
+    await this.recordsService.issueRemittanceReceipt(tenantId, result.id);
+    await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    return result;
   }
 
   async dispute(tenantId: string, id: string, notes: string): Promise<Remittance> {
@@ -319,10 +359,12 @@ export class RemittanceService {
       throw new BadRequestException('notes are required to dispute a remittance');
     }
 
-    return this.prisma.remittance.update({
+    const updated = await this.prisma.remittance.update({
       where: { id },
       data: { status: 'disputed', notes: notes.trim() },
     });
+    await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    return updated;
   }
 
   async waive(tenantId: string, id: string, notes: string, actorRole: string): Promise<Remittance> {
@@ -338,9 +380,58 @@ export class RemittanceService {
       throw new BadRequestException('notes are required to waive a remittance');
     }
 
-    return this.prisma.remittance.update({
+    const updated = await this.prisma.remittance.update({
       where: { id },
       data: { status: 'waived', notes: notes.trim() },
     });
+    await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    return updated;
+  }
+
+  async confirmMany(tenantId: string, ids: string[], paidDate: string) {
+    const results: RemittanceWithWalletEntry[] = [];
+    for (const id of ids) {
+      results.push(await this.confirm(tenantId, id, paidDate));
+    }
+    return results;
+  }
+
+  async resolveDisputesMany(tenantId: string, ids: string[], paidDate: string) {
+    const disputedRecords = await this.prisma.remittance.findMany({
+      where: { tenantId, id: { in: ids }, status: 'disputed' },
+    });
+    const results: RemittanceWithWalletEntry[] = [];
+
+    for (const record of disputedRecords) {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const remittance = await tx.remittance.update({
+          where: { id: record.id },
+          data: {
+            status: 'completed',
+            paidDate,
+            notes: [record.notes, `Dispute resolved on ${paidDate}`].filter(Boolean).join('\n'),
+          },
+        });
+        const walletEntry = await this.operationalWalletsService.addEntryInTransaction(
+          tx,
+          tenantId,
+          record.businessEntityId,
+          {
+            type: 'credit',
+            amountMinorUnits: record.amountMinorUnits,
+            currency: record.currency,
+            referenceId: record.id,
+            referenceType: 'remittance',
+            description: `Disputed remittance completed for assignment ${record.assignmentId}`,
+          },
+        );
+        return { ...remittance, walletEntry };
+      });
+
+      await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+      results.push(updated);
+    }
+
+    return results;
   }
 }

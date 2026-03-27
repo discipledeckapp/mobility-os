@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from 'node:crypto';
 import {
   CONSENT_SCOPES,
   DRIVER_STATUS_CODES,
@@ -34,8 +35,11 @@ import { ControlPlaneBillingClient } from '../tenant-billing/control-plane-billi
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
+import { AuditService } from '../audit/audit.service';
+import { generateOtpCode, hashAuthSecret } from '../auth/auth-token-utils';
 import { hashPassword } from '../auth/password-utils';
 import { readUserSettings, writeUserSettings } from '../auth/user-settings';
+import { PolicyService, type EnforcementSummary } from '../policy/policy.service';
 import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
@@ -104,6 +108,71 @@ type DriverReadinessSummary = {
   assignmentReadinessReasons: string[];
   remittanceReadiness: 'ready' | 'partially_ready' | 'not_ready';
   remittanceReadinessReasons: string[];
+  enforcementStatus?: 'clear' | 'flagged' | 'restricted';
+  enforcementActions?: EnforcementSummary[];
+};
+
+type VerificationPaymentState = 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
+type VerificationEntitlementState =
+  | 'none'
+  | 'paid'
+  | 'reserved'
+  | 'consumed'
+  | 'expired'
+  | 'refunded'
+  | 'cancelled';
+type VerificationFlowState =
+  | 'not_started'
+  | 'in_progress'
+  | 'provider_called'
+  | 'success'
+  | 'failed'
+  | 'abandoned'
+  | 'blocked';
+
+type VerificationEntitlementRecord = {
+  id: string;
+  entitlementCode: string;
+  subjectType: string;
+  subjectId: string;
+  tenantId: string;
+  payerType: string;
+  paymentReference?: string | null;
+  paymentProvider?: string | null;
+  amountMinorUnits: number;
+  currency: string;
+  purpose: string;
+  status: string;
+  paidAt?: Date | null;
+  reservedAt?: Date | null;
+  consumedAt?: Date | null;
+  expiresAt?: Date | null;
+  consumedByAttemptId?: string | null;
+  metadata?: Prisma.JsonValue | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type VerificationAttemptRecord = {
+  id: string;
+  attemptCode: string;
+  subjectType: string;
+  subjectId: string;
+  tenantId: string;
+  entitlementId?: string | null;
+  attemptType: string;
+  requestFingerprint?: string | null;
+  startedAt: Date;
+  completedAt?: Date | null;
+  status: string;
+  failureReason?: string | null;
+  providerCostIncurred: boolean;
+  billableStageReached: boolean;
+  providerCallCount: number;
+  livenessCallCount: number;
+  metadata?: Prisma.JsonValue | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 type DriverIdentityResolutionResult = {
@@ -206,6 +275,17 @@ type DriverDocumentReviewQueueItem = DriverDocumentRecord & {
   fleetId: string;
 };
 
+type DriverAdminOverrideState = {
+  adminAssignmentOverrideRequestedAt?: Date | null;
+  adminAssignmentOverrideRequestedBy?: string | null;
+  adminAssignmentOverrideReason?: string | null;
+  adminAssignmentOverrideEvidence?: Prisma.JsonValue | null;
+  adminAssignmentOverrideOtpHash?: string | null;
+  adminAssignmentOverrideOtpExpiresAt?: Date | null;
+  adminAssignmentOverrideConfirmedAt?: Date | null;
+  adminAssignmentOverrideConfirmedBy?: string | null;
+};
+
 const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
 const DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS = 500_000;
 const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
@@ -235,6 +315,8 @@ export class DriversService {
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
     private readonly meteringClient: ControlPlaneMeteringClient,
     private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
+    private readonly policyService: PolicyService,
+    private readonly auditService: AuditService,
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
@@ -246,6 +328,392 @@ export class DriversService {
       default:
         return DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS;
     }
+  }
+
+  private buildVerificationEntitlementCode(): string {
+    return `ve_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
+  }
+
+  private buildVerificationAttemptCode(): string {
+    return `va_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
+  }
+
+  private buildVerificationRequestFingerprint(input: {
+    subjectType: string;
+    subjectId: string;
+    countryCode?: string;
+    identifiers?: Array<{ type: string; value: string; countryCode?: string }>;
+  }): string {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          subjectType: input.subjectType,
+          subjectId: input.subjectId,
+          countryCode: input.countryCode ?? null,
+          identifiers: (input.identifiers ?? []).map((identifier) => ({
+            type: identifier.type,
+            value: identifier.value,
+            countryCode: identifier.countryCode ?? null,
+          })),
+        }),
+      )
+      .digest('hex');
+  }
+
+  private async getLatestVerificationEntitlement(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+  ): Promise<VerificationEntitlementRecord | null> {
+    const rows = await this.prisma.$queryRaw<VerificationEntitlementRecord[]>(Prisma.sql`
+      SELECT *
+      FROM "verification_entitlements"
+      WHERE "tenantId" = ${tenantId}
+        AND "subjectType" = ${subjectType}
+        AND "subjectId" = ${subjectId}
+        AND "purpose" = 'identity_verification'
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `);
+    return rows[0] ?? null;
+  }
+
+  private async getLatestVerificationAttempt(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+  ): Promise<VerificationAttemptRecord | null> {
+    const rows = await this.prisma.$queryRaw<VerificationAttemptRecord[]>(Prisma.sql`
+      SELECT *
+      FROM "verification_attempts"
+      WHERE "tenantId" = ${tenantId}
+        AND "subjectType" = ${subjectType}
+        AND "subjectId" = ${subjectId}
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `);
+    return rows[0] ?? null;
+  }
+
+  private async getLatestVerificationAttemptByFingerprint(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+    requestFingerprint: string,
+  ): Promise<VerificationAttemptRecord | null> {
+    const rows = await this.prisma.$queryRaw<VerificationAttemptRecord[]>(Prisma.sql`
+      SELECT *
+      FROM "verification_attempts"
+      WHERE "tenantId" = ${tenantId}
+        AND "subjectType" = ${subjectType}
+        AND "subjectId" = ${subjectId}
+        AND "requestFingerprint" = ${requestFingerprint}
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `);
+    return rows[0] ?? null;
+  }
+
+  private async countVerificationAttemptsSince(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+    since: Date,
+    statuses: string[],
+  ): Promise<number> {
+    const rows = await this.prisma.$queryRaw<Array<{ count: bigint | number }>>(Prisma.sql`
+      SELECT COUNT(*)::bigint AS count
+      FROM "verification_attempts"
+      WHERE "tenantId" = ${tenantId}
+        AND "subjectType" = ${subjectType}
+        AND "subjectId" = ${subjectId}
+        AND "status" IN (${Prisma.join(statuses)})
+        AND "createdAt" >= ${since}
+    `);
+    const value = rows[0]?.count ?? 0;
+    return typeof value === 'bigint' ? Number(value) : Number(value);
+  }
+
+  private async createVerificationEntitlement(input: {
+    subjectType: 'driver' | 'guarantor';
+    subjectId: string;
+    tenantId: string;
+    payerType: 'driver' | 'guarantor' | 'tenant' | 'platform';
+    paymentReference?: string | null;
+    paymentProvider?: string | null;
+    amountMinorUnits: number;
+    currency: string;
+    status: string;
+    paidAt?: Date | null;
+    expiresAt?: Date | null;
+  }): Promise<VerificationEntitlementRecord> {
+    const rows = await this.prisma.$queryRaw<VerificationEntitlementRecord[]>(Prisma.sql`
+      INSERT INTO "verification_entitlements" (
+        "id",
+        "entitlementCode",
+        "subjectType",
+        "subjectId",
+        "tenantId",
+        "payerType",
+        "paymentReference",
+        "paymentProvider",
+        "amountMinorUnits",
+        "currency",
+        "purpose",
+        "status",
+        "paidAt",
+        "expiresAt"
+      )
+      VALUES (
+        ${randomUUID()},
+        ${this.buildVerificationEntitlementCode()},
+        ${input.subjectType},
+        ${input.subjectId},
+        ${input.tenantId},
+        ${input.payerType},
+        ${input.paymentReference ?? null},
+        ${input.paymentProvider ?? null},
+        ${input.amountMinorUnits},
+        ${input.currency},
+        'identity_verification',
+        ${input.status},
+        ${input.paidAt ?? null},
+        ${input.expiresAt ?? null}
+      )
+      RETURNING *
+    `);
+    return rows[0] as VerificationEntitlementRecord;
+  }
+
+  private async updateVerificationEntitlement(
+    entitlementId: string,
+    updates: {
+      status?: string;
+      reservedAt?: Date | null;
+      consumedAt?: Date | null;
+      consumedByAttemptId?: string | null;
+      paymentReference?: string | null;
+      paymentProvider?: string | null;
+      paidAt?: Date | null;
+      expiresAt?: Date | null;
+    },
+  ): Promise<void> {
+    await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE "verification_entitlements"
+      SET
+        "status" = COALESCE(${updates.status ?? null}, "status"),
+        "reservedAt" = COALESCE(${updates.reservedAt ?? null}, "reservedAt"),
+        "consumedAt" = COALESCE(${updates.consumedAt ?? null}, "consumedAt"),
+        "consumedByAttemptId" = COALESCE(${updates.consumedByAttemptId ?? null}, "consumedByAttemptId"),
+        "paymentReference" = COALESCE(${updates.paymentReference ?? null}, "paymentReference"),
+        "paymentProvider" = COALESCE(${updates.paymentProvider ?? null}, "paymentProvider"),
+        "paidAt" = COALESCE(${updates.paidAt ?? null}, "paidAt"),
+        "expiresAt" = COALESCE(${updates.expiresAt ?? null}, "expiresAt"),
+        "updatedAt" = NOW()
+      WHERE "id" = ${entitlementId}
+    `);
+  }
+
+  private async createVerificationAttempt(input: {
+    tenantId: string;
+    subjectType: 'driver' | 'guarantor';
+    subjectId: string;
+    entitlementId?: string | null;
+    attemptType: 'driver_verification' | 'guarantor_verification' | 'reverification';
+    requestFingerprint?: string | null;
+    status: string;
+    livenessCallCount?: number;
+    providerCallCount?: number;
+    billableStageReached?: boolean;
+    providerCostIncurred?: boolean;
+    failureReason?: string | null;
+  }): Promise<VerificationAttemptRecord> {
+    const rows = await this.prisma.$queryRaw<VerificationAttemptRecord[]>(Prisma.sql`
+      INSERT INTO "verification_attempts" (
+        "id",
+        "attemptCode",
+        "subjectType",
+        "subjectId",
+        "tenantId",
+        "entitlementId",
+        "attemptType",
+        "requestFingerprint",
+        "status",
+        "livenessCallCount",
+        "providerCallCount",
+        "billableStageReached",
+        "providerCostIncurred",
+        "failureReason"
+      )
+      VALUES (
+        ${randomUUID()},
+        ${this.buildVerificationAttemptCode()},
+        ${input.subjectType},
+        ${input.subjectId},
+        ${input.tenantId},
+        ${input.entitlementId ?? null},
+        ${input.attemptType},
+        ${input.requestFingerprint ?? null},
+        ${input.status},
+        ${input.livenessCallCount ?? 0},
+        ${input.providerCallCount ?? 0},
+        ${input.billableStageReached ?? false},
+        ${input.providerCostIncurred ?? false},
+        ${input.failureReason ?? null}
+      )
+      RETURNING *
+    `);
+    return rows[0] as VerificationAttemptRecord;
+  }
+
+  private async updateVerificationAttempt(
+    attemptId: string,
+    updates: {
+      status?: string;
+      failureReason?: string | null;
+      completedAt?: Date | null;
+      providerCallCountIncrement?: number;
+      livenessCallCountIncrement?: number;
+      billableStageReached?: boolean;
+      providerCostIncurred?: boolean;
+      entitlementId?: string | null;
+    },
+  ): Promise<void> {
+    await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE "verification_attempts"
+      SET
+        "status" = COALESCE(${updates.status ?? null}, "status"),
+        "failureReason" = COALESCE(${updates.failureReason ?? null}, "failureReason"),
+        "completedAt" = COALESCE(${updates.completedAt ?? null}, "completedAt"),
+        "providerCallCount" = "providerCallCount" + ${updates.providerCallCountIncrement ?? 0},
+        "livenessCallCount" = "livenessCallCount" + ${updates.livenessCallCountIncrement ?? 0},
+        "billableStageReached" = COALESCE(${updates.billableStageReached ?? null}, "billableStageReached"),
+        "providerCostIncurred" = COALESCE(${updates.providerCostIncurred ?? null}, "providerCostIncurred"),
+        "entitlementId" = COALESCE(${updates.entitlementId ?? null}, "entitlementId"),
+        "updatedAt" = NOW()
+      WHERE "id" = ${attemptId}
+    `);
+  }
+
+  private async ensureLegacyVerificationEntitlement(input: {
+    tenantId: string;
+    subjectType: 'driver' | 'guarantor';
+    subjectId: string;
+    paymentReference?: string | null;
+    paidAt?: Date | null;
+    amountMinorUnits: number;
+    currency: string;
+    payerType: 'driver' | 'guarantor' | 'tenant' | 'platform';
+  }): Promise<VerificationEntitlementRecord | null> {
+    const existing = await this.getLatestVerificationEntitlement(
+      input.tenantId,
+      input.subjectType,
+      input.subjectId,
+    );
+    if (existing) {
+      return existing;
+    }
+    if (!input.paidAt && !input.paymentReference) {
+      return null;
+    }
+
+    return this.createVerificationEntitlement({
+      subjectType: input.subjectType,
+      subjectId: input.subjectId,
+      tenantId: input.tenantId,
+      payerType: input.payerType,
+      paymentReference: input.paymentReference ?? null,
+      amountMinorUnits: input.amountMinorUnits,
+      currency: input.currency,
+      status: 'paid',
+      paidAt: input.paidAt ?? new Date(),
+      expiresAt: null,
+    });
+  }
+
+  private mapEntitlementState(
+    entitlement: VerificationEntitlementRecord | null,
+  ): VerificationEntitlementState {
+    if (!entitlement) return 'none';
+    if (entitlement.expiresAt && entitlement.expiresAt.getTime() < Date.now()) return 'expired';
+    if (entitlement.status === 'paid') return 'paid';
+    if (entitlement.status === 'reserved') return 'reserved';
+    if (entitlement.status === 'consumed') return 'consumed';
+    if (entitlement.status === 'refunded') return 'refunded';
+    if (entitlement.status === 'cancelled') return 'cancelled';
+    return 'none';
+  }
+
+  private mapAttemptState(attempt: VerificationAttemptRecord | null): VerificationFlowState {
+    if (!attempt) return 'not_started';
+    if (attempt.status === 'provider_called') return 'provider_called';
+    if (attempt.status === 'success') return 'success';
+    if (attempt.status === 'failed') return 'failed';
+    if (attempt.status === 'abandoned') return 'abandoned';
+    if (attempt.status === 'blocked') return 'blocked';
+    return 'in_progress';
+  }
+
+  private async assertVerificationCostControls(input: {
+    tenantId: string;
+    subjectType: 'driver' | 'guarantor';
+    subjectId: string;
+    operation: 'liveness' | 'provider';
+  }): Promise<void> {
+    const now = Date.now();
+    const recentWindow = new Date(now - 15 * 60 * 1000);
+    const longWindow = new Date(now - 60 * 60 * 1000);
+    if (input.operation === 'liveness') {
+      const recentStarts = await this.countVerificationAttemptsSince(
+        input.tenantId,
+        input.subjectType,
+        input.subjectId,
+        recentWindow,
+        ['liveness_started', 'initiated', 'in_progress'],
+      );
+      if (recentStarts >= 5) {
+        throw new ConflictException(
+          'Too many live verification starts in a short period. Please wait a few minutes before trying again.',
+        );
+      }
+      return;
+    }
+
+    const recentProviderCalls = await this.countVerificationAttemptsSince(
+      input.tenantId,
+      input.subjectType,
+      input.subjectId,
+      longWindow,
+      ['provider_called', 'success', 'failed', 'blocked'],
+    );
+    if (recentProviderCalls >= 3) {
+      throw new ConflictException(
+        'Verification is temporarily blocked after repeated costly attempts. Please wait before trying again.',
+      );
+    }
+  }
+
+  private determineVerificationAttemptStatus(
+    result: DriverIdentityResolutionResult,
+  ): 'success' | 'failed' | 'initiated' {
+    if (
+      result.isVerifiedMatch === true ||
+      result.decision === 'review_needed' ||
+      result.decision === 'review_required' ||
+      result.providerLookupStatus === 'skipped_by_organisation_policy'
+    ) {
+      return 'success';
+    }
+
+    if (
+      result.decision === 'failed' ||
+      result.providerLookupStatus === 'no_match' ||
+      result.livenessPassed === false
+    ) {
+      return 'failed';
+    }
+
+    return 'initiated';
   }
 
   private async getOperationalWalletFundingStatus(
@@ -292,6 +760,14 @@ export class DriversService {
     requiredDriverDocumentSlugs: string[];
     driverPaysKyc: boolean;
     kycPaymentVerified: boolean;
+    verificationPaymentState: VerificationPaymentState;
+    verificationEntitlementState: VerificationEntitlementState;
+    verificationState: VerificationFlowState;
+    verificationEntitlementCode?: string | null;
+    verificationPaymentReference?: string | null;
+    verificationConsumedAt?: Date | null;
+    verificationAttemptCount: number;
+    verificationBlockedReason?: string | null;
     verificationPayer: 'driver' | 'organisation';
     verificationAmountMinorUnits: number;
     verificationCurrency: string;
@@ -319,9 +795,43 @@ export class DriversService {
     const driverPaysKyc =
       (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
       settings.operations.driverPaysKyc;
-    const kycPaymentVerified = Boolean(
-      (driver as Driver & { kycPaymentVerifiedAt?: Date | null }).kycPaymentVerifiedAt,
+    const entitlement =
+      await this.ensureLegacyVerificationEntitlement({
+        tenantId,
+        subjectType: 'driver',
+        subjectId: driver.id,
+        paymentReference:
+          (driver as Driver & { kycPaymentReference?: string | null }).kycPaymentReference ?? null,
+        paidAt:
+          (driver as Driver & { kycPaymentVerifiedAt?: Date | null }).kycPaymentVerifiedAt ?? null,
+        amountMinorUnits: verificationAmountMinorUnits,
+        currency: verificationCurrency,
+        payerType: driverPaysKyc ? 'driver' : 'tenant',
+      });
+    const latestAttempt = await this.getLatestVerificationAttempt(tenantId, 'driver', driver.id);
+    const verificationEntitlementState = this.mapEntitlementState(entitlement);
+    const verificationState = this.mapAttemptState(latestAttempt);
+    const verificationAttemptCount = await this.countVerificationAttemptsSince(
+      tenantId,
+      'driver',
+      driver.id,
+      new Date(0),
+      ['initiated', 'liveness_started', 'provider_called', 'success', 'failed', 'abandoned', 'blocked'],
     );
+    const verificationAlreadySatisfied =
+      verificationState === 'success' ||
+      driver.identityStatus === 'verified' ||
+      driver.identityStatus === 'review_needed';
+    const kycPaymentVerified =
+      ['paid', 'reserved'].includes(verificationEntitlementState) ||
+      (verificationEntitlementState === 'consumed' && verificationAlreadySatisfied);
+    const verificationPaymentState: VerificationPaymentState = driverPaysKyc
+      ? verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved'
+        ? 'paid'
+        : verificationEntitlementState === 'consumed'
+          ? 'reconciled'
+          : 'required'
+      : 'not_required';
 
     let verificationPaymentStatus:
       | 'not_required'
@@ -330,12 +840,34 @@ export class DriversService {
       | 'wallet_missing'
       | 'insufficient_balance' = 'not_required';
     let verificationPaymentMessage: string | null = null;
+    let verificationBlockedReason: string | null = null;
 
     if (driverPaysKyc) {
-      verificationPaymentStatus = kycPaymentVerified ? 'ready' : 'driver_payment_required';
-      verificationPaymentMessage = kycPaymentVerified
-        ? 'Your verification payment has been confirmed.'
-        : 'A verification payment is required before live verification can continue.';
+      if (verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved') {
+        verificationPaymentStatus = 'ready';
+        verificationPaymentMessage =
+          verificationEntitlementState === 'reserved'
+            ? 'Your verification payment has already been received. Continue from where you stopped.'
+            : 'Your verification payment has already been received. You can continue from where you stopped.';
+      } else if (verificationEntitlementState === 'consumed') {
+        if (verificationAlreadySatisfied) {
+          verificationPaymentStatus = 'ready';
+          verificationPaymentMessage =
+            'Your verification payment has already been used for this completed onboarding flow.';
+        } else {
+          verificationPaymentStatus = 'driver_payment_required';
+          verificationPaymentMessage =
+            'Your previous paid verification attempt has already been used. A new payment is required only if your organisation policy allows another paid attempt.';
+        }
+      } else if (verificationEntitlementState === 'expired') {
+        verificationPaymentStatus = 'driver_payment_required';
+        verificationPaymentMessage =
+          'Your previous verification payment entitlement expired. A new payment is required before verification can continue.';
+      } else {
+        verificationPaymentStatus = 'driver_payment_required';
+        verificationPaymentMessage =
+          'A verification payment is required before live verification can continue.';
+      }
     } else if (settings.operations.requireIdentityVerificationForActivation) {
       verificationPaymentStatus = await this.getOperationalWalletFundingStatus(
         tenantId,
@@ -347,7 +879,13 @@ export class DriversService {
           ? 'Your company has enabled verification for this onboarding flow.'
           : verificationPaymentStatus === 'wallet_missing'
             ? 'Your company must set up an operations wallet before verification can continue.'
-            : 'Your company wallet needs funding before verification can continue.';
+          : 'Your company wallet needs funding before verification can continue.';
+    }
+
+    if (verificationState === 'blocked') {
+      verificationBlockedReason =
+        latestAttempt?.failureReason ??
+        'Too many recent verification retries. Please wait before trying again.';
     }
 
     return {
@@ -356,6 +894,14 @@ export class DriversService {
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       driverPaysKyc,
       kycPaymentVerified,
+      verificationPaymentState,
+      verificationEntitlementState,
+      verificationState,
+      verificationEntitlementCode: entitlement?.entitlementCode ?? null,
+      verificationPaymentReference: entitlement?.paymentReference ?? null,
+      verificationConsumedAt: entitlement?.consumedAt ?? null,
+      verificationAttemptCount,
+      verificationBlockedReason,
       verificationPayer: driverPaysKyc ? 'driver' : 'organisation',
       verificationAmountMinorUnits,
       verificationCurrency,
@@ -506,9 +1052,15 @@ export class DriversService {
         DriverGuarantorRecord,
         | 'name'
         | 'phone'
+        | 'email'
         | 'countryCode'
         | 'relationship'
         | 'status'
+        | 'personId'
+        | 'dateOfBirth'
+        | 'gender'
+        | 'selfieImageUrl'
+        | 'providerImageUrl'
         | 'disconnectedAt'
         | 'disconnectedReason'
       >;
@@ -537,9 +1089,15 @@ export class DriversService {
               DriverGuarantorRecord,
               | 'name'
               | 'phone'
+              | 'email'
               | 'countryCode'
               | 'relationship'
               | 'status'
+              | 'personId'
+              | 'dateOfBirth'
+              | 'gender'
+              | 'selfieImageUrl'
+              | 'providerImageUrl'
               | 'disconnectedAt'
               | 'disconnectedReason'
             >;
@@ -679,6 +1237,8 @@ export class DriversService {
 
     assertTenantOwnership(asTenantId(driver.tenantId), asTenantId(tenantId));
 
+    await this.policyService.evaluateDriverPolicies(tenantId, driver.id);
+
     const enrichedDriver = await this.enrichDriverWithRisk(driver);
     const [driverWithGuarantor] = await this.attachGuarantorSummaries(tenantId, [enrichedDriver]);
     const [driverWithDocuments] = await this.attachDocumentSummaries(tenantId, [
@@ -755,6 +1315,14 @@ export class DriversService {
         requiredDriverDocumentSlugs?: string[];
         driverPaysKyc?: boolean;
         kycPaymentVerified?: boolean;
+        verificationPaymentState?: VerificationPaymentState;
+        verificationEntitlementState?: VerificationEntitlementState;
+        verificationState?: VerificationFlowState;
+        verificationEntitlementCode?: string | null;
+        verificationPaymentReference?: string | null;
+        verificationConsumedAt?: Date | null;
+        verificationAttemptCount?: number;
+        verificationBlockedReason?: string | null;
         verificationPayer?: 'driver' | 'organisation';
         verificationAmountMinorUnits?: number;
         verificationCurrency?: string;
@@ -786,6 +1354,14 @@ export class DriversService {
       requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
       driverPaysKyc: verificationPolicy.driverPaysKyc,
       kycPaymentVerified: verificationPolicy.kycPaymentVerified,
+      verificationPaymentState: verificationPolicy.verificationPaymentState,
+      verificationEntitlementState: verificationPolicy.verificationEntitlementState,
+      verificationState: verificationPolicy.verificationState,
+      verificationEntitlementCode: verificationPolicy.verificationEntitlementCode ?? null,
+      verificationPaymentReference: verificationPolicy.verificationPaymentReference ?? null,
+      verificationConsumedAt: verificationPolicy.verificationConsumedAt ?? null,
+      verificationAttemptCount: verificationPolicy.verificationAttemptCount,
+      verificationBlockedReason: verificationPolicy.verificationBlockedReason ?? null,
       verificationPayer: verificationPolicy.verificationPayer,
       verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
       verificationCurrency: verificationPolicy.verificationCurrency,
@@ -1254,7 +1830,13 @@ export class DriversService {
     token: string,
     provider: 'paystack' | 'flutterwave',
     returnUrl?: string,
-  ): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
+  ): Promise<{
+    status: 'checkout_required' | 'already_paid';
+    checkoutUrl?: string;
+    amountMinorUnits: number;
+    currency: string;
+    entitlementState?: VerificationEntitlementState;
+  }> {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
     const verificationPolicy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
@@ -1269,6 +1851,18 @@ export class DriversService {
       throw new BadRequestException(
         'A driver email address is required to initiate a KYC payment checkout.',
       );
+    }
+
+    if (
+      verificationPolicy.verificationEntitlementState === 'paid' ||
+      verificationPolicy.verificationEntitlementState === 'reserved'
+    ) {
+      return {
+        status: 'already_paid',
+        amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+        currency: verificationPolicy.verificationCurrency,
+        entitlementState: verificationPolicy.verificationEntitlementState,
+      };
     }
 
     const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
@@ -1291,9 +1885,11 @@ export class DriversService {
     });
 
     return {
+      status: 'checkout_required',
       checkoutUrl: checkout.checkoutUrl,
       amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
       currency: verificationPolicy.verificationCurrency,
+      entitlementState: verificationPolicy.verificationEntitlementState,
     };
   }
 
@@ -1303,6 +1899,8 @@ export class DriversService {
     reference: string,
   ): Promise<{ status: string }> {
     const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const verificationPolicy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
     const normalizedReference = reference.trim();
     const existingDriverWithReference = await this.prisma.driver.findFirst({
       where: {
@@ -1318,6 +1916,31 @@ export class DriversService {
       );
     }
 
+    const existingEntitlement = await this.getLatestVerificationEntitlement(
+      payload.tenantId,
+      'driver',
+      payload.driverId,
+    );
+    const existingEntitlementState = this.mapEntitlementState(existingEntitlement);
+
+    if (
+      existingEntitlement &&
+      existingEntitlement.paymentReference === normalizedReference &&
+      ['paid', 'reserved', 'consumed'].includes(existingEntitlementState)
+    ) {
+      if (existingEntitlementState !== 'consumed') {
+        await this.prisma.driver.update({
+          where: { id: payload.driverId },
+          data: {
+            kycPaymentReference: normalizedReference,
+            kycPaymentVerifiedAt: existingEntitlement.paidAt ?? new Date(),
+          } as never,
+        });
+      }
+
+      return { status: 'already_applied' };
+    }
+
     const applied = await this.controlPlaneBillingClient.verifyAndApplyPayment({
       provider,
       reference: normalizedReference,
@@ -1325,6 +1948,29 @@ export class DriversService {
       tenantId: payload.tenantId,
       driverId: payload.driverId,
     });
+
+    if (existingEntitlement) {
+      await this.updateVerificationEntitlement(existingEntitlement.id, {
+        status:
+          existingEntitlement.status === 'consumed' ? existingEntitlement.status : 'paid',
+        paymentReference: normalizedReference,
+        paymentProvider: provider,
+        paidAt: new Date(),
+      });
+    } else {
+      await this.createVerificationEntitlement({
+        subjectType: 'driver',
+        subjectId: payload.driverId,
+        tenantId: payload.tenantId,
+        payerType: verificationPolicy.driverPaysKyc ? 'driver' : 'tenant',
+        paymentReference: normalizedReference,
+        paymentProvider: provider,
+        amountMinorUnits: applied.amountMinorUnits,
+        currency: applied.currency,
+        status: 'paid',
+        paidAt: new Date(),
+      });
+    }
 
     await this.prisma.driver.update({
       where: { id: payload.driverId },
@@ -1370,7 +2016,18 @@ export class DriversService {
     dto: ResolveDriverIdentityDto,
   ) {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
-    return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, dto);
+    const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
+    return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, {
+      ...rest,
+      ...(livenessCheck
+        ? {
+            livenessCheck: {
+              ...(livenessCheck.provider ? { provider: livenessCheck.provider } : {}),
+              ...(livenessCheck.sessionId ? { sessionId: livenessCheck.sessionId } : {}),
+            },
+          }
+        : {}),
+    });
   }
 
   async listDocuments(tenantId: string, id: string): Promise<DriverDocumentRecord[]> {
@@ -1804,18 +2461,25 @@ export class DriversService {
         personId: null,
         name: dto.name.trim(),
         phone: normalizedPhone,
+        ...(dto.email?.trim() ? { email: dto.email.trim().toLowerCase() } : {}),
         countryCode: dto.countryCode?.trim().toUpperCase() || null,
         relationship: dto.relationship?.trim() || null,
-        status: 'active',
+        status: 'pending_verification',
         disconnectedAt: null,
         disconnectedReason: null,
       },
       update: {
         name: dto.name.trim(),
         phone: normalizedPhone,
+        email: dto.email?.trim().toLowerCase() || null,
         countryCode: dto.countryCode?.trim().toUpperCase() || null,
         relationship: dto.relationship?.trim() || null,
-        status: 'active',
+        status: 'pending_verification',
+        personId: null,
+        dateOfBirth: null,
+        gender: null,
+        selfieImageUrl: null,
+        providerImageUrl: null,
         disconnectedAt: null,
         disconnectedReason: null,
       },
@@ -1878,7 +2542,18 @@ export class DriversService {
       );
     }
 
-    const identifiers = [...(dto.identifiers ?? []), { type: 'PHONE', value: guarantor.phone }];
+    const submittedIdentifiers = dto.identifiers ?? [];
+    const explicitIdentityIdentifiers = submittedIdentifiers.filter(
+      (identifier) => !['PHONE', 'EMAIL'].includes(identifier.type.toUpperCase()),
+    );
+
+    if (explicitIdentityIdentifiers.length === 0) {
+      throw new BadRequestException(
+        'Submit at least one government or identity identifier for the guarantor before verification.',
+      );
+    }
+
+    const identifiers = [...submittedIdentifiers, { type: 'PHONE', value: guarantor.phone }];
 
     // Pre-flight: if the guarantor's phone matches the driver's, block immediately.
     if (guarantor.phone === driver.phone) {
@@ -1891,36 +2566,46 @@ export class DriversService {
       ? await this.persistSelfiePortraitForDriverGuarantor(driver.id, dto.selfieImageBase64)
       : null;
 
-    const result = await this.intelligenceClient.resolveEnrollment({
-      tenantId,
-      countryCode: resolvedCountryCode,
-      roleType: 'guarantor',
-      association: {
-        localEntityType: 'driver_guarantor',
-        localEntityId: guarantor.id,
+    let result: DriverIdentityResolutionResult;
+    try {
+      result = await this.intelligenceClient.resolveEnrollment({
+        tenantId,
+        countryCode: resolvedCountryCode,
         roleType: 'guarantor',
-        ...(driver.businessEntityId ? { businessEntityId: driver.businessEntityId } : {}),
-        ...(driver.operatingUnitId ? { operatingUnitId: driver.operatingUnitId } : {}),
-        ...(driver.fleetId ? { fleetId: driver.fleetId } : {}),
-        status: guarantor.status,
-        source: 'identity_resolution',
-      },
-      ...(dto.livenessPassed !== undefined ? { livenessPassed: dto.livenessPassed } : {}),
-      identifiers,
-      ...(dto.biometric ? { biometric: dto.biometric } : {}),
-      providerVerification: {
-        subjectConsent: dto.subjectConsent ?? false,
-        validationData: {
-          firstName: guarantor.name.split(' ')[0] ?? guarantor.name,
-          ...(guarantor.name.split(' ').slice(1).join(' ')
-            ? { lastName: guarantor.name.split(' ').slice(1).join(' ') }
-            : {}),
+        association: {
+          localEntityType: 'driver_guarantor',
+          localEntityId: guarantor.id,
+          roleType: 'guarantor',
+          ...(driver.businessEntityId ? { businessEntityId: driver.businessEntityId } : {}),
+          ...(driver.operatingUnitId ? { operatingUnitId: driver.operatingUnitId } : {}),
+          ...(driver.fleetId ? { fleetId: driver.fleetId } : {}),
+          status: guarantor.status,
+          source: 'identity_resolution',
         },
-        ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
-        ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
-        ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
-      },
-    });
+        ...(dto.livenessPassed !== undefined ? { livenessPassed: dto.livenessPassed } : {}),
+        identifiers,
+        ...(dto.biometric ? { biometric: dto.biometric } : {}),
+        providerVerification: {
+          subjectConsent: dto.subjectConsent ?? false,
+          validationData: {
+            firstName: guarantor.name.split(' ')[0] ?? guarantor.name,
+            ...(guarantor.name.split(' ').slice(1).join(' ')
+              ? { lastName: guarantor.name.split(' ').slice(1).join(' ') }
+              : {}),
+          },
+          ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
+          ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
+          ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
+        },
+      });
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw new ServiceUnavailableException(
+          'Guarantor verification is temporarily unavailable. Please try again.',
+        );
+      }
+      throw error;
+    }
 
     // Post-resolution self-guarantee check: if the resolved canonical person
     // is the same as the driver's, the guarantor is the driver themselves.
@@ -1943,6 +2628,7 @@ export class DriversService {
         ...(result.personId ? { personId: result.personId } : {}),
         ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+        status: result.personId ? 'verified' : 'pending_verification',
       },
     });
 
@@ -1998,14 +2684,243 @@ export class DriversService {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
     await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
-    return this.initializeIdentityLivenessSession(payload.tenantId, payload.driverId, countryCode);
+    await this.assertVerificationCostControls({
+      tenantId: payload.tenantId,
+      subjectType: 'driver',
+      subjectId: payload.driverId,
+      operation: 'liveness',
+    });
+
+    const policy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
+    const entitlement = await this.getLatestVerificationEntitlement(
+      payload.tenantId,
+      'driver',
+      payload.driverId,
+    );
+    const session = await this.initializeIdentityLivenessSession(
+      payload.tenantId,
+      payload.driverId,
+      countryCode,
+    );
+
+    await this.createVerificationAttempt({
+      tenantId: payload.tenantId,
+      subjectType: 'driver',
+      subjectId: payload.driverId,
+      entitlementId:
+        policy.driverPaysKyc &&
+        entitlement &&
+        ['paid', 'reserved', 'consumed'].includes(this.mapEntitlementState(entitlement))
+          ? entitlement.id
+          : null,
+      attemptType: 'driver_verification',
+      status: 'liveness_started',
+      livenessCallCount: 1,
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'self_service_liveness_started',
+        tenantId: payload.tenantId,
+        driverId: payload.driverId,
+        countryCode: countryCode ?? driver.nationality ?? null,
+        sessionId: session.sessionId,
+      }),
+    );
+
+    return session;
   }
 
   async resolveIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
     await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
-    return this.resolveIdentity(payload.tenantId, payload.driverId, dto);
+    await this.assertVerificationCostControls({
+      tenantId: payload.tenantId,
+      subjectType: 'driver',
+      subjectId: payload.driverId,
+      operation: 'provider',
+    });
+
+    const verificationPolicy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
+    const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
+    const sanitizedIdentifiers =
+      rest.identifiers?.map((identifier) => ({
+        type: identifier.type,
+        value: identifier.value,
+        ...(identifier.countryCode ? { countryCode: identifier.countryCode } : {}),
+      })) ?? [];
+    const fingerprintCountryCode = rest.countryCode ?? driver.nationality ?? null;
+    const requestFingerprint = this.buildVerificationRequestFingerprint({
+      subjectType: 'driver',
+      subjectId: payload.driverId,
+      ...(fingerprintCountryCode ? { countryCode: fingerprintCountryCode } : {}),
+      identifiers: sanitizedIdentifiers,
+    });
+    const duplicateAttempt = await this.getLatestVerificationAttemptByFingerprint(
+      payload.tenantId,
+      'driver',
+      payload.driverId,
+      requestFingerprint,
+    );
+    if (
+      duplicateAttempt &&
+      ['initiated', 'liveness_started', 'provider_called', 'success'].includes(duplicateAttempt.status) &&
+      duplicateAttempt.updatedAt.getTime() >= Date.now() - 5 * 60 * 1000
+    ) {
+      throw new ConflictException(
+        'This verification submission is already being processed. Refresh your status before trying again.',
+      );
+    }
+
+    const entitlement = await this.getLatestVerificationEntitlement(
+      payload.tenantId,
+      'driver',
+      payload.driverId,
+    );
+    const entitlementState = this.mapEntitlementState(entitlement);
+    const latestAttempt = await this.getLatestVerificationAttempt(
+      payload.tenantId,
+      'driver',
+      payload.driverId,
+    );
+    const attempt =
+      latestAttempt &&
+      latestAttempt.status === 'liveness_started' &&
+      latestAttempt.completedAt == null &&
+      latestAttempt.updatedAt.getTime() >= Date.now() - 60 * 60 * 1000
+        ? latestAttempt
+        : await this.createVerificationAttempt({
+            tenantId: payload.tenantId,
+            subjectType: 'driver',
+            subjectId: payload.driverId,
+            entitlementId:
+              verificationPolicy.driverPaysKyc &&
+              entitlement &&
+              ['paid', 'reserved', 'consumed'].includes(entitlementState)
+                ? entitlement.id
+                : null,
+            attemptType: 'driver_verification',
+            requestFingerprint,
+            status: 'initiated',
+          });
+
+    if (attempt.requestFingerprint !== requestFingerprint) {
+      await this.updateVerificationAttempt(attempt.id, {
+        status: 'initiated',
+      });
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE "verification_attempts"
+        SET "requestFingerprint" = ${requestFingerprint}, "updatedAt" = NOW()
+        WHERE "id" = ${attempt.id}
+      `);
+    }
+
+    if (
+      verificationPolicy.driverPaysKyc &&
+      entitlement &&
+      entitlementState === 'paid'
+    ) {
+      await this.updateVerificationEntitlement(entitlement.id, {
+        status: 'reserved',
+        reservedAt: new Date(),
+      });
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'self_service_verification_submit_started',
+        tenantId: payload.tenantId,
+        driverId: payload.driverId,
+        attemptId: attempt.id,
+        entitlementId: entitlement?.id ?? null,
+        entitlementState,
+      }),
+    );
+
+    try {
+      const result = await this.resolveIdentity(payload.tenantId, payload.driverId, {
+        ...rest,
+        ...(livenessCheck
+          ? {
+              livenessCheck: {
+                ...(livenessCheck.provider ? { provider: livenessCheck.provider } : {}),
+              ...(livenessCheck.sessionId ? { sessionId: livenessCheck.sessionId } : {}),
+            },
+          }
+        : {}),
+      });
+      const attemptStatus = this.determineVerificationAttemptStatus(result);
+      await this.updateVerificationAttempt(attempt.id, {
+        status: attemptStatus,
+        providerCallCountIncrement: 1,
+        billableStageReached: true,
+        providerCostIncurred: true,
+        completedAt: attemptStatus === 'initiated' ? null : new Date(),
+        failureReason:
+          attemptStatus === 'failed'
+            ? result.providerLookupStatus ??
+              result.providerVerificationStatus ??
+              result.decision
+            : null,
+        entitlementId: entitlement?.id ?? null,
+      });
+
+      if (
+        verificationPolicy.driverPaysKyc &&
+        entitlement &&
+        ['paid', 'reserved'].includes(entitlementState)
+      ) {
+        await this.updateVerificationEntitlement(entitlement.id, {
+          status: 'consumed',
+          consumedAt: new Date(),
+          consumedByAttemptId: attempt.id,
+        });
+      }
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'self_service_verification_submit_completed',
+          tenantId: payload.tenantId,
+          driverId: payload.driverId,
+          attemptId: attempt.id,
+          attemptStatus,
+          providerLookupStatus: result.providerLookupStatus ?? null,
+          decision: result.decision,
+        }),
+      );
+
+      return result;
+    } catch (error) {
+      await this.updateVerificationAttempt(attempt.id, {
+        status: 'failed',
+        completedAt: new Date(),
+        failureReason:
+          error instanceof Error ? error.message.slice(0, 500) : 'verification_submit_failed',
+        entitlementId: entitlement?.id ?? null,
+      });
+      if (
+        verificationPolicy.driverPaysKyc &&
+        entitlement &&
+        entitlementState === 'paid'
+      ) {
+        await this.updateVerificationEntitlement(entitlement.id, {
+          status: 'paid',
+        });
+      }
+
+      this.logger.warn(
+        JSON.stringify({
+          event: 'self_service_verification_submit_failed',
+          tenantId: payload.tenantId,
+          driverId: payload.driverId,
+          attemptId: attempt.id,
+          error:
+            error instanceof Error ? error.message.slice(0, 500) : 'verification_submit_failed',
+        }),
+      );
+      throw error;
+    }
   }
 
   async recordDriverSelfServiceVerificationConsent(token: string): Promise<{ message: string }> {
@@ -2269,25 +3184,39 @@ export class DriversService {
       );
     }
 
-    await this.prisma.userConsent.create({
-      data: {
-        tenantId: payload.tenantId,
-        userId: linkedUser.id,
-        subjectType: 'guarantor',
-        subjectId: guarantor.id,
-        policyDocument: 'verification_sensitive_processing',
-        policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
-        consentScope: CONSENT_SCOPES.sensitive_identity_verification,
-        granted: true,
-        metadata: {
-          legalDocuments: {
-            privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
-            terms: LEGAL_DOCUMENT_VERSIONS.terms,
+    await this.prisma.$transaction([
+      this.prisma.userConsent.create({
+        data: {
+          tenantId: payload.tenantId,
+          userId: linkedUser.id,
+          subjectType: 'guarantor',
+          subjectId: guarantor.id,
+          policyDocument: 'verification_sensitive_processing',
+          policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+          consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+          granted: true,
+          metadata: {
+            legalDocuments: {
+              privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+              terms: LEGAL_DOCUMENT_VERSIONS.terms,
+            },
+            channel: 'guarantor_self_service',
           },
-          channel: 'guarantor_self_service',
         },
-      },
-    });
+      }),
+      this.prisma.driverGuarantor.update({
+        where: { id: guarantor.id },
+        data: {
+          responsibilityAcceptedAt: new Date(),
+          responsibilityAcceptanceEvidence: {
+            acceptedAt: new Date().toISOString(),
+            acceptedFrom: 'guarantor_self_service',
+            legalVersion: LEGAL_DOCUMENT_VERSIONS.terms,
+            summary: 'Guarantor acknowledged linked-driver responsibility.',
+          },
+        },
+      }),
+    ]);
 
     return { message: 'Verification consent recorded.' };
   }
@@ -2433,6 +3362,9 @@ export class DriversService {
     }
 
     return drivers.map((driver) => {
+      if (driver.identityStatus !== 'verified') {
+        return driver;
+      }
       if (!driver.personId) return driver;
       const risk = riskByPersonId.get(driver.personId);
       return risk ? { ...driver, ...risk } : driver;
@@ -2442,7 +3374,7 @@ export class DriversService {
   private async enrichDriverWithRisk(
     driver: DriverWithIdentityState,
   ): Promise<DriverWithIdentityState & DriverIntelligenceSummary> {
-    if (!driver.personId) {
+    if (!driver.personId || driver.identityStatus !== 'verified') {
       return driver;
     }
 
@@ -2705,15 +3637,32 @@ export class DriversService {
     if (newStatus === 'active') {
       if (driver.activationReadiness !== 'ready') {
         throw new BadRequestException(
-          driver.activationReadinessReasons[0] ?? 'This driver is not ready for activation yet.',
+          driver.activationReadinessReasons.slice(0, 3).join(' ') ||
+            'This driver is not ready for activation yet.',
         );
       }
     }
 
-    return this.prisma.driver.update({
+    const updated = await this.prisma.driver.update({
       where: { id },
       data: { status: newStatus },
     });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'driver',
+      entityId: id,
+      action: 'driver.status.updated',
+      beforeState: { status: driver.status },
+      afterState: { status: newStatus },
+      metadata: {
+        activationReadiness: driver.activationReadiness,
+        identityStatus: driver.identityStatus,
+        adminAssignmentOverride: driver.adminAssignmentOverride ?? false,
+      },
+    });
+
+    return updated;
   }
 
   async initializeIdentityLivenessSession(
@@ -2736,19 +3685,10 @@ export class DriversService {
     }
 
     try {
-      const session = await this.intelligenceClient.initializeLivenessSession({
+      return await this.intelligenceClient.initializeLivenessSession({
         tenantId,
         countryCode: resolvedCountryCode,
       });
-
-      await this.prisma.driver.update({
-        where: { id: driver.id },
-        data: {
-          identityStatus: 'pending_verification',
-        } as never,
-      });
-
-      return session;
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
         throw new ServiceUnavailableException(
@@ -2801,6 +3741,18 @@ export class DriversService {
         'countryCode is required when the driver nationality is not set',
       );
     }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'driver_verification_started',
+        tenantId,
+        driverId: id,
+        countryCode: resolvedCountryCode,
+        identifierCount: dto.identifiers?.length ?? 0,
+        hasSelfie: Boolean(dto.selfieImageBase64),
+        hasLivenessSession: Boolean(dto.livenessCheck?.sessionId),
+      }),
+    );
 
     const identifiers = [
       ...(dto.identifiers ?? []),
@@ -2876,6 +3828,20 @@ export class DriversService {
         identityLivenessReason: result.livenessReason ?? null,
         } as never,
       });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'driver_verification_transition',
+        tenantId,
+        driverId: driver.id,
+        identityStatus: nextIdentityStatus,
+        decision: result.decision,
+        providerLookupStatus: result.providerLookupStatus ?? null,
+        providerVerificationStatus: result.providerVerificationStatus ?? null,
+        livenessPassed: result.livenessPassed ?? null,
+        livenessProviderName: result.livenessProviderName ?? null,
+      }),
+    );
 
     return {
       ...result,
@@ -3272,7 +4238,8 @@ export class DriversService {
 
     if (
       settings.requireGuarantor &&
-      (driver.guarantorStatus !== 'active' ||
+      (!driver.guarantorStatus ||
+        driver.guarantorStatus === 'disconnected' ||
         (settings.requireGuarantorVerification && !driver.guarantorPersonId))
     ) {
       activationReasons.push('A guarantor with verified linkage is required.');
@@ -3404,15 +4371,223 @@ export class DriversService {
     tenantId: string,
     driverId: string,
     override: boolean,
+    actorId?: string,
   ): Promise<void> {
-    const driver = await this.prisma.driver.findUnique({ where: { id: driverId } });
+    const driver = (await this.prisma.driver.findUnique({
+      where: { id: driverId },
+    })) as (Driver & DriverAdminOverrideState) | null;
     if (!driver || driver.tenantId !== tenantId) {
       throw new Error('Driver not found.');
     }
-    await this.prisma.driver.update({
+    if (override) {
+      throw new BadRequestException(
+        'Enabling admin override now requires a reason and OTP confirmation.',
+      );
+    }
+
+    await (this.prisma as never as {
+      driver: {
+        update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
+      };
+    }).driver.update({
       where: { id: driverId },
-      data: { adminAssignmentOverride: override },
+      data: {
+        adminAssignmentOverride: false,
+        adminAssignmentOverrideRequestedAt: null,
+        adminAssignmentOverrideRequestedBy: null,
+        adminAssignmentOverrideReason: null,
+        adminAssignmentOverrideEvidence: Prisma.JsonNull,
+        adminAssignmentOverrideOtpHash: null,
+        adminAssignmentOverrideOtpExpiresAt: null,
+        adminAssignmentOverrideConfirmedAt: null,
+        adminAssignmentOverrideConfirmedBy: null,
+      },
     });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      actorId,
+      entityType: 'driver',
+      entityId: driverId,
+      action: 'driver.admin_override.cleared',
+      beforeState: {
+        adminAssignmentOverride: driver.adminAssignmentOverride,
+        requestedAt: driver.adminAssignmentOverrideRequestedAt?.toISOString() ?? null,
+        confirmedAt: driver.adminAssignmentOverrideConfirmedAt?.toISOString() ?? null,
+      },
+      afterState: {
+        adminAssignmentOverride: false,
+      },
+    });
+  }
+
+  async requestAdminAssignmentOverride(
+    tenantId: string,
+    actorId: string,
+    driverId: string,
+    input: {
+      reason: string;
+      evidenceImageDataUrl?: string;
+    },
+  ): Promise<{ destination: string; expiresAt: string }> {
+    const reason = input.reason.trim();
+    if (reason.length < 8) {
+      throw new BadRequestException('Provide a clear override reason before continuing.');
+    }
+
+    const settings = await this.getOrganisationSettings(tenantId);
+    if (!settings.operations.allowAdminAssignmentOverride) {
+      throw new BadRequestException('Admin assignment override is disabled in organisation settings.');
+    }
+
+    const driver = (await this.prisma.driver.findUnique({
+      where: { id: driverId },
+    })) as DriverWithIdentityState | null;
+    if (!driver || driver.tenantId !== tenantId) {
+      throw new NotFoundException(`Driver '${driverId}' not found`);
+    }
+
+    const actor = await this.prisma.user.findFirst({
+      where: {
+        id: actorId,
+        tenantId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
+    if (!actor?.email) {
+      throw new BadRequestException('Admin email is required before an override OTP can be sent.');
+    }
+
+    const enrichedDriver = await this.enrichDriverWithRisk(driver);
+    const hasFraudFlag =
+      Boolean(enrichedDriver.isWatchlisted) ||
+      Boolean(enrichedDriver.duplicateIdentityFlag) ||
+      enrichedDriver.riskBand === 'high' ||
+      enrichedDriver.riskBand === 'critical';
+    if (hasFraudFlag) {
+      throw new BadRequestException(
+        'Admin override cannot be requested while this driver has active watchlist or fraud risk flags.',
+      );
+    }
+
+    const otpCode = generateOtpCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const evidenceUrl = await this.persistIdentityReferenceImage(
+      input.evidenceImageDataUrl,
+      `driver-admin-override-${driver.id}-${Date.now()}`,
+    );
+
+    await (this.prisma as never as {
+      driver: {
+        update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
+      };
+    }).driver.update({
+      where: { id: driverId },
+      data: {
+        adminAssignmentOverride: false,
+        adminAssignmentOverrideRequestedAt: new Date(),
+        adminAssignmentOverrideRequestedBy: actor.id,
+        adminAssignmentOverrideReason: reason,
+        adminAssignmentOverrideEvidence: {
+          reason,
+          evidenceImageUrl: evidenceUrl,
+          requestedBy: actor.id,
+        },
+        adminAssignmentOverrideOtpHash: hashAuthSecret(otpCode),
+        adminAssignmentOverrideOtpExpiresAt: expiresAt,
+        adminAssignmentOverrideConfirmedAt: null,
+        adminAssignmentOverrideConfirmedBy: null,
+      },
+    });
+
+    await this.authEmailService.sendAccountVerificationOtpEmail({
+      email: actor.email,
+      name: actor.name,
+      code: otpCode,
+    });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      actorId,
+      entityType: 'driver',
+      entityId: driverId,
+      action: 'driver.admin_override.requested',
+      metadata: {
+        reason,
+        evidenceImageUrl: evidenceUrl,
+        otpDelivery: 'email',
+        otpDestination: actor.email,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+
+    return {
+      destination: actor.email,
+      expiresAt: expiresAt.toISOString(),
+    };
+  }
+
+  async confirmAdminAssignmentOverride(
+    tenantId: string,
+    actorId: string,
+    driverId: string,
+    otpCode: string,
+  ): Promise<{ adminAssignmentOverride: boolean }> {
+    const driver = (await this.prisma.driver.findUnique({
+      where: { id: driverId },
+    })) as (Driver & DriverAdminOverrideState) | null;
+    if (!driver || driver.tenantId !== tenantId) {
+      throw new NotFoundException(`Driver '${driverId}' not found`);
+    }
+
+    const normalizedOtp = otpCode.trim();
+    if (!normalizedOtp) {
+      throw new BadRequestException('OTP code is required.');
+    }
+
+    const expiresAt = driver.adminAssignmentOverrideOtpExpiresAt;
+    if (
+      !driver.adminAssignmentOverrideOtpHash ||
+      !expiresAt ||
+      expiresAt.getTime() < Date.now() ||
+      driver.adminAssignmentOverrideOtpHash !== hashAuthSecret(normalizedOtp)
+    ) {
+      throw new UnauthorizedException('Invalid or expired override OTP.');
+    }
+
+    await (this.prisma as never as {
+      driver: {
+        update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
+      };
+    }).driver.update({
+      where: { id: driverId },
+      data: {
+        adminAssignmentOverride: true,
+        adminAssignmentOverrideConfirmedAt: new Date(),
+        adminAssignmentOverrideConfirmedBy: actorId,
+        adminAssignmentOverrideOtpHash: null,
+        adminAssignmentOverrideOtpExpiresAt: null,
+      },
+    });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      actorId,
+      entityType: 'driver',
+      entityId: driverId,
+      action: 'driver.admin_override.confirmed',
+      metadata: {
+        reason: driver.adminAssignmentOverrideReason ?? null,
+        requestedAt: driver.adminAssignmentOverrideRequestedAt?.toISOString() ?? null,
+      },
+    });
+
+    return { adminAssignmentOverride: true };
   }
 
   private async attachGuarantorSummaries<
@@ -3494,7 +4669,7 @@ export class DriversService {
 
       return {
         ...driver,
-        hasGuarantor: guarantor?.status === 'active',
+        hasGuarantor: Boolean(guarantor && guarantor.status !== 'disconnected'),
         guarantorStatus: guarantor?.status ?? null,
         guarantorDisconnectedAt: guarantor?.disconnectedAt ?? null,
         guarantorPersonId: personId,
@@ -3643,10 +4818,19 @@ export class DriversService {
       DriverMobileAccessSummary,
   >(tenantId: string, drivers: TDriver[]): Promise<Array<TDriver & DriverReadinessSummary>> {
     const settings = await this.getOrganisationSettings(tenantId);
-    return drivers.map((driver) => ({
-      ...driver,
-      ...this.computeReadiness(driver, settings.operations),
-    }));
+    const activeActionsByDriverId = await this.policyService.listActiveActionsByEntityIds(
+      tenantId,
+      'driver',
+      drivers.map((driver) => driver.id),
+    );
+    return drivers.map((driver) => {
+      const readiness = this.computeReadiness(driver, settings.operations);
+      const enforcementActions = activeActionsByDriverId.get(driver.id) ?? [];
+      return {
+        ...driver,
+        ...this.policyService.applyDriverEnforcement(readiness, enforcementActions),
+      };
+    });
   }
 
   private async createSelfServiceToken(tenantId: string, driverId: string): Promise<string> {

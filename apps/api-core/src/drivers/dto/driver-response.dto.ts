@@ -202,6 +202,44 @@ export class DriverResponseDto {
   kycPaymentVerified?: boolean;
 
   @ApiPropertyOptional()
+  verificationPaymentState?: 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
+
+  @ApiPropertyOptional()
+  verificationEntitlementState?:
+    | 'none'
+    | 'paid'
+    | 'reserved'
+    | 'consumed'
+    | 'expired'
+    | 'refunded'
+    | 'cancelled';
+
+  @ApiPropertyOptional()
+  verificationState?:
+    | 'not_started'
+    | 'in_progress'
+    | 'provider_called'
+    | 'success'
+    | 'failed'
+    | 'abandoned'
+    | 'blocked';
+
+  @ApiPropertyOptional()
+  verificationEntitlementCode?: string | null;
+
+  @ApiPropertyOptional()
+  verificationPaymentReference?: string | null;
+
+  @ApiPropertyOptional()
+  verificationConsumedAt?: string | null;
+
+  @ApiPropertyOptional()
+  verificationAttemptCount?: number;
+
+  @ApiPropertyOptional()
+  verificationBlockedReason?: string | null;
+
+  @ApiPropertyOptional()
   verificationPayer?: 'driver' | 'organisation';
 
   @ApiPropertyOptional()
@@ -265,6 +303,24 @@ export class DriverResponseDto {
 
   @ApiProperty({ type: [String] })
   remittanceReadinessReasons!: string[];
+
+  @ApiPropertyOptional({
+    description: 'Current policy/enforcement posture: clear | flagged | restricted.',
+  })
+  enforcementStatus?: string;
+
+  @ApiPropertyOptional({
+    type: [Object],
+    description: 'Active policy actions and the reasons operators and drivers should see.',
+  })
+  enforcementActions?: Array<{
+    id: string;
+    actionType: string;
+    reason: string;
+    status: string;
+    triggeredAt: Date;
+    policyRuleId?: string | null;
+  }>;
 
   @ApiProperty()
   createdAt!: Date;

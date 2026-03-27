@@ -24,26 +24,26 @@ export function readinessTone(status: string): StatusTone {
 }
 
 export function assignmentStatusTone(status: string): StatusTone {
-  if (status === 'completed' || status === 'active') {
+  if (status === 'ended' || status === 'active') {
     return 'success';
   }
-  if (status === 'assigned' || status === 'created' || status === 'pending') {
+  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'pending') {
     return 'warning';
   }
-  if (status === 'cancelled' || status === 'disputed' || status === 'waived') {
+  if (status === 'cancelled' || status === 'declined' || status === 'disputed' || status === 'waived') {
     return 'danger';
   }
   return 'neutral';
 }
 
 export function remittanceTone(status: string): StatusTone {
-  if (status === 'confirmed') {
+  if (status === 'completed' || status === 'partially_settled') {
     return 'success';
   }
   if (status === 'pending') {
     return 'warning';
   }
-  if (status === 'disputed' || status === 'waived') {
+  if (status === 'disputed' || status === 'waived' || status === 'cancelled_due_to_assignment_end') {
     return 'danger';
   }
   return 'neutral';

@@ -268,6 +268,14 @@ model Driver {
   // other details are present). Only honoured when the org setting
   // allowAdminAssignmentOverride = true AND no active fraud flags are present.
   adminAssignmentOverride Boolean @default(false)
+  adminAssignmentOverrideRequestedAt DateTime?
+  adminAssignmentOverrideRequestedBy String?
+  adminAssignmentOverrideReason String?
+  adminAssignmentOverrideEvidence Json?
+  adminAssignmentOverrideOtpHash String?
+  adminAssignmentOverrideOtpExpiresAt DateTime?
+  adminAssignmentOverrideConfirmedAt DateTime?
+  adminAssignmentOverrideConfirmedBy String?
 
   // Denormalized for fast lookups without joining fleet → operating unit → business entity.
   businessEntityId String
@@ -290,6 +298,60 @@ model Driver {
   @@map("drivers")
 }
 
+model VerificationEntitlement {
+  id                  String   @id
+  entitlementCode     String   @unique
+  subjectType         String
+  subjectId           String
+  tenantId            String
+  payerType           String
+  paymentReference    String?
+  paymentProvider     String?
+  amountMinorUnits    Int
+  currency            String
+  purpose             String
+  status              String   @default("pending")
+  paidAt              DateTime?
+  reservedAt          DateTime?
+  consumedAt          DateTime?
+  expiresAt           DateTime?
+  consumedByAttemptId String?
+  metadata            Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId, subjectType, subjectId, status])
+  @@index([paymentReference])
+  @@map("verification_entitlements")
+}
+
+model VerificationAttempt {
+  id                   String   @id
+  attemptCode          String   @unique
+  subjectType          String
+  subjectId            String
+  tenantId             String
+  entitlementId        String?
+  attemptType          String
+  requestFingerprint   String?
+  startedAt            DateTime @default(now())
+  completedAt          DateTime?
+  status               String   @default("initiated")
+  failureReason        String?
+  providerCostIncurred Boolean  @default(false)
+  billableStageReached Boolean  @default(false)
+  providerCallCount    Int      @default(0)
+  livenessCallCount    Int      @default(0)
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([tenantId, subjectType, subjectId, status])
+  @@index([entitlementId])
+  @@index([requestFingerprint])
+  @@map("verification_attempts")
+}
+
 model DriverGuarantor {
   id           String @id @default(cuid())
   tenantId     String
@@ -308,6 +370,8 @@ model DriverGuarantor {
   status       String @default("active")
   disconnectedAt DateTime?
   disconnectedReason String?
+  responsibilityAcceptedAt DateTime?
+  responsibilityAcceptanceEvidence Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -608,6 +672,50 @@ model OperationalAuditLog {
   @@map("operational_audit_logs")
 }
 
+model PolicyRule {
+  id            String @id @default(cuid())
+  tenantId      String
+  name          String
+  conditionType String
+  threshold     Int
+  timeWindowDays Int
+  actionType    String
+  appliesTo     String
+  isActive      Boolean @default(true)
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enforcementActions EnforcementAction[]
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, appliesTo, conditionType])
+  @@map("policy_rules")
+}
+
+model EnforcementAction {
+  id           String @id @default(cuid())
+  tenantId     String
+  policyRuleId String?
+  entityType   String
+  entityId     String
+  actionType   String
+  status       String @default("active")
+  reason       String
+  metadata     Json?
+  triggeredAt  DateTime @default(now())
+  resolvedAt   DateTime?
+  resolvedReason String?
+
+  policyRule PolicyRule? @relation(fields: [policyRuleId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, entityType, entityId, status])
+  @@index([tenantId, actionType, status])
+  @@index([policyRuleId])
+  @@map("enforcement_actions")
+}
+
 model InspectionChecklistTemplate {
   id                  String @id @default(cuid())
   tenantId            String
@@ -904,7 +1012,7 @@ model VehicleRiskAssessment {
 // at the service layer; no DB unique because completed assignments are retained).
 //
 // AssignmentStatus from domain-config ASSIGNMENT_STATUS_CODES:
-//   created | assigned | active | completed (terminal) | cancelled (terminal)
+//   created | pending_driver_confirmation | active | declined | ended | cancelled
 
 model Assignment {
   id        String @id @default(cuid())
@@ -913,13 +1021,20 @@ model Assignment {
   driverId  String
   vehicleId String
   // AssignmentStatus from domain-config ASSIGNMENT_STATUS_CODES.
-  status    String @default("assigned")
+  status    String @default("pending_driver_confirmation")
 
   startedAt DateTime @default(now())
   // Null while the assignment is active.
   endedAt   DateTime?
   // Free-text reason for suspension or cancellation.
   notes     String?
+  driverConfirmedAt DateTime?
+  driverConfirmationMethod String?
+  driverConfirmationEvidence Json?
+  acceptanceSnapshotHash String?
+  returnedAt DateTime?
+  returnedBy String?
+  returnEvidence Json?
 
   // Planned remittance terms for this assignment. These are nullable so existing
   // assignments created before remittance planning remain valid.
@@ -931,6 +1046,11 @@ model Assignment {
   remittanceStartDate        String?
   // Monday = 1 ... Sunday = 7. Used when frequency is weekly.
   remittanceCollectionDay    Int?
+  contractVersion            String?
+  contractSnapshot           Json?
+  driverAcceptedTermsAt      DateTime?
+  driverAcceptanceEvidence   Json?
+  contractStatus             String @default("pending_acceptance")
 
   // Denormalized for filtering without joins.
   operatingUnitId  String
@@ -974,6 +1094,15 @@ model Remittance {
   // Actual payment date. Null until confirmed.
   paidDate         String?
   notes            String?
+  clientReferenceId String?
+  submissionSource String @default("online")
+  syncStatus       String @default("synced")
+  originalCapturedAt DateTime?
+  syncedAt         DateTime?
+  evidence         Json?
+  shiftCode        String?
+  checkpointLabel  String?
+  shortfallAmountMinorUnits Int @default(0)
 
   // Denormalized for fast lookups.
   fleetId          String
@@ -987,7 +1116,153 @@ model Remittance {
   @@index([assignmentId])
   @@index([driverId])
   @@index([tenantId, status])
+  @@index([tenantId, syncStatus])
+  @@unique([tenantId, clientReferenceId])
   @@map("remittances")
+}
+
+model OperationalDispute {
+  id                String   @id @default(cuid())
+  disputeCode       String   @unique
+  tenantId          String
+  driverId          String?
+  disputeType       String
+  relatedEntityType String
+  relatedEntityId   String
+  claimantType      String
+  claimantId        String
+  respondentType    String
+  respondentId      String?
+  title             String
+  reasonCode        String
+  narrative         String
+  status            String   @default("open")
+  priority          String   @default("normal")
+  assignedTo        String?
+  resolvedAt        DateTime?
+  resolvedByType    String?
+  resolvedById      String?
+  resolutionSummary Json?
+  finalAmountMinorUnits Int?
+  currency          String?
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timeline OperationalDisputeTimeline[]
+  evidence OperationalDisputeEvidence[]
+
+  @@index([tenantId, status])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([driverId])
+  @@map("ops_disputes")
+}
+
+model OperationalDisputeEvidence {
+  id             String  @id @default(cuid())
+  disputeId      String
+  tenantId       String
+  uploadedByType String
+  uploadedById   String?
+  evidenceType   String
+  description    String?
+  fileName       String?
+  contentType    String?
+  storageKey     String?
+  fileUrl        String
+  fileHash       String
+  integrityHash  String
+  metadata       Json?
+
+  createdAt DateTime @default(now())
+
+  dispute OperationalDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@index([tenantId, createdAt])
+  @@map("ops_dispute_evidence")
+}
+
+model OperationalDisputeTimeline {
+  id         String @id @default(cuid())
+  disputeId  String
+  tenantId   String
+  actorType  String
+  actorId    String?
+  actionType String
+  message    String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  dispute OperationalDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("ops_dispute_timeline")
+}
+
+model OperationalEvidenceRecord {
+  id                String  @id @default(cuid())
+  tenantId          String
+  actorType         String
+  actorId           String?
+  evidenceType      String
+  relatedEntityType String
+  relatedEntityId   String
+  sourceEntityType  String?
+  sourceEntityId    String?
+  amountMinorUnits  Int?
+  currency          String?
+  fileName          String?
+  contentType       String?
+  storageKey        String?
+  fileUrl           String?
+  fileHash          String?
+  integrityHash     String
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  @@index([tenantId, createdAt])
+  @@map("ops_evidence_records")
+}
+
+model OperationalIssuedDocument {
+  id                    String  @id @default(cuid())
+  tenantId              String
+  documentNumber        String  @unique
+  documentType          String
+  status                String  @default("active")
+  issuerType            String
+  issuerId              String?
+  recipientType         String?
+  recipientId           String?
+  relatedEntityType     String
+  relatedEntityId       String
+  supersededById        String?
+  version               Int     @default(1)
+  fingerprint           String
+  signatureVersion      String
+  signedAt              DateTime
+  signedBySystem        String
+  verificationReference String
+  fileName              String
+  contentType           String
+  storageKey            String
+  fileUrl               String
+  fileHash              String
+  canonicalPayload      Json
+  metadata              Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  @@index([tenantId, documentType])
+  @@map("ops_issued_documents")
 }
 
 // ── Operational Wallets ───────────────────────────────────────────────────────

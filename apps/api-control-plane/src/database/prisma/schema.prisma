@@ -249,6 +249,148 @@ model CpPaymentAttempt {
   @@map("cp_payment_attempts")
 }
 
+model CpDispute {
+  id                String   @id @default(cuid())
+  disputeCode       String   @unique
+  tenantId          String?
+  disputeType       String
+  relatedEntityType String
+  relatedEntityId   String
+  claimantType      String
+  claimantId        String
+  respondentType    String
+  respondentId      String?
+  title             String
+  reasonCode        String
+  narrative         String
+  status            String   @default("open")
+  priority          String   @default("normal")
+  assignedTo        String?
+  resolvedAt        DateTime?
+  resolvedByType    String?
+  resolvedById      String?
+  resolutionSummary Json?
+  finalAmountMinorUnits Int?
+  currency          String?
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timeline CpDisputeTimeline[]
+  evidence CpDisputeEvidence[]
+
+  @@index([tenantId, status])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("cp_disputes")
+}
+
+model CpDisputeEvidence {
+  id             String  @id @default(cuid())
+  disputeId      String
+  tenantId       String?
+  uploadedByType String
+  uploadedById   String?
+  evidenceType   String
+  description    String?
+  fileName       String?
+  contentType    String?
+  storageKey     String?
+  fileUrl        String
+  fileHash       String
+  integrityHash  String
+  metadata       Json?
+
+  createdAt DateTime @default(now())
+
+  dispute CpDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@index([tenantId, createdAt])
+  @@map("cp_dispute_evidence")
+}
+
+model CpDisputeTimeline {
+  id         String @id @default(cuid())
+  disputeId  String
+  tenantId   String?
+  actorType  String
+  actorId    String?
+  actionType String
+  message    String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  dispute CpDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("cp_dispute_timeline")
+}
+
+model CpEvidenceRecord {
+  id                String  @id @default(cuid())
+  tenantId          String?
+  actorType         String
+  actorId           String?
+  evidenceType      String
+  relatedEntityType String
+  relatedEntityId   String
+  sourceEntityType  String?
+  sourceEntityId    String?
+  amountMinorUnits  Int?
+  currency          String?
+  fileName          String?
+  contentType       String?
+  storageKey        String?
+  fileUrl           String?
+  fileHash          String?
+  integrityHash     String
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  @@index([tenantId, createdAt])
+  @@map("cp_evidence_records")
+}
+
+model CpIssuedDocument {
+  id                    String  @id @default(cuid())
+  tenantId              String?
+  documentNumber        String  @unique
+  documentType          String
+  status                String  @default("active")
+  issuerType            String
+  issuerId              String?
+  recipientType         String?
+  recipientId           String?
+  relatedEntityType     String
+  relatedEntityId       String
+  supersededById        String?
+  version               Int     @default(1)
+  fingerprint           String
+  signatureVersion      String
+  signedAt              DateTime
+  signedBySystem        String
+  verificationReference String
+  fileName              String
+  contentType           String
+  storageKey            String
+  fileUrl               String
+  fileHash              String
+  canonicalPayload      Json
+  metadata              Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, relatedEntityType, relatedEntityId])
+  @@index([tenantId, documentType])
+  @@map("cp_issued_documents")
+}
+
 // ── Feature Flags ─────────────────────────────────────────────────────────────
 // Two-table model: flags define the default; overrides set per-tenant/plan/country values.
 // See docs/platform/feature-flag-strategy.md.

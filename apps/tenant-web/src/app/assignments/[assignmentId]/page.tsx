@@ -24,8 +24,8 @@ import { AssignmentRemittancePlanForm } from '../assignment-remittance-plan-form
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
-  if (status === 'assigned' || status === 'created') return 'warning';
-  if (status === 'cancelled') return 'danger';
+  if (status === 'pending_driver_confirmation' || status === 'created') return 'warning';
+  if (status === 'cancelled' || status === 'declined') return 'danger';
   return 'neutral';
 }
 
@@ -75,7 +75,7 @@ export default async function AssignmentDetailPage({
               </div>
               <div className="space-y-1">
                 <Text tone="muted">Started</Text>
-                <Text>{formatDateTime(assignment.startedAt)}</Text>
+                <Text>{formatDateTime(assignment.driverConfirmedAt ?? assignment.startedAt)}</Text>
               </div>
               <div className="space-y-1">
                 <Text tone="muted">Ended</Text>
@@ -153,6 +153,49 @@ export default async function AssignmentDetailPage({
               />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Assignment contract</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Text tone="muted">Contract status</Text>
+                <Badge tone={assignment.contractStatus === 'accepted' ? 'success' : 'warning'}>
+                  {assignment.contractStatus ?? 'pending_acceptance'}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Version</Text>
+                <Text>{assignment.contractVersion ?? 'Not recorded'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Expected terms</Text>
+                <Text>
+                  {assignment.contractSnapshot?.expectedRemittanceTerms ??
+                    'Contract terms will be generated from the current remittance plan.'}
+                </Text>
+              </div>
+              {assignment.driverAcceptedTermsAt ? (
+                <div className="space-y-1">
+                  <Text tone="muted">Accepted at</Text>
+                  <Text>{formatDateTime(assignment.driverAcceptedTermsAt)}</Text>
+                </div>
+              ) : (
+                <Text tone="muted">
+                  The driver must accept these terms before remittance can begin.
+                </Text>
+              )}
+              <div className="space-y-1">
+                <Text tone="muted">Confirmation method</Text>
+                <Text>{assignment.driverConfirmationMethod ?? 'Not recorded'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Acceptance evidence</Text>
+                <Text>{assignment.acceptanceSnapshotHash ?? 'No acceptance hash recorded yet.'}</Text>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -181,8 +224,8 @@ export default async function AssignmentDetailPage({
                 <Heading size="h3">
                   {assignment.status === 'active'
                     ? 'Trip is in progress'
-                    : assignment.status === 'assigned' || assignment.status === 'created'
-                      ? 'Reserved and waiting to start'
+                    : assignment.status === 'pending_driver_confirmation' || assignment.status === 'created'
+                      ? 'Waiting for driver confirmation'
                       : 'Lifecycle complete'}
                 </Heading>
               </div>

@@ -36,6 +36,7 @@ import {
 } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { AssignmentsService } from '../assignments/assignments.service';
+import { RecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ListRemittanceDto } from './dto/list-remittance.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -56,6 +57,7 @@ export class RemittanceController {
   constructor(
     private readonly service: RemittanceService,
     private readonly assignmentsService: AssignmentsService,
+    private readonly recordsService: RecordsService,
   ) {}
 
   @Get()
@@ -142,6 +144,19 @@ export class RemittanceController {
     });
   }
 
+  @Post('actions/bulk-confirm')
+  @RequirePermissions(Permission.RemittanceApprove)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [RemittanceResponseDto] })
+  confirmMany(
+    @CurrentTenant() ctx: TenantContext,
+    @Body('ids') ids: string[],
+    @Body('paidDate') paidDate: string,
+  ) {
+    assertNoLinkedDriverMutation(ctx, 'bulk confirm remittance');
+    return this.service.confirmMany(ctx.tenantId, ids ?? [], paidDate);
+  }
+
   @Post(':id/dispute')
   @RequirePermissions(Permission.RemittanceWrite)
   @UseGuards(PermissionsGuard)
@@ -155,7 +170,29 @@ export class RemittanceController {
       assertLinkedAssignmentAccess(ctx, record.driverId);
       assertFleetAccess(ctx, record.fleetId);
       assertVehicleAccess(ctx, record.vehicleId);
-      return this.service.dispute(ctx.tenantId, id, notes);
+      return this.service.dispute(ctx.tenantId, id, notes).then(async (updated) => {
+        await this.recordsService.createDispute({
+          tenantId: ctx.tenantId,
+          driverId: record.driverId,
+          disputeType: 'driver_tenant_remittance',
+          relatedEntityType: 'remittance',
+          relatedEntityId: record.id,
+          claimantType: 'tenant',
+          claimantId: ctx.userId,
+          respondentType: 'driver',
+          respondentId: record.driverId,
+          title: `Remittance dispute for ${record.id}`,
+          reasonCode: 'remittance_variance',
+          narrative: notes,
+          metadata: {
+            assignmentId: record.assignmentId,
+            amountMinorUnits: record.amountMinorUnits,
+            currency: record.currency,
+            dueDate: record.dueDate,
+          },
+        });
+        return updated;
+      });
     });
   }
 
@@ -175,5 +212,18 @@ export class RemittanceController {
       assertVehicleAccess(ctx, record.vehicleId);
       return this.service.waive(ctx.tenantId, id, notes, ctx.role);
     });
+  }
+
+  @Post('actions/bulk-resolve-disputes')
+  @RequirePermissions(Permission.RemittanceApprove)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [RemittanceResponseDto] })
+  resolveDisputesMany(
+    @CurrentTenant() ctx: TenantContext,
+    @Body('ids') ids: string[],
+    @Body('paidDate') paidDate: string,
+  ) {
+    assertNoLinkedDriverMutation(ctx, 'bulk resolve remittance disputes');
+    return this.service.resolveDisputesMany(ctx.tenantId, ids ?? [], paidDate);
   }
 }

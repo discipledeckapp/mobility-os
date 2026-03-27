@@ -271,9 +271,12 @@ function GuarantorAgreementCard({
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm leading-relaxed text-slate-700">
           <div className="mb-6 border-b border-slate-200 pb-4 text-center">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              Mobiris Fleet Platform
+              Mobiris · Growth Figures Limited
             </p>
             <p className="mt-1 text-base font-bold text-slate-900">Driver Guarantor Agreement</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Issuer: Growth Figures Limited, registered in Nigeria · growthfigures.com
+            </p>
             <p className="mt-1 text-xs text-slate-500">Date: {today}</p>
           </div>
 
@@ -370,7 +373,7 @@ function GuarantorAgreementCard({
 
 function GuarantorCompletionCard({ context }: { context: GuarantorContext }) {
   const statusLabel =
-    context.guarantorPersonId || context.guarantorStatus === 'active'
+    context.guarantorPersonId
       ? 'Verification submitted'
       : 'Onboarding complete';
 
@@ -404,6 +407,9 @@ function getFlowStep(context: GuarantorContext): GuarantorFlowStep {
   }
   if (context.guarantorPersonId) {
     return 'complete';
+  }
+  if (context.guarantorStatus === 'pending_verification') {
+    return 'verification';
   }
   return 'agreement';
 }

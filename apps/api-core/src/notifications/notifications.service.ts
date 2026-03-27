@@ -648,7 +648,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           where: {
             tenantId,
             vehicleId: { in: vehicleIds },
-            status: { in: ['assigned', 'active'] },
+            status: { in: ['pending_driver_confirmation', 'active'] },
           },
           orderBy: { startedAt: 'desc' },
           select: {

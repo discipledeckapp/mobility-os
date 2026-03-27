@@ -586,8 +586,54 @@ export class DriversController {
     if (typeof override !== 'boolean') {
       throw new BadRequestException('override must be a boolean');
     }
-    await this.service.setAdminAssignmentOverride(ctx.tenantId, id, override);
+    await this.service.setAdminAssignmentOverride(ctx.tenantId, id, override, ctx.userId);
     return { adminAssignmentOverride: override };
+  }
+
+  @Post(':id/admin-override/request')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  @ApiOperation({
+    summary: 'Request an admin assignment override OTP',
+    description:
+      'Captures the override reason and optional evidence, sends an OTP to the acting admin, and records the pending override request for audit.',
+  })
+  requestAdminOverride(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Body('evidenceImageDataUrl') evidenceImageDataUrl?: string,
+  ): Promise<{ destination: string; expiresAt: string }> {
+    if (!reason?.trim()) {
+      throw new BadRequestException('reason is required');
+    }
+
+    return this.service.requestAdminAssignmentOverride(ctx.tenantId, ctx.userId, id, {
+      reason,
+      ...(evidenceImageDataUrl?.trim() ? { evidenceImageDataUrl: evidenceImageDataUrl.trim() } : {}),
+    });
+  }
+
+  @Post(':id/admin-override/confirm')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  @ApiOperation({
+    summary: 'Confirm an admin assignment override with OTP',
+    description:
+      'Validates the OTP that was sent to the acting admin and only then enables the assignment-readiness override.',
+  })
+  confirmAdminOverride(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('otpCode') otpCode: string,
+  ): Promise<{ adminAssignmentOverride: boolean }> {
+    if (!otpCode?.trim()) {
+      throw new BadRequestException('otpCode is required');
+    }
+
+    return this.service.confirmAdminAssignmentOverride(ctx.tenantId, ctx.userId, id, otpCode);
   }
 
   private toResponse(
@@ -779,6 +825,62 @@ export class DriverSelfServiceController {
       driverPaysKyc: (driver as { driverPaysKyc?: boolean }).driverPaysKyc ?? false,
       kycPaymentVerified:
         (driver as { kycPaymentVerified?: boolean }).kycPaymentVerified ?? false,
+      verificationPaymentState:
+        (driver as {
+          verificationPaymentState?:
+            | 'not_required'
+            | 'required'
+            | 'pending'
+            | 'paid'
+            | 'reconciled';
+        }).verificationPaymentState ?? 'not_required',
+      verificationEntitlementState:
+        (driver as {
+          verificationEntitlementState?:
+            | 'none'
+            | 'paid'
+            | 'reserved'
+            | 'consumed'
+            | 'expired'
+            | 'refunded'
+            | 'cancelled';
+        }).verificationEntitlementState ?? 'none',
+      verificationState:
+        (driver as {
+          verificationState?:
+            | 'not_started'
+            | 'in_progress'
+            | 'provider_called'
+            | 'success'
+            | 'failed'
+            | 'abandoned'
+            | 'blocked';
+        }).verificationState ?? 'not_started',
+      verificationEntitlementCode:
+        (driver as { verificationEntitlementCode?: string | null }).verificationEntitlementCode ??
+        null,
+      verificationPaymentReference:
+        (driver as { verificationPaymentReference?: string | null }).verificationPaymentReference ??
+        null,
+      verificationConsumedAt:
+        (() => {
+          const consumedAt = (
+            driver as {
+              verificationConsumedAt?: Date | string | null;
+            }
+          ).verificationConsumedAt;
+          if (!consumedAt) {
+            return null;
+          }
+          return consumedAt instanceof Date
+            ? consumedAt.toISOString()
+            : new Date(consumedAt).toISOString();
+        })(),
+      verificationAttemptCount:
+        (driver as { verificationAttemptCount?: number }).verificationAttemptCount ?? 0,
+      verificationBlockedReason:
+        (driver as { verificationBlockedReason?: string | null }).verificationBlockedReason ??
+        null,
       verificationPayer:
         (driver as { verificationPayer?: 'driver' | 'organisation' }).verificationPayer ??
         'organisation',

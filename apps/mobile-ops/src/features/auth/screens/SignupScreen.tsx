@@ -1,8 +1,7 @@
 'use client';
 
-import { getAllBusinessModelSlugs, getSupportedCountryCodes } from '@mobility-os/domain-config';
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
@@ -10,9 +9,6 @@ import { Screen } from '../../../components/screen';
 import { registerOrganisation } from '../../../api';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
-
-const SUPPORTED_COUNTRIES = getSupportedCountryCodes();
-const BUSINESS_MODELS = getAllBusinessModelSlugs();
 
 function slugify(value: string) {
   return value
@@ -25,26 +21,14 @@ function slugify(value: string) {
 
 export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
   const [orgName, setOrgName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [country, setCountry] = useState(SUPPORTED_COUNTRIES[0] ?? 'NG');
-  const [businessModel, setBusinessModel] = useState(BUSINESS_MODELS[0] ?? 'hire-purchase');
-  const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
-  const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
   const suggestedSlug = useMemo(() => slugify(orgName), [orgName]);
 
   const onSubmit = async () => {
-    if (
-      !orgName.trim() ||
-      !adminName.trim() ||
-      !adminEmail.trim() ||
-      !adminPassword ||
-      !(slug.trim() || suggestedSlug)
-    ) {
-      Alert.alert('Sign up', 'Complete the organisation and administrator fields first.');
+    if (!orgName.trim() || !adminEmail.trim() || !adminPassword) {
+      Alert.alert('Create organisation', 'Enter your organisation name, email, and password.');
       return;
     }
 
@@ -52,12 +36,11 @@ export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
     try {
       await registerOrganisation({
         orgName: orgName.trim(),
-        slug: (slug.trim() || suggestedSlug).trim(),
-        country,
-        businessModel,
-        adminName: adminName.trim(),
+        slug: suggestedSlug || 'mobiris-organisation',
+        country: 'NG',
+        businessModel: 'hire-purchase',
+        adminName: orgName.trim(),
         adminEmail: adminEmail.trim().toLowerCase(),
-        adminPhone: adminPhone.trim() || undefined,
         adminPassword,
       });
 
@@ -68,8 +51,8 @@ export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
       });
     } catch (error) {
       Alert.alert(
-        'Sign up failed',
-        error instanceof Error ? error.message : 'Unable to start organisation signup.',
+        'Create organisation',
+        error instanceof Error ? error.message : 'Unable to start organisation setup.',
       );
     } finally {
       setSubmitting(false);
@@ -77,77 +60,61 @@ export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
   };
 
   return (
-    <Screen>
+    <Screen contentContainerStyle={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Operator mobile signup</Text>
-        <Text style={styles.title}>Create your organisation from your phone</Text>
+        <Text style={styles.kicker}>Organisation setup</Text>
+        <Text style={styles.title}>Create your workspace</Text>
         <Text style={styles.copy}>
-          Register the tenant, verify the OTP sent to the admin email, then land directly in the
-          operator workspace.
+          Start with the essentials. You can finish the rest after your email is verified.
         </Text>
       </View>
 
       <Card style={styles.card}>
-        <Input label="Organisation name" onChangeText={setOrgName} value={orgName} />
         <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          helperText={`Suggested: ${suggestedSlug || 'enter organisation name first'}`}
-          label="Organisation slug"
-          onChangeText={setSlug}
-          value={slug}
+          label="Organisation name"
+          onChangeText={setOrgName}
+          placeholder="Your transport company"
+          value={orgName}
         />
-        <Input
-          autoCapitalize="characters"
-          helperText={`Supported: ${SUPPORTED_COUNTRIES.join(', ')}`}
-          label="Country"
-          onChangeText={(value) => setCountry(value.toUpperCase())}
-          value={country}
-        />
-        <Input
-          autoCapitalize="none"
-          helperText={`Examples: ${BUSINESS_MODELS.join(', ')}`}
-          label="Business model"
-          onChangeText={setBusinessModel}
-          value={businessModel}
-        />
-        <Input label="Administrator name" onChangeText={setAdminName} value={adminName} />
         <Input
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
-          label="Administrator email"
+          label="Work email"
+          helperText="We will send your verification code here."
           onChangeText={setAdminEmail}
+          placeholder="name@company.com"
           value={adminEmail}
-        />
-        <Input
-          keyboardType="phone-pad"
-          label="Administrator phone"
-          onChangeText={setAdminPhone}
-          value={adminPhone}
         />
         <Input
           autoCapitalize="none"
           label="Password"
+          helperText="Use 8 or more characters."
           onChangeText={setAdminPassword}
           secureTextEntry
           value={adminPassword}
         />
-        <Button label="Register organisation" loading={submitting} onPress={onSubmit} />
-        <Button
-          label="Back to sign in"
-          variant="secondary"
-          onPress={() => navigation.navigate('Login')}
-        />
+        <View style={styles.summaryStrip}>
+          <Text style={styles.summaryLabel}>Workspace link</Text>
+          <Text style={styles.summaryValue}>{suggestedSlug || 'created automatically'}</Text>
+        </View>
+        <Button label="Create organisation" loading={submitting} onPress={onSubmit} />
       </Card>
+
+      <Pressable onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.backText}>Back to entry</Text>
+      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    justifyContent: 'center',
+  },
   hero: {
-    gap: 10,
-    marginTop: 24,
+    gap: tokens.spacing.sm,
+    marginTop: tokens.spacing.lg,
   },
   kicker: {
     color: tokens.colors.primary,
@@ -167,6 +134,31 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: tokens.spacing.md,
+  },
+  summaryStrip: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: '#F8FAFC',
+    padding: tokens.spacing.md,
+    gap: 4,
+  },
+  summaryLabel: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  summaryValue: {
+    color: tokens.colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  backText: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

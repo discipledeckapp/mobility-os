@@ -96,6 +96,13 @@ function sanitizeSelfServiceErrorMessage(message: string): string {
   if (normalized.includes('provider') || normalized.includes('fallback') || normalized.includes('internal_free_service')) {
     return 'Live verification is unavailable right now. Please try again.';
   }
+  if (
+    normalized.includes('intelligence service') ||
+    normalized.includes('temporarily unavailable') ||
+    normalized.includes('status 500')
+  ) {
+    return 'Identity verification is temporarily unavailable. Please try again.';
+  }
   return message;
 }
 

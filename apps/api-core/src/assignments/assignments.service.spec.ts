@@ -33,6 +33,12 @@ describe('AssignmentsService', () => {
   const vehicleRiskService = {
     getVehicleRisk: jest.fn(),
   };
+  const policyService = {
+    assertAssignmentEligible: jest.fn(),
+  };
+  const auditService = {
+    recordTenantAction: jest.fn(),
+  };
 
   let service: AssignmentsService;
 
@@ -65,10 +71,12 @@ describe('AssignmentsService', () => {
       prisma as never,
       driversService as never,
       vehicleRiskService as never,
+      policyService as never,
+      auditService as never,
     );
   });
 
-  it('creates an assignment in assigned status and reserves the vehicle', async () => {
+  it('creates an assignment in pending confirmation status and reserves the vehicle', async () => {
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
@@ -89,7 +97,7 @@ describe('AssignmentsService', () => {
         fleetId: 'fleet_1',
         operatingUnitId: 'ou_1',
         businessEntityId: 'be_1',
-        status: 'assigned',
+        status: 'pending_driver_confirmation',
       },
     ]);
 
@@ -102,7 +110,7 @@ describe('AssignmentsService', () => {
 
     expect(prisma.assignment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        status: 'assigned',
+        status: 'pending_driver_confirmation',
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
       }),
@@ -111,7 +119,7 @@ describe('AssignmentsService', () => {
       where: { id: 'vehicle_1' },
       data: { status: 'assigned' },
     });
-    expect(result.status).toBe('assigned');
+    expect(result.status).toBe('pending_driver_confirmation');
   });
 
   it('blocks create when the driver is not assignment-ready', async () => {
@@ -142,14 +150,16 @@ describe('AssignmentsService', () => {
     ).rejects.toThrow('An approved driver licence is required.');
   });
 
-  it('starts an assigned assignment and moves it to active', async () => {
+  it('starts a confirmed assignment and moves it to active', async () => {
     prisma.assignment.findUnique.mockResolvedValue({
       id: 'assignment_1',
       tenantId: 'tenant_1',
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       fleetId: 'fleet_1',
-      status: 'assigned',
+      status: 'pending_driver_confirmation',
+      contractStatus: 'accepted',
+      driverConfirmedAt: new Date('2026-03-27T09:00:00.000Z'),
       notes: null,
     });
     prisma.vehicle.findUnique.mockResolvedValue({
@@ -169,9 +179,9 @@ describe('AssignmentsService', () => {
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
         fleetId: 'fleet_1',
-        status: 'active',
-      },
-    ]);
+      status: 'active',
+    },
+  ]);
 
     const result = await service.start('tenant_1', 'assignment_1');
 
@@ -189,10 +199,10 @@ describe('AssignmentsService', () => {
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       fleetId: 'fleet_1',
-      status: 'assigned',
+      status: 'pending_driver_confirmation',
     });
 
-    await expect(service.end('tenant_1', 'assignment_1', 'completed')).rejects.toBeInstanceOf(
+    await expect(service.end('tenant_1', 'assignment_1', 'ended')).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });

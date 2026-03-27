@@ -15,7 +15,12 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
-import { listInvoices } from '../../lib/api-control-plane';
+import {
+  getPlatformApiToken,
+  listControlPlaneDisputes,
+  listControlPlaneDocuments,
+  listInvoices,
+} from '../../lib/api-control-plane';
 import { RunBillingOpsCard } from './run-billing-ops-card';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
@@ -32,13 +37,27 @@ function getInvoiceTone(status: string): 'success' | 'warning' | 'neutral' {
   return 'neutral';
 }
 
+function getDisputeTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
+  if (status === 'resolved') return 'success';
+  if (['open', 'under_review', 'awaiting_evidence', 'escalated'].includes(status)) return 'warning';
+  if (status === 'rejected') return 'danger';
+  return 'neutral';
+}
+
 export default async function BillingOperationsPage() {
-  const invoices = await listInvoices();
+  const token = await getPlatformApiToken().catch(() => undefined);
+  const [invoices, disputes, documents] = await Promise.all([
+    listInvoices(token),
+    listControlPlaneDisputes(undefined, token),
+    listControlPlaneDocuments(undefined, token),
+  ]);
   const openInvoices = invoices.filter((invoice) => invoice.status === 'open');
   const overdueExposure = openInvoices.reduce(
     (sum, invoice) => sum + (invoice.amountDueMinorUnits - invoice.amountPaidMinorUnits),
     0,
   );
+  const recentDisputes = disputes.slice(0, 6);
+  const recentDocuments = documents.slice(0, 6);
 
   return (
     <ControlPlaneShell
@@ -126,6 +145,106 @@ export default async function BillingOperationsPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dispute registry</CardTitle>
+              <CardDescription>
+                Billing, payment, and reconciliation disputes with evidence-backed status history.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dispute</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Entity</TableHead>
+                      <TableHead>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentDisputes.map((dispute) => (
+                      <TableRow key={dispute.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-900">{dispute.title}</p>
+                            <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {dispute.relatedEntityType}:{' '}
+                          <span className="font-mono text-xs">{dispute.relatedEntityId}</span>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {new Date(dispute.updatedAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+              {recentDisputes.length === 0 ? (
+                <Text className="pt-4">No disputes have been opened in the control plane yet.</Text>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Issued documents</CardTitle>
+              <CardDescription>
+                Fingerprinted invoices, receipts, and resolution summaries generated from billing events.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Fingerprint</TableHead>
+                      <TableHead>Download</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentDocuments.map((document) => (
+                      <TableRow key={document.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-900">{document.documentNumber}</p>
+                            <p className="text-xs text-slate-500">{document.relatedEntityType}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{document.documentType}</TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">
+                          {document.fingerprint.slice(0, 16)}...
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            className="text-sm font-medium text-[var(--mobiris-primary-dark)] hover:underline"
+                            href={`/api/records/documents/${document.id}/content`}
+                          >
+                            Download
+                          </a>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+              {recentDocuments.length === 0 ? (
+                <Text className="pt-4">No platform documents have been issued yet.</Text>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </ControlPlaneShell>
   );

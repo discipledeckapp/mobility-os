@@ -1,6 +1,5 @@
 import { createHash, createHmac } from 'node:crypto';
 import { request as httpsRequest } from 'node:https';
-import { URL } from 'node:url';
 import {
   type IdentityVerificationProviderCapability,
   getCountryConfig,
@@ -13,6 +12,11 @@ import {
   ControlPlaneSettingsClient,
   DEFAULT_LIVENESS_ROUTING,
 } from './control-plane-settings.client';
+import {
+  isPlaceholderCredential,
+  requestProviderJson,
+  summarizeProviderFailure,
+} from './provider-http';
 
 export interface LivenessCheckInput {
   countryCode: string;
@@ -129,90 +133,6 @@ function postAwsJson(
     req.on('error', reject);
     req.write(payload);
     req.end();
-  });
-}
-
-function postJson(
-  urlString: string,
-  headers: Record<string, string>,
-  body: Record<string, unknown>,
-): Promise<{ statusCode: number; payload: unknown }> {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const serializedBody = JSON.stringify(body);
-    const request = httpsRequest(
-      {
-        protocol: url.protocol,
-        hostname: url.hostname,
-        port: url.port || undefined,
-        path: `${url.pathname}${url.search}`,
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'content-length': Buffer.byteLength(serializedBody).toString(),
-          ...headers,
-        },
-      },
-      (response) => {
-        let responseBody = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          responseBody += chunk;
-        });
-        response.on('end', () => {
-          try {
-            resolve({
-              statusCode: response.statusCode ?? 500,
-              payload: responseBody.length > 0 ? JSON.parse(responseBody) : {},
-            });
-          } catch (error) {
-            reject(error);
-          }
-        });
-      },
-    );
-
-    request.on('error', reject);
-    request.write(serializedBody);
-    request.end();
-  });
-}
-
-function getJson(
-  urlString: string,
-  headers: Record<string, string>,
-): Promise<{ statusCode: number; payload: unknown }> {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const request = httpsRequest(
-      {
-        protocol: url.protocol,
-        hostname: url.hostname,
-        port: url.port || undefined,
-        path: `${url.pathname}${url.search}`,
-        method: 'GET',
-        headers: { accept: 'application/json', ...headers },
-      },
-      (response) => {
-        let responseBody = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          responseBody += chunk;
-        });
-        response.on('end', () => {
-          try {
-            resolve({
-              statusCode: response.statusCode ?? 500,
-              payload: responseBody.length > 0 ? JSON.parse(responseBody) : {},
-            });
-          } catch (error) {
-            reject(error);
-          }
-        });
-      },
-    );
-    request.on('error', reject);
-    request.end();
   });
 }
 
@@ -397,21 +317,28 @@ export class LivenessService {
 
     const endpoint = this.configService.get<string>('AZURE_FACE_ENDPOINT');
     const apiKey = this.configService.get<string>('AZURE_FACE_API_KEY');
-    if (!endpoint || !apiKey) {
+    if (!endpoint || !apiKey || isPlaceholderCredential(apiKey)) {
       return { reason: 'provider_unavailable' };
     }
 
     try {
       const url = `${endpoint.replace(/\/$/, '')}/face/v1.2/detectLiveness/singleModal/sessions`;
-      const response = (await postJson(
+      const response = await requestProviderJson({
+        providerName: 'azure_face',
+        operation: 'liveness:init',
+        method: 'POST',
         url,
-        { 'Ocp-Apim-Subscription-Key': apiKey },
-        {
+        headers: { 'Ocp-Apim-Subscription-Key': apiKey },
+        body: {
           livenessOperationMode: 'Passive',
           sendResultsToClient: false,
           authTokenTimeToLiveInSeconds: 60,
         },
-      )) as { statusCode: number; payload: unknown };
+      });
+
+      if (summarizeProviderFailure('azure_face', 'liveness:init', response)) {
+        return { reason: 'provider_error' };
+      }
 
       const payload = response.payload as {
         sessionId?: string;
@@ -454,17 +381,21 @@ export class LivenessService {
 
     const endpoint = this.configService.get<string>('AZURE_FACE_ENDPOINT');
     const apiKey = this.configService.get<string>('AZURE_FACE_API_KEY');
-    if (!endpoint || !apiKey) {
+    if (!endpoint || !apiKey || isPlaceholderCredential(apiKey)) {
       return { passed: false, reason: 'provider_unavailable' };
     }
 
     try {
       const url = `${endpoint.replace(/\/$/, '')}/face/v1.2/detectLiveness/singleModal/sessions/${encodeURIComponent(evidence.sessionId)}`;
-      const response = (await getJson(url, {
-        'Ocp-Apim-Subscription-Key': apiKey,
-      })) as { statusCode: number; payload: unknown };
+      const response = await requestProviderJson({
+        providerName: 'azure_face',
+        operation: 'liveness:result',
+        method: 'GET',
+        url,
+        headers: { 'Ocp-Apim-Subscription-Key': apiKey },
+      });
 
-      if (response.statusCode !== 200) {
+      if (summarizeProviderFailure('azure_face', 'liveness:result', response)) {
         return { passed: false, reason: 'provider_error' };
       }
 
@@ -552,22 +483,29 @@ export class LivenessService {
 
     const apiKey = this.configService.get<string>('YOUVERIFY_API_KEY');
     const baseUrl = this.configService.get<string>('YOUVERIFY_BASE_URL');
-    if (!apiKey || !baseUrl) {
+    if (!apiKey || !baseUrl || isPlaceholderCredential(apiKey)) {
       return { reason: 'provider_unavailable' };
     }
 
     try {
-      const response = (await postJson(
-        `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/generate`,
-        { token: apiKey },
-        {
+      const response = await requestProviderJson({
+        providerName: 'youverify',
+        operation: 'liveness:init',
+        method: 'POST',
+        url: `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/generate`,
+        headers: { token: apiKey },
+        body: {
           ttlSeconds: 120,
           metadata: {
             tenantId: input.tenantId,
             countryCode: input.countryCode,
           },
         },
-      )) as { statusCode: number; payload: unknown };
+      });
+
+      if (summarizeProviderFailure('youverify', 'liveness:init', response)) {
+        return { reason: 'provider_error' };
+      }
 
       const payload = response.payload as {
         data?: { sessionId?: string; expiresAt?: string };
@@ -728,15 +666,21 @@ export class LivenessService {
 
     const apiKey = this.configService.get<string>('YOUVERIFY_API_KEY');
     const baseUrl = this.configService.get<string>('YOUVERIFY_BASE_URL');
-    if (!apiKey || !baseUrl) {
+    if (!apiKey || !baseUrl || isPlaceholderCredential(apiKey)) {
       return { passed: false, reason: 'provider_unavailable' };
     }
 
     try {
       const url = `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/${encodeURIComponent(evidence.sessionId)}`;
-      const response = await getJson(url, { token: apiKey });
+      const response = await requestProviderJson({
+        providerName: 'youverify',
+        operation: 'liveness:result',
+        method: 'GET',
+        url,
+        headers: { token: apiKey },
+      });
 
-      if (response.statusCode !== 200) {
+      if (summarizeProviderFailure('youverify', 'liveness:result', response)) {
         return { passed: false, reason: 'provider_error' };
       }
 
@@ -793,7 +737,7 @@ export class LivenessService {
     const apiKey = this.configService.get<string>('SMILE_IDENTITY_API_KEY');
     const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
     const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
-    if (!apiKey || !partnerId || !baseUrl) {
+    if (!apiKey || !partnerId || !baseUrl || isPlaceholderCredential(apiKey)) {
       return { reason: 'provider_unavailable' };
     }
 
@@ -801,16 +745,22 @@ export class LivenessService {
     const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
 
     try {
-      const response = await postJson(
-        `${baseUrl.replace(/\/$/, '')}/v1/token`,
-        {},
-        {
+      const response = await requestProviderJson({
+        providerName: 'smile_identity',
+        operation: 'liveness:init',
+        method: 'POST',
+        url: `${baseUrl.replace(/\/$/, '')}/v1/token`,
+        body: {
           partner_id: partnerId,
           timestamp,
           signature,
           product: 'biometric_kyc',
         },
-      );
+      });
+
+      if (summarizeProviderFailure('smile_identity', 'liveness:init', response)) {
+        return { reason: 'provider_error' };
+      }
 
       const payload = response.payload as { token?: string; expires_at?: string };
       if (!payload.token) {
@@ -850,7 +800,7 @@ export class LivenessService {
     const apiKey = this.configService.get<string>('SMILE_IDENTITY_API_KEY');
     const partnerId = this.configService.get<string>('SMILE_IDENTITY_PARTNER_ID');
     const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL');
-    if (!apiKey || !partnerId || !baseUrl) {
+    if (!apiKey || !partnerId || !baseUrl || isPlaceholderCredential(apiKey)) {
       return { passed: false, reason: 'provider_unavailable' };
     }
 
@@ -867,10 +817,12 @@ export class LivenessService {
     const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
 
     try {
-      const response = await postJson(
-        `${baseUrl.replace(/\/$/, '')}/v1/get_job_status`,
-        {},
-        {
+      const response = await requestProviderJson({
+        providerName: 'smile_identity',
+        operation: 'liveness:result',
+        method: 'POST',
+        url: `${baseUrl.replace(/\/$/, '')}/v1/get_job_status`,
+        body: {
           partner_id: partnerId,
           timestamp,
           signature,
@@ -879,7 +831,11 @@ export class LivenessService {
           return_history: false,
           return_images: false,
         },
-      );
+      });
+
+      if (summarizeProviderFailure('smile_identity', 'liveness:result', response)) {
+        return { passed: false, reason: 'provider_error' };
+      }
 
       const payload = response.payload as {
         job_complete?: boolean;

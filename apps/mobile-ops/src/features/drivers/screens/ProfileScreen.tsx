@@ -95,15 +95,33 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         </View>
       </Card>
 
+      {driver.identityStatus !== 'verified' ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Risk warning</Text>
+          <Text style={styles.muted}>
+            This driver has not completed identity verification. Risk is higher. Complete verification to reduce risk.
+          </Text>
+          <Text style={styles.muted}>
+            Assignment acceptance is still required before remittance can start.
+          </Text>
+        </Card>
+      ) : null}
+
       <Card style={styles.section}>
         <Text style={styles.title}>
-          {driver.firstName} {driver.lastName}
+          {getDriverDisplayName(driver.firstName, driver.lastName, driver.identityStatus)}
         </Text>
         <View style={styles.badgeRow}>
           <Badge
             label={formatIdentityStatus(driver.identityStatus)}
             tone={identityTone(driver.identityStatus)}
           />
+          {driver.identityStatus !== 'verified' ? (
+            <Badge
+              label={driver.status === 'active' ? 'Active (Unverified)' : 'Unverified Driver'}
+              tone="warning"
+            />
+          ) : null}
           {driver.riskBand ? (
             <Badge label={`Risk: ${driver.riskBand}`} tone={riskTone(driver.riskBand)} />
           ) : null}
@@ -213,6 +231,18 @@ function formatDateTime(value: string, locale?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function getDriverDisplayName(
+  firstName?: string | null,
+  lastName?: string | null,
+  identityStatus?: string | null,
+) {
+  const fullName = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+  return identityStatus === 'unverified' ? 'Onboarding in progress' : 'New Driver';
 }
 
 function guidanceForDriver(driver: NonNullable<ReturnType<typeof useDriverProfile>['driver']>) {

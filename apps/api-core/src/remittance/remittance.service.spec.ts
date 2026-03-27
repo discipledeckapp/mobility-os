@@ -27,6 +27,13 @@ describe('RemittanceService', () => {
   const operationalWalletsService = {
     addEntryInTransaction: jest.fn(),
   };
+  const policyService = {
+    evaluateDriverPolicies: jest.fn(),
+  };
+  const recordsService = {
+    issueRemittanceReceipt: jest.fn(),
+    createDispute: jest.fn(),
+  };
 
   let service: RemittanceService;
 
@@ -36,7 +43,13 @@ describe('RemittanceService', () => {
       callback(prisma as never),
     );
     prisma.remittance.findFirst.mockResolvedValue(null);
-    service = new RemittanceService(prisma as never, operationalWalletsService as never);
+    policyService.evaluateDriverPolicies.mockResolvedValue([]);
+    service = new RemittanceService(
+      prisma as never,
+      operationalWalletsService as never,
+      policyService as never,
+      recordsService as never,
+    );
   });
 
   it('records remittance only against active assignments', async () => {
@@ -48,6 +61,7 @@ describe('RemittanceService', () => {
       id: 'assignment_1',
       tenantId: 'tenant_1',
       status: 'active',
+      driverConfirmedAt: new Date('2026-03-20T07:00:00.000Z'),
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       fleetId: 'fleet_1',
@@ -87,6 +101,7 @@ describe('RemittanceService', () => {
       id: 'assignment_1',
       tenantId: 'tenant_1',
       status: 'assigned',
+      driverConfirmedAt: null,
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       fleetId: 'fleet_1',
@@ -125,7 +140,7 @@ describe('RemittanceService', () => {
       businessEntityId: 'be_1',
       amountMinorUnits: 150000,
       currency: 'NGN',
-      status: 'confirmed',
+      status: 'completed',
       paidDate: '2026-03-21',
     });
     operationalWalletsService.addEntryInTransaction.mockResolvedValue({
@@ -136,7 +151,7 @@ describe('RemittanceService', () => {
       currency: 'NGN',
       referenceId: 'rem_1',
       referenceType: 'remittance',
-      description: 'Remittance confirmed for assignment assignment_1',
+      description: 'Remittance completed for assignment assignment_1',
       createdAt: new Date('2026-03-21T00:00:00.000Z'),
     });
 
@@ -145,7 +160,7 @@ describe('RemittanceService', () => {
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.remittance.update).toHaveBeenCalledWith({
       where: { id: 'rem_1' },
-      data: { status: 'confirmed', paidDate: '2026-03-21' },
+      data: { status: 'completed', paidDate: '2026-03-21' },
     });
     expect(operationalWalletsService.addEntryInTransaction).toHaveBeenCalledWith(
       prisma,
@@ -157,10 +172,11 @@ describe('RemittanceService', () => {
         currency: 'NGN',
         referenceId: 'rem_1',
         referenceType: 'remittance',
-        description: 'Remittance confirmed for assignment assignment_1',
+        description: 'Remittance completed for assignment assignment_1',
       },
     );
-    expect(result.status).toBe('confirmed');
+    expect(recordsService.issueRemittanceReceipt).toHaveBeenCalledWith('tenant_1', 'rem_1');
+    expect(result.status).toBe('completed');
     expect(result.walletEntry?.id).toBe('wallet_entry_1');
   });
 
@@ -168,7 +184,7 @@ describe('RemittanceService', () => {
     prisma.remittance.findUnique.mockResolvedValue({
       id: 'rem_1',
       tenantId: 'tenant_1',
-      status: 'confirmed',
+      status: 'completed',
     });
 
     await expect(service.confirm('tenant_1', 'rem_1', '2026-03-21')).rejects.toBeInstanceOf(
@@ -228,6 +244,7 @@ describe('RemittanceService', () => {
       id: 'assignment_1',
       tenantId: 'tenant_1',
       status: 'active',
+      driverConfirmedAt: new Date('2026-03-20T07:00:00.000Z'),
       driverId: 'driver_1',
       vehicleId: 'vehicle_1',
       fleetId: 'fleet_1',

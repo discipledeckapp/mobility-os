@@ -1,5 +1,11 @@
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
-import { type FleetRecord, type VehicleRecord, listFleets, listVehicles } from '../../lib/api-core';
+import {
+  getTenantApiToken,
+  type FleetRecord,
+  type VehicleRecord,
+  listFleets,
+  listVehicles,
+} from '../../lib/api-core';
 import { importVehiclesCsvAction } from './actions';
 import { VehicleRecordsPanel } from './vehicle-records-panel';
 
@@ -22,9 +28,10 @@ export default async function VehiclesPage() {
   let errorMessage: string | null = null;
 
   try {
+    const token = await getTenantApiToken().catch(() => undefined);
     const [vehiclesResult, fleetsResult] = await Promise.all([
-      listVehicles({ limit: 200 }),
-      listFleets(),
+      listVehicles({ limit: 200 }, token),
+      listFleets(token),
     ]);
     vehicles = vehiclesResult.data;
     fleets = fleetsResult;

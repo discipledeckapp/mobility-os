@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { DocumentScope, getDocumentTypesByScope } from '@mobility-os/domain-config';
+import { useActionState, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -60,6 +61,8 @@ const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy' },
 ];
+
+const DRIVER_DOCUMENT_OPTIONS = getDocumentTypesByScope(DocumentScope.Driver);
 
 function EyeIcon() {
   return (
@@ -270,6 +273,17 @@ export function SettingsPanel({
   );
   const [requiresGuarantor, setRequiresGuarantor] = useState(
     tenant.requireGuarantor ?? true,
+  );
+  const selectedDriverDocumentSlugs = useMemo(
+    () => new Set(tenant.requiredDriverDocumentSlugs ?? []),
+    [tenant.requiredDriverDocumentSlugs],
+  );
+  const customDriverDocumentTypes = useMemo(
+    () =>
+      (tenant.customDriverDocumentTypes ?? []).filter(
+        (slug) => !DRIVER_DOCUMENT_OPTIONS.some((document) => document.slug === slug),
+      ),
+    [tenant.customDriverDocumentTypes],
   );
 
   return (
@@ -625,21 +639,41 @@ export function SettingsPanel({
 
                   {/* Driver document and guarantor capacity fields */}
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-3 md:col-span-2">
                       <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
-                      <Input
-                        defaultValue={(
-                          tenant.requiredDriverDocumentSlugs ?? [
-                            'national-id',
-                            'drivers-license',
-                          ]
-                        ).join(', ')}
-                        id="requiredDriverDocumentSlugs"
-                        name="requiredDriverDocumentSlugs"
-                      />
+                      <div className="grid gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/60 p-4 md:grid-cols-2">
+                        {DRIVER_DOCUMENT_OPTIONS.map((document) => (
+                          <label className="flex items-start gap-3 text-sm" key={document.slug}>
+                            <input
+                              defaultChecked={selectedDriverDocumentSlugs.has(document.slug)}
+                              name="requiredDriverDocumentSlugs"
+                              type="checkbox"
+                              value={document.slug}
+                            />
+                            <span className="space-y-0.5">
+                              <span className="block font-medium text-slate-800">{document.name}</span>
+                              <span className="block text-slate-500">
+                                {document.hasExpiry ? 'Track expiry during onboarding.' : 'Collect once during onboarding.'}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                       <Text tone="muted">
-                        Use comma-separated document slugs such as `national-id, drivers-license`.
+                        Supporting documents stay optional unless you select them here.
                       </Text>
+                      <div className="space-y-2">
+                        <Label htmlFor="customDriverDocumentTypes">Custom document types</Label>
+                        <Input
+                          defaultValue={customDriverDocumentTypes.join(', ')}
+                          id="customDriverDocumentTypes"
+                          name="customDriverDocumentTypes"
+                          placeholder="guarantor-letter, union-card"
+                        />
+                        <Text tone="muted">
+                          Add any extra document types you want collected. Custom entries entered here will be included in onboarding.
+                        </Text>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="guarantorMaxActiveDrivers">

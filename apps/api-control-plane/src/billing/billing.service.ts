@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { ControlPlaneRecordsService } from '../records/records.service';
 import type { CpInvoice, Prisma } from '../generated/prisma';
 import type { CreateInvoiceDto } from './dto/create-invoice.dto';
 import type { GenerateInvoiceDto } from './dto/generate-invoice.dto';
@@ -43,7 +44,10 @@ interface DraftInvoiceLineItem {
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recordsService: ControlPlaneRecordsService,
+  ) {}
 
   async listInvoices(filters?: {
     tenantId?: string;
@@ -127,10 +131,37 @@ export class BillingService {
       );
     }
 
-    return this.prisma.cpInvoice.update({
+    const opened = await this.prisma.cpInvoice.update({
       where: { id },
       data: { status: INVOICE_STATUS.Open },
     });
+    await this.recordsService.issueDocument({
+      tenantId: opened.tenantId,
+      documentType: 'subscription_invoice',
+      issuerType: 'platform',
+      issuerId: 'api-control-plane',
+      recipientType: 'tenant',
+      recipientId: opened.tenantId,
+      relatedEntityType: 'invoice',
+      relatedEntityId: opened.id,
+      title: `Subscription Invoice ${opened.id}`,
+      subjectLines: [
+        `Invoice id: ${opened.id}`,
+        `Subscription: ${opened.subscriptionId}`,
+        `Amount due: ${opened.amountDueMinorUnits} ${opened.currency}`,
+        `Due at: ${opened.dueAt?.toISOString() ?? 'Not set'}`,
+        `Period: ${opened.periodStart.toISOString()} to ${opened.periodEnd.toISOString()}`,
+      ],
+      canonicalPayload: {
+        invoiceId: opened.id,
+        tenantId: opened.tenantId,
+        subscriptionId: opened.subscriptionId,
+        amountDueMinorUnits: opened.amountDueMinorUnits,
+        currency: opened.currency,
+        dueAt: opened.dueAt?.toISOString() ?? null,
+      },
+    });
+    return opened;
   }
 
   async markPaid(id: string, paidAt?: string): Promise<CpInvoice> {

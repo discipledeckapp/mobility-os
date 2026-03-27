@@ -26,12 +26,15 @@ describe('BillingService', () => {
       findMany: jest.fn(),
     },
   };
+  const recordsService = {
+    issueDocument: jest.fn(),
+  };
 
   let service: BillingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BillingService(prisma as never);
+    service = new BillingService(prisma as never, recordsService as never);
   });
 
   it('creates an invoice when the subscription and currency align', async () => {

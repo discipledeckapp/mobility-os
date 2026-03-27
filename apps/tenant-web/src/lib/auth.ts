@@ -27,41 +27,7 @@ function decodeBase64Url(value: string): string | null {
   }
 }
 
-export function isTenantJwtUsable(token: string | undefined): boolean {
-  if (!token) {
-    return false;
-  }
-
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    return false;
-  }
-
-  const payloadSegment = parts[1];
-  if (!payloadSegment) {
-    return false;
-  }
-
-  const decodedPayload = decodeBase64Url(payloadSegment);
-  if (!decodedPayload) {
-    return false;
-  }
-
-  let payload: JwtPayload;
-  try {
-    payload = JSON.parse(decodedPayload) as JwtPayload;
-  } catch {
-    return false;
-  }
-
-  if (typeof payload.exp !== 'number') {
-    return false;
-  }
-
-  return payload.exp * 1000 > Date.now();
-}
-
-export function parseTenantJwtPayload(token: string | undefined): JwtPayload | null {
+function decodeJwtPayload(token: string | undefined): JwtPayload | null {
   if (!token) {
     return null;
   }
@@ -86,6 +52,19 @@ export function parseTenantJwtPayload(token: string | undefined): JwtPayload | n
   } catch {
     return null;
   }
+}
+
+export function isTenantJwtUsable(token: string | undefined): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') {
+    return false;
+  }
+
+  return payload.exp * 1000 > Date.now() + 15_000;
+}
+
+export function parseTenantJwtPayload(token: string | undefined): JwtPayload | null {
+  return decodeJwtPayload(token);
 }
 
 export function getSelfServiceContinuationPath(payload: JwtPayload | null): string | null {

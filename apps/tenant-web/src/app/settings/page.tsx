@@ -1,5 +1,6 @@
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
+  getTenantApiToken,
   getPrivacySupport,
   getNotificationPreferences,
   getTenantMe,
@@ -13,16 +14,17 @@ import {
 import { SettingsPanel } from './settings-panel';
 
 export default async function SettingsPage() {
+  const token = await getTenantApiToken().catch(() => undefined);
   const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, privacySupport, dataRequests] = await Promise.all([
-    getTenantMe(),
-    getTenantSession(),
-    listTeamMembers().catch(() => []),
-    listFleets().catch(() => []),
-    listVehicles({ limit: 200 }).catch(() => ({ data: [], total: 0, page: 1, limit: 200 })),
-    getNotificationPreferences().catch(() => null),
-    listUserNotifications().catch(() => []),
-    getPrivacySupport().catch(() => null),
-    listDataSubjectRequests().catch(() => []),
+    getTenantMe(token),
+    getTenantSession(token),
+    listTeamMembers(token).catch(() => []),
+    listFleets(token).catch(() => []),
+    listVehicles({ limit: 200 }, token).catch(() => ({ data: [], total: 0, page: 1, limit: 200 })),
+    getNotificationPreferences(token).catch(() => null),
+    listUserNotifications(token).catch(() => []),
+    getPrivacySupport(token).catch(() => null),
+    listDataSubjectRequests(token).catch(() => []),
   ]);
 
   const canManage = session.permissions.includes('tenants:write');

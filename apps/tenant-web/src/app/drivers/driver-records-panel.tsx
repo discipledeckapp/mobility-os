@@ -136,6 +136,14 @@ function getReadinessLabel(status: string): string {
   return 'Not ready';
 }
 
+function getDriverDisplayName(driver: DriverRecord): string {
+  const fullName = `${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+  return driver.identityStatus === 'unverified' ? 'Onboarding in progress' : 'New Driver';
+}
+
 export function DriverRecordsPanel({
   drivers,
   fleets,
@@ -177,6 +185,16 @@ export function DriverRecordsPanel({
     [fleets],
   );
   const fleetOptions = useMemo(() => toFleetOptions(fleets), [fleets]);
+  const verifiedActiveDrivers = useMemo(
+    () =>
+      drivers.filter((driver) => driver.status === 'active' && driver.identityStatus === 'verified')
+        .length,
+    [drivers],
+  );
+  const unverifiedDrivers = useMemo(
+    () => drivers.filter((driver) => driver.identityStatus !== 'verified').length,
+    [drivers],
+  );
 
   const updateSearch = (updates: Record<string, string | number | null>) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -251,9 +269,9 @@ export function DriverRecordsPanel({
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-emerald-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Verified</Text>
+                <Text tone="muted">Verified active drivers</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.filter((driver) => driver.identityStatus === 'verified').length}
+                  {verifiedActiveDrivers}
                 </p>
                 <Text tone="muted">On this page</Text>
               </div>
@@ -261,19 +279,19 @@ export function DriverRecordsPanel({
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-violet-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-violet-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Guarantors linked</Text>
+                <Text tone="muted">Unverified drivers</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.filter((driver) => driver.guarantorStatus === 'active').length}
+                  {unverifiedDrivers}
                 </p>
-                <Text tone="muted">On this page</Text>
+                <Text tone="muted">Onboarding pool</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-sky-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-sky-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Mobile access linked</Text>
+                <Text tone="muted">Guarantors linked</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.filter((driver) => driver.mobileAccessStatus === 'linked').length}
+                  {drivers.filter((driver) => driver.guarantorStatus === 'active').length}
                 </p>
                 <Text tone="muted">On this page</Text>
               </div>
@@ -386,14 +404,14 @@ export function DriverRecordsPanel({
                         type="button"
                       >
                         <LockIcon />
-                        {`${driver.firstName} ${driver.lastName}`}
+                        {getDriverDisplayName(driver)}
                       </button>
                     ) : (
                       <Link
                         className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
                         href={`/drivers/${driver.id}`}
                       >
-                        {`${driver.firstName} ${driver.lastName}`}
+                        {getDriverDisplayName(driver)}
                       </Link>
                     )}
                     <p className="text-xs text-slate-400">{driver.email ?? driver.phone}</p>
@@ -491,7 +509,7 @@ export function DriverRecordsPanel({
                   ) : driver.hasResolvedIdentity ? (
                     <Badge tone="neutral">no signal</Badge>
                   ) : (
-                    <span className="text-slate-300">—</span>
+                    <Badge tone="neutral">unverified</Badge>
                   )}
                 </TableCell>
                 <TableCell>

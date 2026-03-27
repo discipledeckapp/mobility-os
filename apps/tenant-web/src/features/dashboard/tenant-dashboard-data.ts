@@ -5,6 +5,7 @@ import {
   type RemittanceRecord,
   type ReportsOverviewRecord,
   type VehicleRecord,
+  getTenantApiToken,
   getReportsOverview,
   getTenantMe,
   listAssignments,
@@ -176,7 +177,7 @@ function getEmptyDashboardData(): DashboardData {
         label: 'Confirmed remittance',
         value: 'None',
         tone: 'neutral',
-        detail: 'No confirmed remittance yet',
+        detail: 'No settled remittance yet',
       },
       { label: 'Open remittance', value: 'None', tone: 'neutral', detail: 'No open remittance' },
     ],
@@ -313,25 +314,26 @@ function buildRecentActivity(
     .slice(0, 6);
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(explicitToken?: string): Promise<DashboardData> {
   const settle = async <T>(loader: () => Promise<T>): Promise<T> => loader();
   const notes: string[] = [];
   const appendAvailabilityNote = (surface: string) => {
     notes.push(`${surface} data is temporarily unavailable. Try refreshing or contact support.`);
   };
 
-  const tenant = await getTenantMe().catch(() => null);
+  const token = await getTenantApiToken(explicitToken).catch(() => explicitToken);
+  const tenant = await getTenantMe(token).catch(() => null);
   const locale = getFormattingLocale(tenant?.country);
 
   const [driversResult, vehiclesResult, assignmentsResult, remittancesResult] =
     await Promise.allSettled([
-      settle(() => listDrivers({ limit: 200 })),
-      settle(() => listVehicles({ limit: 200 })),
-      settle(() => listAssignments({ limit: 200 })),
-      settle(() => listRemittances({ limit: 200 })),
+      settle(() => listDrivers({ limit: 200 }, token)),
+      settle(() => listVehicles({ limit: 200 }, token)),
+      settle(() => listAssignments({ limit: 200 }, token)),
+      settle(() => listRemittances({ limit: 200 }, token)),
     ]);
   const overviewResult = await Promise.resolve()
-    .then(() => getReportsOverview())
+    .then(() => getReportsOverview({}, token))
     .catch((error) => error as Error);
 
   const results = [driversResult, vehiclesResult, assignmentsResult, remittancesResult];
@@ -383,20 +385,26 @@ export async function getDashboardData(): Promise<DashboardData> {
     appendAvailabilityNote('Remittance forecast');
   }
 
-  const activeDrivers = drivers.filter((driver) => driver.status === 'active').length;
+  const verifiedActiveDrivers = drivers.filter(
+    (driver) => driver.status === 'active' && driver.identityStatus === 'verified',
+  ).length;
+  const onboardingPoolCount = drivers.filter(
+    (driver) => driver.identityStatus !== 'verified',
+  ).length;
   const totalVehicles = vehicles.length;
   const activeAssignments = assignments.filter(
     (assignment) => assignment.status === 'active',
   ).length;
   const assignedAssignments = assignments.filter(
-    (assignment) => assignment.status === 'assigned' || assignment.status === 'created',
+    (assignment) =>
+      assignment.status === 'pending_driver_confirmation' || assignment.status === 'created',
   ).length;
   const completedAssignments = assignments.filter(
-    (assignment) => assignment.status === 'completed',
+    (assignment) => assignment.status === 'ended',
   ).length;
   const pendingRemittances = remittances.filter((remittance) => remittance.status === 'pending');
   const confirmedRemittances = remittances.filter(
-    (remittance) => remittance.status === 'confirmed',
+    (remittance) => remittance.status === 'completed' || remittance.status === 'partially_settled',
   );
   const availableVehicles = vehicles.filter((vehicle) => vehicle.status === 'available').length;
   const projection = overviewResult instanceof Error ? null : (overviewResult as ReportsOverviewRecord).remittanceProjection;
@@ -407,13 +415,13 @@ export async function getDashboardData(): Promise<DashboardData> {
         label: 'Total drivers',
         value: String(totalDrivers),
         tone: totalDrivers > 0 ? 'accent' : 'neutral',
-        detail: `${activeDrivers} active`,
+        detail: `${onboardingPoolCount} still onboarding`,
       },
       {
         label: 'Active drivers',
-        value: String(activeDrivers),
-        tone: activeDrivers > 0 ? 'accent' : 'warm',
-        detail: `${totalDrivers - activeDrivers} not active`,
+        value: String(verifiedActiveDrivers),
+        tone: verifiedActiveDrivers > 0 ? 'accent' : 'warm',
+        detail: `${onboardingPoolCount} unverified or incomplete`,
       },
       {
         label: 'Total vehicles',
@@ -425,7 +433,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         label: 'Active assignments',
         value: String(activeAssignments),
         tone: activeAssignments > 0 ? 'accent' : 'neutral',
-        detail: `${assignedAssignments} reserved • ${completedAssignments} completed`,
+        detail: `${assignedAssignments} pending confirmation • ${completedAssignments} ended`,
       },
       {
         label: 'Pending remittances',
@@ -445,10 +453,10 @@ export async function getDashboardData(): Promise<DashboardData> {
         detail: `${remittances.length} total records`,
       },
       {
-        label: 'Confirmed remittance',
-        value: formatCurrencyTotals(remittances, locale, 'confirmed'),
+        label: 'Settled remittance',
+        value: formatCurrencyTotals(remittances, locale, 'completed'),
         tone: confirmedRemittances.length > 0 ? 'accent' : 'neutral',
-        detail: `${confirmedRemittances.length} confirmed`,
+        detail: `${confirmedRemittances.length} settled`,
       },
       {
         label: 'Open remittance',

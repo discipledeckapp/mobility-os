@@ -100,6 +100,31 @@ function getFriendlyVehicleCodeSuggestionMessage(error: unknown): string {
   return message;
 }
 
+async function parseJsonResponse<T>(response: Response): Promise<T | { message?: string } | null> {
+  const text = await response.text().catch(() => '');
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as T | { message?: string };
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeVehicleCatalogMessage(message: string, fallback: string): string {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('unexpected end of json input') ||
+    normalized.includes('returned an unreadable response') ||
+    normalized.includes('returned no data')
+  ) {
+    return fallback;
+  }
+  return message;
+}
+
 export function CreateVehicleForm({
   fleets,
   fleetError,
@@ -131,6 +156,8 @@ export function CreateVehicleForm({
   const [selectedMakerId, setSelectedMakerId] = useState('');
   const [modelOptions, setModelOptions] = useState<VehicleModelCatalogRecord[]>([]);
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [manualModelName, setManualModelName] = useState('');
+  const [useManualModel, setUseManualModel] = useState(false);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [showAddMaker, setShowAddMaker] = useState(makers.length === 0);
@@ -168,11 +195,14 @@ export function CreateVehicleForm({
   const hasModelOptions = modelOptions.some((model) => model.status !== 'inactive');
   const selectedMaker = makerOptions.find((maker) => maker.id === selectedMakerId);
   const selectedModel = modelOptions.find((model) => model.id === selectedModelId);
+  const resolvedModelName = useManualModel
+    ? manualModelName.trim()
+    : selectedModel?.name ?? decodedModelDisplay ?? '';
   const saveBlockingReasons = [
     !hasFleetOptions ? 'No active fleet is available.' : null,
     hasFleetOptions && !fleetId ? 'Select a fleet.' : null,
     !selectedMaker ? 'Select a maker.' : null,
-    !selectedModel ? 'Select a model.' : null,
+    !resolvedModelName ? 'Select a model or enter one manually.' : null,
     modelsLoading ? 'Vehicle models are still loading.' : null,
     isPending ? 'Vehicle save is already in progress.' : null,
   ].filter(Boolean) as string[];
@@ -267,13 +297,11 @@ export function CreateVehicleForm({
         const response = await fetch(`/api/vehicle-catalog/models?${params.toString()}`, {
           cache: 'no-store',
         });
-        const payload = (await response.json()) as
-          | VehicleModelCatalogRecord[]
-          | { message?: string };
+        const payload = await parseJsonResponse<VehicleModelCatalogRecord[]>(response);
 
         if (!response.ok) {
           throw new Error(
-            !Array.isArray(payload) && payload.message
+            payload && !Array.isArray(payload) && payload.message
               ? payload.message
               : 'Unable to load vehicle models.',
           );
@@ -293,7 +321,13 @@ export function CreateVehicleForm({
       } catch (error) {
         if (!cancelled) {
           setModelOptions([]);
-          setModelsError(error instanceof Error ? error.message : 'Unable to load vehicle models.');
+          setModelsError(
+            sanitizeVehicleCatalogMessage(
+              error instanceof Error ? error.message : 'Unable to load vehicle models.',
+              'Vehicle models are unavailable right now. Enter the model manually to continue.',
+            ),
+          );
+          setUseManualModel(true);
         }
       } finally {
         if (!cancelled) {
@@ -433,11 +467,11 @@ export function CreateVehicleForm({
           ...(year.trim() ? { modelYear: Number(year.trim()) } : {}),
         }),
       });
-      const payload = (await response.json()) as VehicleVinDecodeRecord | { message?: string };
+      const payload = await parseJsonResponse<VehicleVinDecodeRecord>(response);
 
-      if (!response.ok || !('id' in payload)) {
+      if (!response.ok || !payload || !('id' in payload)) {
         throw new Error(
-          !('id' in payload) && payload.message ? payload.message : 'Unable to decode VIN.',
+          payload && !('id' in payload) && payload.message ? payload.message : 'Unable to decode VIN.',
         );
       }
 
@@ -484,6 +518,8 @@ export function CreateVehicleForm({
       }
 
       if (decodedModelId && decodedModelName && decodedMakerId) {
+        setUseManualModel(false);
+        setManualModelName('');
         setSelectedModelId(decodedModelId);
         setPendingDecodedModelId(decodedModelId);
         setModelOptions((current) => {
@@ -503,6 +539,9 @@ export function CreateVehicleForm({
           };
           return [...next, decodedModel].sort((left, right) => left.name.localeCompare(right.name));
         });
+      } else if (decodedModelName) {
+        setUseManualModel(true);
+        setManualModelName(decodedModelName);
       }
 
       const summary = [
@@ -517,7 +556,13 @@ export function CreateVehicleForm({
         summary ? `VIN decoded and applied: ${summary}` : 'VIN decoded successfully.',
       );
     } catch (error) {
-      setVinDecodeError(error instanceof Error ? error.message : 'Unable to decode VIN.');
+      setUseManualModel(true);
+      setVinDecodeError(
+        sanitizeVehicleCatalogMessage(
+          error instanceof Error ? error.message : 'Unable to decode VIN.',
+          'VIN decoding is unavailable right now. Enter the make, model, and year manually.',
+        ),
+      );
     } finally {
       setIsDecodingVin(false);
     }
@@ -652,6 +697,8 @@ export function CreateVehicleForm({
                 setDecodedMakerDisplay(null);
                 setDecodedModelDisplay(null);
                 setSelectedModelId('');
+                setManualModelName('');
+                setUseManualModel(false);
                 setPendingDecodedModelId(null);
                 setCatalogActionError(null);
                 setCatalogActionSuccess(null);
@@ -726,7 +773,7 @@ export function CreateVehicleForm({
 
           <div className="space-y-2">
             <SearchableSelect
-              disabled={!selectedMakerId || modelsLoading || !hasModelOptions}
+              disabled={useManualModel || !selectedMakerId || modelsLoading || !hasModelOptions}
               emptyText="No models are available for this maker yet. Add one manually if the import has not covered it."
               errorText={!selectedMakerId ? null : modelsError}
               inputId="modelId"
@@ -745,7 +792,7 @@ export function CreateVehicleForm({
                       ? 'Search models'
                       : 'No models available yet'
               }
-              required
+              required={!useManualModel}
               isLoading={modelsLoading}
               loadingText="Loading models..."
               displayValue={decodedModelDisplay ?? undefined}
@@ -754,15 +801,41 @@ export function CreateVehicleForm({
             <HelperDisclosure summary="Model help">
               {!selectedMakerId
                 ? 'Select a maker first to load matching models.'
-                : hasModelOptions
+                : useManualModel
+                  ? 'Manual model entry is enabled for this save.'
+                  : hasModelOptions
                   ? 'Search models for the selected maker.'
-                  : 'No models are available for the selected maker yet.'}
+                  : 'No models are available for the selected maker yet. Enter one manually or add it to the catalog.'}
             </HelperDisclosure>
+            {useManualModel ? (
+              <div className="space-y-2">
+                <Label htmlFor="manualModelName">Manual model entry</Label>
+                <Input
+                  id="manualModelName"
+                  onChange={(event) => setManualModelName(event.target.value)}
+                  placeholder="Enter the vehicle model"
+                  value={manualModelName}
+                />
+              </div>
+            ) : null}
             <input
               name="model"
               type="hidden"
-              value={selectedModel?.name ?? decodedModelDisplay ?? ''}
+              value={resolvedModelName}
             />
+            <Button
+              disabled={!selectedMakerId}
+              onClick={() => {
+                setUseManualModel((current) => !current);
+                setCatalogActionError(null);
+                setCatalogActionSuccess(null);
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              {useManualModel ? 'Use catalog model' : 'Enter model manually'}
+            </Button>
             <Button
               disabled={!selectedMakerId}
               onClick={() => {
@@ -774,7 +847,7 @@ export function CreateVehicleForm({
               type="button"
               variant="ghost"
             >
-              Add new model
+              Add new model to catalog
             </Button>
             {showAddModel ? (
               <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">

@@ -11,26 +11,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableViewport,
   Text,
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
+  getTenantApiToken,
   getTenantMe,
   listFleets,
   listDrivers,
   listAssignments,
+  listOperationalDisputes,
+  listOperationalDocuments,
   listRemittances,
   listVehicles,
   type AssignmentRecord,
   type DriverRecord,
+  type RecordDisputeRecord,
+  type RecordDocumentRecord,
   type FleetRecord,
   type RemittanceRecord,
   type VehicleRecord,
 } from '../../lib/api-core';
 import { getFormattingLocale } from '../../lib/locale';
-import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { CreateRemittanceForm } from './create-remittance-form';
-import { RemittanceRowActions } from './remittance-row-actions';
+import { RemittanceRecordsPanel } from './remittance-records-panel';
 
 function formatAmount(amountMinorUnits: number, currency: string, locale: string): string {
   return new Intl.NumberFormat(locale, {
@@ -40,26 +45,16 @@ function formatAmount(amountMinorUnits: number, currency: string, locale: string
   }).format(amountMinorUnits / 100);
 }
 
-function formatDate(dateString: string, locale: string): string {
-  const parts = dateString.split('-');
-  if (parts.length !== 3) {
-    return dateString;
-  }
+function formatTimestamp(value: string, locale: string): string {
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime()) ? value : timestamp.toLocaleString(locale);
+}
 
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
-  if (
-    !Number.isFinite(year) ||
-    !Number.isFinite(month) ||
-    !Number.isFinite(day)
-  ) {
-    return dateString;
-  }
-
-  return new Date(year, month - 1, day).toLocaleDateString(locale, {
-    dateStyle: 'medium',
-  });
+function getDisputeTone(status: string): 'danger' | 'warning' | 'success' | 'neutral' {
+  if (['open', 'under_review', 'awaiting_evidence', 'escalated'].includes(status)) return 'warning';
+  if (status === 'resolved') return 'success';
+  if (status === 'rejected') return 'danger';
+  return 'neutral';
 }
 
 export default async function RemittancePage() {
@@ -68,27 +63,37 @@ export default async function RemittancePage() {
   let drivers: DriverRecord[] = [];
   let vehicles: VehicleRecord[] = [];
   let fleets: FleetRecord[] = [];
+  let disputes: RecordDisputeRecord[] = [];
+  let documents: RecordDocumentRecord[] = [];
   let errorMessage: string | null = null;
   let helperNote: string | null = null;
   let fleetError: string | null = null;
   let locale = 'en-US';
+  const token = await getTenantApiToken().catch(() => undefined);
 
   try {
-    const tenant = await getTenantMe();
+    const tenant = await getTenantMe(token);
     locale = getFormattingLocale(tenant.country);
   } catch {
     locale = 'en-US';
   }
 
   try {
-    remittances = (await listRemittances({ limit: 200 })).data;
+    const [remittancesResult, disputesResult, documentsResult] = await Promise.all([
+      listRemittances({ limit: 200 }, token),
+      listOperationalDisputes({ relatedEntityType: 'remittance' }, token),
+      listOperationalDocuments({ relatedEntityType: 'remittance' }, token),
+    ]);
+    remittances = remittancesResult.data;
+    disputes = disputesResult;
+    documents = documentsResult;
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : 'Unable to load remittance.';
   }
 
   const assignmentsResult = await Promise.resolve()
-    .then(() => listAssignments({ limit: 200 }))
+    .then(() => listAssignments({ limit: 200 }, token))
     .catch((error) => error);
 
   if (assignmentsResult instanceof Error) {
@@ -99,9 +104,9 @@ export default async function RemittancePage() {
   }
 
   const [driversResult, vehiclesResult, fleetsResult] = await Promise.allSettled([
-    (async () => listDrivers({ limit: 200 }))(),
-    (async () => listVehicles({ limit: 200 }))(),
-    (async () => listFleets())(),
+    (async () => listDrivers({ limit: 200 }, token))(),
+    (async () => listVehicles({ limit: 200 }, token))(),
+    (async () => listFleets(token))(),
   ]);
 
   if (driversResult.status === 'fulfilled') {
@@ -129,15 +134,24 @@ export default async function RemittancePage() {
         : 'Live fleet data could not be loaded.';
   }
 
-  const assignmentLabels = new Map(
-    assignments.map((assignment) => [assignment.id, assignment.id]),
-  );
-  const driverLabels = new Map(
-    drivers.map((driver) => [driver.id, `${driver.firstName} ${driver.lastName}`]),
-  );
-  const vehicleLabels = new Map(
-    vehicles.map((vehicle) => [vehicle.id, getVehiclePrimaryLabel(vehicle)]),
-  );
+  const expectedTodayMinorUnits = assignments
+    .filter((assignment) => assignment.status === 'active')
+    .reduce((sum, assignment) => sum + (assignment.remittanceAmountMinorUnits ?? 0), 0);
+  const operatingCurrency =
+    assignments.find((assignment) => assignment.remittanceCurrency)?.remittanceCurrency ??
+    remittances[0]?.currency ??
+    'NGN';
+  const receivedMinorUnits = remittances
+    .filter((remittance) => ['completed', 'partially_settled'].includes(remittance.status))
+    .reduce((sum, remittance) => sum + remittance.amountMinorUnits, 0);
+  const typicalMinorUnits =
+    remittances.length > 0
+      ? Math.round(remittances.reduce((sum, remittance) => sum + remittance.amountMinorUnits, 0) / remittances.length)
+      : 0;
+  const leakageMinorUnits = Math.max(0, expectedTodayMinorUnits - receivedMinorUnits);
+  const flaggedDrivers = drivers.filter((driver) => driver.enforcementStatus && driver.enforcementStatus !== 'clear').length;
+  const recentDisputes = disputes.slice(0, 6);
+  const recentDocuments = documents.slice(0, 6);
 
   return (
     <TenantAppShell
@@ -173,6 +187,23 @@ export default async function RemittancePage() {
         helperNote={helperNote}
       />
 
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
+        {[
+          { label: 'Total expected', value: formatAmount(expectedTodayMinorUnits, operatingCurrency, locale), note: 'Live target from current assignment terms' },
+          { label: 'Total received', value: formatAmount(receivedMinorUnits, operatingCurrency, locale), note: 'Completed collections so far' },
+          { label: 'Leakage', value: formatAmount(leakageMinorUnits, operatingCurrency, locale), note: 'Gap between target and settled cash' },
+          { label: 'Flagged drivers', value: String(flaggedDrivers), note: `Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}` },
+        ].map((item) => (
+          <Card key={item.label}>
+            <CardContent className="space-y-1 py-5">
+              <Text tone="muted">{item.label}</Text>
+              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">{item.value}</p>
+              <Text tone="muted">{item.note}</Text>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Remittance records</CardTitle>
@@ -186,79 +217,115 @@ export default async function RemittancePage() {
           ) : remittances.length === 0 ? (
             <Text>No remittance records found for this tenant yet.</Text>
           ) : (
-            <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assignment</TableHead>
-                  <TableHead>Driver</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Due date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {remittances.map((remittance) => (
-                  <TableRow key={remittance.id}>
-                    <TableCell>
-                      <Badge
-                        tone={
-                          remittance.status === 'confirmed'
-                            ? 'success'
-                            : remittance.status === 'disputed'
-                              ? 'danger'
-                              : remittance.status === 'waived'
-                                ? 'neutral'
-                                : 'warning'
-                        }
-                      >
-                        {remittance.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Text>
-                          {assignmentLabels.get(remittance.assignmentId) ?? remittance.assignmentId}
-                        </Text>
-                        <Text tone="muted">{remittance.assignmentId}</Text>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Text>{driverLabels.get(remittance.driverId) ?? remittance.driverId}</Text>
-                        <Text tone="muted">{remittance.driverId}</Text>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Text>{vehicleLabels.get(remittance.vehicleId) ?? remittance.vehicleId}</Text>
-                        <Text tone="muted">{remittance.vehicleId}</Text>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatAmount(
-                        remittance.amountMinorUnits,
-                        remittance.currency,
-                        locale,
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(remittance.dueDate, locale)}</TableCell>
-                    <TableCell>
-                      <RemittanceRowActions
-                        remittanceId={remittance.id}
-                        status={remittance.status}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </div>
+            <RemittanceRecordsPanel
+              assignments={assignments}
+              drivers={drivers}
+              locale={locale}
+              remittances={remittances}
+              vehicles={vehicles}
+            />
           )}
         </CardContent>
       </Card>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dispute registry</CardTitle>
+            <CardDescription>
+              Formal remittance disputes, with status and timeline-backed claim references.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentDisputes.length === 0 ? (
+              <Text>No remittance disputes have been opened yet.</Text>
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dispute</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentDisputes.map((dispute) => (
+                      <TableRow key={dispute.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-[var(--mobiris-ink)]">{dispute.title}</p>
+                            <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{dispute.reasonCode}</TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {formatTimestamp(dispute.updatedAt, locale)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Receipts and documents</CardTitle>
+            <CardDescription>
+              Fingerprinted remittance receipts and dispute outputs linked back to source records.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentDocuments.length === 0 ? (
+              <Text>No remittance documents have been issued yet.</Text>
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Fingerprint</TableHead>
+                      <TableHead>Download</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentDocuments.map((document) => (
+                      <TableRow key={document.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-[var(--mobiris-ink)]">{document.documentNumber}</p>
+                            <p className="text-xs text-slate-500">{formatTimestamp(document.createdAt, locale)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{document.documentType}</TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">
+                          {document.fingerprint.slice(0, 16)}...
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            className="text-sm font-medium text-[var(--mobiris-primary-dark)] hover:underline"
+                            href={`/api/records/documents/${document.id}/content`}
+                          >
+                            Download
+                          </a>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </TenantAppShell>
   );
 }

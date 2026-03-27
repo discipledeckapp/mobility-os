@@ -215,7 +215,7 @@ export class VehiclesService {
           where: {
             tenantId,
             vehicleId: vehicle.id,
-            status: { in: ['assigned', 'active'] },
+            status: { in: ['pending_driver_confirmation', 'active'] },
           },
         }),
         vehicle.vin

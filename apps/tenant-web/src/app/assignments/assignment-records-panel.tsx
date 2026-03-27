@@ -30,9 +30,10 @@ import { AssignmentRowActions } from './assignment-row-actions';
 
 const STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'created', label: 'Created' },
-  { value: 'assigned', label: 'Assigned' },
+  { value: 'pending_driver_confirmation', label: 'Pending driver confirmation' },
   { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'declined', label: 'Declined' },
+  { value: 'ended', label: 'Ended' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -44,8 +45,8 @@ function toFleetOptions(fleets: FleetRecord[]): SearchableSelectOption[] {
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
-  if (status === 'assigned' || status === 'created') return 'warning';
-  if (status === 'cancelled') return 'danger';
+  if (status === 'pending_driver_confirmation' || status === 'created') return 'warning';
+  if (status === 'cancelled' || status === 'declined') return 'danger';
   return 'neutral';
 }
 

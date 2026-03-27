@@ -2,7 +2,10 @@ export function formatStatusLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function formatDateTime(value: string, locale?: string | null) {
+export function formatDateTime(value?: string | null, locale?: string | null) {
+  if (!value) {
+    return 'Not recorded';
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;

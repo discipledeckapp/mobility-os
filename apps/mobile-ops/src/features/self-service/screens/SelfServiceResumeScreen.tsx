@@ -1,13 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
@@ -43,8 +37,8 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
 
     bootstrapToken(route.params.token).catch((error) => {
       Alert.alert(
-        'Verification link',
-        error instanceof Error ? error.message : 'Unable to open that verification link.',
+        'Invite link',
+        error instanceof Error ? error.message : 'Unable to open that onboarding link.',
       );
       navigation.replace('SelfServiceOtp');
     });
@@ -53,11 +47,11 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
   const onRefresh = async () => {
     try {
       await refreshSelfService();
-      showToast('Verification context refreshed.', 'success');
+      showToast('Onboarding updated.', 'success');
     } catch (error) {
       Alert.alert(
-        'Verification status',
-        error instanceof Error ? error.message : 'Unable to refresh verification status.',
+        'Onboarding',
+        error instanceof Error ? error.message : 'Unable to refresh this onboarding session.',
       );
     }
   };
@@ -71,7 +65,7 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
     return (
       <Screen contentContainerStyle={styles.centered}>
         <ActivityIndicator color={tokens.colors.primary} size="large" />
-        <Text style={styles.loadingText}>Loading verification context…</Text>
+        <Text style={styles.loadingText}>Opening your onboarding…</Text>
       </Screen>
     );
   }
@@ -80,86 +74,112 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
     return (
       <Screen contentContainerStyle={styles.centered}>
         <EmptyState
-          actionLabel="Enter verification code"
-          message="No active driver verification session is stored on this device."
-          title="Verification session not found"
+          actionLabel="Enter invitation code"
+          message="No saved driver invite was found on this device."
+          title="Invite not found"
           onAction={() => navigation.replace('SelfServiceOtp')}
         />
       </Screen>
     );
   }
 
-  const signInReady =
-    driver.authenticationAccess === 'ready' &&
-    driver.hasMobileAccess === true &&
-    driver.mobileAccessStatus === 'linked';
+  const nextStep = getNextStep(driver, documents.length);
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
-      <Card style={styles.section}>
-        <Text style={styles.kicker}>Mobiris driver onboarding</Text>
-        <Text style={styles.title}>{`${driver.firstName} ${driver.lastName}`}</Text>
+      <Card style={styles.heroCard}>
+        <Text style={styles.kicker}>Welcome to {driver.organisationName ?? 'your organisation'}</Text>
+        <Text style={styles.title}>
+          {driver.firstName ? `Hi ${driver.firstName}` : 'Your onboarding is ready'}
+        </Text>
         <Text style={styles.copy}>
-          This device is now linked to your self-service verification session. The next mobile phases will complete identity capture and document submission here.
+          We saved your progress. Finish the next step and keep moving.
         </Text>
         <View style={styles.badgeRow}>
           <Badge label={formatIdentityStatus(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
-          <Badge
-            label={`Sign in ${formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}`}
-            tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
-          />
+          <Badge label={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')} tone={readinessTone(driver.authenticationAccess ?? 'not_ready')} />
         </View>
       </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Current status</Text>
-        <Text style={styles.meta}>Phone: {driver.phone ?? 'Not added yet'}</Text>
-        {driver.email ? <Text style={styles.meta}>Email: {driver.email}</Text> : null}
-        <Text style={styles.meta}>Identity: {formatIdentityStatus(driver.identityStatus)}</Text>
-        <Text style={styles.meta}>
-          Sign-in access: {formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}
-        </Text>
-        <Text style={styles.meta}>
-          Activation readiness: {formatReadinessLabel(driver.activationReadiness ?? 'not_ready')}
-        </Text>
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Document status</Text>
-        <Text style={styles.meta}>Pending documents: {driver.pendingDocumentCount}</Text>
-        <Text style={styles.meta}>Rejected documents: {driver.rejectedDocumentCount}</Text>
-        <Text style={styles.meta}>Expired documents: {driver.expiredDocumentCount}</Text>
-        <Text style={styles.meta}>Uploaded records visible: {documents.length}</Text>
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Readiness blockers</Text>
-        {driver.activationReadinessReasons?.length ? (
-          driver.activationReadinessReasons.map((reason) => (
-            <Text key={reason} style={styles.reason}>
-              • {reason}
-            </Text>
-          ))
-        ) : (
-          <Text style={styles.meta}>No activation blockers are currently reported.</Text>
-        )}
+        <View style={styles.metricRow}>
+          <Metric label="Identity" value={formatIdentityStatus(driver.identityStatus)} />
+          <Metric label="Documents" value={String(documents.length)} />
+          <Metric label="Sign in" value={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')} />
+        </View>
       </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Next step</Text>
-        <Text style={styles.copy}>
-          Open the readiness checklist to review sign-in access separately from activation, assignment, and remittance readiness, then continue any remaining verification tasks.
-        </Text>
-        <Button label="Open readiness checklist" onPress={() => navigation.navigate('SelfServiceReadiness')} />
-        <Button label="Continue verification" variant="secondary" onPress={() => navigation.navigate('SelfServiceVerification')} />
-        <Button label="Refresh status" onPress={() => void onRefresh()} />
-        <Button label="Use another verification code" variant="secondary" onPress={() => void onClear()} />
-        {signInReady ? (
-          <Button label="Back to sign in" variant="secondary" onPress={() => navigation.navigate('Login')} />
-        ) : null}
+        <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
+        <Text style={styles.copy}>{nextStep.description}</Text>
+        <Button label={nextStep.cta} onPress={nextStep.onPress.bind(null, navigation)} />
+        <Button label="Refresh" variant="secondary" onPress={() => void onRefresh()} />
+        <Button label="Use another invite" variant="secondary" onPress={() => void onClear()} />
       </Card>
     </Screen>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+    </View>
+  );
+}
+
+function getNextStep(
+  driver: NonNullable<ReturnType<typeof useSelfService>['driver']>,
+  uploadedDocuments: number,
+) {
+  if (!driver.hasMobileAccess) {
+    return {
+      title: 'Create your account',
+      description: 'Use your email and password so you can resume onboarding anytime.',
+      cta: 'Create account',
+      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
+        navigation.navigate('DriverAccountSetup'),
+    };
+  }
+
+  if (
+    driver.verificationPaymentStatus === 'driver_payment_required' ||
+    driver.verificationPaymentStatus === 'wallet_missing' ||
+    driver.verificationPaymentStatus === 'insufficient_balance' ||
+    driver.identityStatus === 'unverified'
+  ) {
+    return {
+      title: 'Verify your identity',
+      description: 'Complete payment if required, then verify with your ID number and live selfie.',
+      cta: 'Continue verification',
+      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
+        navigation.navigate('SelfServiceVerification'),
+    };
+  }
+
+  if (!driver.hasGuarantor) {
+    return {
+      title: 'Add your guarantor',
+      description: 'Your organisation needs a guarantor before readiness can be completed.',
+      cta: 'Add guarantor',
+      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
+        navigation.navigate('DriverGuarantor'),
+    };
+  }
+
+  return {
+    title: uploadedDocuments > 0 ? 'Check readiness' : 'Upload your documents',
+    description:
+      uploadedDocuments > 0
+        ? 'Your main onboarding steps are saved. Check what the operator still needs.'
+        : 'Upload the required documents and finish onboarding.',
+    cta: uploadedDocuments > 0 ? 'Open checklist' : 'Continue onboarding',
+    onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
+      navigation.navigate(uploadedDocuments > 0 ? 'SelfServiceReadiness' : 'SelfServiceVerification'),
+  };
 }
 
 function formatIdentityStatus(status: string) {
@@ -167,15 +187,9 @@ function formatIdentityStatus(status: string) {
 }
 
 function identityTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'verified') {
-    return 'success';
-  }
-  if (status === 'failed') {
-    return 'danger';
-  }
-  if (status === 'review_needed' || status === 'pending_verification') {
-    return 'warning';
-  }
+  if (status === 'verified') return 'success';
+  if (status === 'failed') return 'danger';
+  if (status === 'review_needed' || status === 'pending_verification') return 'warning';
   return 'neutral';
 }
 
@@ -184,12 +198,8 @@ function formatReadinessLabel(status: string) {
 }
 
 function readinessTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'ready') {
-    return 'success';
-  }
-  if (status === 'blocked') {
-    return 'danger';
-  }
+  if (status === 'ready') return 'success';
+  if (status === 'blocked') return 'danger';
   return 'warning';
 }
 
@@ -201,6 +211,11 @@ const styles = StyleSheet.create({
     color: tokens.colors.inkSoft,
     fontSize: 14,
     textAlign: 'center',
+  },
+  heroCard: {
+    gap: tokens.spacing.sm,
+    backgroundColor: '#F8FBFF',
+    borderColor: '#BFDBFE',
   },
   section: {
     gap: tokens.spacing.sm,
@@ -231,14 +246,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  meta: {
-    color: tokens.colors.ink,
-    fontSize: 14,
+  metricRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.sm,
   },
-  reason: {
+  metricCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: '#F8FAFC',
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  metricLabel: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
     color: tokens.colors.ink,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  nextStepTitle: {
+    color: tokens.colors.ink,
+    fontSize: 20,
+    fontWeight: '800',
   },
 });
 

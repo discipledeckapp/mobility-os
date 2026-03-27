@@ -71,6 +71,9 @@ export class TenantsService {
               requireGovernmentVerificationLookup: dto.requireGovernmentVerificationLookup,
             }
           : {}),
+        ...(dto.customDriverDocumentTypes !== undefined
+          ? { customDriverDocumentTypes: dto.customDriverDocumentTypes }
+          : {}),
         ...(dto.requiredDriverDocumentSlugs !== undefined
           ? { requiredDriverDocumentSlugs: dto.requiredDriverDocumentSlugs }
           : {}),
@@ -81,6 +84,9 @@ export class TenantsService {
         ...(dto.requireGuarantor !== undefined ? { requireGuarantor: dto.requireGuarantor } : {}),
         ...(dto.requireGuarantorVerification !== undefined
           ? { requireGuarantorVerification: dto.requireGuarantorVerification }
+          : {}),
+        ...(dto.allowAdminAssignmentOverride !== undefined
+          ? { allowAdminAssignmentOverride: dto.allowAdminAssignmentOverride }
           : {}),
       },
       tenant.country,

@@ -3,6 +3,7 @@ import { Card, CardContent, Text } from '@mobility-os/ui';
 import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
+  getTenantApiToken,
   listDrivers,
   listFleets,
   type DriverRecord,
@@ -64,6 +65,7 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
   const identityStatus = resolvedSearchParams.identityStatus?.trim() ?? '';
 
   try {
+    const token = await getTenantApiToken().catch(() => undefined);
     const [driversResult, fleetsResult] = await Promise.all([
       listDrivers({
         page,
@@ -72,8 +74,8 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
         ...(fleetId ? { fleetId } : {}),
         ...(status ? { status } : {}),
         ...(identityStatus ? { identityStatus } : {}),
-      }),
-      listFleets(),
+      }, token),
+      listFleets(token),
     ]);
     totalDrivers = driversResult.total;
     filteredDrivers = driversResult.total;

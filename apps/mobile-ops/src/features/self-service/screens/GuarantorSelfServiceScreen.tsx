@@ -244,19 +244,36 @@ export function GuarantorSelfServiceScreen({
       return;
     }
 
+    if (!countryCode.trim()) {
+      Alert.alert('Verification', 'Enter the guarantor country code before submitting verification.');
+      return;
+    }
+
+    if (!identifierValue.trim()) {
+      Alert.alert(
+        'Verification',
+        'Enter a government or identity identifier before submitting guarantor verification.',
+      );
+      return;
+    }
+
     setSubmittingIdentity(true);
     try {
       const result = await resolveGuarantorSelfServiceIdentity(token, {
-        ...(identifierValue.trim()
-          ? {
-              identifierType,
-              identifierValue: identifierValue.trim(),
-              ...(countryCode.trim() ? { countryCode: countryCode.trim().toUpperCase() } : {}),
-            }
-          : {}),
+        countryCode: countryCode.trim().toUpperCase(),
+        identifiers: [
+          {
+            type: identifierType.trim().toUpperCase(),
+            value: identifierValue.trim(),
+            countryCode: countryCode.trim().toUpperCase(),
+          },
+        ],
         selfieImageBase64: selfieBase64,
-        livenessSessionId: livenessSession.sessionId,
-        consentAccepted: true,
+        livenessCheck: {
+          provider: livenessSession.providerName,
+          sessionId: livenessSession.sessionId,
+        },
+        subjectConsent: true,
       });
       setIdentityResult(result);
       await refresh();
@@ -362,7 +379,7 @@ export function GuarantorSelfServiceScreen({
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Live verification</Text>
           <Text style={styles.copy}>
-            Enter an identifier if requested by your organisation, then capture a live selfie to complete guarantor verification.
+            Enter the guarantor country and identity number, then capture a live selfie to complete guarantor verification.
           </Text>
           <Input
             label="Identifier type"

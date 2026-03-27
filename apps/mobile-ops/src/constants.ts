@@ -14,6 +14,8 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {
+  assignmentAccept: 'assignment_accept',
+  assignmentDecline: 'assignment_decline',
   assignmentStart: 'assignment_start',
   assignmentComplete: 'assignment_complete',
   assignmentCancel: 'assignment_cancel',
@@ -27,9 +29,10 @@ export const ROLES = {
 
 export const ASSIGNMENT_STATUS = {
   created: 'created',
-  assigned: 'assigned',
+  pendingDriverConfirmation: 'pending_driver_confirmation',
   active: 'active',
-  completed: 'completed',
+  declined: 'declined',
+  ended: 'ended',
   cancelled: 'cancelled',
 } as const;
 

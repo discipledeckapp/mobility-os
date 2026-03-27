@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD, Reflector } from '@nestjs/core';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  getOptionsToken,
+  getStorageToken,
+} from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
 import { AuthModule } from './auth/auth.module';
@@ -127,6 +133,17 @@ function createLoggerModule() {
     MatchingModule,
     WatchlistsModule,
   ],
-  providers: [ThrottlerGuard],
+  providers: [
+    {
+      provide: ThrottlerGuard,
+      useFactory: (options: object, storage: object) =>
+        new ThrottlerGuard(options as never, storage as never, new Reflector()),
+      inject: [getOptionsToken(), getStorageToken()],
+    },
+    {
+      provide: APP_GUARD,
+      useExisting: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -145,9 +145,15 @@ function ExpiredLinkCard() {
 type FlowStep = 'account' | 'profile' | 'payment' | 'verification' | 'documents' | 'complete';
 
 function isIdentitySubmitted(driver: DriverRecord): boolean {
-  return ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
-    driver.identityStatus,
-  );
+  if (driver.identityStatus === 'verified' || driver.identityStatus === 'review_needed') {
+    return true;
+  }
+
+  if (driver.identityStatus !== 'pending_verification') {
+    return false;
+  }
+
+  return Boolean(driver.identityLastVerifiedAt || driver.identityLastDecision);
 }
 
 function getMissingRequiredDocumentSlugs(

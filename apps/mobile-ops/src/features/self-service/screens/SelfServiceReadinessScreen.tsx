@@ -26,6 +26,12 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         'paystack',
         buildSelfServiceVerificationDeepLink(),
       );
+      if (checkout.status === 'already_paid' || !checkout.checkoutUrl) {
+        await refreshSelfService();
+        showToast('Your verification payment has already been received.', 'success');
+        navigation.navigate('SelfServiceVerification');
+        return;
+      }
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
       Alert.alert(
@@ -85,6 +91,11 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     driver.rejectedDocumentCount > 0 ||
     driver.expiredDocumentCount > 0;
   const canResumeVerification = requiresIdentity || hasDocumentBlockers;
+  const hasUsableVerificationEntitlement =
+    driver.verificationEntitlementState === 'paid' ||
+    driver.verificationEntitlementState === 'reserved';
+  const needsVerificationPayment =
+    driver.driverPaysKyc && driver.verificationPaymentStatus === 'driver_payment_required';
   const mobileAccessLabel = formatMobileAccessLabel(driver.mobileAccessStatus);
   const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
 
@@ -196,12 +207,12 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         )}
       </Card>
 
-      {driver.driverPaysKyc && !driver.kycPaymentVerified ? (
+      {needsVerificationPayment ? (
         <Card style={[styles.section, styles.kycPaymentCard]}>
           <Text style={styles.sectionTitle}>Identity verification payment</Text>
           <Text style={styles.copy}>
-            Your organisation requires you to pay the verification fee before your identity check
-            can proceed.
+            {driver.verificationPaymentMessage ??
+              'Your organisation requires you to pay the verification fee before your identity check can proceed.'}
           </Text>
           <Button
             label="Pay verification fee"
@@ -211,12 +222,23 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             You will be redirected to a secure payment page. Return here after payment completes.
           </Text>
         </Card>
-      ) : driver.driverPaysKyc && driver.kycPaymentVerified ? (
+      ) : driver.driverPaysKyc && hasUsableVerificationEntitlement ? (
         <Card style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.label}>Verification payment</Text>
-            <Badge label="Paid" tone="success" />
+            <Badge
+              label={
+                driver.verificationEntitlementState === 'reserved'
+                  ? 'Payment received'
+                  : 'Paid'
+              }
+              tone="success"
+            />
           </View>
+          <Text style={styles.copy}>
+            {driver.verificationPaymentMessage ??
+              'Your verification payment has already been received. You can continue from where you stopped.'}
+          </Text>
         </Card>
       ) : null}
 

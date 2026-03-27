@@ -59,6 +59,31 @@ export type CpWalletEntry = $Result.DefaultSelection<Prisma.$CpWalletEntryPayloa
  */
 export type CpPaymentAttempt = $Result.DefaultSelection<Prisma.$CpPaymentAttemptPayload>
 /**
+ * Model CpDispute
+ * 
+ */
+export type CpDispute = $Result.DefaultSelection<Prisma.$CpDisputePayload>
+/**
+ * Model CpDisputeEvidence
+ * 
+ */
+export type CpDisputeEvidence = $Result.DefaultSelection<Prisma.$CpDisputeEvidencePayload>
+/**
+ * Model CpDisputeTimeline
+ * 
+ */
+export type CpDisputeTimeline = $Result.DefaultSelection<Prisma.$CpDisputeTimelinePayload>
+/**
+ * Model CpEvidenceRecord
+ * 
+ */
+export type CpEvidenceRecord = $Result.DefaultSelection<Prisma.$CpEvidenceRecordPayload>
+/**
+ * Model CpIssuedDocument
+ * 
+ */
+export type CpIssuedDocument = $Result.DefaultSelection<Prisma.$CpIssuedDocumentPayload>
+/**
  * Model CpFeatureFlag
  * 
  */
@@ -296,6 +321,56 @@ export class PrismaClient<
     * ```
     */
   get cpPaymentAttempt(): Prisma.CpPaymentAttemptDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpDispute`: Exposes CRUD operations for the **CpDispute** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpDisputes
+    * const cpDisputes = await prisma.cpDispute.findMany()
+    * ```
+    */
+  get cpDispute(): Prisma.CpDisputeDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpDisputeEvidence`: Exposes CRUD operations for the **CpDisputeEvidence** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpDisputeEvidences
+    * const cpDisputeEvidences = await prisma.cpDisputeEvidence.findMany()
+    * ```
+    */
+  get cpDisputeEvidence(): Prisma.CpDisputeEvidenceDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpDisputeTimeline`: Exposes CRUD operations for the **CpDisputeTimeline** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpDisputeTimelines
+    * const cpDisputeTimelines = await prisma.cpDisputeTimeline.findMany()
+    * ```
+    */
+  get cpDisputeTimeline(): Prisma.CpDisputeTimelineDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpEvidenceRecord`: Exposes CRUD operations for the **CpEvidenceRecord** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpEvidenceRecords
+    * const cpEvidenceRecords = await prisma.cpEvidenceRecord.findMany()
+    * ```
+    */
+  get cpEvidenceRecord(): Prisma.CpEvidenceRecordDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpIssuedDocument`: Exposes CRUD operations for the **CpIssuedDocument** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpIssuedDocuments
+    * const cpIssuedDocuments = await prisma.cpIssuedDocument.findMany()
+    * ```
+    */
+  get cpIssuedDocument(): Prisma.CpIssuedDocumentDelegate<ExtArgs>;
 
   /**
    * `prisma.cpFeatureFlag`: Exposes CRUD operations for the **CpFeatureFlag** model.
@@ -796,6 +871,11 @@ export namespace Prisma {
     CpPlatformWallet: 'CpPlatformWallet',
     CpWalletEntry: 'CpWalletEntry',
     CpPaymentAttempt: 'CpPaymentAttempt',
+    CpDispute: 'CpDispute',
+    CpDisputeEvidence: 'CpDisputeEvidence',
+    CpDisputeTimeline: 'CpDisputeTimeline',
+    CpEvidenceRecord: 'CpEvidenceRecord',
+    CpIssuedDocument: 'CpIssuedDocument',
     CpFeatureFlag: 'CpFeatureFlag',
     CpFeatureFlagOverride: 'CpFeatureFlagOverride',
     CpPlatformSetting: 'CpPlatformSetting',
@@ -816,7 +896,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "cpPlatformUser" | "cpPlan" | "cpSubscription" | "cpInvoice" | "cpCollectionAttempt" | "cpInvoiceLineItem" | "cpPlatformWallet" | "cpWalletEntry" | "cpPaymentAttempt" | "cpFeatureFlag" | "cpFeatureFlagOverride" | "cpPlatformSetting" | "cpUsageEvent" | "cpTenantLifecycleEvent"
+      modelProps: "cpPlatformUser" | "cpPlan" | "cpSubscription" | "cpInvoice" | "cpCollectionAttempt" | "cpInvoiceLineItem" | "cpPlatformWallet" | "cpWalletEntry" | "cpPaymentAttempt" | "cpDispute" | "cpDisputeEvidence" | "cpDisputeTimeline" | "cpEvidenceRecord" | "cpIssuedDocument" | "cpFeatureFlag" | "cpFeatureFlagOverride" | "cpPlatformSetting" | "cpUsageEvent" | "cpTenantLifecycleEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1447,6 +1527,356 @@ export namespace Prisma {
           count: {
             args: Prisma.CpPaymentAttemptCountArgs<ExtArgs>
             result: $Utils.Optional<CpPaymentAttemptCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpDispute: {
+        payload: Prisma.$CpDisputePayload<ExtArgs>
+        fields: Prisma.CpDisputeFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpDisputeFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpDisputeFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          findFirst: {
+            args: Prisma.CpDisputeFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpDisputeFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          findMany: {
+            args: Prisma.CpDisputeFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>[]
+          }
+          create: {
+            args: Prisma.CpDisputeCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          createMany: {
+            args: Prisma.CpDisputeCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpDisputeCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>[]
+          }
+          delete: {
+            args: Prisma.CpDisputeDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          update: {
+            args: Prisma.CpDisputeUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          deleteMany: {
+            args: Prisma.CpDisputeDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpDisputeUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpDisputeUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputePayload>
+          }
+          aggregate: {
+            args: Prisma.CpDisputeAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpDispute>
+          }
+          groupBy: {
+            args: Prisma.CpDisputeGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpDisputeCountArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpDisputeEvidence: {
+        payload: Prisma.$CpDisputeEvidencePayload<ExtArgs>
+        fields: Prisma.CpDisputeEvidenceFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpDisputeEvidenceFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpDisputeEvidenceFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          findFirst: {
+            args: Prisma.CpDisputeEvidenceFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpDisputeEvidenceFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          findMany: {
+            args: Prisma.CpDisputeEvidenceFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>[]
+          }
+          create: {
+            args: Prisma.CpDisputeEvidenceCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          createMany: {
+            args: Prisma.CpDisputeEvidenceCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpDisputeEvidenceCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>[]
+          }
+          delete: {
+            args: Prisma.CpDisputeEvidenceDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          update: {
+            args: Prisma.CpDisputeEvidenceUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          deleteMany: {
+            args: Prisma.CpDisputeEvidenceDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpDisputeEvidenceUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpDisputeEvidenceUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeEvidencePayload>
+          }
+          aggregate: {
+            args: Prisma.CpDisputeEvidenceAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpDisputeEvidence>
+          }
+          groupBy: {
+            args: Prisma.CpDisputeEvidenceGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeEvidenceGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpDisputeEvidenceCountArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeEvidenceCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpDisputeTimeline: {
+        payload: Prisma.$CpDisputeTimelinePayload<ExtArgs>
+        fields: Prisma.CpDisputeTimelineFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpDisputeTimelineFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpDisputeTimelineFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          findFirst: {
+            args: Prisma.CpDisputeTimelineFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpDisputeTimelineFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          findMany: {
+            args: Prisma.CpDisputeTimelineFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>[]
+          }
+          create: {
+            args: Prisma.CpDisputeTimelineCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          createMany: {
+            args: Prisma.CpDisputeTimelineCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpDisputeTimelineCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>[]
+          }
+          delete: {
+            args: Prisma.CpDisputeTimelineDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          update: {
+            args: Prisma.CpDisputeTimelineUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          deleteMany: {
+            args: Prisma.CpDisputeTimelineDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpDisputeTimelineUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpDisputeTimelineUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpDisputeTimelinePayload>
+          }
+          aggregate: {
+            args: Prisma.CpDisputeTimelineAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpDisputeTimeline>
+          }
+          groupBy: {
+            args: Prisma.CpDisputeTimelineGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeTimelineGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpDisputeTimelineCountArgs<ExtArgs>
+            result: $Utils.Optional<CpDisputeTimelineCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpEvidenceRecord: {
+        payload: Prisma.$CpEvidenceRecordPayload<ExtArgs>
+        fields: Prisma.CpEvidenceRecordFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpEvidenceRecordFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpEvidenceRecordFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          findFirst: {
+            args: Prisma.CpEvidenceRecordFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpEvidenceRecordFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          findMany: {
+            args: Prisma.CpEvidenceRecordFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>[]
+          }
+          create: {
+            args: Prisma.CpEvidenceRecordCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          createMany: {
+            args: Prisma.CpEvidenceRecordCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpEvidenceRecordCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>[]
+          }
+          delete: {
+            args: Prisma.CpEvidenceRecordDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          update: {
+            args: Prisma.CpEvidenceRecordUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpEvidenceRecordDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpEvidenceRecordUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpEvidenceRecordUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpEvidenceRecordPayload>
+          }
+          aggregate: {
+            args: Prisma.CpEvidenceRecordAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpEvidenceRecord>
+          }
+          groupBy: {
+            args: Prisma.CpEvidenceRecordGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpEvidenceRecordGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpEvidenceRecordCountArgs<ExtArgs>
+            result: $Utils.Optional<CpEvidenceRecordCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpIssuedDocument: {
+        payload: Prisma.$CpIssuedDocumentPayload<ExtArgs>
+        fields: Prisma.CpIssuedDocumentFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpIssuedDocumentFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpIssuedDocumentFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          findFirst: {
+            args: Prisma.CpIssuedDocumentFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpIssuedDocumentFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          findMany: {
+            args: Prisma.CpIssuedDocumentFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>[]
+          }
+          create: {
+            args: Prisma.CpIssuedDocumentCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          createMany: {
+            args: Prisma.CpIssuedDocumentCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpIssuedDocumentCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>[]
+          }
+          delete: {
+            args: Prisma.CpIssuedDocumentDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          update: {
+            args: Prisma.CpIssuedDocumentUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpIssuedDocumentDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpIssuedDocumentUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpIssuedDocumentUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpIssuedDocumentPayload>
+          }
+          aggregate: {
+            args: Prisma.CpIssuedDocumentAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpIssuedDocument>
+          }
+          groupBy: {
+            args: Prisma.CpIssuedDocumentGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpIssuedDocumentGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpIssuedDocumentCountArgs<ExtArgs>
+            result: $Utils.Optional<CpIssuedDocumentCountAggregateOutputType> | number
           }
         }
       }
@@ -2086,6 +2516,46 @@ export namespace Prisma {
    */
   export type CpPlatformWalletCountOutputTypeCountEntriesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: CpWalletEntryWhereInput
+  }
+
+
+  /**
+   * Count Type CpDisputeCountOutputType
+   */
+
+  export type CpDisputeCountOutputType = {
+    timeline: number
+    evidence: number
+  }
+
+  export type CpDisputeCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    timeline?: boolean | CpDisputeCountOutputTypeCountTimelineArgs
+    evidence?: boolean | CpDisputeCountOutputTypeCountEvidenceArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CpDisputeCountOutputType without action
+   */
+  export type CpDisputeCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeCountOutputType
+     */
+    select?: CpDisputeCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CpDisputeCountOutputType without action
+   */
+  export type CpDisputeCountOutputTypeCountTimelineArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpDisputeTimelineWhereInput
+  }
+
+  /**
+   * CpDisputeCountOutputType without action
+   */
+  export type CpDisputeCountOutputTypeCountEvidenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpDisputeEvidenceWhereInput
   }
 
 
@@ -11292,6 +11762,5514 @@ export namespace Prisma {
 
 
   /**
+   * Model CpDispute
+   */
+
+  export type AggregateCpDispute = {
+    _count: CpDisputeCountAggregateOutputType | null
+    _avg: CpDisputeAvgAggregateOutputType | null
+    _sum: CpDisputeSumAggregateOutputType | null
+    _min: CpDisputeMinAggregateOutputType | null
+    _max: CpDisputeMaxAggregateOutputType | null
+  }
+
+  export type CpDisputeAvgAggregateOutputType = {
+    finalAmountMinorUnits: number | null
+  }
+
+  export type CpDisputeSumAggregateOutputType = {
+    finalAmountMinorUnits: number | null
+  }
+
+  export type CpDisputeMinAggregateOutputType = {
+    id: string | null
+    disputeCode: string | null
+    tenantId: string | null
+    disputeType: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    claimantType: string | null
+    claimantId: string | null
+    respondentType: string | null
+    respondentId: string | null
+    title: string | null
+    reasonCode: string | null
+    narrative: string | null
+    status: string | null
+    priority: string | null
+    assignedTo: string | null
+    resolvedAt: Date | null
+    resolvedByType: string | null
+    resolvedById: string | null
+    finalAmountMinorUnits: number | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpDisputeMaxAggregateOutputType = {
+    id: string | null
+    disputeCode: string | null
+    tenantId: string | null
+    disputeType: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    claimantType: string | null
+    claimantId: string | null
+    respondentType: string | null
+    respondentId: string | null
+    title: string | null
+    reasonCode: string | null
+    narrative: string | null
+    status: string | null
+    priority: string | null
+    assignedTo: string | null
+    resolvedAt: Date | null
+    resolvedByType: string | null
+    resolvedById: string | null
+    finalAmountMinorUnits: number | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpDisputeCountAggregateOutputType = {
+    id: number
+    disputeCode: number
+    tenantId: number
+    disputeType: number
+    relatedEntityType: number
+    relatedEntityId: number
+    claimantType: number
+    claimantId: number
+    respondentType: number
+    respondentId: number
+    title: number
+    reasonCode: number
+    narrative: number
+    status: number
+    priority: number
+    assignedTo: number
+    resolvedAt: number
+    resolvedByType: number
+    resolvedById: number
+    resolutionSummary: number
+    finalAmountMinorUnits: number
+    currency: number
+    metadata: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpDisputeAvgAggregateInputType = {
+    finalAmountMinorUnits?: true
+  }
+
+  export type CpDisputeSumAggregateInputType = {
+    finalAmountMinorUnits?: true
+  }
+
+  export type CpDisputeMinAggregateInputType = {
+    id?: true
+    disputeCode?: true
+    tenantId?: true
+    disputeType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    claimantType?: true
+    claimantId?: true
+    respondentType?: true
+    respondentId?: true
+    title?: true
+    reasonCode?: true
+    narrative?: true
+    status?: true
+    priority?: true
+    assignedTo?: true
+    resolvedAt?: true
+    resolvedByType?: true
+    resolvedById?: true
+    finalAmountMinorUnits?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpDisputeMaxAggregateInputType = {
+    id?: true
+    disputeCode?: true
+    tenantId?: true
+    disputeType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    claimantType?: true
+    claimantId?: true
+    respondentType?: true
+    respondentId?: true
+    title?: true
+    reasonCode?: true
+    narrative?: true
+    status?: true
+    priority?: true
+    assignedTo?: true
+    resolvedAt?: true
+    resolvedByType?: true
+    resolvedById?: true
+    finalAmountMinorUnits?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpDisputeCountAggregateInputType = {
+    id?: true
+    disputeCode?: true
+    tenantId?: true
+    disputeType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    claimantType?: true
+    claimantId?: true
+    respondentType?: true
+    respondentId?: true
+    title?: true
+    reasonCode?: true
+    narrative?: true
+    status?: true
+    priority?: true
+    assignedTo?: true
+    resolvedAt?: true
+    resolvedByType?: true
+    resolvedById?: true
+    resolutionSummary?: true
+    finalAmountMinorUnits?: true
+    currency?: true
+    metadata?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpDisputeAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDispute to aggregate.
+     */
+    where?: CpDisputeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputes to fetch.
+     */
+    orderBy?: CpDisputeOrderByWithRelationInput | CpDisputeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpDisputeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpDisputes
+    **/
+    _count?: true | CpDisputeCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpDisputeAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpDisputeSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpDisputeMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpDisputeMaxAggregateInputType
+  }
+
+  export type GetCpDisputeAggregateType<T extends CpDisputeAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpDispute]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpDispute[P]>
+      : GetScalarType<T[P], AggregateCpDispute[P]>
+  }
+
+
+
+
+  export type CpDisputeGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpDisputeWhereInput
+    orderBy?: CpDisputeOrderByWithAggregationInput | CpDisputeOrderByWithAggregationInput[]
+    by: CpDisputeScalarFieldEnum[] | CpDisputeScalarFieldEnum
+    having?: CpDisputeScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpDisputeCountAggregateInputType | true
+    _avg?: CpDisputeAvgAggregateInputType
+    _sum?: CpDisputeSumAggregateInputType
+    _min?: CpDisputeMinAggregateInputType
+    _max?: CpDisputeMaxAggregateInputType
+  }
+
+  export type CpDisputeGroupByOutputType = {
+    id: string
+    disputeCode: string
+    tenantId: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status: string
+    priority: string
+    assignedTo: string | null
+    resolvedAt: Date | null
+    resolvedByType: string | null
+    resolvedById: string | null
+    resolutionSummary: JsonValue | null
+    finalAmountMinorUnits: number | null
+    currency: string | null
+    metadata: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpDisputeCountAggregateOutputType | null
+    _avg: CpDisputeAvgAggregateOutputType | null
+    _sum: CpDisputeSumAggregateOutputType | null
+    _min: CpDisputeMinAggregateOutputType | null
+    _max: CpDisputeMaxAggregateOutputType | null
+  }
+
+  type GetCpDisputeGroupByPayload<T extends CpDisputeGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpDisputeGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpDisputeGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpDisputeGroupByOutputType[P]>
+            : GetScalarType<T[P], CpDisputeGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpDisputeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeCode?: boolean
+    tenantId?: boolean
+    disputeType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    claimantType?: boolean
+    claimantId?: boolean
+    respondentType?: boolean
+    respondentId?: boolean
+    title?: boolean
+    reasonCode?: boolean
+    narrative?: boolean
+    status?: boolean
+    priority?: boolean
+    assignedTo?: boolean
+    resolvedAt?: boolean
+    resolvedByType?: boolean
+    resolvedById?: boolean
+    resolutionSummary?: boolean
+    finalAmountMinorUnits?: boolean
+    currency?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    timeline?: boolean | CpDispute$timelineArgs<ExtArgs>
+    evidence?: boolean | CpDispute$evidenceArgs<ExtArgs>
+    _count?: boolean | CpDisputeCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpDispute"]>
+
+  export type CpDisputeSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeCode?: boolean
+    tenantId?: boolean
+    disputeType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    claimantType?: boolean
+    claimantId?: boolean
+    respondentType?: boolean
+    respondentId?: boolean
+    title?: boolean
+    reasonCode?: boolean
+    narrative?: boolean
+    status?: boolean
+    priority?: boolean
+    assignedTo?: boolean
+    resolvedAt?: boolean
+    resolvedByType?: boolean
+    resolvedById?: boolean
+    resolutionSummary?: boolean
+    finalAmountMinorUnits?: boolean
+    currency?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpDispute"]>
+
+  export type CpDisputeSelectScalar = {
+    id?: boolean
+    disputeCode?: boolean
+    tenantId?: boolean
+    disputeType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    claimantType?: boolean
+    claimantId?: boolean
+    respondentType?: boolean
+    respondentId?: boolean
+    title?: boolean
+    reasonCode?: boolean
+    narrative?: boolean
+    status?: boolean
+    priority?: boolean
+    assignedTo?: boolean
+    resolvedAt?: boolean
+    resolvedByType?: boolean
+    resolvedById?: boolean
+    resolutionSummary?: boolean
+    finalAmountMinorUnits?: boolean
+    currency?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CpDisputeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    timeline?: boolean | CpDispute$timelineArgs<ExtArgs>
+    evidence?: boolean | CpDispute$evidenceArgs<ExtArgs>
+    _count?: boolean | CpDisputeCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CpDisputeIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $CpDisputePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpDispute"
+    objects: {
+      timeline: Prisma.$CpDisputeTimelinePayload<ExtArgs>[]
+      evidence: Prisma.$CpDisputeEvidencePayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      disputeCode: string
+      tenantId: string | null
+      disputeType: string
+      relatedEntityType: string
+      relatedEntityId: string
+      claimantType: string
+      claimantId: string
+      respondentType: string
+      respondentId: string | null
+      title: string
+      reasonCode: string
+      narrative: string
+      status: string
+      priority: string
+      assignedTo: string | null
+      resolvedAt: Date | null
+      resolvedByType: string | null
+      resolvedById: string | null
+      resolutionSummary: Prisma.JsonValue | null
+      finalAmountMinorUnits: number | null
+      currency: string | null
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpDispute"]>
+    composites: {}
+  }
+
+  type CpDisputeGetPayload<S extends boolean | null | undefined | CpDisputeDefaultArgs> = $Result.GetResult<Prisma.$CpDisputePayload, S>
+
+  type CpDisputeCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpDisputeFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpDisputeCountAggregateInputType | true
+    }
+
+  export interface CpDisputeDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpDispute'], meta: { name: 'CpDispute' } }
+    /**
+     * Find zero or one CpDispute that matches the filter.
+     * @param {CpDisputeFindUniqueArgs} args - Arguments to find a CpDispute
+     * @example
+     * // Get one CpDispute
+     * const cpDispute = await prisma.cpDispute.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpDisputeFindUniqueArgs>(args: SelectSubset<T, CpDisputeFindUniqueArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpDispute that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpDisputeFindUniqueOrThrowArgs} args - Arguments to find a CpDispute
+     * @example
+     * // Get one CpDispute
+     * const cpDispute = await prisma.cpDispute.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpDisputeFindUniqueOrThrowArgs>(args: SelectSubset<T, CpDisputeFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpDispute that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeFindFirstArgs} args - Arguments to find a CpDispute
+     * @example
+     * // Get one CpDispute
+     * const cpDispute = await prisma.cpDispute.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpDisputeFindFirstArgs>(args?: SelectSubset<T, CpDisputeFindFirstArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpDispute that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeFindFirstOrThrowArgs} args - Arguments to find a CpDispute
+     * @example
+     * // Get one CpDispute
+     * const cpDispute = await prisma.cpDispute.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpDisputeFindFirstOrThrowArgs>(args?: SelectSubset<T, CpDisputeFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpDisputes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpDisputes
+     * const cpDisputes = await prisma.cpDispute.findMany()
+     * 
+     * // Get first 10 CpDisputes
+     * const cpDisputes = await prisma.cpDispute.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpDisputeWithIdOnly = await prisma.cpDispute.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpDisputeFindManyArgs>(args?: SelectSubset<T, CpDisputeFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpDispute.
+     * @param {CpDisputeCreateArgs} args - Arguments to create a CpDispute.
+     * @example
+     * // Create one CpDispute
+     * const CpDispute = await prisma.cpDispute.create({
+     *   data: {
+     *     // ... data to create a CpDispute
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpDisputeCreateArgs>(args: SelectSubset<T, CpDisputeCreateArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpDisputes.
+     * @param {CpDisputeCreateManyArgs} args - Arguments to create many CpDisputes.
+     * @example
+     * // Create many CpDisputes
+     * const cpDispute = await prisma.cpDispute.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpDisputeCreateManyArgs>(args?: SelectSubset<T, CpDisputeCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpDisputes and returns the data saved in the database.
+     * @param {CpDisputeCreateManyAndReturnArgs} args - Arguments to create many CpDisputes.
+     * @example
+     * // Create many CpDisputes
+     * const cpDispute = await prisma.cpDispute.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpDisputes and only return the `id`
+     * const cpDisputeWithIdOnly = await prisma.cpDispute.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpDisputeCreateManyAndReturnArgs>(args?: SelectSubset<T, CpDisputeCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpDispute.
+     * @param {CpDisputeDeleteArgs} args - Arguments to delete one CpDispute.
+     * @example
+     * // Delete one CpDispute
+     * const CpDispute = await prisma.cpDispute.delete({
+     *   where: {
+     *     // ... filter to delete one CpDispute
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpDisputeDeleteArgs>(args: SelectSubset<T, CpDisputeDeleteArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpDispute.
+     * @param {CpDisputeUpdateArgs} args - Arguments to update one CpDispute.
+     * @example
+     * // Update one CpDispute
+     * const cpDispute = await prisma.cpDispute.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpDisputeUpdateArgs>(args: SelectSubset<T, CpDisputeUpdateArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpDisputes.
+     * @param {CpDisputeDeleteManyArgs} args - Arguments to filter CpDisputes to delete.
+     * @example
+     * // Delete a few CpDisputes
+     * const { count } = await prisma.cpDispute.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpDisputeDeleteManyArgs>(args?: SelectSubset<T, CpDisputeDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpDisputes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpDisputes
+     * const cpDispute = await prisma.cpDispute.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpDisputeUpdateManyArgs>(args: SelectSubset<T, CpDisputeUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpDispute.
+     * @param {CpDisputeUpsertArgs} args - Arguments to update or create a CpDispute.
+     * @example
+     * // Update or create a CpDispute
+     * const cpDispute = await prisma.cpDispute.upsert({
+     *   create: {
+     *     // ... data to create a CpDispute
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpDispute we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpDisputeUpsertArgs>(args: SelectSubset<T, CpDisputeUpsertArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpDisputes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeCountArgs} args - Arguments to filter CpDisputes to count.
+     * @example
+     * // Count the number of CpDisputes
+     * const count = await prisma.cpDispute.count({
+     *   where: {
+     *     // ... the filter for the CpDisputes we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpDisputeCountArgs>(
+      args?: Subset<T, CpDisputeCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpDisputeCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpDispute.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpDisputeAggregateArgs>(args: Subset<T, CpDisputeAggregateArgs>): Prisma.PrismaPromise<GetCpDisputeAggregateType<T>>
+
+    /**
+     * Group by CpDispute.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpDisputeGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpDisputeGroupByArgs['orderBy'] }
+        : { orderBy?: CpDisputeGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpDisputeGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpDisputeGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpDispute model
+   */
+  readonly fields: CpDisputeFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpDispute.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpDisputeClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    timeline<T extends CpDispute$timelineArgs<ExtArgs> = {}>(args?: Subset<T, CpDispute$timelineArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findMany"> | Null>
+    evidence<T extends CpDispute$evidenceArgs<ExtArgs> = {}>(args?: Subset<T, CpDispute$evidenceArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpDispute model
+   */ 
+  interface CpDisputeFieldRefs {
+    readonly id: FieldRef<"CpDispute", 'String'>
+    readonly disputeCode: FieldRef<"CpDispute", 'String'>
+    readonly tenantId: FieldRef<"CpDispute", 'String'>
+    readonly disputeType: FieldRef<"CpDispute", 'String'>
+    readonly relatedEntityType: FieldRef<"CpDispute", 'String'>
+    readonly relatedEntityId: FieldRef<"CpDispute", 'String'>
+    readonly claimantType: FieldRef<"CpDispute", 'String'>
+    readonly claimantId: FieldRef<"CpDispute", 'String'>
+    readonly respondentType: FieldRef<"CpDispute", 'String'>
+    readonly respondentId: FieldRef<"CpDispute", 'String'>
+    readonly title: FieldRef<"CpDispute", 'String'>
+    readonly reasonCode: FieldRef<"CpDispute", 'String'>
+    readonly narrative: FieldRef<"CpDispute", 'String'>
+    readonly status: FieldRef<"CpDispute", 'String'>
+    readonly priority: FieldRef<"CpDispute", 'String'>
+    readonly assignedTo: FieldRef<"CpDispute", 'String'>
+    readonly resolvedAt: FieldRef<"CpDispute", 'DateTime'>
+    readonly resolvedByType: FieldRef<"CpDispute", 'String'>
+    readonly resolvedById: FieldRef<"CpDispute", 'String'>
+    readonly resolutionSummary: FieldRef<"CpDispute", 'Json'>
+    readonly finalAmountMinorUnits: FieldRef<"CpDispute", 'Int'>
+    readonly currency: FieldRef<"CpDispute", 'String'>
+    readonly metadata: FieldRef<"CpDispute", 'Json'>
+    readonly createdAt: FieldRef<"CpDispute", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpDispute", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpDispute findUnique
+   */
+  export type CpDisputeFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDispute to fetch.
+     */
+    where: CpDisputeWhereUniqueInput
+  }
+
+  /**
+   * CpDispute findUniqueOrThrow
+   */
+  export type CpDisputeFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDispute to fetch.
+     */
+    where: CpDisputeWhereUniqueInput
+  }
+
+  /**
+   * CpDispute findFirst
+   */
+  export type CpDisputeFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDispute to fetch.
+     */
+    where?: CpDisputeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputes to fetch.
+     */
+    orderBy?: CpDisputeOrderByWithRelationInput | CpDisputeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputes.
+     */
+    cursor?: CpDisputeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputes.
+     */
+    distinct?: CpDisputeScalarFieldEnum | CpDisputeScalarFieldEnum[]
+  }
+
+  /**
+   * CpDispute findFirstOrThrow
+   */
+  export type CpDisputeFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDispute to fetch.
+     */
+    where?: CpDisputeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputes to fetch.
+     */
+    orderBy?: CpDisputeOrderByWithRelationInput | CpDisputeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputes.
+     */
+    cursor?: CpDisputeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputes.
+     */
+    distinct?: CpDisputeScalarFieldEnum | CpDisputeScalarFieldEnum[]
+  }
+
+  /**
+   * CpDispute findMany
+   */
+  export type CpDisputeFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputes to fetch.
+     */
+    where?: CpDisputeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputes to fetch.
+     */
+    orderBy?: CpDisputeOrderByWithRelationInput | CpDisputeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpDisputes.
+     */
+    cursor?: CpDisputeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputes.
+     */
+    skip?: number
+    distinct?: CpDisputeScalarFieldEnum | CpDisputeScalarFieldEnum[]
+  }
+
+  /**
+   * CpDispute create
+   */
+  export type CpDisputeCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpDispute.
+     */
+    data: XOR<CpDisputeCreateInput, CpDisputeUncheckedCreateInput>
+  }
+
+  /**
+   * CpDispute createMany
+   */
+  export type CpDisputeCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpDisputes.
+     */
+    data: CpDisputeCreateManyInput | CpDisputeCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpDispute createManyAndReturn
+   */
+  export type CpDisputeCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpDisputes.
+     */
+    data: CpDisputeCreateManyInput | CpDisputeCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpDispute update
+   */
+  export type CpDisputeUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpDispute.
+     */
+    data: XOR<CpDisputeUpdateInput, CpDisputeUncheckedUpdateInput>
+    /**
+     * Choose, which CpDispute to update.
+     */
+    where: CpDisputeWhereUniqueInput
+  }
+
+  /**
+   * CpDispute updateMany
+   */
+  export type CpDisputeUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpDisputes.
+     */
+    data: XOR<CpDisputeUpdateManyMutationInput, CpDisputeUncheckedUpdateManyInput>
+    /**
+     * Filter which CpDisputes to update
+     */
+    where?: CpDisputeWhereInput
+  }
+
+  /**
+   * CpDispute upsert
+   */
+  export type CpDisputeUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpDispute to update in case it exists.
+     */
+    where: CpDisputeWhereUniqueInput
+    /**
+     * In case the CpDispute found by the `where` argument doesn't exist, create a new CpDispute with this data.
+     */
+    create: XOR<CpDisputeCreateInput, CpDisputeUncheckedCreateInput>
+    /**
+     * In case the CpDispute was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpDisputeUpdateInput, CpDisputeUncheckedUpdateInput>
+  }
+
+  /**
+   * CpDispute delete
+   */
+  export type CpDisputeDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+    /**
+     * Filter which CpDispute to delete.
+     */
+    where: CpDisputeWhereUniqueInput
+  }
+
+  /**
+   * CpDispute deleteMany
+   */
+  export type CpDisputeDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDisputes to delete
+     */
+    where?: CpDisputeWhereInput
+  }
+
+  /**
+   * CpDispute.timeline
+   */
+  export type CpDispute$timelineArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    where?: CpDisputeTimelineWhereInput
+    orderBy?: CpDisputeTimelineOrderByWithRelationInput | CpDisputeTimelineOrderByWithRelationInput[]
+    cursor?: CpDisputeTimelineWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpDisputeTimelineScalarFieldEnum | CpDisputeTimelineScalarFieldEnum[]
+  }
+
+  /**
+   * CpDispute.evidence
+   */
+  export type CpDispute$evidenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    where?: CpDisputeEvidenceWhereInput
+    orderBy?: CpDisputeEvidenceOrderByWithRelationInput | CpDisputeEvidenceOrderByWithRelationInput[]
+    cursor?: CpDisputeEvidenceWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CpDisputeEvidenceScalarFieldEnum | CpDisputeEvidenceScalarFieldEnum[]
+  }
+
+  /**
+   * CpDispute without action
+   */
+  export type CpDisputeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDispute
+     */
+    select?: CpDisputeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpDisputeEvidence
+   */
+
+  export type AggregateCpDisputeEvidence = {
+    _count: CpDisputeEvidenceCountAggregateOutputType | null
+    _min: CpDisputeEvidenceMinAggregateOutputType | null
+    _max: CpDisputeEvidenceMaxAggregateOutputType | null
+  }
+
+  export type CpDisputeEvidenceMinAggregateOutputType = {
+    id: string | null
+    disputeId: string | null
+    tenantId: string | null
+    uploadedByType: string | null
+    uploadedById: string | null
+    evidenceType: string | null
+    description: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    integrityHash: string | null
+    createdAt: Date | null
+  }
+
+  export type CpDisputeEvidenceMaxAggregateOutputType = {
+    id: string | null
+    disputeId: string | null
+    tenantId: string | null
+    uploadedByType: string | null
+    uploadedById: string | null
+    evidenceType: string | null
+    description: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    integrityHash: string | null
+    createdAt: Date | null
+  }
+
+  export type CpDisputeEvidenceCountAggregateOutputType = {
+    id: number
+    disputeId: number
+    tenantId: number
+    uploadedByType: number
+    uploadedById: number
+    evidenceType: number
+    description: number
+    fileName: number
+    contentType: number
+    storageKey: number
+    fileUrl: number
+    fileHash: number
+    integrityHash: number
+    metadata: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CpDisputeEvidenceMinAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    uploadedByType?: true
+    uploadedById?: true
+    evidenceType?: true
+    description?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    createdAt?: true
+  }
+
+  export type CpDisputeEvidenceMaxAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    uploadedByType?: true
+    uploadedById?: true
+    evidenceType?: true
+    description?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    createdAt?: true
+  }
+
+  export type CpDisputeEvidenceCountAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    uploadedByType?: true
+    uploadedById?: true
+    evidenceType?: true
+    description?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    metadata?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CpDisputeEvidenceAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDisputeEvidence to aggregate.
+     */
+    where?: CpDisputeEvidenceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeEvidences to fetch.
+     */
+    orderBy?: CpDisputeEvidenceOrderByWithRelationInput | CpDisputeEvidenceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpDisputeEvidenceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeEvidences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeEvidences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpDisputeEvidences
+    **/
+    _count?: true | CpDisputeEvidenceCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpDisputeEvidenceMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpDisputeEvidenceMaxAggregateInputType
+  }
+
+  export type GetCpDisputeEvidenceAggregateType<T extends CpDisputeEvidenceAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpDisputeEvidence]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpDisputeEvidence[P]>
+      : GetScalarType<T[P], AggregateCpDisputeEvidence[P]>
+  }
+
+
+
+
+  export type CpDisputeEvidenceGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpDisputeEvidenceWhereInput
+    orderBy?: CpDisputeEvidenceOrderByWithAggregationInput | CpDisputeEvidenceOrderByWithAggregationInput[]
+    by: CpDisputeEvidenceScalarFieldEnum[] | CpDisputeEvidenceScalarFieldEnum
+    having?: CpDisputeEvidenceScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpDisputeEvidenceCountAggregateInputType | true
+    _min?: CpDisputeEvidenceMinAggregateInputType
+    _max?: CpDisputeEvidenceMaxAggregateInputType
+  }
+
+  export type CpDisputeEvidenceGroupByOutputType = {
+    id: string
+    disputeId: string
+    tenantId: string | null
+    uploadedByType: string
+    uploadedById: string | null
+    evidenceType: string
+    description: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata: JsonValue | null
+    createdAt: Date
+    _count: CpDisputeEvidenceCountAggregateOutputType | null
+    _min: CpDisputeEvidenceMinAggregateOutputType | null
+    _max: CpDisputeEvidenceMaxAggregateOutputType | null
+  }
+
+  type GetCpDisputeEvidenceGroupByPayload<T extends CpDisputeEvidenceGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpDisputeEvidenceGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpDisputeEvidenceGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpDisputeEvidenceGroupByOutputType[P]>
+            : GetScalarType<T[P], CpDisputeEvidenceGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpDisputeEvidenceSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    uploadedByType?: boolean
+    uploadedById?: boolean
+    evidenceType?: boolean
+    description?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpDisputeEvidence"]>
+
+  export type CpDisputeEvidenceSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    uploadedByType?: boolean
+    uploadedById?: boolean
+    evidenceType?: boolean
+    description?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpDisputeEvidence"]>
+
+  export type CpDisputeEvidenceSelectScalar = {
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    uploadedByType?: boolean
+    uploadedById?: boolean
+    evidenceType?: boolean
+    description?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }
+
+  export type CpDisputeEvidenceInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }
+  export type CpDisputeEvidenceIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }
+
+  export type $CpDisputeEvidencePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpDisputeEvidence"
+    objects: {
+      dispute: Prisma.$CpDisputePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      disputeId: string
+      tenantId: string | null
+      uploadedByType: string
+      uploadedById: string | null
+      evidenceType: string
+      description: string | null
+      fileName: string | null
+      contentType: string | null
+      storageKey: string | null
+      fileUrl: string
+      fileHash: string
+      integrityHash: string
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["cpDisputeEvidence"]>
+    composites: {}
+  }
+
+  type CpDisputeEvidenceGetPayload<S extends boolean | null | undefined | CpDisputeEvidenceDefaultArgs> = $Result.GetResult<Prisma.$CpDisputeEvidencePayload, S>
+
+  type CpDisputeEvidenceCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpDisputeEvidenceFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpDisputeEvidenceCountAggregateInputType | true
+    }
+
+  export interface CpDisputeEvidenceDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpDisputeEvidence'], meta: { name: 'CpDisputeEvidence' } }
+    /**
+     * Find zero or one CpDisputeEvidence that matches the filter.
+     * @param {CpDisputeEvidenceFindUniqueArgs} args - Arguments to find a CpDisputeEvidence
+     * @example
+     * // Get one CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpDisputeEvidenceFindUniqueArgs>(args: SelectSubset<T, CpDisputeEvidenceFindUniqueArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpDisputeEvidence that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpDisputeEvidenceFindUniqueOrThrowArgs} args - Arguments to find a CpDisputeEvidence
+     * @example
+     * // Get one CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpDisputeEvidenceFindUniqueOrThrowArgs>(args: SelectSubset<T, CpDisputeEvidenceFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpDisputeEvidence that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceFindFirstArgs} args - Arguments to find a CpDisputeEvidence
+     * @example
+     * // Get one CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpDisputeEvidenceFindFirstArgs>(args?: SelectSubset<T, CpDisputeEvidenceFindFirstArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpDisputeEvidence that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceFindFirstOrThrowArgs} args - Arguments to find a CpDisputeEvidence
+     * @example
+     * // Get one CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpDisputeEvidenceFindFirstOrThrowArgs>(args?: SelectSubset<T, CpDisputeEvidenceFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpDisputeEvidences that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpDisputeEvidences
+     * const cpDisputeEvidences = await prisma.cpDisputeEvidence.findMany()
+     * 
+     * // Get first 10 CpDisputeEvidences
+     * const cpDisputeEvidences = await prisma.cpDisputeEvidence.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpDisputeEvidenceWithIdOnly = await prisma.cpDisputeEvidence.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpDisputeEvidenceFindManyArgs>(args?: SelectSubset<T, CpDisputeEvidenceFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpDisputeEvidence.
+     * @param {CpDisputeEvidenceCreateArgs} args - Arguments to create a CpDisputeEvidence.
+     * @example
+     * // Create one CpDisputeEvidence
+     * const CpDisputeEvidence = await prisma.cpDisputeEvidence.create({
+     *   data: {
+     *     // ... data to create a CpDisputeEvidence
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpDisputeEvidenceCreateArgs>(args: SelectSubset<T, CpDisputeEvidenceCreateArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpDisputeEvidences.
+     * @param {CpDisputeEvidenceCreateManyArgs} args - Arguments to create many CpDisputeEvidences.
+     * @example
+     * // Create many CpDisputeEvidences
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpDisputeEvidenceCreateManyArgs>(args?: SelectSubset<T, CpDisputeEvidenceCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpDisputeEvidences and returns the data saved in the database.
+     * @param {CpDisputeEvidenceCreateManyAndReturnArgs} args - Arguments to create many CpDisputeEvidences.
+     * @example
+     * // Create many CpDisputeEvidences
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpDisputeEvidences and only return the `id`
+     * const cpDisputeEvidenceWithIdOnly = await prisma.cpDisputeEvidence.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpDisputeEvidenceCreateManyAndReturnArgs>(args?: SelectSubset<T, CpDisputeEvidenceCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpDisputeEvidence.
+     * @param {CpDisputeEvidenceDeleteArgs} args - Arguments to delete one CpDisputeEvidence.
+     * @example
+     * // Delete one CpDisputeEvidence
+     * const CpDisputeEvidence = await prisma.cpDisputeEvidence.delete({
+     *   where: {
+     *     // ... filter to delete one CpDisputeEvidence
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpDisputeEvidenceDeleteArgs>(args: SelectSubset<T, CpDisputeEvidenceDeleteArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpDisputeEvidence.
+     * @param {CpDisputeEvidenceUpdateArgs} args - Arguments to update one CpDisputeEvidence.
+     * @example
+     * // Update one CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpDisputeEvidenceUpdateArgs>(args: SelectSubset<T, CpDisputeEvidenceUpdateArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpDisputeEvidences.
+     * @param {CpDisputeEvidenceDeleteManyArgs} args - Arguments to filter CpDisputeEvidences to delete.
+     * @example
+     * // Delete a few CpDisputeEvidences
+     * const { count } = await prisma.cpDisputeEvidence.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpDisputeEvidenceDeleteManyArgs>(args?: SelectSubset<T, CpDisputeEvidenceDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpDisputeEvidences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpDisputeEvidences
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpDisputeEvidenceUpdateManyArgs>(args: SelectSubset<T, CpDisputeEvidenceUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpDisputeEvidence.
+     * @param {CpDisputeEvidenceUpsertArgs} args - Arguments to update or create a CpDisputeEvidence.
+     * @example
+     * // Update or create a CpDisputeEvidence
+     * const cpDisputeEvidence = await prisma.cpDisputeEvidence.upsert({
+     *   create: {
+     *     // ... data to create a CpDisputeEvidence
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpDisputeEvidence we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpDisputeEvidenceUpsertArgs>(args: SelectSubset<T, CpDisputeEvidenceUpsertArgs<ExtArgs>>): Prisma__CpDisputeEvidenceClient<$Result.GetResult<Prisma.$CpDisputeEvidencePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpDisputeEvidences.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceCountArgs} args - Arguments to filter CpDisputeEvidences to count.
+     * @example
+     * // Count the number of CpDisputeEvidences
+     * const count = await prisma.cpDisputeEvidence.count({
+     *   where: {
+     *     // ... the filter for the CpDisputeEvidences we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpDisputeEvidenceCountArgs>(
+      args?: Subset<T, CpDisputeEvidenceCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpDisputeEvidenceCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpDisputeEvidence.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpDisputeEvidenceAggregateArgs>(args: Subset<T, CpDisputeEvidenceAggregateArgs>): Prisma.PrismaPromise<GetCpDisputeEvidenceAggregateType<T>>
+
+    /**
+     * Group by CpDisputeEvidence.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeEvidenceGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpDisputeEvidenceGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpDisputeEvidenceGroupByArgs['orderBy'] }
+        : { orderBy?: CpDisputeEvidenceGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpDisputeEvidenceGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpDisputeEvidenceGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpDisputeEvidence model
+   */
+  readonly fields: CpDisputeEvidenceFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpDisputeEvidence.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpDisputeEvidenceClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    dispute<T extends CpDisputeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpDisputeDefaultArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpDisputeEvidence model
+   */ 
+  interface CpDisputeEvidenceFieldRefs {
+    readonly id: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly disputeId: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly tenantId: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly uploadedByType: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly uploadedById: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly evidenceType: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly description: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly fileName: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly contentType: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly storageKey: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly fileUrl: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly fileHash: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly integrityHash: FieldRef<"CpDisputeEvidence", 'String'>
+    readonly metadata: FieldRef<"CpDisputeEvidence", 'Json'>
+    readonly createdAt: FieldRef<"CpDisputeEvidence", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpDisputeEvidence findUnique
+   */
+  export type CpDisputeEvidenceFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeEvidence to fetch.
+     */
+    where: CpDisputeEvidenceWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeEvidence findUniqueOrThrow
+   */
+  export type CpDisputeEvidenceFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeEvidence to fetch.
+     */
+    where: CpDisputeEvidenceWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeEvidence findFirst
+   */
+  export type CpDisputeEvidenceFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeEvidence to fetch.
+     */
+    where?: CpDisputeEvidenceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeEvidences to fetch.
+     */
+    orderBy?: CpDisputeEvidenceOrderByWithRelationInput | CpDisputeEvidenceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputeEvidences.
+     */
+    cursor?: CpDisputeEvidenceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeEvidences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeEvidences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputeEvidences.
+     */
+    distinct?: CpDisputeEvidenceScalarFieldEnum | CpDisputeEvidenceScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeEvidence findFirstOrThrow
+   */
+  export type CpDisputeEvidenceFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeEvidence to fetch.
+     */
+    where?: CpDisputeEvidenceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeEvidences to fetch.
+     */
+    orderBy?: CpDisputeEvidenceOrderByWithRelationInput | CpDisputeEvidenceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputeEvidences.
+     */
+    cursor?: CpDisputeEvidenceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeEvidences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeEvidences.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputeEvidences.
+     */
+    distinct?: CpDisputeEvidenceScalarFieldEnum | CpDisputeEvidenceScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeEvidence findMany
+   */
+  export type CpDisputeEvidenceFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeEvidences to fetch.
+     */
+    where?: CpDisputeEvidenceWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeEvidences to fetch.
+     */
+    orderBy?: CpDisputeEvidenceOrderByWithRelationInput | CpDisputeEvidenceOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpDisputeEvidences.
+     */
+    cursor?: CpDisputeEvidenceWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeEvidences from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeEvidences.
+     */
+    skip?: number
+    distinct?: CpDisputeEvidenceScalarFieldEnum | CpDisputeEvidenceScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeEvidence create
+   */
+  export type CpDisputeEvidenceCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpDisputeEvidence.
+     */
+    data: XOR<CpDisputeEvidenceCreateInput, CpDisputeEvidenceUncheckedCreateInput>
+  }
+
+  /**
+   * CpDisputeEvidence createMany
+   */
+  export type CpDisputeEvidenceCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpDisputeEvidences.
+     */
+    data: CpDisputeEvidenceCreateManyInput | CpDisputeEvidenceCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpDisputeEvidence createManyAndReturn
+   */
+  export type CpDisputeEvidenceCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpDisputeEvidences.
+     */
+    data: CpDisputeEvidenceCreateManyInput | CpDisputeEvidenceCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpDisputeEvidence update
+   */
+  export type CpDisputeEvidenceUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpDisputeEvidence.
+     */
+    data: XOR<CpDisputeEvidenceUpdateInput, CpDisputeEvidenceUncheckedUpdateInput>
+    /**
+     * Choose, which CpDisputeEvidence to update.
+     */
+    where: CpDisputeEvidenceWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeEvidence updateMany
+   */
+  export type CpDisputeEvidenceUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpDisputeEvidences.
+     */
+    data: XOR<CpDisputeEvidenceUpdateManyMutationInput, CpDisputeEvidenceUncheckedUpdateManyInput>
+    /**
+     * Filter which CpDisputeEvidences to update
+     */
+    where?: CpDisputeEvidenceWhereInput
+  }
+
+  /**
+   * CpDisputeEvidence upsert
+   */
+  export type CpDisputeEvidenceUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpDisputeEvidence to update in case it exists.
+     */
+    where: CpDisputeEvidenceWhereUniqueInput
+    /**
+     * In case the CpDisputeEvidence found by the `where` argument doesn't exist, create a new CpDisputeEvidence with this data.
+     */
+    create: XOR<CpDisputeEvidenceCreateInput, CpDisputeEvidenceUncheckedCreateInput>
+    /**
+     * In case the CpDisputeEvidence was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpDisputeEvidenceUpdateInput, CpDisputeEvidenceUncheckedUpdateInput>
+  }
+
+  /**
+   * CpDisputeEvidence delete
+   */
+  export type CpDisputeEvidenceDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+    /**
+     * Filter which CpDisputeEvidence to delete.
+     */
+    where: CpDisputeEvidenceWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeEvidence deleteMany
+   */
+  export type CpDisputeEvidenceDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDisputeEvidences to delete
+     */
+    where?: CpDisputeEvidenceWhereInput
+  }
+
+  /**
+   * CpDisputeEvidence without action
+   */
+  export type CpDisputeEvidenceDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeEvidence
+     */
+    select?: CpDisputeEvidenceSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeEvidenceInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpDisputeTimeline
+   */
+
+  export type AggregateCpDisputeTimeline = {
+    _count: CpDisputeTimelineCountAggregateOutputType | null
+    _min: CpDisputeTimelineMinAggregateOutputType | null
+    _max: CpDisputeTimelineMaxAggregateOutputType | null
+  }
+
+  export type CpDisputeTimelineMinAggregateOutputType = {
+    id: string | null
+    disputeId: string | null
+    tenantId: string | null
+    actorType: string | null
+    actorId: string | null
+    actionType: string | null
+    message: string | null
+    createdAt: Date | null
+  }
+
+  export type CpDisputeTimelineMaxAggregateOutputType = {
+    id: string | null
+    disputeId: string | null
+    tenantId: string | null
+    actorType: string | null
+    actorId: string | null
+    actionType: string | null
+    message: string | null
+    createdAt: Date | null
+  }
+
+  export type CpDisputeTimelineCountAggregateOutputType = {
+    id: number
+    disputeId: number
+    tenantId: number
+    actorType: number
+    actorId: number
+    actionType: number
+    message: number
+    metadata: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CpDisputeTimelineMinAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    actionType?: true
+    message?: true
+    createdAt?: true
+  }
+
+  export type CpDisputeTimelineMaxAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    actionType?: true
+    message?: true
+    createdAt?: true
+  }
+
+  export type CpDisputeTimelineCountAggregateInputType = {
+    id?: true
+    disputeId?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    actionType?: true
+    message?: true
+    metadata?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CpDisputeTimelineAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDisputeTimeline to aggregate.
+     */
+    where?: CpDisputeTimelineWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeTimelines to fetch.
+     */
+    orderBy?: CpDisputeTimelineOrderByWithRelationInput | CpDisputeTimelineOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpDisputeTimelineWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeTimelines from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeTimelines.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpDisputeTimelines
+    **/
+    _count?: true | CpDisputeTimelineCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpDisputeTimelineMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpDisputeTimelineMaxAggregateInputType
+  }
+
+  export type GetCpDisputeTimelineAggregateType<T extends CpDisputeTimelineAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpDisputeTimeline]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpDisputeTimeline[P]>
+      : GetScalarType<T[P], AggregateCpDisputeTimeline[P]>
+  }
+
+
+
+
+  export type CpDisputeTimelineGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpDisputeTimelineWhereInput
+    orderBy?: CpDisputeTimelineOrderByWithAggregationInput | CpDisputeTimelineOrderByWithAggregationInput[]
+    by: CpDisputeTimelineScalarFieldEnum[] | CpDisputeTimelineScalarFieldEnum
+    having?: CpDisputeTimelineScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpDisputeTimelineCountAggregateInputType | true
+    _min?: CpDisputeTimelineMinAggregateInputType
+    _max?: CpDisputeTimelineMaxAggregateInputType
+  }
+
+  export type CpDisputeTimelineGroupByOutputType = {
+    id: string
+    disputeId: string
+    tenantId: string | null
+    actorType: string
+    actorId: string | null
+    actionType: string
+    message: string
+    metadata: JsonValue | null
+    createdAt: Date
+    _count: CpDisputeTimelineCountAggregateOutputType | null
+    _min: CpDisputeTimelineMinAggregateOutputType | null
+    _max: CpDisputeTimelineMaxAggregateOutputType | null
+  }
+
+  type GetCpDisputeTimelineGroupByPayload<T extends CpDisputeTimelineGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpDisputeTimelineGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpDisputeTimelineGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpDisputeTimelineGroupByOutputType[P]>
+            : GetScalarType<T[P], CpDisputeTimelineGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpDisputeTimelineSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    actionType?: boolean
+    message?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpDisputeTimeline"]>
+
+  export type CpDisputeTimelineSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    actionType?: boolean
+    message?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cpDisputeTimeline"]>
+
+  export type CpDisputeTimelineSelectScalar = {
+    id?: boolean
+    disputeId?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    actionType?: boolean
+    message?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }
+
+  export type CpDisputeTimelineInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }
+  export type CpDisputeTimelineIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    dispute?: boolean | CpDisputeDefaultArgs<ExtArgs>
+  }
+
+  export type $CpDisputeTimelinePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpDisputeTimeline"
+    objects: {
+      dispute: Prisma.$CpDisputePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      disputeId: string
+      tenantId: string | null
+      actorType: string
+      actorId: string | null
+      actionType: string
+      message: string
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["cpDisputeTimeline"]>
+    composites: {}
+  }
+
+  type CpDisputeTimelineGetPayload<S extends boolean | null | undefined | CpDisputeTimelineDefaultArgs> = $Result.GetResult<Prisma.$CpDisputeTimelinePayload, S>
+
+  type CpDisputeTimelineCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpDisputeTimelineFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpDisputeTimelineCountAggregateInputType | true
+    }
+
+  export interface CpDisputeTimelineDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpDisputeTimeline'], meta: { name: 'CpDisputeTimeline' } }
+    /**
+     * Find zero or one CpDisputeTimeline that matches the filter.
+     * @param {CpDisputeTimelineFindUniqueArgs} args - Arguments to find a CpDisputeTimeline
+     * @example
+     * // Get one CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpDisputeTimelineFindUniqueArgs>(args: SelectSubset<T, CpDisputeTimelineFindUniqueArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpDisputeTimeline that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpDisputeTimelineFindUniqueOrThrowArgs} args - Arguments to find a CpDisputeTimeline
+     * @example
+     * // Get one CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpDisputeTimelineFindUniqueOrThrowArgs>(args: SelectSubset<T, CpDisputeTimelineFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpDisputeTimeline that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineFindFirstArgs} args - Arguments to find a CpDisputeTimeline
+     * @example
+     * // Get one CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpDisputeTimelineFindFirstArgs>(args?: SelectSubset<T, CpDisputeTimelineFindFirstArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpDisputeTimeline that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineFindFirstOrThrowArgs} args - Arguments to find a CpDisputeTimeline
+     * @example
+     * // Get one CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpDisputeTimelineFindFirstOrThrowArgs>(args?: SelectSubset<T, CpDisputeTimelineFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpDisputeTimelines that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpDisputeTimelines
+     * const cpDisputeTimelines = await prisma.cpDisputeTimeline.findMany()
+     * 
+     * // Get first 10 CpDisputeTimelines
+     * const cpDisputeTimelines = await prisma.cpDisputeTimeline.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpDisputeTimelineWithIdOnly = await prisma.cpDisputeTimeline.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpDisputeTimelineFindManyArgs>(args?: SelectSubset<T, CpDisputeTimelineFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpDisputeTimeline.
+     * @param {CpDisputeTimelineCreateArgs} args - Arguments to create a CpDisputeTimeline.
+     * @example
+     * // Create one CpDisputeTimeline
+     * const CpDisputeTimeline = await prisma.cpDisputeTimeline.create({
+     *   data: {
+     *     // ... data to create a CpDisputeTimeline
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpDisputeTimelineCreateArgs>(args: SelectSubset<T, CpDisputeTimelineCreateArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpDisputeTimelines.
+     * @param {CpDisputeTimelineCreateManyArgs} args - Arguments to create many CpDisputeTimelines.
+     * @example
+     * // Create many CpDisputeTimelines
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpDisputeTimelineCreateManyArgs>(args?: SelectSubset<T, CpDisputeTimelineCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpDisputeTimelines and returns the data saved in the database.
+     * @param {CpDisputeTimelineCreateManyAndReturnArgs} args - Arguments to create many CpDisputeTimelines.
+     * @example
+     * // Create many CpDisputeTimelines
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpDisputeTimelines and only return the `id`
+     * const cpDisputeTimelineWithIdOnly = await prisma.cpDisputeTimeline.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpDisputeTimelineCreateManyAndReturnArgs>(args?: SelectSubset<T, CpDisputeTimelineCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpDisputeTimeline.
+     * @param {CpDisputeTimelineDeleteArgs} args - Arguments to delete one CpDisputeTimeline.
+     * @example
+     * // Delete one CpDisputeTimeline
+     * const CpDisputeTimeline = await prisma.cpDisputeTimeline.delete({
+     *   where: {
+     *     // ... filter to delete one CpDisputeTimeline
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpDisputeTimelineDeleteArgs>(args: SelectSubset<T, CpDisputeTimelineDeleteArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpDisputeTimeline.
+     * @param {CpDisputeTimelineUpdateArgs} args - Arguments to update one CpDisputeTimeline.
+     * @example
+     * // Update one CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpDisputeTimelineUpdateArgs>(args: SelectSubset<T, CpDisputeTimelineUpdateArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpDisputeTimelines.
+     * @param {CpDisputeTimelineDeleteManyArgs} args - Arguments to filter CpDisputeTimelines to delete.
+     * @example
+     * // Delete a few CpDisputeTimelines
+     * const { count } = await prisma.cpDisputeTimeline.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpDisputeTimelineDeleteManyArgs>(args?: SelectSubset<T, CpDisputeTimelineDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpDisputeTimelines.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpDisputeTimelines
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpDisputeTimelineUpdateManyArgs>(args: SelectSubset<T, CpDisputeTimelineUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpDisputeTimeline.
+     * @param {CpDisputeTimelineUpsertArgs} args - Arguments to update or create a CpDisputeTimeline.
+     * @example
+     * // Update or create a CpDisputeTimeline
+     * const cpDisputeTimeline = await prisma.cpDisputeTimeline.upsert({
+     *   create: {
+     *     // ... data to create a CpDisputeTimeline
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpDisputeTimeline we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpDisputeTimelineUpsertArgs>(args: SelectSubset<T, CpDisputeTimelineUpsertArgs<ExtArgs>>): Prisma__CpDisputeTimelineClient<$Result.GetResult<Prisma.$CpDisputeTimelinePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpDisputeTimelines.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineCountArgs} args - Arguments to filter CpDisputeTimelines to count.
+     * @example
+     * // Count the number of CpDisputeTimelines
+     * const count = await prisma.cpDisputeTimeline.count({
+     *   where: {
+     *     // ... the filter for the CpDisputeTimelines we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpDisputeTimelineCountArgs>(
+      args?: Subset<T, CpDisputeTimelineCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpDisputeTimelineCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpDisputeTimeline.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpDisputeTimelineAggregateArgs>(args: Subset<T, CpDisputeTimelineAggregateArgs>): Prisma.PrismaPromise<GetCpDisputeTimelineAggregateType<T>>
+
+    /**
+     * Group by CpDisputeTimeline.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpDisputeTimelineGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpDisputeTimelineGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpDisputeTimelineGroupByArgs['orderBy'] }
+        : { orderBy?: CpDisputeTimelineGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpDisputeTimelineGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpDisputeTimelineGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpDisputeTimeline model
+   */
+  readonly fields: CpDisputeTimelineFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpDisputeTimeline.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpDisputeTimelineClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    dispute<T extends CpDisputeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CpDisputeDefaultArgs<ExtArgs>>): Prisma__CpDisputeClient<$Result.GetResult<Prisma.$CpDisputePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpDisputeTimeline model
+   */ 
+  interface CpDisputeTimelineFieldRefs {
+    readonly id: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly disputeId: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly tenantId: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly actorType: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly actorId: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly actionType: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly message: FieldRef<"CpDisputeTimeline", 'String'>
+    readonly metadata: FieldRef<"CpDisputeTimeline", 'Json'>
+    readonly createdAt: FieldRef<"CpDisputeTimeline", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpDisputeTimeline findUnique
+   */
+  export type CpDisputeTimelineFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeTimeline to fetch.
+     */
+    where: CpDisputeTimelineWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeTimeline findUniqueOrThrow
+   */
+  export type CpDisputeTimelineFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeTimeline to fetch.
+     */
+    where: CpDisputeTimelineWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeTimeline findFirst
+   */
+  export type CpDisputeTimelineFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeTimeline to fetch.
+     */
+    where?: CpDisputeTimelineWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeTimelines to fetch.
+     */
+    orderBy?: CpDisputeTimelineOrderByWithRelationInput | CpDisputeTimelineOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputeTimelines.
+     */
+    cursor?: CpDisputeTimelineWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeTimelines from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeTimelines.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputeTimelines.
+     */
+    distinct?: CpDisputeTimelineScalarFieldEnum | CpDisputeTimelineScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeTimeline findFirstOrThrow
+   */
+  export type CpDisputeTimelineFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeTimeline to fetch.
+     */
+    where?: CpDisputeTimelineWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeTimelines to fetch.
+     */
+    orderBy?: CpDisputeTimelineOrderByWithRelationInput | CpDisputeTimelineOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpDisputeTimelines.
+     */
+    cursor?: CpDisputeTimelineWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeTimelines from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeTimelines.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpDisputeTimelines.
+     */
+    distinct?: CpDisputeTimelineScalarFieldEnum | CpDisputeTimelineScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeTimeline findMany
+   */
+  export type CpDisputeTimelineFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter, which CpDisputeTimelines to fetch.
+     */
+    where?: CpDisputeTimelineWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpDisputeTimelines to fetch.
+     */
+    orderBy?: CpDisputeTimelineOrderByWithRelationInput | CpDisputeTimelineOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpDisputeTimelines.
+     */
+    cursor?: CpDisputeTimelineWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpDisputeTimelines from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpDisputeTimelines.
+     */
+    skip?: number
+    distinct?: CpDisputeTimelineScalarFieldEnum | CpDisputeTimelineScalarFieldEnum[]
+  }
+
+  /**
+   * CpDisputeTimeline create
+   */
+  export type CpDisputeTimelineCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CpDisputeTimeline.
+     */
+    data: XOR<CpDisputeTimelineCreateInput, CpDisputeTimelineUncheckedCreateInput>
+  }
+
+  /**
+   * CpDisputeTimeline createMany
+   */
+  export type CpDisputeTimelineCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpDisputeTimelines.
+     */
+    data: CpDisputeTimelineCreateManyInput | CpDisputeTimelineCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpDisputeTimeline createManyAndReturn
+   */
+  export type CpDisputeTimelineCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpDisputeTimelines.
+     */
+    data: CpDisputeTimelineCreateManyInput | CpDisputeTimelineCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CpDisputeTimeline update
+   */
+  export type CpDisputeTimelineUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CpDisputeTimeline.
+     */
+    data: XOR<CpDisputeTimelineUpdateInput, CpDisputeTimelineUncheckedUpdateInput>
+    /**
+     * Choose, which CpDisputeTimeline to update.
+     */
+    where: CpDisputeTimelineWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeTimeline updateMany
+   */
+  export type CpDisputeTimelineUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpDisputeTimelines.
+     */
+    data: XOR<CpDisputeTimelineUpdateManyMutationInput, CpDisputeTimelineUncheckedUpdateManyInput>
+    /**
+     * Filter which CpDisputeTimelines to update
+     */
+    where?: CpDisputeTimelineWhereInput
+  }
+
+  /**
+   * CpDisputeTimeline upsert
+   */
+  export type CpDisputeTimelineUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CpDisputeTimeline to update in case it exists.
+     */
+    where: CpDisputeTimelineWhereUniqueInput
+    /**
+     * In case the CpDisputeTimeline found by the `where` argument doesn't exist, create a new CpDisputeTimeline with this data.
+     */
+    create: XOR<CpDisputeTimelineCreateInput, CpDisputeTimelineUncheckedCreateInput>
+    /**
+     * In case the CpDisputeTimeline was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpDisputeTimelineUpdateInput, CpDisputeTimelineUncheckedUpdateInput>
+  }
+
+  /**
+   * CpDisputeTimeline delete
+   */
+  export type CpDisputeTimelineDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+    /**
+     * Filter which CpDisputeTimeline to delete.
+     */
+    where: CpDisputeTimelineWhereUniqueInput
+  }
+
+  /**
+   * CpDisputeTimeline deleteMany
+   */
+  export type CpDisputeTimelineDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpDisputeTimelines to delete
+     */
+    where?: CpDisputeTimelineWhereInput
+  }
+
+  /**
+   * CpDisputeTimeline without action
+   */
+  export type CpDisputeTimelineDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpDisputeTimeline
+     */
+    select?: CpDisputeTimelineSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CpDisputeTimelineInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpEvidenceRecord
+   */
+
+  export type AggregateCpEvidenceRecord = {
+    _count: CpEvidenceRecordCountAggregateOutputType | null
+    _avg: CpEvidenceRecordAvgAggregateOutputType | null
+    _sum: CpEvidenceRecordSumAggregateOutputType | null
+    _min: CpEvidenceRecordMinAggregateOutputType | null
+    _max: CpEvidenceRecordMaxAggregateOutputType | null
+  }
+
+  export type CpEvidenceRecordAvgAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpEvidenceRecordSumAggregateOutputType = {
+    amountMinorUnits: number | null
+  }
+
+  export type CpEvidenceRecordMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    actorType: string | null
+    actorId: string | null
+    evidenceType: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    sourceEntityType: string | null
+    sourceEntityId: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    integrityHash: string | null
+    createdAt: Date | null
+  }
+
+  export type CpEvidenceRecordMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    actorType: string | null
+    actorId: string | null
+    evidenceType: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    sourceEntityType: string | null
+    sourceEntityId: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    integrityHash: string | null
+    createdAt: Date | null
+  }
+
+  export type CpEvidenceRecordCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    actorType: number
+    actorId: number
+    evidenceType: number
+    relatedEntityType: number
+    relatedEntityId: number
+    sourceEntityType: number
+    sourceEntityId: number
+    amountMinorUnits: number
+    currency: number
+    fileName: number
+    contentType: number
+    storageKey: number
+    fileUrl: number
+    fileHash: number
+    integrityHash: number
+    metadata: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CpEvidenceRecordAvgAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpEvidenceRecordSumAggregateInputType = {
+    amountMinorUnits?: true
+  }
+
+  export type CpEvidenceRecordMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    evidenceType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    sourceEntityType?: true
+    sourceEntityId?: true
+    amountMinorUnits?: true
+    currency?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    createdAt?: true
+  }
+
+  export type CpEvidenceRecordMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    evidenceType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    sourceEntityType?: true
+    sourceEntityId?: true
+    amountMinorUnits?: true
+    currency?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    createdAt?: true
+  }
+
+  export type CpEvidenceRecordCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    actorType?: true
+    actorId?: true
+    evidenceType?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    sourceEntityType?: true
+    sourceEntityId?: true
+    amountMinorUnits?: true
+    currency?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    integrityHash?: true
+    metadata?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CpEvidenceRecordAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpEvidenceRecord to aggregate.
+     */
+    where?: CpEvidenceRecordWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpEvidenceRecords to fetch.
+     */
+    orderBy?: CpEvidenceRecordOrderByWithRelationInput | CpEvidenceRecordOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpEvidenceRecordWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpEvidenceRecords from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpEvidenceRecords.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpEvidenceRecords
+    **/
+    _count?: true | CpEvidenceRecordCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpEvidenceRecordAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpEvidenceRecordSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpEvidenceRecordMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpEvidenceRecordMaxAggregateInputType
+  }
+
+  export type GetCpEvidenceRecordAggregateType<T extends CpEvidenceRecordAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpEvidenceRecord]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpEvidenceRecord[P]>
+      : GetScalarType<T[P], AggregateCpEvidenceRecord[P]>
+  }
+
+
+
+
+  export type CpEvidenceRecordGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpEvidenceRecordWhereInput
+    orderBy?: CpEvidenceRecordOrderByWithAggregationInput | CpEvidenceRecordOrderByWithAggregationInput[]
+    by: CpEvidenceRecordScalarFieldEnum[] | CpEvidenceRecordScalarFieldEnum
+    having?: CpEvidenceRecordScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpEvidenceRecordCountAggregateInputType | true
+    _avg?: CpEvidenceRecordAvgAggregateInputType
+    _sum?: CpEvidenceRecordSumAggregateInputType
+    _min?: CpEvidenceRecordMinAggregateInputType
+    _max?: CpEvidenceRecordMaxAggregateInputType
+  }
+
+  export type CpEvidenceRecordGroupByOutputType = {
+    id: string
+    tenantId: string | null
+    actorType: string
+    actorId: string | null
+    evidenceType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    sourceEntityType: string | null
+    sourceEntityId: string | null
+    amountMinorUnits: number | null
+    currency: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    integrityHash: string
+    metadata: JsonValue | null
+    createdAt: Date
+    _count: CpEvidenceRecordCountAggregateOutputType | null
+    _avg: CpEvidenceRecordAvgAggregateOutputType | null
+    _sum: CpEvidenceRecordSumAggregateOutputType | null
+    _min: CpEvidenceRecordMinAggregateOutputType | null
+    _max: CpEvidenceRecordMaxAggregateOutputType | null
+  }
+
+  type GetCpEvidenceRecordGroupByPayload<T extends CpEvidenceRecordGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpEvidenceRecordGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpEvidenceRecordGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpEvidenceRecordGroupByOutputType[P]>
+            : GetScalarType<T[P], CpEvidenceRecordGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpEvidenceRecordSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    evidenceType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    sourceEntityType?: boolean
+    sourceEntityId?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["cpEvidenceRecord"]>
+
+  export type CpEvidenceRecordSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    evidenceType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    sourceEntityType?: boolean
+    sourceEntityId?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["cpEvidenceRecord"]>
+
+  export type CpEvidenceRecordSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    actorType?: boolean
+    actorId?: boolean
+    evidenceType?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    sourceEntityType?: boolean
+    sourceEntityId?: boolean
+    amountMinorUnits?: boolean
+    currency?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    integrityHash?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+  }
+
+
+  export type $CpEvidenceRecordPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpEvidenceRecord"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string | null
+      actorType: string
+      actorId: string | null
+      evidenceType: string
+      relatedEntityType: string
+      relatedEntityId: string
+      sourceEntityType: string | null
+      sourceEntityId: string | null
+      amountMinorUnits: number | null
+      currency: string | null
+      fileName: string | null
+      contentType: string | null
+      storageKey: string | null
+      fileUrl: string | null
+      fileHash: string | null
+      integrityHash: string
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["cpEvidenceRecord"]>
+    composites: {}
+  }
+
+  type CpEvidenceRecordGetPayload<S extends boolean | null | undefined | CpEvidenceRecordDefaultArgs> = $Result.GetResult<Prisma.$CpEvidenceRecordPayload, S>
+
+  type CpEvidenceRecordCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpEvidenceRecordFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpEvidenceRecordCountAggregateInputType | true
+    }
+
+  export interface CpEvidenceRecordDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpEvidenceRecord'], meta: { name: 'CpEvidenceRecord' } }
+    /**
+     * Find zero or one CpEvidenceRecord that matches the filter.
+     * @param {CpEvidenceRecordFindUniqueArgs} args - Arguments to find a CpEvidenceRecord
+     * @example
+     * // Get one CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpEvidenceRecordFindUniqueArgs>(args: SelectSubset<T, CpEvidenceRecordFindUniqueArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpEvidenceRecord that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpEvidenceRecordFindUniqueOrThrowArgs} args - Arguments to find a CpEvidenceRecord
+     * @example
+     * // Get one CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpEvidenceRecordFindUniqueOrThrowArgs>(args: SelectSubset<T, CpEvidenceRecordFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpEvidenceRecord that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordFindFirstArgs} args - Arguments to find a CpEvidenceRecord
+     * @example
+     * // Get one CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpEvidenceRecordFindFirstArgs>(args?: SelectSubset<T, CpEvidenceRecordFindFirstArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpEvidenceRecord that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordFindFirstOrThrowArgs} args - Arguments to find a CpEvidenceRecord
+     * @example
+     * // Get one CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpEvidenceRecordFindFirstOrThrowArgs>(args?: SelectSubset<T, CpEvidenceRecordFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpEvidenceRecords that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpEvidenceRecords
+     * const cpEvidenceRecords = await prisma.cpEvidenceRecord.findMany()
+     * 
+     * // Get first 10 CpEvidenceRecords
+     * const cpEvidenceRecords = await prisma.cpEvidenceRecord.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpEvidenceRecordWithIdOnly = await prisma.cpEvidenceRecord.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpEvidenceRecordFindManyArgs>(args?: SelectSubset<T, CpEvidenceRecordFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpEvidenceRecord.
+     * @param {CpEvidenceRecordCreateArgs} args - Arguments to create a CpEvidenceRecord.
+     * @example
+     * // Create one CpEvidenceRecord
+     * const CpEvidenceRecord = await prisma.cpEvidenceRecord.create({
+     *   data: {
+     *     // ... data to create a CpEvidenceRecord
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpEvidenceRecordCreateArgs>(args: SelectSubset<T, CpEvidenceRecordCreateArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpEvidenceRecords.
+     * @param {CpEvidenceRecordCreateManyArgs} args - Arguments to create many CpEvidenceRecords.
+     * @example
+     * // Create many CpEvidenceRecords
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpEvidenceRecordCreateManyArgs>(args?: SelectSubset<T, CpEvidenceRecordCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpEvidenceRecords and returns the data saved in the database.
+     * @param {CpEvidenceRecordCreateManyAndReturnArgs} args - Arguments to create many CpEvidenceRecords.
+     * @example
+     * // Create many CpEvidenceRecords
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpEvidenceRecords and only return the `id`
+     * const cpEvidenceRecordWithIdOnly = await prisma.cpEvidenceRecord.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpEvidenceRecordCreateManyAndReturnArgs>(args?: SelectSubset<T, CpEvidenceRecordCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpEvidenceRecord.
+     * @param {CpEvidenceRecordDeleteArgs} args - Arguments to delete one CpEvidenceRecord.
+     * @example
+     * // Delete one CpEvidenceRecord
+     * const CpEvidenceRecord = await prisma.cpEvidenceRecord.delete({
+     *   where: {
+     *     // ... filter to delete one CpEvidenceRecord
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpEvidenceRecordDeleteArgs>(args: SelectSubset<T, CpEvidenceRecordDeleteArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpEvidenceRecord.
+     * @param {CpEvidenceRecordUpdateArgs} args - Arguments to update one CpEvidenceRecord.
+     * @example
+     * // Update one CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpEvidenceRecordUpdateArgs>(args: SelectSubset<T, CpEvidenceRecordUpdateArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpEvidenceRecords.
+     * @param {CpEvidenceRecordDeleteManyArgs} args - Arguments to filter CpEvidenceRecords to delete.
+     * @example
+     * // Delete a few CpEvidenceRecords
+     * const { count } = await prisma.cpEvidenceRecord.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpEvidenceRecordDeleteManyArgs>(args?: SelectSubset<T, CpEvidenceRecordDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpEvidenceRecords.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpEvidenceRecords
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpEvidenceRecordUpdateManyArgs>(args: SelectSubset<T, CpEvidenceRecordUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpEvidenceRecord.
+     * @param {CpEvidenceRecordUpsertArgs} args - Arguments to update or create a CpEvidenceRecord.
+     * @example
+     * // Update or create a CpEvidenceRecord
+     * const cpEvidenceRecord = await prisma.cpEvidenceRecord.upsert({
+     *   create: {
+     *     // ... data to create a CpEvidenceRecord
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpEvidenceRecord we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpEvidenceRecordUpsertArgs>(args: SelectSubset<T, CpEvidenceRecordUpsertArgs<ExtArgs>>): Prisma__CpEvidenceRecordClient<$Result.GetResult<Prisma.$CpEvidenceRecordPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpEvidenceRecords.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordCountArgs} args - Arguments to filter CpEvidenceRecords to count.
+     * @example
+     * // Count the number of CpEvidenceRecords
+     * const count = await prisma.cpEvidenceRecord.count({
+     *   where: {
+     *     // ... the filter for the CpEvidenceRecords we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpEvidenceRecordCountArgs>(
+      args?: Subset<T, CpEvidenceRecordCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpEvidenceRecordCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpEvidenceRecord.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpEvidenceRecordAggregateArgs>(args: Subset<T, CpEvidenceRecordAggregateArgs>): Prisma.PrismaPromise<GetCpEvidenceRecordAggregateType<T>>
+
+    /**
+     * Group by CpEvidenceRecord.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpEvidenceRecordGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpEvidenceRecordGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpEvidenceRecordGroupByArgs['orderBy'] }
+        : { orderBy?: CpEvidenceRecordGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpEvidenceRecordGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpEvidenceRecordGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpEvidenceRecord model
+   */
+  readonly fields: CpEvidenceRecordFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpEvidenceRecord.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpEvidenceRecordClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpEvidenceRecord model
+   */ 
+  interface CpEvidenceRecordFieldRefs {
+    readonly id: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly tenantId: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly actorType: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly actorId: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly evidenceType: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly relatedEntityType: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly relatedEntityId: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly sourceEntityType: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly sourceEntityId: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly amountMinorUnits: FieldRef<"CpEvidenceRecord", 'Int'>
+    readonly currency: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly fileName: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly contentType: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly storageKey: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly fileUrl: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly fileHash: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly integrityHash: FieldRef<"CpEvidenceRecord", 'String'>
+    readonly metadata: FieldRef<"CpEvidenceRecord", 'Json'>
+    readonly createdAt: FieldRef<"CpEvidenceRecord", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpEvidenceRecord findUnique
+   */
+  export type CpEvidenceRecordFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter, which CpEvidenceRecord to fetch.
+     */
+    where: CpEvidenceRecordWhereUniqueInput
+  }
+
+  /**
+   * CpEvidenceRecord findUniqueOrThrow
+   */
+  export type CpEvidenceRecordFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter, which CpEvidenceRecord to fetch.
+     */
+    where: CpEvidenceRecordWhereUniqueInput
+  }
+
+  /**
+   * CpEvidenceRecord findFirst
+   */
+  export type CpEvidenceRecordFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter, which CpEvidenceRecord to fetch.
+     */
+    where?: CpEvidenceRecordWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpEvidenceRecords to fetch.
+     */
+    orderBy?: CpEvidenceRecordOrderByWithRelationInput | CpEvidenceRecordOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpEvidenceRecords.
+     */
+    cursor?: CpEvidenceRecordWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpEvidenceRecords from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpEvidenceRecords.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpEvidenceRecords.
+     */
+    distinct?: CpEvidenceRecordScalarFieldEnum | CpEvidenceRecordScalarFieldEnum[]
+  }
+
+  /**
+   * CpEvidenceRecord findFirstOrThrow
+   */
+  export type CpEvidenceRecordFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter, which CpEvidenceRecord to fetch.
+     */
+    where?: CpEvidenceRecordWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpEvidenceRecords to fetch.
+     */
+    orderBy?: CpEvidenceRecordOrderByWithRelationInput | CpEvidenceRecordOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpEvidenceRecords.
+     */
+    cursor?: CpEvidenceRecordWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpEvidenceRecords from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpEvidenceRecords.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpEvidenceRecords.
+     */
+    distinct?: CpEvidenceRecordScalarFieldEnum | CpEvidenceRecordScalarFieldEnum[]
+  }
+
+  /**
+   * CpEvidenceRecord findMany
+   */
+  export type CpEvidenceRecordFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter, which CpEvidenceRecords to fetch.
+     */
+    where?: CpEvidenceRecordWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpEvidenceRecords to fetch.
+     */
+    orderBy?: CpEvidenceRecordOrderByWithRelationInput | CpEvidenceRecordOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpEvidenceRecords.
+     */
+    cursor?: CpEvidenceRecordWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpEvidenceRecords from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpEvidenceRecords.
+     */
+    skip?: number
+    distinct?: CpEvidenceRecordScalarFieldEnum | CpEvidenceRecordScalarFieldEnum[]
+  }
+
+  /**
+   * CpEvidenceRecord create
+   */
+  export type CpEvidenceRecordCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpEvidenceRecord.
+     */
+    data: XOR<CpEvidenceRecordCreateInput, CpEvidenceRecordUncheckedCreateInput>
+  }
+
+  /**
+   * CpEvidenceRecord createMany
+   */
+  export type CpEvidenceRecordCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpEvidenceRecords.
+     */
+    data: CpEvidenceRecordCreateManyInput | CpEvidenceRecordCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpEvidenceRecord createManyAndReturn
+   */
+  export type CpEvidenceRecordCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpEvidenceRecords.
+     */
+    data: CpEvidenceRecordCreateManyInput | CpEvidenceRecordCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpEvidenceRecord update
+   */
+  export type CpEvidenceRecordUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpEvidenceRecord.
+     */
+    data: XOR<CpEvidenceRecordUpdateInput, CpEvidenceRecordUncheckedUpdateInput>
+    /**
+     * Choose, which CpEvidenceRecord to update.
+     */
+    where: CpEvidenceRecordWhereUniqueInput
+  }
+
+  /**
+   * CpEvidenceRecord updateMany
+   */
+  export type CpEvidenceRecordUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpEvidenceRecords.
+     */
+    data: XOR<CpEvidenceRecordUpdateManyMutationInput, CpEvidenceRecordUncheckedUpdateManyInput>
+    /**
+     * Filter which CpEvidenceRecords to update
+     */
+    where?: CpEvidenceRecordWhereInput
+  }
+
+  /**
+   * CpEvidenceRecord upsert
+   */
+  export type CpEvidenceRecordUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpEvidenceRecord to update in case it exists.
+     */
+    where: CpEvidenceRecordWhereUniqueInput
+    /**
+     * In case the CpEvidenceRecord found by the `where` argument doesn't exist, create a new CpEvidenceRecord with this data.
+     */
+    create: XOR<CpEvidenceRecordCreateInput, CpEvidenceRecordUncheckedCreateInput>
+    /**
+     * In case the CpEvidenceRecord was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpEvidenceRecordUpdateInput, CpEvidenceRecordUncheckedUpdateInput>
+  }
+
+  /**
+   * CpEvidenceRecord delete
+   */
+  export type CpEvidenceRecordDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+    /**
+     * Filter which CpEvidenceRecord to delete.
+     */
+    where: CpEvidenceRecordWhereUniqueInput
+  }
+
+  /**
+   * CpEvidenceRecord deleteMany
+   */
+  export type CpEvidenceRecordDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpEvidenceRecords to delete
+     */
+    where?: CpEvidenceRecordWhereInput
+  }
+
+  /**
+   * CpEvidenceRecord without action
+   */
+  export type CpEvidenceRecordDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpEvidenceRecord
+     */
+    select?: CpEvidenceRecordSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpIssuedDocument
+   */
+
+  export type AggregateCpIssuedDocument = {
+    _count: CpIssuedDocumentCountAggregateOutputType | null
+    _avg: CpIssuedDocumentAvgAggregateOutputType | null
+    _sum: CpIssuedDocumentSumAggregateOutputType | null
+    _min: CpIssuedDocumentMinAggregateOutputType | null
+    _max: CpIssuedDocumentMaxAggregateOutputType | null
+  }
+
+  export type CpIssuedDocumentAvgAggregateOutputType = {
+    version: number | null
+  }
+
+  export type CpIssuedDocumentSumAggregateOutputType = {
+    version: number | null
+  }
+
+  export type CpIssuedDocumentMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    documentNumber: string | null
+    documentType: string | null
+    status: string | null
+    issuerType: string | null
+    issuerId: string | null
+    recipientType: string | null
+    recipientId: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    supersededById: string | null
+    version: number | null
+    fingerprint: string | null
+    signatureVersion: string | null
+    signedAt: Date | null
+    signedBySystem: string | null
+    verificationReference: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpIssuedDocumentMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    documentNumber: string | null
+    documentType: string | null
+    status: string | null
+    issuerType: string | null
+    issuerId: string | null
+    recipientType: string | null
+    recipientId: string | null
+    relatedEntityType: string | null
+    relatedEntityId: string | null
+    supersededById: string | null
+    version: number | null
+    fingerprint: string | null
+    signatureVersion: string | null
+    signedAt: Date | null
+    signedBySystem: string | null
+    verificationReference: string | null
+    fileName: string | null
+    contentType: string | null
+    storageKey: string | null
+    fileUrl: string | null
+    fileHash: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpIssuedDocumentCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    documentNumber: number
+    documentType: number
+    status: number
+    issuerType: number
+    issuerId: number
+    recipientType: number
+    recipientId: number
+    relatedEntityType: number
+    relatedEntityId: number
+    supersededById: number
+    version: number
+    fingerprint: number
+    signatureVersion: number
+    signedAt: number
+    signedBySystem: number
+    verificationReference: number
+    fileName: number
+    contentType: number
+    storageKey: number
+    fileUrl: number
+    fileHash: number
+    canonicalPayload: number
+    metadata: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpIssuedDocumentAvgAggregateInputType = {
+    version?: true
+  }
+
+  export type CpIssuedDocumentSumAggregateInputType = {
+    version?: true
+  }
+
+  export type CpIssuedDocumentMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    documentNumber?: true
+    documentType?: true
+    status?: true
+    issuerType?: true
+    issuerId?: true
+    recipientType?: true
+    recipientId?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    supersededById?: true
+    version?: true
+    fingerprint?: true
+    signatureVersion?: true
+    signedAt?: true
+    signedBySystem?: true
+    verificationReference?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpIssuedDocumentMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    documentNumber?: true
+    documentType?: true
+    status?: true
+    issuerType?: true
+    issuerId?: true
+    recipientType?: true
+    recipientId?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    supersededById?: true
+    version?: true
+    fingerprint?: true
+    signatureVersion?: true
+    signedAt?: true
+    signedBySystem?: true
+    verificationReference?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpIssuedDocumentCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    documentNumber?: true
+    documentType?: true
+    status?: true
+    issuerType?: true
+    issuerId?: true
+    recipientType?: true
+    recipientId?: true
+    relatedEntityType?: true
+    relatedEntityId?: true
+    supersededById?: true
+    version?: true
+    fingerprint?: true
+    signatureVersion?: true
+    signedAt?: true
+    signedBySystem?: true
+    verificationReference?: true
+    fileName?: true
+    contentType?: true
+    storageKey?: true
+    fileUrl?: true
+    fileHash?: true
+    canonicalPayload?: true
+    metadata?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpIssuedDocumentAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpIssuedDocument to aggregate.
+     */
+    where?: CpIssuedDocumentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpIssuedDocuments to fetch.
+     */
+    orderBy?: CpIssuedDocumentOrderByWithRelationInput | CpIssuedDocumentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpIssuedDocumentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpIssuedDocuments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpIssuedDocuments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpIssuedDocuments
+    **/
+    _count?: true | CpIssuedDocumentCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CpIssuedDocumentAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CpIssuedDocumentSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpIssuedDocumentMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpIssuedDocumentMaxAggregateInputType
+  }
+
+  export type GetCpIssuedDocumentAggregateType<T extends CpIssuedDocumentAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpIssuedDocument]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpIssuedDocument[P]>
+      : GetScalarType<T[P], AggregateCpIssuedDocument[P]>
+  }
+
+
+
+
+  export type CpIssuedDocumentGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpIssuedDocumentWhereInput
+    orderBy?: CpIssuedDocumentOrderByWithAggregationInput | CpIssuedDocumentOrderByWithAggregationInput[]
+    by: CpIssuedDocumentScalarFieldEnum[] | CpIssuedDocumentScalarFieldEnum
+    having?: CpIssuedDocumentScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpIssuedDocumentCountAggregateInputType | true
+    _avg?: CpIssuedDocumentAvgAggregateInputType
+    _sum?: CpIssuedDocumentSumAggregateInputType
+    _min?: CpIssuedDocumentMinAggregateInputType
+    _max?: CpIssuedDocumentMaxAggregateInputType
+  }
+
+  export type CpIssuedDocumentGroupByOutputType = {
+    id: string
+    tenantId: string | null
+    documentNumber: string
+    documentType: string
+    status: string
+    issuerType: string
+    issuerId: string | null
+    recipientType: string | null
+    recipientId: string | null
+    relatedEntityType: string
+    relatedEntityId: string
+    supersededById: string | null
+    version: number
+    fingerprint: string
+    signatureVersion: string
+    signedAt: Date
+    signedBySystem: string
+    verificationReference: string
+    fileName: string
+    contentType: string
+    storageKey: string
+    fileUrl: string
+    fileHash: string
+    canonicalPayload: JsonValue
+    metadata: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpIssuedDocumentCountAggregateOutputType | null
+    _avg: CpIssuedDocumentAvgAggregateOutputType | null
+    _sum: CpIssuedDocumentSumAggregateOutputType | null
+    _min: CpIssuedDocumentMinAggregateOutputType | null
+    _max: CpIssuedDocumentMaxAggregateOutputType | null
+  }
+
+  type GetCpIssuedDocumentGroupByPayload<T extends CpIssuedDocumentGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpIssuedDocumentGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpIssuedDocumentGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpIssuedDocumentGroupByOutputType[P]>
+            : GetScalarType<T[P], CpIssuedDocumentGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpIssuedDocumentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    documentNumber?: boolean
+    documentType?: boolean
+    status?: boolean
+    issuerType?: boolean
+    issuerId?: boolean
+    recipientType?: boolean
+    recipientId?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    supersededById?: boolean
+    version?: boolean
+    fingerprint?: boolean
+    signatureVersion?: boolean
+    signedAt?: boolean
+    signedBySystem?: boolean
+    verificationReference?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    canonicalPayload?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpIssuedDocument"]>
+
+  export type CpIssuedDocumentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    documentNumber?: boolean
+    documentType?: boolean
+    status?: boolean
+    issuerType?: boolean
+    issuerId?: boolean
+    recipientType?: boolean
+    recipientId?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    supersededById?: boolean
+    version?: boolean
+    fingerprint?: boolean
+    signatureVersion?: boolean
+    signedAt?: boolean
+    signedBySystem?: boolean
+    verificationReference?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    canonicalPayload?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpIssuedDocument"]>
+
+  export type CpIssuedDocumentSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    documentNumber?: boolean
+    documentType?: boolean
+    status?: boolean
+    issuerType?: boolean
+    issuerId?: boolean
+    recipientType?: boolean
+    recipientId?: boolean
+    relatedEntityType?: boolean
+    relatedEntityId?: boolean
+    supersededById?: boolean
+    version?: boolean
+    fingerprint?: boolean
+    signatureVersion?: boolean
+    signedAt?: boolean
+    signedBySystem?: boolean
+    verificationReference?: boolean
+    fileName?: boolean
+    contentType?: boolean
+    storageKey?: boolean
+    fileUrl?: boolean
+    fileHash?: boolean
+    canonicalPayload?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CpIssuedDocumentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpIssuedDocument"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string | null
+      documentNumber: string
+      documentType: string
+      status: string
+      issuerType: string
+      issuerId: string | null
+      recipientType: string | null
+      recipientId: string | null
+      relatedEntityType: string
+      relatedEntityId: string
+      supersededById: string | null
+      version: number
+      fingerprint: string
+      signatureVersion: string
+      signedAt: Date
+      signedBySystem: string
+      verificationReference: string
+      fileName: string
+      contentType: string
+      storageKey: string
+      fileUrl: string
+      fileHash: string
+      canonicalPayload: Prisma.JsonValue
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpIssuedDocument"]>
+    composites: {}
+  }
+
+  type CpIssuedDocumentGetPayload<S extends boolean | null | undefined | CpIssuedDocumentDefaultArgs> = $Result.GetResult<Prisma.$CpIssuedDocumentPayload, S>
+
+  type CpIssuedDocumentCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpIssuedDocumentFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpIssuedDocumentCountAggregateInputType | true
+    }
+
+  export interface CpIssuedDocumentDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpIssuedDocument'], meta: { name: 'CpIssuedDocument' } }
+    /**
+     * Find zero or one CpIssuedDocument that matches the filter.
+     * @param {CpIssuedDocumentFindUniqueArgs} args - Arguments to find a CpIssuedDocument
+     * @example
+     * // Get one CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpIssuedDocumentFindUniqueArgs>(args: SelectSubset<T, CpIssuedDocumentFindUniqueArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpIssuedDocument that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpIssuedDocumentFindUniqueOrThrowArgs} args - Arguments to find a CpIssuedDocument
+     * @example
+     * // Get one CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpIssuedDocumentFindUniqueOrThrowArgs>(args: SelectSubset<T, CpIssuedDocumentFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpIssuedDocument that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentFindFirstArgs} args - Arguments to find a CpIssuedDocument
+     * @example
+     * // Get one CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpIssuedDocumentFindFirstArgs>(args?: SelectSubset<T, CpIssuedDocumentFindFirstArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpIssuedDocument that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentFindFirstOrThrowArgs} args - Arguments to find a CpIssuedDocument
+     * @example
+     * // Get one CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpIssuedDocumentFindFirstOrThrowArgs>(args?: SelectSubset<T, CpIssuedDocumentFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpIssuedDocuments that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpIssuedDocuments
+     * const cpIssuedDocuments = await prisma.cpIssuedDocument.findMany()
+     * 
+     * // Get first 10 CpIssuedDocuments
+     * const cpIssuedDocuments = await prisma.cpIssuedDocument.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpIssuedDocumentWithIdOnly = await prisma.cpIssuedDocument.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpIssuedDocumentFindManyArgs>(args?: SelectSubset<T, CpIssuedDocumentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpIssuedDocument.
+     * @param {CpIssuedDocumentCreateArgs} args - Arguments to create a CpIssuedDocument.
+     * @example
+     * // Create one CpIssuedDocument
+     * const CpIssuedDocument = await prisma.cpIssuedDocument.create({
+     *   data: {
+     *     // ... data to create a CpIssuedDocument
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpIssuedDocumentCreateArgs>(args: SelectSubset<T, CpIssuedDocumentCreateArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpIssuedDocuments.
+     * @param {CpIssuedDocumentCreateManyArgs} args - Arguments to create many CpIssuedDocuments.
+     * @example
+     * // Create many CpIssuedDocuments
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpIssuedDocumentCreateManyArgs>(args?: SelectSubset<T, CpIssuedDocumentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpIssuedDocuments and returns the data saved in the database.
+     * @param {CpIssuedDocumentCreateManyAndReturnArgs} args - Arguments to create many CpIssuedDocuments.
+     * @example
+     * // Create many CpIssuedDocuments
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpIssuedDocuments and only return the `id`
+     * const cpIssuedDocumentWithIdOnly = await prisma.cpIssuedDocument.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpIssuedDocumentCreateManyAndReturnArgs>(args?: SelectSubset<T, CpIssuedDocumentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpIssuedDocument.
+     * @param {CpIssuedDocumentDeleteArgs} args - Arguments to delete one CpIssuedDocument.
+     * @example
+     * // Delete one CpIssuedDocument
+     * const CpIssuedDocument = await prisma.cpIssuedDocument.delete({
+     *   where: {
+     *     // ... filter to delete one CpIssuedDocument
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpIssuedDocumentDeleteArgs>(args: SelectSubset<T, CpIssuedDocumentDeleteArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpIssuedDocument.
+     * @param {CpIssuedDocumentUpdateArgs} args - Arguments to update one CpIssuedDocument.
+     * @example
+     * // Update one CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpIssuedDocumentUpdateArgs>(args: SelectSubset<T, CpIssuedDocumentUpdateArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpIssuedDocuments.
+     * @param {CpIssuedDocumentDeleteManyArgs} args - Arguments to filter CpIssuedDocuments to delete.
+     * @example
+     * // Delete a few CpIssuedDocuments
+     * const { count } = await prisma.cpIssuedDocument.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpIssuedDocumentDeleteManyArgs>(args?: SelectSubset<T, CpIssuedDocumentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpIssuedDocuments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpIssuedDocuments
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpIssuedDocumentUpdateManyArgs>(args: SelectSubset<T, CpIssuedDocumentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpIssuedDocument.
+     * @param {CpIssuedDocumentUpsertArgs} args - Arguments to update or create a CpIssuedDocument.
+     * @example
+     * // Update or create a CpIssuedDocument
+     * const cpIssuedDocument = await prisma.cpIssuedDocument.upsert({
+     *   create: {
+     *     // ... data to create a CpIssuedDocument
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpIssuedDocument we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpIssuedDocumentUpsertArgs>(args: SelectSubset<T, CpIssuedDocumentUpsertArgs<ExtArgs>>): Prisma__CpIssuedDocumentClient<$Result.GetResult<Prisma.$CpIssuedDocumentPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpIssuedDocuments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentCountArgs} args - Arguments to filter CpIssuedDocuments to count.
+     * @example
+     * // Count the number of CpIssuedDocuments
+     * const count = await prisma.cpIssuedDocument.count({
+     *   where: {
+     *     // ... the filter for the CpIssuedDocuments we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpIssuedDocumentCountArgs>(
+      args?: Subset<T, CpIssuedDocumentCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpIssuedDocumentCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpIssuedDocument.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpIssuedDocumentAggregateArgs>(args: Subset<T, CpIssuedDocumentAggregateArgs>): Prisma.PrismaPromise<GetCpIssuedDocumentAggregateType<T>>
+
+    /**
+     * Group by CpIssuedDocument.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpIssuedDocumentGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpIssuedDocumentGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpIssuedDocumentGroupByArgs['orderBy'] }
+        : { orderBy?: CpIssuedDocumentGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpIssuedDocumentGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpIssuedDocumentGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpIssuedDocument model
+   */
+  readonly fields: CpIssuedDocumentFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpIssuedDocument.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpIssuedDocumentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpIssuedDocument model
+   */ 
+  interface CpIssuedDocumentFieldRefs {
+    readonly id: FieldRef<"CpIssuedDocument", 'String'>
+    readonly tenantId: FieldRef<"CpIssuedDocument", 'String'>
+    readonly documentNumber: FieldRef<"CpIssuedDocument", 'String'>
+    readonly documentType: FieldRef<"CpIssuedDocument", 'String'>
+    readonly status: FieldRef<"CpIssuedDocument", 'String'>
+    readonly issuerType: FieldRef<"CpIssuedDocument", 'String'>
+    readonly issuerId: FieldRef<"CpIssuedDocument", 'String'>
+    readonly recipientType: FieldRef<"CpIssuedDocument", 'String'>
+    readonly recipientId: FieldRef<"CpIssuedDocument", 'String'>
+    readonly relatedEntityType: FieldRef<"CpIssuedDocument", 'String'>
+    readonly relatedEntityId: FieldRef<"CpIssuedDocument", 'String'>
+    readonly supersededById: FieldRef<"CpIssuedDocument", 'String'>
+    readonly version: FieldRef<"CpIssuedDocument", 'Int'>
+    readonly fingerprint: FieldRef<"CpIssuedDocument", 'String'>
+    readonly signatureVersion: FieldRef<"CpIssuedDocument", 'String'>
+    readonly signedAt: FieldRef<"CpIssuedDocument", 'DateTime'>
+    readonly signedBySystem: FieldRef<"CpIssuedDocument", 'String'>
+    readonly verificationReference: FieldRef<"CpIssuedDocument", 'String'>
+    readonly fileName: FieldRef<"CpIssuedDocument", 'String'>
+    readonly contentType: FieldRef<"CpIssuedDocument", 'String'>
+    readonly storageKey: FieldRef<"CpIssuedDocument", 'String'>
+    readonly fileUrl: FieldRef<"CpIssuedDocument", 'String'>
+    readonly fileHash: FieldRef<"CpIssuedDocument", 'String'>
+    readonly canonicalPayload: FieldRef<"CpIssuedDocument", 'Json'>
+    readonly metadata: FieldRef<"CpIssuedDocument", 'Json'>
+    readonly createdAt: FieldRef<"CpIssuedDocument", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpIssuedDocument", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpIssuedDocument findUnique
+   */
+  export type CpIssuedDocumentFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter, which CpIssuedDocument to fetch.
+     */
+    where: CpIssuedDocumentWhereUniqueInput
+  }
+
+  /**
+   * CpIssuedDocument findUniqueOrThrow
+   */
+  export type CpIssuedDocumentFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter, which CpIssuedDocument to fetch.
+     */
+    where: CpIssuedDocumentWhereUniqueInput
+  }
+
+  /**
+   * CpIssuedDocument findFirst
+   */
+  export type CpIssuedDocumentFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter, which CpIssuedDocument to fetch.
+     */
+    where?: CpIssuedDocumentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpIssuedDocuments to fetch.
+     */
+    orderBy?: CpIssuedDocumentOrderByWithRelationInput | CpIssuedDocumentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpIssuedDocuments.
+     */
+    cursor?: CpIssuedDocumentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpIssuedDocuments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpIssuedDocuments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpIssuedDocuments.
+     */
+    distinct?: CpIssuedDocumentScalarFieldEnum | CpIssuedDocumentScalarFieldEnum[]
+  }
+
+  /**
+   * CpIssuedDocument findFirstOrThrow
+   */
+  export type CpIssuedDocumentFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter, which CpIssuedDocument to fetch.
+     */
+    where?: CpIssuedDocumentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpIssuedDocuments to fetch.
+     */
+    orderBy?: CpIssuedDocumentOrderByWithRelationInput | CpIssuedDocumentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpIssuedDocuments.
+     */
+    cursor?: CpIssuedDocumentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpIssuedDocuments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpIssuedDocuments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpIssuedDocuments.
+     */
+    distinct?: CpIssuedDocumentScalarFieldEnum | CpIssuedDocumentScalarFieldEnum[]
+  }
+
+  /**
+   * CpIssuedDocument findMany
+   */
+  export type CpIssuedDocumentFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter, which CpIssuedDocuments to fetch.
+     */
+    where?: CpIssuedDocumentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpIssuedDocuments to fetch.
+     */
+    orderBy?: CpIssuedDocumentOrderByWithRelationInput | CpIssuedDocumentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpIssuedDocuments.
+     */
+    cursor?: CpIssuedDocumentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpIssuedDocuments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpIssuedDocuments.
+     */
+    skip?: number
+    distinct?: CpIssuedDocumentScalarFieldEnum | CpIssuedDocumentScalarFieldEnum[]
+  }
+
+  /**
+   * CpIssuedDocument create
+   */
+  export type CpIssuedDocumentCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpIssuedDocument.
+     */
+    data: XOR<CpIssuedDocumentCreateInput, CpIssuedDocumentUncheckedCreateInput>
+  }
+
+  /**
+   * CpIssuedDocument createMany
+   */
+  export type CpIssuedDocumentCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpIssuedDocuments.
+     */
+    data: CpIssuedDocumentCreateManyInput | CpIssuedDocumentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpIssuedDocument createManyAndReturn
+   */
+  export type CpIssuedDocumentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpIssuedDocuments.
+     */
+    data: CpIssuedDocumentCreateManyInput | CpIssuedDocumentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpIssuedDocument update
+   */
+  export type CpIssuedDocumentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpIssuedDocument.
+     */
+    data: XOR<CpIssuedDocumentUpdateInput, CpIssuedDocumentUncheckedUpdateInput>
+    /**
+     * Choose, which CpIssuedDocument to update.
+     */
+    where: CpIssuedDocumentWhereUniqueInput
+  }
+
+  /**
+   * CpIssuedDocument updateMany
+   */
+  export type CpIssuedDocumentUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpIssuedDocuments.
+     */
+    data: XOR<CpIssuedDocumentUpdateManyMutationInput, CpIssuedDocumentUncheckedUpdateManyInput>
+    /**
+     * Filter which CpIssuedDocuments to update
+     */
+    where?: CpIssuedDocumentWhereInput
+  }
+
+  /**
+   * CpIssuedDocument upsert
+   */
+  export type CpIssuedDocumentUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpIssuedDocument to update in case it exists.
+     */
+    where: CpIssuedDocumentWhereUniqueInput
+    /**
+     * In case the CpIssuedDocument found by the `where` argument doesn't exist, create a new CpIssuedDocument with this data.
+     */
+    create: XOR<CpIssuedDocumentCreateInput, CpIssuedDocumentUncheckedCreateInput>
+    /**
+     * In case the CpIssuedDocument was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpIssuedDocumentUpdateInput, CpIssuedDocumentUncheckedUpdateInput>
+  }
+
+  /**
+   * CpIssuedDocument delete
+   */
+  export type CpIssuedDocumentDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+    /**
+     * Filter which CpIssuedDocument to delete.
+     */
+    where: CpIssuedDocumentWhereUniqueInput
+  }
+
+  /**
+   * CpIssuedDocument deleteMany
+   */
+  export type CpIssuedDocumentDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpIssuedDocuments to delete
+     */
+    where?: CpIssuedDocumentWhereInput
+  }
+
+  /**
+   * CpIssuedDocument without action
+   */
+  export type CpIssuedDocumentDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpIssuedDocument
+     */
+    select?: CpIssuedDocumentSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Model CpFeatureFlag
    */
 
@@ -16192,6 +22170,131 @@ export namespace Prisma {
   export type CpPaymentAttemptScalarFieldEnum = (typeof CpPaymentAttemptScalarFieldEnum)[keyof typeof CpPaymentAttemptScalarFieldEnum]
 
 
+  export const CpDisputeScalarFieldEnum: {
+    id: 'id',
+    disputeCode: 'disputeCode',
+    tenantId: 'tenantId',
+    disputeType: 'disputeType',
+    relatedEntityType: 'relatedEntityType',
+    relatedEntityId: 'relatedEntityId',
+    claimantType: 'claimantType',
+    claimantId: 'claimantId',
+    respondentType: 'respondentType',
+    respondentId: 'respondentId',
+    title: 'title',
+    reasonCode: 'reasonCode',
+    narrative: 'narrative',
+    status: 'status',
+    priority: 'priority',
+    assignedTo: 'assignedTo',
+    resolvedAt: 'resolvedAt',
+    resolvedByType: 'resolvedByType',
+    resolvedById: 'resolvedById',
+    resolutionSummary: 'resolutionSummary',
+    finalAmountMinorUnits: 'finalAmountMinorUnits',
+    currency: 'currency',
+    metadata: 'metadata',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpDisputeScalarFieldEnum = (typeof CpDisputeScalarFieldEnum)[keyof typeof CpDisputeScalarFieldEnum]
+
+
+  export const CpDisputeEvidenceScalarFieldEnum: {
+    id: 'id',
+    disputeId: 'disputeId',
+    tenantId: 'tenantId',
+    uploadedByType: 'uploadedByType',
+    uploadedById: 'uploadedById',
+    evidenceType: 'evidenceType',
+    description: 'description',
+    fileName: 'fileName',
+    contentType: 'contentType',
+    storageKey: 'storageKey',
+    fileUrl: 'fileUrl',
+    fileHash: 'fileHash',
+    integrityHash: 'integrityHash',
+    metadata: 'metadata',
+    createdAt: 'createdAt'
+  };
+
+  export type CpDisputeEvidenceScalarFieldEnum = (typeof CpDisputeEvidenceScalarFieldEnum)[keyof typeof CpDisputeEvidenceScalarFieldEnum]
+
+
+  export const CpDisputeTimelineScalarFieldEnum: {
+    id: 'id',
+    disputeId: 'disputeId',
+    tenantId: 'tenantId',
+    actorType: 'actorType',
+    actorId: 'actorId',
+    actionType: 'actionType',
+    message: 'message',
+    metadata: 'metadata',
+    createdAt: 'createdAt'
+  };
+
+  export type CpDisputeTimelineScalarFieldEnum = (typeof CpDisputeTimelineScalarFieldEnum)[keyof typeof CpDisputeTimelineScalarFieldEnum]
+
+
+  export const CpEvidenceRecordScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    actorType: 'actorType',
+    actorId: 'actorId',
+    evidenceType: 'evidenceType',
+    relatedEntityType: 'relatedEntityType',
+    relatedEntityId: 'relatedEntityId',
+    sourceEntityType: 'sourceEntityType',
+    sourceEntityId: 'sourceEntityId',
+    amountMinorUnits: 'amountMinorUnits',
+    currency: 'currency',
+    fileName: 'fileName',
+    contentType: 'contentType',
+    storageKey: 'storageKey',
+    fileUrl: 'fileUrl',
+    fileHash: 'fileHash',
+    integrityHash: 'integrityHash',
+    metadata: 'metadata',
+    createdAt: 'createdAt'
+  };
+
+  export type CpEvidenceRecordScalarFieldEnum = (typeof CpEvidenceRecordScalarFieldEnum)[keyof typeof CpEvidenceRecordScalarFieldEnum]
+
+
+  export const CpIssuedDocumentScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    documentNumber: 'documentNumber',
+    documentType: 'documentType',
+    status: 'status',
+    issuerType: 'issuerType',
+    issuerId: 'issuerId',
+    recipientType: 'recipientType',
+    recipientId: 'recipientId',
+    relatedEntityType: 'relatedEntityType',
+    relatedEntityId: 'relatedEntityId',
+    supersededById: 'supersededById',
+    version: 'version',
+    fingerprint: 'fingerprint',
+    signatureVersion: 'signatureVersion',
+    signedAt: 'signedAt',
+    signedBySystem: 'signedBySystem',
+    verificationReference: 'verificationReference',
+    fileName: 'fileName',
+    contentType: 'contentType',
+    storageKey: 'storageKey',
+    fileUrl: 'fileUrl',
+    fileHash: 'fileHash',
+    canonicalPayload: 'canonicalPayload',
+    metadata: 'metadata',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpIssuedDocumentScalarFieldEnum = (typeof CpIssuedDocumentScalarFieldEnum)[keyof typeof CpIssuedDocumentScalarFieldEnum]
+
+
   export const CpFeatureFlagScalarFieldEnum: {
     id: 'id',
     key: 'key',
@@ -17151,6 +23254,634 @@ export namespace Prisma {
     appliedAt?: DateTimeNullableWithAggregatesFilter<"CpPaymentAttempt"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"CpPaymentAttempt"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"CpPaymentAttempt"> | Date | string
+  }
+
+  export type CpDisputeWhereInput = {
+    AND?: CpDisputeWhereInput | CpDisputeWhereInput[]
+    OR?: CpDisputeWhereInput[]
+    NOT?: CpDisputeWhereInput | CpDisputeWhereInput[]
+    id?: StringFilter<"CpDispute"> | string
+    disputeCode?: StringFilter<"CpDispute"> | string
+    tenantId?: StringNullableFilter<"CpDispute"> | string | null
+    disputeType?: StringFilter<"CpDispute"> | string
+    relatedEntityType?: StringFilter<"CpDispute"> | string
+    relatedEntityId?: StringFilter<"CpDispute"> | string
+    claimantType?: StringFilter<"CpDispute"> | string
+    claimantId?: StringFilter<"CpDispute"> | string
+    respondentType?: StringFilter<"CpDispute"> | string
+    respondentId?: StringNullableFilter<"CpDispute"> | string | null
+    title?: StringFilter<"CpDispute"> | string
+    reasonCode?: StringFilter<"CpDispute"> | string
+    narrative?: StringFilter<"CpDispute"> | string
+    status?: StringFilter<"CpDispute"> | string
+    priority?: StringFilter<"CpDispute"> | string
+    assignedTo?: StringNullableFilter<"CpDispute"> | string | null
+    resolvedAt?: DateTimeNullableFilter<"CpDispute"> | Date | string | null
+    resolvedByType?: StringNullableFilter<"CpDispute"> | string | null
+    resolvedById?: StringNullableFilter<"CpDispute"> | string | null
+    resolutionSummary?: JsonNullableFilter<"CpDispute">
+    finalAmountMinorUnits?: IntNullableFilter<"CpDispute"> | number | null
+    currency?: StringNullableFilter<"CpDispute"> | string | null
+    metadata?: JsonNullableFilter<"CpDispute">
+    createdAt?: DateTimeFilter<"CpDispute"> | Date | string
+    updatedAt?: DateTimeFilter<"CpDispute"> | Date | string
+    timeline?: CpDisputeTimelineListRelationFilter
+    evidence?: CpDisputeEvidenceListRelationFilter
+  }
+
+  export type CpDisputeOrderByWithRelationInput = {
+    id?: SortOrder
+    disputeCode?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    disputeType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    claimantType?: SortOrder
+    claimantId?: SortOrder
+    respondentType?: SortOrder
+    respondentId?: SortOrderInput | SortOrder
+    title?: SortOrder
+    reasonCode?: SortOrder
+    narrative?: SortOrder
+    status?: SortOrder
+    priority?: SortOrder
+    assignedTo?: SortOrderInput | SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    resolvedByType?: SortOrderInput | SortOrder
+    resolvedById?: SortOrderInput | SortOrder
+    resolutionSummary?: SortOrderInput | SortOrder
+    finalAmountMinorUnits?: SortOrderInput | SortOrder
+    currency?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    timeline?: CpDisputeTimelineOrderByRelationAggregateInput
+    evidence?: CpDisputeEvidenceOrderByRelationAggregateInput
+  }
+
+  export type CpDisputeWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    disputeCode?: string
+    AND?: CpDisputeWhereInput | CpDisputeWhereInput[]
+    OR?: CpDisputeWhereInput[]
+    NOT?: CpDisputeWhereInput | CpDisputeWhereInput[]
+    tenantId?: StringNullableFilter<"CpDispute"> | string | null
+    disputeType?: StringFilter<"CpDispute"> | string
+    relatedEntityType?: StringFilter<"CpDispute"> | string
+    relatedEntityId?: StringFilter<"CpDispute"> | string
+    claimantType?: StringFilter<"CpDispute"> | string
+    claimantId?: StringFilter<"CpDispute"> | string
+    respondentType?: StringFilter<"CpDispute"> | string
+    respondentId?: StringNullableFilter<"CpDispute"> | string | null
+    title?: StringFilter<"CpDispute"> | string
+    reasonCode?: StringFilter<"CpDispute"> | string
+    narrative?: StringFilter<"CpDispute"> | string
+    status?: StringFilter<"CpDispute"> | string
+    priority?: StringFilter<"CpDispute"> | string
+    assignedTo?: StringNullableFilter<"CpDispute"> | string | null
+    resolvedAt?: DateTimeNullableFilter<"CpDispute"> | Date | string | null
+    resolvedByType?: StringNullableFilter<"CpDispute"> | string | null
+    resolvedById?: StringNullableFilter<"CpDispute"> | string | null
+    resolutionSummary?: JsonNullableFilter<"CpDispute">
+    finalAmountMinorUnits?: IntNullableFilter<"CpDispute"> | number | null
+    currency?: StringNullableFilter<"CpDispute"> | string | null
+    metadata?: JsonNullableFilter<"CpDispute">
+    createdAt?: DateTimeFilter<"CpDispute"> | Date | string
+    updatedAt?: DateTimeFilter<"CpDispute"> | Date | string
+    timeline?: CpDisputeTimelineListRelationFilter
+    evidence?: CpDisputeEvidenceListRelationFilter
+  }, "id" | "disputeCode">
+
+  export type CpDisputeOrderByWithAggregationInput = {
+    id?: SortOrder
+    disputeCode?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    disputeType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    claimantType?: SortOrder
+    claimantId?: SortOrder
+    respondentType?: SortOrder
+    respondentId?: SortOrderInput | SortOrder
+    title?: SortOrder
+    reasonCode?: SortOrder
+    narrative?: SortOrder
+    status?: SortOrder
+    priority?: SortOrder
+    assignedTo?: SortOrderInput | SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    resolvedByType?: SortOrderInput | SortOrder
+    resolvedById?: SortOrderInput | SortOrder
+    resolutionSummary?: SortOrderInput | SortOrder
+    finalAmountMinorUnits?: SortOrderInput | SortOrder
+    currency?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpDisputeCountOrderByAggregateInput
+    _avg?: CpDisputeAvgOrderByAggregateInput
+    _max?: CpDisputeMaxOrderByAggregateInput
+    _min?: CpDisputeMinOrderByAggregateInput
+    _sum?: CpDisputeSumOrderByAggregateInput
+  }
+
+  export type CpDisputeScalarWhereWithAggregatesInput = {
+    AND?: CpDisputeScalarWhereWithAggregatesInput | CpDisputeScalarWhereWithAggregatesInput[]
+    OR?: CpDisputeScalarWhereWithAggregatesInput[]
+    NOT?: CpDisputeScalarWhereWithAggregatesInput | CpDisputeScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpDispute"> | string
+    disputeCode?: StringWithAggregatesFilter<"CpDispute"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    disputeType?: StringWithAggregatesFilter<"CpDispute"> | string
+    relatedEntityType?: StringWithAggregatesFilter<"CpDispute"> | string
+    relatedEntityId?: StringWithAggregatesFilter<"CpDispute"> | string
+    claimantType?: StringWithAggregatesFilter<"CpDispute"> | string
+    claimantId?: StringWithAggregatesFilter<"CpDispute"> | string
+    respondentType?: StringWithAggregatesFilter<"CpDispute"> | string
+    respondentId?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    title?: StringWithAggregatesFilter<"CpDispute"> | string
+    reasonCode?: StringWithAggregatesFilter<"CpDispute"> | string
+    narrative?: StringWithAggregatesFilter<"CpDispute"> | string
+    status?: StringWithAggregatesFilter<"CpDispute"> | string
+    priority?: StringWithAggregatesFilter<"CpDispute"> | string
+    assignedTo?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    resolvedAt?: DateTimeNullableWithAggregatesFilter<"CpDispute"> | Date | string | null
+    resolvedByType?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    resolvedById?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    resolutionSummary?: JsonNullableWithAggregatesFilter<"CpDispute">
+    finalAmountMinorUnits?: IntNullableWithAggregatesFilter<"CpDispute"> | number | null
+    currency?: StringNullableWithAggregatesFilter<"CpDispute"> | string | null
+    metadata?: JsonNullableWithAggregatesFilter<"CpDispute">
+    createdAt?: DateTimeWithAggregatesFilter<"CpDispute"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpDispute"> | Date | string
+  }
+
+  export type CpDisputeEvidenceWhereInput = {
+    AND?: CpDisputeEvidenceWhereInput | CpDisputeEvidenceWhereInput[]
+    OR?: CpDisputeEvidenceWhereInput[]
+    NOT?: CpDisputeEvidenceWhereInput | CpDisputeEvidenceWhereInput[]
+    id?: StringFilter<"CpDisputeEvidence"> | string
+    disputeId?: StringFilter<"CpDisputeEvidence"> | string
+    tenantId?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    uploadedByType?: StringFilter<"CpDisputeEvidence"> | string
+    uploadedById?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    evidenceType?: StringFilter<"CpDisputeEvidence"> | string
+    description?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileName?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    contentType?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    storageKey?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileUrl?: StringFilter<"CpDisputeEvidence"> | string
+    fileHash?: StringFilter<"CpDisputeEvidence"> | string
+    integrityHash?: StringFilter<"CpDisputeEvidence"> | string
+    metadata?: JsonNullableFilter<"CpDisputeEvidence">
+    createdAt?: DateTimeFilter<"CpDisputeEvidence"> | Date | string
+    dispute?: XOR<CpDisputeRelationFilter, CpDisputeWhereInput>
+  }
+
+  export type CpDisputeEvidenceOrderByWithRelationInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    uploadedByType?: SortOrder
+    uploadedById?: SortOrderInput | SortOrder
+    evidenceType?: SortOrder
+    description?: SortOrderInput | SortOrder
+    fileName?: SortOrderInput | SortOrder
+    contentType?: SortOrderInput | SortOrder
+    storageKey?: SortOrderInput | SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    dispute?: CpDisputeOrderByWithRelationInput
+  }
+
+  export type CpDisputeEvidenceWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpDisputeEvidenceWhereInput | CpDisputeEvidenceWhereInput[]
+    OR?: CpDisputeEvidenceWhereInput[]
+    NOT?: CpDisputeEvidenceWhereInput | CpDisputeEvidenceWhereInput[]
+    disputeId?: StringFilter<"CpDisputeEvidence"> | string
+    tenantId?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    uploadedByType?: StringFilter<"CpDisputeEvidence"> | string
+    uploadedById?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    evidenceType?: StringFilter<"CpDisputeEvidence"> | string
+    description?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileName?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    contentType?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    storageKey?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileUrl?: StringFilter<"CpDisputeEvidence"> | string
+    fileHash?: StringFilter<"CpDisputeEvidence"> | string
+    integrityHash?: StringFilter<"CpDisputeEvidence"> | string
+    metadata?: JsonNullableFilter<"CpDisputeEvidence">
+    createdAt?: DateTimeFilter<"CpDisputeEvidence"> | Date | string
+    dispute?: XOR<CpDisputeRelationFilter, CpDisputeWhereInput>
+  }, "id">
+
+  export type CpDisputeEvidenceOrderByWithAggregationInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    uploadedByType?: SortOrder
+    uploadedById?: SortOrderInput | SortOrder
+    evidenceType?: SortOrder
+    description?: SortOrderInput | SortOrder
+    fileName?: SortOrderInput | SortOrder
+    contentType?: SortOrderInput | SortOrder
+    storageKey?: SortOrderInput | SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CpDisputeEvidenceCountOrderByAggregateInput
+    _max?: CpDisputeEvidenceMaxOrderByAggregateInput
+    _min?: CpDisputeEvidenceMinOrderByAggregateInput
+  }
+
+  export type CpDisputeEvidenceScalarWhereWithAggregatesInput = {
+    AND?: CpDisputeEvidenceScalarWhereWithAggregatesInput | CpDisputeEvidenceScalarWhereWithAggregatesInput[]
+    OR?: CpDisputeEvidenceScalarWhereWithAggregatesInput[]
+    NOT?: CpDisputeEvidenceScalarWhereWithAggregatesInput | CpDisputeEvidenceScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    disputeId?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    uploadedByType?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    uploadedById?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    evidenceType?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    description?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    fileName?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    contentType?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    storageKey?: StringNullableWithAggregatesFilter<"CpDisputeEvidence"> | string | null
+    fileUrl?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    fileHash?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    integrityHash?: StringWithAggregatesFilter<"CpDisputeEvidence"> | string
+    metadata?: JsonNullableWithAggregatesFilter<"CpDisputeEvidence">
+    createdAt?: DateTimeWithAggregatesFilter<"CpDisputeEvidence"> | Date | string
+  }
+
+  export type CpDisputeTimelineWhereInput = {
+    AND?: CpDisputeTimelineWhereInput | CpDisputeTimelineWhereInput[]
+    OR?: CpDisputeTimelineWhereInput[]
+    NOT?: CpDisputeTimelineWhereInput | CpDisputeTimelineWhereInput[]
+    id?: StringFilter<"CpDisputeTimeline"> | string
+    disputeId?: StringFilter<"CpDisputeTimeline"> | string
+    tenantId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actorType?: StringFilter<"CpDisputeTimeline"> | string
+    actorId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actionType?: StringFilter<"CpDisputeTimeline"> | string
+    message?: StringFilter<"CpDisputeTimeline"> | string
+    metadata?: JsonNullableFilter<"CpDisputeTimeline">
+    createdAt?: DateTimeFilter<"CpDisputeTimeline"> | Date | string
+    dispute?: XOR<CpDisputeRelationFilter, CpDisputeWhereInput>
+  }
+
+  export type CpDisputeTimelineOrderByWithRelationInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    actionType?: SortOrder
+    message?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    dispute?: CpDisputeOrderByWithRelationInput
+  }
+
+  export type CpDisputeTimelineWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpDisputeTimelineWhereInput | CpDisputeTimelineWhereInput[]
+    OR?: CpDisputeTimelineWhereInput[]
+    NOT?: CpDisputeTimelineWhereInput | CpDisputeTimelineWhereInput[]
+    disputeId?: StringFilter<"CpDisputeTimeline"> | string
+    tenantId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actorType?: StringFilter<"CpDisputeTimeline"> | string
+    actorId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actionType?: StringFilter<"CpDisputeTimeline"> | string
+    message?: StringFilter<"CpDisputeTimeline"> | string
+    metadata?: JsonNullableFilter<"CpDisputeTimeline">
+    createdAt?: DateTimeFilter<"CpDisputeTimeline"> | Date | string
+    dispute?: XOR<CpDisputeRelationFilter, CpDisputeWhereInput>
+  }, "id">
+
+  export type CpDisputeTimelineOrderByWithAggregationInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    actionType?: SortOrder
+    message?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CpDisputeTimelineCountOrderByAggregateInput
+    _max?: CpDisputeTimelineMaxOrderByAggregateInput
+    _min?: CpDisputeTimelineMinOrderByAggregateInput
+  }
+
+  export type CpDisputeTimelineScalarWhereWithAggregatesInput = {
+    AND?: CpDisputeTimelineScalarWhereWithAggregatesInput | CpDisputeTimelineScalarWhereWithAggregatesInput[]
+    OR?: CpDisputeTimelineScalarWhereWithAggregatesInput[]
+    NOT?: CpDisputeTimelineScalarWhereWithAggregatesInput | CpDisputeTimelineScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpDisputeTimeline"> | string
+    disputeId?: StringWithAggregatesFilter<"CpDisputeTimeline"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpDisputeTimeline"> | string | null
+    actorType?: StringWithAggregatesFilter<"CpDisputeTimeline"> | string
+    actorId?: StringNullableWithAggregatesFilter<"CpDisputeTimeline"> | string | null
+    actionType?: StringWithAggregatesFilter<"CpDisputeTimeline"> | string
+    message?: StringWithAggregatesFilter<"CpDisputeTimeline"> | string
+    metadata?: JsonNullableWithAggregatesFilter<"CpDisputeTimeline">
+    createdAt?: DateTimeWithAggregatesFilter<"CpDisputeTimeline"> | Date | string
+  }
+
+  export type CpEvidenceRecordWhereInput = {
+    AND?: CpEvidenceRecordWhereInput | CpEvidenceRecordWhereInput[]
+    OR?: CpEvidenceRecordWhereInput[]
+    NOT?: CpEvidenceRecordWhereInput | CpEvidenceRecordWhereInput[]
+    id?: StringFilter<"CpEvidenceRecord"> | string
+    tenantId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    actorType?: StringFilter<"CpEvidenceRecord"> | string
+    actorId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    evidenceType?: StringFilter<"CpEvidenceRecord"> | string
+    relatedEntityType?: StringFilter<"CpEvidenceRecord"> | string
+    relatedEntityId?: StringFilter<"CpEvidenceRecord"> | string
+    sourceEntityType?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    sourceEntityId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    amountMinorUnits?: IntNullableFilter<"CpEvidenceRecord"> | number | null
+    currency?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileName?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    contentType?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    storageKey?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileUrl?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileHash?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    integrityHash?: StringFilter<"CpEvidenceRecord"> | string
+    metadata?: JsonNullableFilter<"CpEvidenceRecord">
+    createdAt?: DateTimeFilter<"CpEvidenceRecord"> | Date | string
+  }
+
+  export type CpEvidenceRecordOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    evidenceType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    sourceEntityType?: SortOrderInput | SortOrder
+    sourceEntityId?: SortOrderInput | SortOrder
+    amountMinorUnits?: SortOrderInput | SortOrder
+    currency?: SortOrderInput | SortOrder
+    fileName?: SortOrderInput | SortOrder
+    contentType?: SortOrderInput | SortOrder
+    storageKey?: SortOrderInput | SortOrder
+    fileUrl?: SortOrderInput | SortOrder
+    fileHash?: SortOrderInput | SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpEvidenceRecordWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CpEvidenceRecordWhereInput | CpEvidenceRecordWhereInput[]
+    OR?: CpEvidenceRecordWhereInput[]
+    NOT?: CpEvidenceRecordWhereInput | CpEvidenceRecordWhereInput[]
+    tenantId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    actorType?: StringFilter<"CpEvidenceRecord"> | string
+    actorId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    evidenceType?: StringFilter<"CpEvidenceRecord"> | string
+    relatedEntityType?: StringFilter<"CpEvidenceRecord"> | string
+    relatedEntityId?: StringFilter<"CpEvidenceRecord"> | string
+    sourceEntityType?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    sourceEntityId?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    amountMinorUnits?: IntNullableFilter<"CpEvidenceRecord"> | number | null
+    currency?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileName?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    contentType?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    storageKey?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileUrl?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    fileHash?: StringNullableFilter<"CpEvidenceRecord"> | string | null
+    integrityHash?: StringFilter<"CpEvidenceRecord"> | string
+    metadata?: JsonNullableFilter<"CpEvidenceRecord">
+    createdAt?: DateTimeFilter<"CpEvidenceRecord"> | Date | string
+  }, "id">
+
+  export type CpEvidenceRecordOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrderInput | SortOrder
+    evidenceType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    sourceEntityType?: SortOrderInput | SortOrder
+    sourceEntityId?: SortOrderInput | SortOrder
+    amountMinorUnits?: SortOrderInput | SortOrder
+    currency?: SortOrderInput | SortOrder
+    fileName?: SortOrderInput | SortOrder
+    contentType?: SortOrderInput | SortOrder
+    storageKey?: SortOrderInput | SortOrder
+    fileUrl?: SortOrderInput | SortOrder
+    fileHash?: SortOrderInput | SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CpEvidenceRecordCountOrderByAggregateInput
+    _avg?: CpEvidenceRecordAvgOrderByAggregateInput
+    _max?: CpEvidenceRecordMaxOrderByAggregateInput
+    _min?: CpEvidenceRecordMinOrderByAggregateInput
+    _sum?: CpEvidenceRecordSumOrderByAggregateInput
+  }
+
+  export type CpEvidenceRecordScalarWhereWithAggregatesInput = {
+    AND?: CpEvidenceRecordScalarWhereWithAggregatesInput | CpEvidenceRecordScalarWhereWithAggregatesInput[]
+    OR?: CpEvidenceRecordScalarWhereWithAggregatesInput[]
+    NOT?: CpEvidenceRecordScalarWhereWithAggregatesInput | CpEvidenceRecordScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    actorType?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    actorId?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    evidenceType?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    relatedEntityType?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    relatedEntityId?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    sourceEntityType?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    sourceEntityId?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    amountMinorUnits?: IntNullableWithAggregatesFilter<"CpEvidenceRecord"> | number | null
+    currency?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    fileName?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    contentType?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    storageKey?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    fileUrl?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    fileHash?: StringNullableWithAggregatesFilter<"CpEvidenceRecord"> | string | null
+    integrityHash?: StringWithAggregatesFilter<"CpEvidenceRecord"> | string
+    metadata?: JsonNullableWithAggregatesFilter<"CpEvidenceRecord">
+    createdAt?: DateTimeWithAggregatesFilter<"CpEvidenceRecord"> | Date | string
+  }
+
+  export type CpIssuedDocumentWhereInput = {
+    AND?: CpIssuedDocumentWhereInput | CpIssuedDocumentWhereInput[]
+    OR?: CpIssuedDocumentWhereInput[]
+    NOT?: CpIssuedDocumentWhereInput | CpIssuedDocumentWhereInput[]
+    id?: StringFilter<"CpIssuedDocument"> | string
+    tenantId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    documentNumber?: StringFilter<"CpIssuedDocument"> | string
+    documentType?: StringFilter<"CpIssuedDocument"> | string
+    status?: StringFilter<"CpIssuedDocument"> | string
+    issuerType?: StringFilter<"CpIssuedDocument"> | string
+    issuerId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    recipientType?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    recipientId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    relatedEntityType?: StringFilter<"CpIssuedDocument"> | string
+    relatedEntityId?: StringFilter<"CpIssuedDocument"> | string
+    supersededById?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    version?: IntFilter<"CpIssuedDocument"> | number
+    fingerprint?: StringFilter<"CpIssuedDocument"> | string
+    signatureVersion?: StringFilter<"CpIssuedDocument"> | string
+    signedAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+    signedBySystem?: StringFilter<"CpIssuedDocument"> | string
+    verificationReference?: StringFilter<"CpIssuedDocument"> | string
+    fileName?: StringFilter<"CpIssuedDocument"> | string
+    contentType?: StringFilter<"CpIssuedDocument"> | string
+    storageKey?: StringFilter<"CpIssuedDocument"> | string
+    fileUrl?: StringFilter<"CpIssuedDocument"> | string
+    fileHash?: StringFilter<"CpIssuedDocument"> | string
+    canonicalPayload?: JsonFilter<"CpIssuedDocument">
+    metadata?: JsonNullableFilter<"CpIssuedDocument">
+    createdAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+    updatedAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+  }
+
+  export type CpIssuedDocumentOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    documentNumber?: SortOrder
+    documentType?: SortOrder
+    status?: SortOrder
+    issuerType?: SortOrder
+    issuerId?: SortOrderInput | SortOrder
+    recipientType?: SortOrderInput | SortOrder
+    recipientId?: SortOrderInput | SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    supersededById?: SortOrderInput | SortOrder
+    version?: SortOrder
+    fingerprint?: SortOrder
+    signatureVersion?: SortOrder
+    signedAt?: SortOrder
+    signedBySystem?: SortOrder
+    verificationReference?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    canonicalPayload?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpIssuedDocumentWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    documentNumber?: string
+    AND?: CpIssuedDocumentWhereInput | CpIssuedDocumentWhereInput[]
+    OR?: CpIssuedDocumentWhereInput[]
+    NOT?: CpIssuedDocumentWhereInput | CpIssuedDocumentWhereInput[]
+    tenantId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    documentType?: StringFilter<"CpIssuedDocument"> | string
+    status?: StringFilter<"CpIssuedDocument"> | string
+    issuerType?: StringFilter<"CpIssuedDocument"> | string
+    issuerId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    recipientType?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    recipientId?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    relatedEntityType?: StringFilter<"CpIssuedDocument"> | string
+    relatedEntityId?: StringFilter<"CpIssuedDocument"> | string
+    supersededById?: StringNullableFilter<"CpIssuedDocument"> | string | null
+    version?: IntFilter<"CpIssuedDocument"> | number
+    fingerprint?: StringFilter<"CpIssuedDocument"> | string
+    signatureVersion?: StringFilter<"CpIssuedDocument"> | string
+    signedAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+    signedBySystem?: StringFilter<"CpIssuedDocument"> | string
+    verificationReference?: StringFilter<"CpIssuedDocument"> | string
+    fileName?: StringFilter<"CpIssuedDocument"> | string
+    contentType?: StringFilter<"CpIssuedDocument"> | string
+    storageKey?: StringFilter<"CpIssuedDocument"> | string
+    fileUrl?: StringFilter<"CpIssuedDocument"> | string
+    fileHash?: StringFilter<"CpIssuedDocument"> | string
+    canonicalPayload?: JsonFilter<"CpIssuedDocument">
+    metadata?: JsonNullableFilter<"CpIssuedDocument">
+    createdAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+    updatedAt?: DateTimeFilter<"CpIssuedDocument"> | Date | string
+  }, "id" | "documentNumber">
+
+  export type CpIssuedDocumentOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    documentNumber?: SortOrder
+    documentType?: SortOrder
+    status?: SortOrder
+    issuerType?: SortOrder
+    issuerId?: SortOrderInput | SortOrder
+    recipientType?: SortOrderInput | SortOrder
+    recipientId?: SortOrderInput | SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    supersededById?: SortOrderInput | SortOrder
+    version?: SortOrder
+    fingerprint?: SortOrder
+    signatureVersion?: SortOrder
+    signedAt?: SortOrder
+    signedBySystem?: SortOrder
+    verificationReference?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    canonicalPayload?: SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpIssuedDocumentCountOrderByAggregateInput
+    _avg?: CpIssuedDocumentAvgOrderByAggregateInput
+    _max?: CpIssuedDocumentMaxOrderByAggregateInput
+    _min?: CpIssuedDocumentMinOrderByAggregateInput
+    _sum?: CpIssuedDocumentSumOrderByAggregateInput
+  }
+
+  export type CpIssuedDocumentScalarWhereWithAggregatesInput = {
+    AND?: CpIssuedDocumentScalarWhereWithAggregatesInput | CpIssuedDocumentScalarWhereWithAggregatesInput[]
+    OR?: CpIssuedDocumentScalarWhereWithAggregatesInput[]
+    NOT?: CpIssuedDocumentScalarWhereWithAggregatesInput | CpIssuedDocumentScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"CpIssuedDocument"> | string | null
+    documentNumber?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    documentType?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    status?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    issuerType?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    issuerId?: StringNullableWithAggregatesFilter<"CpIssuedDocument"> | string | null
+    recipientType?: StringNullableWithAggregatesFilter<"CpIssuedDocument"> | string | null
+    recipientId?: StringNullableWithAggregatesFilter<"CpIssuedDocument"> | string | null
+    relatedEntityType?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    relatedEntityId?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    supersededById?: StringNullableWithAggregatesFilter<"CpIssuedDocument"> | string | null
+    version?: IntWithAggregatesFilter<"CpIssuedDocument"> | number
+    fingerprint?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    signatureVersion?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    signedAt?: DateTimeWithAggregatesFilter<"CpIssuedDocument"> | Date | string
+    signedBySystem?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    verificationReference?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    fileName?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    contentType?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    storageKey?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    fileUrl?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    fileHash?: StringWithAggregatesFilter<"CpIssuedDocument"> | string
+    canonicalPayload?: JsonWithAggregatesFilter<"CpIssuedDocument">
+    metadata?: JsonNullableWithAggregatesFilter<"CpIssuedDocument">
+    createdAt?: DateTimeWithAggregatesFilter<"CpIssuedDocument"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpIssuedDocument"> | Date | string
   }
 
   export type CpFeatureFlagWhereInput = {
@@ -18382,6 +25113,782 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CpDisputeCreateInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    timeline?: CpDisputeTimelineCreateNestedManyWithoutDisputeInput
+    evidence?: CpDisputeEvidenceCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeUncheckedCreateInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    timeline?: CpDisputeTimelineUncheckedCreateNestedManyWithoutDisputeInput
+    evidence?: CpDisputeEvidenceUncheckedCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    timeline?: CpDisputeTimelineUpdateManyWithoutDisputeNestedInput
+    evidence?: CpDisputeEvidenceUpdateManyWithoutDisputeNestedInput
+  }
+
+  export type CpDisputeUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    timeline?: CpDisputeTimelineUncheckedUpdateManyWithoutDisputeNestedInput
+    evidence?: CpDisputeEvidenceUncheckedUpdateManyWithoutDisputeNestedInput
+  }
+
+  export type CpDisputeCreateManyInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpDisputeUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceCreateInput = {
+    id?: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    dispute: CpDisputeCreateNestedOneWithoutEvidenceInput
+  }
+
+  export type CpDisputeEvidenceUncheckedCreateInput = {
+    id?: string
+    disputeId: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeEvidenceUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dispute?: CpDisputeUpdateOneRequiredWithoutEvidenceNestedInput
+  }
+
+  export type CpDisputeEvidenceUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceCreateManyInput = {
+    id?: string
+    disputeId: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeEvidenceUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeTimelineCreateInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    dispute: CpDisputeCreateNestedOneWithoutTimelineInput
+  }
+
+  export type CpDisputeTimelineUncheckedCreateInput = {
+    id?: string
+    disputeId: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeTimelineUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dispute?: CpDisputeUpdateOneRequiredWithoutTimelineNestedInput
+  }
+
+  export type CpDisputeTimelineUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeTimelineCreateManyInput = {
+    id?: string
+    disputeId: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeTimelineUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeTimelineUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeId?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpEvidenceRecordCreateInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    evidenceType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    sourceEntityType?: string | null
+    sourceEntityId?: string | null
+    amountMinorUnits?: number | null
+    currency?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl?: string | null
+    fileHash?: string | null
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpEvidenceRecordUncheckedCreateInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    evidenceType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    sourceEntityType?: string | null
+    sourceEntityId?: string | null
+    amountMinorUnits?: number | null
+    currency?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl?: string | null
+    fileHash?: string | null
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpEvidenceRecordUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    sourceEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    amountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    fileHash?: NullableStringFieldUpdateOperationsInput | string | null
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpEvidenceRecordUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    sourceEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    amountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    fileHash?: NullableStringFieldUpdateOperationsInput | string | null
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpEvidenceRecordCreateManyInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    evidenceType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    sourceEntityType?: string | null
+    sourceEntityId?: string | null
+    amountMinorUnits?: number | null
+    currency?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl?: string | null
+    fileHash?: string | null
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpEvidenceRecordUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    sourceEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    amountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    fileHash?: NullableStringFieldUpdateOperationsInput | string | null
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpEvidenceRecordUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    sourceEntityType?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceEntityId?: NullableStringFieldUpdateOperationsInput | string | null
+    amountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    fileHash?: NullableStringFieldUpdateOperationsInput | string | null
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpIssuedDocumentCreateInput = {
+    id?: string
+    tenantId?: string | null
+    documentNumber: string
+    documentType: string
+    status?: string
+    issuerType: string
+    issuerId?: string | null
+    recipientType?: string | null
+    recipientId?: string | null
+    relatedEntityType: string
+    relatedEntityId: string
+    supersededById?: string | null
+    version?: number
+    fingerprint: string
+    signatureVersion: string
+    signedAt: Date | string
+    signedBySystem: string
+    verificationReference: string
+    fileName: string
+    contentType: string
+    storageKey: string
+    fileUrl: string
+    fileHash: string
+    canonicalPayload: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpIssuedDocumentUncheckedCreateInput = {
+    id?: string
+    tenantId?: string | null
+    documentNumber: string
+    documentType: string
+    status?: string
+    issuerType: string
+    issuerId?: string | null
+    recipientType?: string | null
+    recipientId?: string | null
+    relatedEntityType: string
+    relatedEntityId: string
+    supersededById?: string | null
+    version?: number
+    fingerprint: string
+    signatureVersion: string
+    signedAt: Date | string
+    signedBySystem: string
+    verificationReference: string
+    fileName: string
+    contentType: string
+    storageKey: string
+    fileUrl: string
+    fileHash: string
+    canonicalPayload: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpIssuedDocumentUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    documentNumber?: StringFieldUpdateOperationsInput | string
+    documentType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    issuerType?: StringFieldUpdateOperationsInput | string
+    issuerId?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientType?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientId?: NullableStringFieldUpdateOperationsInput | string | null
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    signatureVersion?: StringFieldUpdateOperationsInput | string
+    signedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    signedBySystem?: StringFieldUpdateOperationsInput | string
+    verificationReference?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    contentType?: StringFieldUpdateOperationsInput | string
+    storageKey?: StringFieldUpdateOperationsInput | string
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    canonicalPayload?: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpIssuedDocumentUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    documentNumber?: StringFieldUpdateOperationsInput | string
+    documentType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    issuerType?: StringFieldUpdateOperationsInput | string
+    issuerId?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientType?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientId?: NullableStringFieldUpdateOperationsInput | string | null
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    signatureVersion?: StringFieldUpdateOperationsInput | string
+    signedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    signedBySystem?: StringFieldUpdateOperationsInput | string
+    verificationReference?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    contentType?: StringFieldUpdateOperationsInput | string
+    storageKey?: StringFieldUpdateOperationsInput | string
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    canonicalPayload?: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpIssuedDocumentCreateManyInput = {
+    id?: string
+    tenantId?: string | null
+    documentNumber: string
+    documentType: string
+    status?: string
+    issuerType: string
+    issuerId?: string | null
+    recipientType?: string | null
+    recipientId?: string | null
+    relatedEntityType: string
+    relatedEntityId: string
+    supersededById?: string | null
+    version?: number
+    fingerprint: string
+    signatureVersion: string
+    signedAt: Date | string
+    signedBySystem: string
+    verificationReference: string
+    fileName: string
+    contentType: string
+    storageKey: string
+    fileUrl: string
+    fileHash: string
+    canonicalPayload: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpIssuedDocumentUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    documentNumber?: StringFieldUpdateOperationsInput | string
+    documentType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    issuerType?: StringFieldUpdateOperationsInput | string
+    issuerId?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientType?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientId?: NullableStringFieldUpdateOperationsInput | string | null
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    signatureVersion?: StringFieldUpdateOperationsInput | string
+    signedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    signedBySystem?: StringFieldUpdateOperationsInput | string
+    verificationReference?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    contentType?: StringFieldUpdateOperationsInput | string
+    storageKey?: StringFieldUpdateOperationsInput | string
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    canonicalPayload?: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpIssuedDocumentUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    documentNumber?: StringFieldUpdateOperationsInput | string
+    documentType?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    issuerType?: StringFieldUpdateOperationsInput | string
+    issuerId?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientType?: NullableStringFieldUpdateOperationsInput | string | null
+    recipientId?: NullableStringFieldUpdateOperationsInput | string | null
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: IntFieldUpdateOperationsInput | number
+    fingerprint?: StringFieldUpdateOperationsInput | string
+    signatureVersion?: StringFieldUpdateOperationsInput | string
+    signedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    signedBySystem?: StringFieldUpdateOperationsInput | string
+    verificationReference?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    contentType?: StringFieldUpdateOperationsInput | string
+    storageKey?: StringFieldUpdateOperationsInput | string
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    canonicalPayload?: JsonNullValueInput | InputJsonValue
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type CpFeatureFlagCreateInput = {
     id?: string
     key: string
@@ -19514,6 +27021,398 @@ export namespace Prisma {
     amountMinorUnits?: SortOrder
   }
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type CpDisputeTimelineListRelationFilter = {
+    every?: CpDisputeTimelineWhereInput
+    some?: CpDisputeTimelineWhereInput
+    none?: CpDisputeTimelineWhereInput
+  }
+
+  export type CpDisputeEvidenceListRelationFilter = {
+    every?: CpDisputeEvidenceWhereInput
+    some?: CpDisputeEvidenceWhereInput
+    none?: CpDisputeEvidenceWhereInput
+  }
+
+  export type CpDisputeTimelineOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpDisputeEvidenceOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CpDisputeCountOrderByAggregateInput = {
+    id?: SortOrder
+    disputeCode?: SortOrder
+    tenantId?: SortOrder
+    disputeType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    claimantType?: SortOrder
+    claimantId?: SortOrder
+    respondentType?: SortOrder
+    respondentId?: SortOrder
+    title?: SortOrder
+    reasonCode?: SortOrder
+    narrative?: SortOrder
+    status?: SortOrder
+    priority?: SortOrder
+    assignedTo?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByType?: SortOrder
+    resolvedById?: SortOrder
+    resolutionSummary?: SortOrder
+    finalAmountMinorUnits?: SortOrder
+    currency?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpDisputeAvgOrderByAggregateInput = {
+    finalAmountMinorUnits?: SortOrder
+  }
+
+  export type CpDisputeMaxOrderByAggregateInput = {
+    id?: SortOrder
+    disputeCode?: SortOrder
+    tenantId?: SortOrder
+    disputeType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    claimantType?: SortOrder
+    claimantId?: SortOrder
+    respondentType?: SortOrder
+    respondentId?: SortOrder
+    title?: SortOrder
+    reasonCode?: SortOrder
+    narrative?: SortOrder
+    status?: SortOrder
+    priority?: SortOrder
+    assignedTo?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByType?: SortOrder
+    resolvedById?: SortOrder
+    finalAmountMinorUnits?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpDisputeMinOrderByAggregateInput = {
+    id?: SortOrder
+    disputeCode?: SortOrder
+    tenantId?: SortOrder
+    disputeType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    claimantType?: SortOrder
+    claimantId?: SortOrder
+    respondentType?: SortOrder
+    respondentId?: SortOrder
+    title?: SortOrder
+    reasonCode?: SortOrder
+    narrative?: SortOrder
+    status?: SortOrder
+    priority?: SortOrder
+    assignedTo?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByType?: SortOrder
+    resolvedById?: SortOrder
+    finalAmountMinorUnits?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpDisputeSumOrderByAggregateInput = {
+    finalAmountMinorUnits?: SortOrder
+  }
+
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type CpDisputeRelationFilter = {
+    is?: CpDisputeWhereInput
+    isNot?: CpDisputeWhereInput
+  }
+
+  export type CpDisputeEvidenceCountOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    uploadedByType?: SortOrder
+    uploadedById?: SortOrder
+    evidenceType?: SortOrder
+    description?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpDisputeEvidenceMaxOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    uploadedByType?: SortOrder
+    uploadedById?: SortOrder
+    evidenceType?: SortOrder
+    description?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpDisputeEvidenceMinOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    uploadedByType?: SortOrder
+    uploadedById?: SortOrder
+    evidenceType?: SortOrder
+    description?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpDisputeTimelineCountOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    actionType?: SortOrder
+    message?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpDisputeTimelineMaxOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    actionType?: SortOrder
+    message?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpDisputeTimelineMinOrderByAggregateInput = {
+    id?: SortOrder
+    disputeId?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    actionType?: SortOrder
+    message?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpEvidenceRecordCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    evidenceType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    sourceEntityType?: SortOrder
+    sourceEntityId?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpEvidenceRecordAvgOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpEvidenceRecordMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    evidenceType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    sourceEntityType?: SortOrder
+    sourceEntityId?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpEvidenceRecordMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    actorType?: SortOrder
+    actorId?: SortOrder
+    evidenceType?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    sourceEntityType?: SortOrder
+    sourceEntityId?: SortOrder
+    amountMinorUnits?: SortOrder
+    currency?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    integrityHash?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CpEvidenceRecordSumOrderByAggregateInput = {
+    amountMinorUnits?: SortOrder
+  }
+
+  export type CpIssuedDocumentCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    documentNumber?: SortOrder
+    documentType?: SortOrder
+    status?: SortOrder
+    issuerType?: SortOrder
+    issuerId?: SortOrder
+    recipientType?: SortOrder
+    recipientId?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    supersededById?: SortOrder
+    version?: SortOrder
+    fingerprint?: SortOrder
+    signatureVersion?: SortOrder
+    signedAt?: SortOrder
+    signedBySystem?: SortOrder
+    verificationReference?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    canonicalPayload?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpIssuedDocumentAvgOrderByAggregateInput = {
+    version?: SortOrder
+  }
+
+  export type CpIssuedDocumentMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    documentNumber?: SortOrder
+    documentType?: SortOrder
+    status?: SortOrder
+    issuerType?: SortOrder
+    issuerId?: SortOrder
+    recipientType?: SortOrder
+    recipientId?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    supersededById?: SortOrder
+    version?: SortOrder
+    fingerprint?: SortOrder
+    signatureVersion?: SortOrder
+    signedAt?: SortOrder
+    signedBySystem?: SortOrder
+    verificationReference?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpIssuedDocumentMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    documentNumber?: SortOrder
+    documentType?: SortOrder
+    status?: SortOrder
+    issuerType?: SortOrder
+    issuerId?: SortOrder
+    recipientType?: SortOrder
+    recipientId?: SortOrder
+    relatedEntityType?: SortOrder
+    relatedEntityId?: SortOrder
+    supersededById?: SortOrder
+    version?: SortOrder
+    fingerprint?: SortOrder
+    signatureVersion?: SortOrder
+    signedAt?: SortOrder
+    signedBySystem?: SortOrder
+    verificationReference?: SortOrder
+    fileName?: SortOrder
+    contentType?: SortOrder
+    storageKey?: SortOrder
+    fileUrl?: SortOrder
+    fileHash?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpIssuedDocumentSumOrderByAggregateInput = {
+    version?: SortOrder
+  }
+
   export type CpFeatureFlagOverrideListRelationFilter = {
     every?: CpFeatureFlagOverrideWhereInput
     some?: CpFeatureFlagOverrideWhereInput
@@ -20008,6 +27907,126 @@ export namespace Prisma {
     update?: XOR<XOR<CpPlatformWalletUpdateToOneWithWhereWithoutEntriesInput, CpPlatformWalletUpdateWithoutEntriesInput>, CpPlatformWalletUncheckedUpdateWithoutEntriesInput>
   }
 
+  export type CpDisputeTimelineCreateNestedManyWithoutDisputeInput = {
+    create?: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput> | CpDisputeTimelineCreateWithoutDisputeInput[] | CpDisputeTimelineUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeTimelineCreateOrConnectWithoutDisputeInput | CpDisputeTimelineCreateOrConnectWithoutDisputeInput[]
+    createMany?: CpDisputeTimelineCreateManyDisputeInputEnvelope
+    connect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+  }
+
+  export type CpDisputeEvidenceCreateNestedManyWithoutDisputeInput = {
+    create?: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput> | CpDisputeEvidenceCreateWithoutDisputeInput[] | CpDisputeEvidenceUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeEvidenceCreateOrConnectWithoutDisputeInput | CpDisputeEvidenceCreateOrConnectWithoutDisputeInput[]
+    createMany?: CpDisputeEvidenceCreateManyDisputeInputEnvelope
+    connect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+  }
+
+  export type CpDisputeTimelineUncheckedCreateNestedManyWithoutDisputeInput = {
+    create?: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput> | CpDisputeTimelineCreateWithoutDisputeInput[] | CpDisputeTimelineUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeTimelineCreateOrConnectWithoutDisputeInput | CpDisputeTimelineCreateOrConnectWithoutDisputeInput[]
+    createMany?: CpDisputeTimelineCreateManyDisputeInputEnvelope
+    connect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+  }
+
+  export type CpDisputeEvidenceUncheckedCreateNestedManyWithoutDisputeInput = {
+    create?: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput> | CpDisputeEvidenceCreateWithoutDisputeInput[] | CpDisputeEvidenceUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeEvidenceCreateOrConnectWithoutDisputeInput | CpDisputeEvidenceCreateOrConnectWithoutDisputeInput[]
+    createMany?: CpDisputeEvidenceCreateManyDisputeInputEnvelope
+    connect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+  }
+
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type CpDisputeTimelineUpdateManyWithoutDisputeNestedInput = {
+    create?: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput> | CpDisputeTimelineCreateWithoutDisputeInput[] | CpDisputeTimelineUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeTimelineCreateOrConnectWithoutDisputeInput | CpDisputeTimelineCreateOrConnectWithoutDisputeInput[]
+    upsert?: CpDisputeTimelineUpsertWithWhereUniqueWithoutDisputeInput | CpDisputeTimelineUpsertWithWhereUniqueWithoutDisputeInput[]
+    createMany?: CpDisputeTimelineCreateManyDisputeInputEnvelope
+    set?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    disconnect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    delete?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    connect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    update?: CpDisputeTimelineUpdateWithWhereUniqueWithoutDisputeInput | CpDisputeTimelineUpdateWithWhereUniqueWithoutDisputeInput[]
+    updateMany?: CpDisputeTimelineUpdateManyWithWhereWithoutDisputeInput | CpDisputeTimelineUpdateManyWithWhereWithoutDisputeInput[]
+    deleteMany?: CpDisputeTimelineScalarWhereInput | CpDisputeTimelineScalarWhereInput[]
+  }
+
+  export type CpDisputeEvidenceUpdateManyWithoutDisputeNestedInput = {
+    create?: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput> | CpDisputeEvidenceCreateWithoutDisputeInput[] | CpDisputeEvidenceUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeEvidenceCreateOrConnectWithoutDisputeInput | CpDisputeEvidenceCreateOrConnectWithoutDisputeInput[]
+    upsert?: CpDisputeEvidenceUpsertWithWhereUniqueWithoutDisputeInput | CpDisputeEvidenceUpsertWithWhereUniqueWithoutDisputeInput[]
+    createMany?: CpDisputeEvidenceCreateManyDisputeInputEnvelope
+    set?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    disconnect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    delete?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    connect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    update?: CpDisputeEvidenceUpdateWithWhereUniqueWithoutDisputeInput | CpDisputeEvidenceUpdateWithWhereUniqueWithoutDisputeInput[]
+    updateMany?: CpDisputeEvidenceUpdateManyWithWhereWithoutDisputeInput | CpDisputeEvidenceUpdateManyWithWhereWithoutDisputeInput[]
+    deleteMany?: CpDisputeEvidenceScalarWhereInput | CpDisputeEvidenceScalarWhereInput[]
+  }
+
+  export type CpDisputeTimelineUncheckedUpdateManyWithoutDisputeNestedInput = {
+    create?: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput> | CpDisputeTimelineCreateWithoutDisputeInput[] | CpDisputeTimelineUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeTimelineCreateOrConnectWithoutDisputeInput | CpDisputeTimelineCreateOrConnectWithoutDisputeInput[]
+    upsert?: CpDisputeTimelineUpsertWithWhereUniqueWithoutDisputeInput | CpDisputeTimelineUpsertWithWhereUniqueWithoutDisputeInput[]
+    createMany?: CpDisputeTimelineCreateManyDisputeInputEnvelope
+    set?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    disconnect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    delete?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    connect?: CpDisputeTimelineWhereUniqueInput | CpDisputeTimelineWhereUniqueInput[]
+    update?: CpDisputeTimelineUpdateWithWhereUniqueWithoutDisputeInput | CpDisputeTimelineUpdateWithWhereUniqueWithoutDisputeInput[]
+    updateMany?: CpDisputeTimelineUpdateManyWithWhereWithoutDisputeInput | CpDisputeTimelineUpdateManyWithWhereWithoutDisputeInput[]
+    deleteMany?: CpDisputeTimelineScalarWhereInput | CpDisputeTimelineScalarWhereInput[]
+  }
+
+  export type CpDisputeEvidenceUncheckedUpdateManyWithoutDisputeNestedInput = {
+    create?: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput> | CpDisputeEvidenceCreateWithoutDisputeInput[] | CpDisputeEvidenceUncheckedCreateWithoutDisputeInput[]
+    connectOrCreate?: CpDisputeEvidenceCreateOrConnectWithoutDisputeInput | CpDisputeEvidenceCreateOrConnectWithoutDisputeInput[]
+    upsert?: CpDisputeEvidenceUpsertWithWhereUniqueWithoutDisputeInput | CpDisputeEvidenceUpsertWithWhereUniqueWithoutDisputeInput[]
+    createMany?: CpDisputeEvidenceCreateManyDisputeInputEnvelope
+    set?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    disconnect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    delete?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    connect?: CpDisputeEvidenceWhereUniqueInput | CpDisputeEvidenceWhereUniqueInput[]
+    update?: CpDisputeEvidenceUpdateWithWhereUniqueWithoutDisputeInput | CpDisputeEvidenceUpdateWithWhereUniqueWithoutDisputeInput[]
+    updateMany?: CpDisputeEvidenceUpdateManyWithWhereWithoutDisputeInput | CpDisputeEvidenceUpdateManyWithWhereWithoutDisputeInput[]
+    deleteMany?: CpDisputeEvidenceScalarWhereInput | CpDisputeEvidenceScalarWhereInput[]
+  }
+
+  export type CpDisputeCreateNestedOneWithoutEvidenceInput = {
+    create?: XOR<CpDisputeCreateWithoutEvidenceInput, CpDisputeUncheckedCreateWithoutEvidenceInput>
+    connectOrCreate?: CpDisputeCreateOrConnectWithoutEvidenceInput
+    connect?: CpDisputeWhereUniqueInput
+  }
+
+  export type CpDisputeUpdateOneRequiredWithoutEvidenceNestedInput = {
+    create?: XOR<CpDisputeCreateWithoutEvidenceInput, CpDisputeUncheckedCreateWithoutEvidenceInput>
+    connectOrCreate?: CpDisputeCreateOrConnectWithoutEvidenceInput
+    upsert?: CpDisputeUpsertWithoutEvidenceInput
+    connect?: CpDisputeWhereUniqueInput
+    update?: XOR<XOR<CpDisputeUpdateToOneWithWhereWithoutEvidenceInput, CpDisputeUpdateWithoutEvidenceInput>, CpDisputeUncheckedUpdateWithoutEvidenceInput>
+  }
+
+  export type CpDisputeCreateNestedOneWithoutTimelineInput = {
+    create?: XOR<CpDisputeCreateWithoutTimelineInput, CpDisputeUncheckedCreateWithoutTimelineInput>
+    connectOrCreate?: CpDisputeCreateOrConnectWithoutTimelineInput
+    connect?: CpDisputeWhereUniqueInput
+  }
+
+  export type CpDisputeUpdateOneRequiredWithoutTimelineNestedInput = {
+    create?: XOR<CpDisputeCreateWithoutTimelineInput, CpDisputeUncheckedCreateWithoutTimelineInput>
+    connectOrCreate?: CpDisputeCreateOrConnectWithoutTimelineInput
+    upsert?: CpDisputeUpsertWithoutTimelineInput
+    connect?: CpDisputeWhereUniqueInput
+    update?: XOR<XOR<CpDisputeUpdateToOneWithWhereWithoutTimelineInput, CpDisputeUpdateWithoutTimelineInput>, CpDisputeUncheckedUpdateWithoutTimelineInput>
+  }
+
   export type CpFeatureFlagOverrideCreateNestedManyWithoutFlagInput = {
     create?: XOR<CpFeatureFlagOverrideCreateWithoutFlagInput, CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput> | CpFeatureFlagOverrideCreateWithoutFlagInput[] | CpFeatureFlagOverrideUncheckedCreateWithoutFlagInput[]
     connectOrCreate?: CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput | CpFeatureFlagOverrideCreateOrConnectWithoutFlagInput[]
@@ -20280,6 +28299,33 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
     _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
+  export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type CpSubscriptionCreateWithoutPlanInput = {
@@ -20983,6 +29029,414 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CpDisputeTimelineCreateWithoutDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeTimelineUncheckedCreateWithoutDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeTimelineCreateOrConnectWithoutDisputeInput = {
+    where: CpDisputeTimelineWhereUniqueInput
+    create: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput>
+  }
+
+  export type CpDisputeTimelineCreateManyDisputeInputEnvelope = {
+    data: CpDisputeTimelineCreateManyDisputeInput | CpDisputeTimelineCreateManyDisputeInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpDisputeEvidenceCreateWithoutDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeEvidenceUncheckedCreateWithoutDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeEvidenceCreateOrConnectWithoutDisputeInput = {
+    where: CpDisputeEvidenceWhereUniqueInput
+    create: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput>
+  }
+
+  export type CpDisputeEvidenceCreateManyDisputeInputEnvelope = {
+    data: CpDisputeEvidenceCreateManyDisputeInput | CpDisputeEvidenceCreateManyDisputeInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CpDisputeTimelineUpsertWithWhereUniqueWithoutDisputeInput = {
+    where: CpDisputeTimelineWhereUniqueInput
+    update: XOR<CpDisputeTimelineUpdateWithoutDisputeInput, CpDisputeTimelineUncheckedUpdateWithoutDisputeInput>
+    create: XOR<CpDisputeTimelineCreateWithoutDisputeInput, CpDisputeTimelineUncheckedCreateWithoutDisputeInput>
+  }
+
+  export type CpDisputeTimelineUpdateWithWhereUniqueWithoutDisputeInput = {
+    where: CpDisputeTimelineWhereUniqueInput
+    data: XOR<CpDisputeTimelineUpdateWithoutDisputeInput, CpDisputeTimelineUncheckedUpdateWithoutDisputeInput>
+  }
+
+  export type CpDisputeTimelineUpdateManyWithWhereWithoutDisputeInput = {
+    where: CpDisputeTimelineScalarWhereInput
+    data: XOR<CpDisputeTimelineUpdateManyMutationInput, CpDisputeTimelineUncheckedUpdateManyWithoutDisputeInput>
+  }
+
+  export type CpDisputeTimelineScalarWhereInput = {
+    AND?: CpDisputeTimelineScalarWhereInput | CpDisputeTimelineScalarWhereInput[]
+    OR?: CpDisputeTimelineScalarWhereInput[]
+    NOT?: CpDisputeTimelineScalarWhereInput | CpDisputeTimelineScalarWhereInput[]
+    id?: StringFilter<"CpDisputeTimeline"> | string
+    disputeId?: StringFilter<"CpDisputeTimeline"> | string
+    tenantId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actorType?: StringFilter<"CpDisputeTimeline"> | string
+    actorId?: StringNullableFilter<"CpDisputeTimeline"> | string | null
+    actionType?: StringFilter<"CpDisputeTimeline"> | string
+    message?: StringFilter<"CpDisputeTimeline"> | string
+    metadata?: JsonNullableFilter<"CpDisputeTimeline">
+    createdAt?: DateTimeFilter<"CpDisputeTimeline"> | Date | string
+  }
+
+  export type CpDisputeEvidenceUpsertWithWhereUniqueWithoutDisputeInput = {
+    where: CpDisputeEvidenceWhereUniqueInput
+    update: XOR<CpDisputeEvidenceUpdateWithoutDisputeInput, CpDisputeEvidenceUncheckedUpdateWithoutDisputeInput>
+    create: XOR<CpDisputeEvidenceCreateWithoutDisputeInput, CpDisputeEvidenceUncheckedCreateWithoutDisputeInput>
+  }
+
+  export type CpDisputeEvidenceUpdateWithWhereUniqueWithoutDisputeInput = {
+    where: CpDisputeEvidenceWhereUniqueInput
+    data: XOR<CpDisputeEvidenceUpdateWithoutDisputeInput, CpDisputeEvidenceUncheckedUpdateWithoutDisputeInput>
+  }
+
+  export type CpDisputeEvidenceUpdateManyWithWhereWithoutDisputeInput = {
+    where: CpDisputeEvidenceScalarWhereInput
+    data: XOR<CpDisputeEvidenceUpdateManyMutationInput, CpDisputeEvidenceUncheckedUpdateManyWithoutDisputeInput>
+  }
+
+  export type CpDisputeEvidenceScalarWhereInput = {
+    AND?: CpDisputeEvidenceScalarWhereInput | CpDisputeEvidenceScalarWhereInput[]
+    OR?: CpDisputeEvidenceScalarWhereInput[]
+    NOT?: CpDisputeEvidenceScalarWhereInput | CpDisputeEvidenceScalarWhereInput[]
+    id?: StringFilter<"CpDisputeEvidence"> | string
+    disputeId?: StringFilter<"CpDisputeEvidence"> | string
+    tenantId?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    uploadedByType?: StringFilter<"CpDisputeEvidence"> | string
+    uploadedById?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    evidenceType?: StringFilter<"CpDisputeEvidence"> | string
+    description?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileName?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    contentType?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    storageKey?: StringNullableFilter<"CpDisputeEvidence"> | string | null
+    fileUrl?: StringFilter<"CpDisputeEvidence"> | string
+    fileHash?: StringFilter<"CpDisputeEvidence"> | string
+    integrityHash?: StringFilter<"CpDisputeEvidence"> | string
+    metadata?: JsonNullableFilter<"CpDisputeEvidence">
+    createdAt?: DateTimeFilter<"CpDisputeEvidence"> | Date | string
+  }
+
+  export type CpDisputeCreateWithoutEvidenceInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    timeline?: CpDisputeTimelineCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeUncheckedCreateWithoutEvidenceInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    timeline?: CpDisputeTimelineUncheckedCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeCreateOrConnectWithoutEvidenceInput = {
+    where: CpDisputeWhereUniqueInput
+    create: XOR<CpDisputeCreateWithoutEvidenceInput, CpDisputeUncheckedCreateWithoutEvidenceInput>
+  }
+
+  export type CpDisputeUpsertWithoutEvidenceInput = {
+    update: XOR<CpDisputeUpdateWithoutEvidenceInput, CpDisputeUncheckedUpdateWithoutEvidenceInput>
+    create: XOR<CpDisputeCreateWithoutEvidenceInput, CpDisputeUncheckedCreateWithoutEvidenceInput>
+    where?: CpDisputeWhereInput
+  }
+
+  export type CpDisputeUpdateToOneWithWhereWithoutEvidenceInput = {
+    where?: CpDisputeWhereInput
+    data: XOR<CpDisputeUpdateWithoutEvidenceInput, CpDisputeUncheckedUpdateWithoutEvidenceInput>
+  }
+
+  export type CpDisputeUpdateWithoutEvidenceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    timeline?: CpDisputeTimelineUpdateManyWithoutDisputeNestedInput
+  }
+
+  export type CpDisputeUncheckedUpdateWithoutEvidenceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    timeline?: CpDisputeTimelineUncheckedUpdateManyWithoutDisputeNestedInput
+  }
+
+  export type CpDisputeCreateWithoutTimelineInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    evidence?: CpDisputeEvidenceCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeUncheckedCreateWithoutTimelineInput = {
+    id?: string
+    disputeCode: string
+    tenantId?: string | null
+    disputeType: string
+    relatedEntityType: string
+    relatedEntityId: string
+    claimantType: string
+    claimantId: string
+    respondentType: string
+    respondentId?: string | null
+    title: string
+    reasonCode: string
+    narrative: string
+    status?: string
+    priority?: string
+    assignedTo?: string | null
+    resolvedAt?: Date | string | null
+    resolvedByType?: string | null
+    resolvedById?: string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: number | null
+    currency?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    evidence?: CpDisputeEvidenceUncheckedCreateNestedManyWithoutDisputeInput
+  }
+
+  export type CpDisputeCreateOrConnectWithoutTimelineInput = {
+    where: CpDisputeWhereUniqueInput
+    create: XOR<CpDisputeCreateWithoutTimelineInput, CpDisputeUncheckedCreateWithoutTimelineInput>
+  }
+
+  export type CpDisputeUpsertWithoutTimelineInput = {
+    update: XOR<CpDisputeUpdateWithoutTimelineInput, CpDisputeUncheckedUpdateWithoutTimelineInput>
+    create: XOR<CpDisputeCreateWithoutTimelineInput, CpDisputeUncheckedCreateWithoutTimelineInput>
+    where?: CpDisputeWhereInput
+  }
+
+  export type CpDisputeUpdateToOneWithWhereWithoutTimelineInput = {
+    where?: CpDisputeWhereInput
+    data: XOR<CpDisputeUpdateWithoutTimelineInput, CpDisputeUncheckedUpdateWithoutTimelineInput>
+  }
+
+  export type CpDisputeUpdateWithoutTimelineInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    evidence?: CpDisputeEvidenceUpdateManyWithoutDisputeNestedInput
+  }
+
+  export type CpDisputeUncheckedUpdateWithoutTimelineInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    disputeCode?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    disputeType?: StringFieldUpdateOperationsInput | string
+    relatedEntityType?: StringFieldUpdateOperationsInput | string
+    relatedEntityId?: StringFieldUpdateOperationsInput | string
+    claimantType?: StringFieldUpdateOperationsInput | string
+    claimantId?: StringFieldUpdateOperationsInput | string
+    respondentType?: StringFieldUpdateOperationsInput | string
+    respondentId?: NullableStringFieldUpdateOperationsInput | string | null
+    title?: StringFieldUpdateOperationsInput | string
+    reasonCode?: StringFieldUpdateOperationsInput | string
+    narrative?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    priority?: StringFieldUpdateOperationsInput | string
+    assignedTo?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByType?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionSummary?: NullableJsonNullValueInput | InputJsonValue
+    finalAmountMinorUnits?: NullableIntFieldUpdateOperationsInput | number | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    evidence?: CpDisputeEvidenceUncheckedUpdateManyWithoutDisputeNestedInput
+  }
+
   export type CpFeatureFlagOverrideCreateWithoutFlagInput = {
     id?: string
     tenantId?: string | null
@@ -21372,6 +29826,118 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CpDisputeTimelineCreateManyDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    actorType: string
+    actorId?: string | null
+    actionType: string
+    message: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeEvidenceCreateManyDisputeInput = {
+    id?: string
+    tenantId?: string | null
+    uploadedByType: string
+    uploadedById?: string | null
+    evidenceType: string
+    description?: string | null
+    fileName?: string | null
+    contentType?: string | null
+    storageKey?: string | null
+    fileUrl: string
+    fileHash: string
+    integrityHash: string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CpDisputeTimelineUpdateWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeTimelineUncheckedUpdateWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeTimelineUncheckedUpdateManyWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    actorType?: StringFieldUpdateOperationsInput | string
+    actorId?: NullableStringFieldUpdateOperationsInput | string | null
+    actionType?: StringFieldUpdateOperationsInput | string
+    message?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceUpdateWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceUncheckedUpdateWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpDisputeEvidenceUncheckedUpdateManyWithoutDisputeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    uploadedByType?: StringFieldUpdateOperationsInput | string
+    uploadedById?: NullableStringFieldUpdateOperationsInput | string | null
+    evidenceType?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    fileName?: NullableStringFieldUpdateOperationsInput | string | null
+    contentType?: NullableStringFieldUpdateOperationsInput | string | null
+    storageKey?: NullableStringFieldUpdateOperationsInput | string | null
+    fileUrl?: StringFieldUpdateOperationsInput | string
+    fileHash?: StringFieldUpdateOperationsInput | string
+    integrityHash?: StringFieldUpdateOperationsInput | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type CpFeatureFlagOverrideCreateManyFlagInput = {
     id?: string
     tenantId?: string | null
@@ -21438,6 +30004,10 @@ export namespace Prisma {
      */
     export type CpPlatformWalletCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPlatformWalletCountOutputTypeDefaultArgs<ExtArgs>
     /**
+     * @deprecated Use CpDisputeCountOutputTypeDefaultArgs instead
+     */
+    export type CpDisputeCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpDisputeCountOutputTypeDefaultArgs<ExtArgs>
+    /**
      * @deprecated Use CpFeatureFlagCountOutputTypeDefaultArgs instead
      */
     export type CpFeatureFlagCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpFeatureFlagCountOutputTypeDefaultArgs<ExtArgs>
@@ -21477,6 +30047,26 @@ export namespace Prisma {
      * @deprecated Use CpPaymentAttemptDefaultArgs instead
      */
     export type CpPaymentAttemptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpPaymentAttemptDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpDisputeDefaultArgs instead
+     */
+    export type CpDisputeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpDisputeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpDisputeEvidenceDefaultArgs instead
+     */
+    export type CpDisputeEvidenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpDisputeEvidenceDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpDisputeTimelineDefaultArgs instead
+     */
+    export type CpDisputeTimelineArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpDisputeTimelineDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpEvidenceRecordDefaultArgs instead
+     */
+    export type CpEvidenceRecordArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpEvidenceRecordDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpIssuedDocumentDefaultArgs instead
+     */
+    export type CpIssuedDocumentArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpIssuedDocumentDefaultArgs<ExtArgs>
     /**
      * @deprecated Use CpFeatureFlagDefaultArgs instead
      */

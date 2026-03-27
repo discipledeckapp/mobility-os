@@ -73,9 +73,14 @@ export async function updateOrganisationSettingsAction(
   const driverPaysKyc = formData.get('driverPaysKyc') === 'true';
   const requireGuarantor = formData.get('requireGuarantor') === 'on';
   const requireGuarantorVerification = formData.get('requireGuarantorVerification') === 'on';
-  const requiredDriverDocumentSlugs = String(formData.get('requiredDriverDocumentSlugs') ?? '')
-    .split(',')
+  const customDriverDocumentTypes = String(formData.get('customDriverDocumentTypes') ?? '')
+    .split(/[\n,]/)
     .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => value.toLowerCase());
+  const requiredDriverDocumentSlugs = formData
+    .getAll('requiredDriverDocumentSlugs')
+    .map((value) => String(value).trim().toLowerCase())
     .filter(Boolean);
   const requiredVehicleDocumentSlugs = String(formData.get('requiredVehicleDocumentSlugs') ?? '')
     .split(',')
@@ -97,8 +102,12 @@ export async function updateOrganisationSettingsAction(
       driverPaysKyc,
       requireGuarantor,
       requireGuarantorVerification,
-      ...(requiredDriverDocumentSlugs.length > 0 ? { requiredDriverDocumentSlugs } : {}),
+      customDriverDocumentTypes,
+      requiredDriverDocumentSlugs: Array.from(
+        new Set([...requiredDriverDocumentSlugs, ...customDriverDocumentTypes]),
+      ),
       ...(requiredVehicleDocumentSlugs.length > 0 ? { requiredVehicleDocumentSlugs } : {}),
+      allowAdminAssignmentOverride: formData.get('allowAdminAssignmentOverride') === 'on',
     });
     revalidatePath('/settings');
     revalidatePath('/');

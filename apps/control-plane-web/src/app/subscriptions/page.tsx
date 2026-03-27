@@ -17,7 +17,11 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
-import { listInvoices, listSubscriptions } from '../../lib/api-control-plane';
+import {
+  getPlatformApiToken,
+  listInvoices,
+  listSubscriptions,
+} from '../../lib/api-control-plane';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -36,7 +40,11 @@ type SubscriptionsPageProps = {
 
 export default async function SubscriptionsPage({ searchParams }: SubscriptionsPageProps) {
   const params = (await searchParams) ?? {};
-  const [subscriptions, invoices] = await Promise.all([listSubscriptions(), listInvoices()]);
+  const token = await getPlatformApiToken().catch(() => undefined);
+  const [subscriptions, invoices] = await Promise.all([
+    listSubscriptions(token),
+    listInvoices(token),
+  ]);
   const planFilter = params.plan?.trim().toLowerCase() ?? '';
   const statusFilter = params.status?.trim().toLowerCase() ?? '';
   const filteredSubscriptions = subscriptions.filter((subscription) => {

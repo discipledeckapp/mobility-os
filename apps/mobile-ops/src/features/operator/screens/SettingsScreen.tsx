@@ -79,7 +79,7 @@ export function SettingsScreen() {
     session?.requireGovernmentVerificationLookup ?? true,
   );
   const [requiredDriverDocuments, setRequiredDriverDocuments] = useState(
-    (session?.requiredDriverDocumentSlugs ?? ['national-id', 'drivers-license']).join(', '),
+    (session?.requiredDriverDocumentSlugs ?? []).join(', '),
   );
   const [requiredVehicleDocuments, setRequiredVehicleDocuments] = useState(
     (session?.requiredVehicleDocumentSlugs ?? ['vehicle-license', 'insurance']).join(', '),

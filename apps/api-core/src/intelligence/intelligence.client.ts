@@ -103,6 +103,38 @@ interface PersonRolePresence {
 export class IntelligenceClient {
   constructor(private readonly configService: ConfigService) {}
 
+  private async parseJsonSafely<T>(response: Response): Promise<T | null> {
+    const text = await response.text().catch(() => '');
+    if (!text.trim()) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  private toServiceUnavailableMessage(
+    status: number,
+    payload: { message?: string | string[]; error?: string } | null,
+  ): string {
+    const message = Array.isArray(payload?.message)
+      ? payload.message.join(', ')
+      : payload?.message ?? payload?.error ?? null;
+
+    if (status >= 500) {
+      return 'Identity verification is temporarily unavailable. Please try again.';
+    }
+
+    if (message) {
+      return message;
+    }
+
+    return `Intelligence service returned status ${status}`;
+  }
+
   async initializeLivenessSession(input: InitLivenessSessionInput): Promise<LivenessSessionResult> {
     return this.post<LivenessSessionResult>('/api/v1/internal/matching/liveness-sessions', input);
   }
@@ -172,13 +204,23 @@ export class IntelligenceClient {
       );
     }
 
+    const payload = await this.parseJsonSafely<T & { message?: string | string[]; error?: string }>(
+      response,
+    );
+
     if (!response.ok) {
       throw new ServiceUnavailableException(
-        `Intelligence service returned status ${response.status}`,
+        this.toServiceUnavailableMessage(response.status, payload),
       );
     }
 
-    return (await response.json()) as T;
+    if (!payload) {
+      throw new ServiceUnavailableException(
+        'Identity verification is temporarily unavailable. Please try again.',
+      );
+    }
+
+    return payload as T;
   }
 
   private async post<T>(path: string, body: object): Promise<T> {
@@ -208,12 +250,22 @@ export class IntelligenceClient {
       );
     }
 
+    const payload = await this.parseJsonSafely<T & { message?: string | string[]; error?: string }>(
+      response,
+    );
+
     if (!response.ok) {
       throw new ServiceUnavailableException(
-        `Intelligence service returned status ${response.status}`,
+        this.toServiceUnavailableMessage(response.status, payload),
       );
     }
 
-    return (await response.json()) as T;
+    if (!payload) {
+      throw new ServiceUnavailableException(
+        'Identity verification is temporarily unavailable. Please try again.',
+      );
+    }
+
+    return payload as T;
   }
 }

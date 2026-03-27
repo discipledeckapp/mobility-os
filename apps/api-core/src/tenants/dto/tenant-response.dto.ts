@@ -50,6 +50,9 @@ export class TenantResponseDto {
   requiredDriverIdentifierTypes?: string[];
 
   @ApiPropertyOptional({ type: [String] })
+  customDriverDocumentTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
   requiredDriverDocumentSlugs?: string[];
 
   @ApiPropertyOptional({ type: [String] })

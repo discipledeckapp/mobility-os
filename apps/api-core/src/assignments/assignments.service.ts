@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import {
   ASSIGNMENT_STATUS_CODES,
+  LEGAL_DOCUMENT_VERSIONS,
   getCountryConfig,
   isCountrySupported,
   normalizeRemittanceFrequency,
@@ -7,18 +9,27 @@ import {
 } from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Assignment, Prisma } from '@prisma/client';
+import { Prisma, type Assignment } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv, parseCsv } from '../common/csv-utils';
+import { AuditService } from '../audit/audit.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
 import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
+import { PolicyService } from '../policy/policy.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
 import type { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
 
-const OPEN_ASSIGNMENT_STATUSES = ['created', 'assigned', 'active'] as const;
+const OPEN_ASSIGNMENT_STATUSES = ['created', 'pending_driver_confirmation', 'active'] as const;
+const PLATFORM_ISSUER = {
+  productName: 'Mobiris',
+  legalName: 'Growth Figures Limited',
+  jurisdiction: 'Nigeria',
+  website: 'growthfigures.com',
+} as const;
+
 type AssignmentResourceInput = {
   driverId: string;
   vehicleId: string;
@@ -31,6 +42,8 @@ export class AssignmentsService {
     private readonly prisma: PrismaService,
     private readonly driversService: DriversService,
     private readonly vehicleRiskService: VehicleRiskService,
+    private readonly policyService: PolicyService,
+    private readonly auditService: AuditService,
   ) {}
 
   private async resolveTenantCurrency(tenantId: string): Promise<string> {
@@ -100,6 +113,72 @@ export class AssignmentsService {
       remittanceCollectionDay:
         remittanceFrequency === 'weekly' ? input.remittanceCollectionDay ?? null : null,
     };
+  }
+
+  private buildContractSnapshot(input: {
+    remittanceModel: string;
+    remittanceFrequency: string;
+    remittanceAmountMinorUnits: number;
+    remittanceCurrency: string;
+    remittanceStartDate: string;
+    remittanceCollectionDay?: number | null;
+  }) {
+    const schedule =
+      input.remittanceFrequency === 'weekly' && input.remittanceCollectionDay
+        ? `weekly on collection day ${input.remittanceCollectionDay}`
+        : input.remittanceFrequency;
+    return {
+      paymentStructure:
+        input.remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'fixed_remittance',
+      expectedRemittanceTerms: `${input.remittanceAmountMinorUnits} ${input.remittanceCurrency} ${schedule} starting ${input.remittanceStartDate}`,
+      platformIssuer: {
+        productName: PLATFORM_ISSUER.productName,
+        legalName: PLATFORM_ISSUER.legalName,
+        jurisdiction: PLATFORM_ISSUER.jurisdiction,
+        website: PLATFORM_ISSUER.website,
+      },
+      obligations: [
+        'Submit remittance using the agreed schedule or record an exception with evidence.',
+        'Return the vehicle promptly when the shift closes or the operator requests recovery.',
+        'Report incidents, partial-day returns, and disputes with transparent notes.',
+      ],
+      generatedAt: new Date().toISOString(),
+    } satisfies Prisma.InputJsonValue;
+  }
+
+  private buildAcceptanceSnapshotHash(input: {
+    assignmentId: string;
+    driverId: string;
+    vehicleId: string;
+    contractVersion?: string | null;
+    contractSnapshot?: Prisma.JsonValue;
+  }) {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          assignmentId: input.assignmentId,
+          driverId: input.driverId,
+          vehicleId: input.vehicleId,
+          contractVersion: input.contractVersion ?? null,
+          contractSnapshot: input.contractSnapshot ?? null,
+        }),
+      )
+      .digest('hex');
+  }
+
+  private async recordAssignmentAudit(
+    tenantId: string,
+    assignmentId: string,
+    action: string,
+    metadata?: Prisma.InputJsonValue,
+  ) {
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'assignment',
+      entityId: assignmentId,
+      action,
+      ...(metadata !== undefined ? { metadata } : {}),
+    });
   }
 
   async list(
@@ -205,6 +284,14 @@ export class AssignmentsService {
       );
     }
 
+    try {
+      await this.policyService.assertAssignmentEligible(tenantId, driver.id);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'This driver is currently restricted by policy.',
+      );
+    }
+
     const fleet = await this.prisma.fleet.findUnique({
       where: { id: driver.fleetId },
       include: {
@@ -297,6 +384,7 @@ export class AssignmentsService {
     const { driver } = await this.loadAssignmentResources(tenantId, dto, ['available']);
     await this.ensureNoOverlappingAssignments(dto);
     const remittancePlan = this.normalizeRemittancePlan(tenantCurrency, dto);
+    const contractSnapshot = this.buildContractSnapshot(remittancePlan);
 
     const [assignment] = await this.prisma.$transaction([
       this.prisma.assignment.create({
@@ -307,9 +395,12 @@ export class AssignmentsService {
           businessEntityId: driver.businessEntityId,
           driverId: dto.driverId,
           vehicleId: dto.vehicleId,
-          status: 'assigned',
+          status: 'pending_driver_confirmation',
           notes: dto.notes ?? null,
           ...remittancePlan,
+          contractVersion: LEGAL_DOCUMENT_VERSIONS.terms,
+          contractSnapshot,
+          contractStatus: 'pending_acceptance',
         },
       }),
       this.prisma.vehicle.update({
@@ -317,6 +408,13 @@ export class AssignmentsService {
         data: { status: 'assigned' },
       }),
     ]);
+
+    await this.recordAssignmentAudit(tenantId, assignment.id, 'assignment_created', {
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      status: assignment.status,
+      contractVersion: assignment.contractVersion,
+    });
 
     return assignment;
   }
@@ -341,14 +439,120 @@ export class AssignmentsService {
 
     return this.prisma.assignment.update({
       where: { id },
-      data: nextPlan,
+      data: {
+        ...nextPlan,
+        contractSnapshot: this.buildContractSnapshot(nextPlan),
+      },
     });
+  }
+
+  async acceptDriverTerms(
+    tenantId: string,
+    id: string,
+    input: {
+      acceptedFrom: string;
+      note?: string;
+      confirmationMethod?: string;
+      deviceInfo?: Record<string, unknown>;
+      signatureHash?: string;
+    },
+  ): Promise<Assignment> {
+    const assignment = await this.findOne(tenantId, id);
+    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
+      throw new BadRequestException(
+        `Assignment '${id}' cannot be accepted from status '${assignment.status}'.`,
+      );
+    }
+
+    const acceptedAt = new Date();
+    const acceptanceSnapshotHash = this.buildAcceptanceSnapshotHash({
+      assignmentId: assignment.id,
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      contractVersion: assignment.contractVersion,
+      ...(assignment.contractSnapshot ? { contractSnapshot: assignment.contractSnapshot } : {}),
+    });
+    const acceptanceEvidence = {
+      acceptedFrom: input.acceptedFrom,
+      acceptedAt: acceptedAt.toISOString(),
+      confirmationMethod: input.confirmationMethod ?? input.acceptedFrom,
+      ...(input.note ? { note: input.note } : {}),
+    } satisfies Prisma.InputJsonValue;
+    const confirmationEvidence = {
+      timestamp: acceptedAt.toISOString(),
+      acceptedFrom: input.acceptedFrom,
+      confirmationMethod: input.confirmationMethod ?? input.acceptedFrom,
+      assignmentSnapshotHash: acceptanceSnapshotHash,
+      ...(input.deviceInfo ? { deviceInfo: input.deviceInfo as Prisma.InputJsonValue } : {}),
+      ...(input.signatureHash ? { signatureHash: input.signatureHash } : {}),
+    } satisfies Prisma.InputJsonValue;
+
+    const updated = await this.prisma.assignment.update({
+      where: { id },
+      data: {
+        status: 'active',
+        startedAt: acceptedAt,
+        contractStatus: 'accepted',
+        driverAcceptedTermsAt: acceptedAt,
+        driverConfirmedAt: acceptedAt,
+        driverConfirmationMethod: input.confirmationMethod ?? input.acceptedFrom,
+        acceptanceSnapshotHash,
+        driverAcceptanceEvidence: acceptanceEvidence,
+        driverConfirmationEvidence: confirmationEvidence,
+      },
+    });
+    await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_accepted', {
+      acceptedAt: acceptedAt.toISOString(),
+      confirmationMethod: updated.driverConfirmationMethod,
+      assignmentSnapshotHash: acceptanceSnapshotHash,
+    });
+    await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_activated', {
+      activatedAt: acceptedAt.toISOString(),
+    });
+    return updated;
+  }
+
+  async decline(
+    tenantId: string,
+    id: string,
+    input: { declinedFrom: string; note?: string },
+  ): Promise<Assignment> {
+    const assignment = await this.findOne(tenantId, id);
+    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
+      throw new BadRequestException(
+        `Assignment '${id}' cannot be declined from status '${assignment.status}'.`,
+      );
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.assignment.update({
+        where: { id },
+        data: {
+          status: 'declined',
+          endedAt: new Date(),
+          notes: input.note ?? assignment.notes,
+        },
+      }),
+      this.prisma.vehicle.update({
+        where: { id: assignment.vehicleId },
+        data: { status: 'available' },
+      }),
+    ]);
+    await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_declined', {
+      declinedFrom: input.declinedFrom,
+      ...(input.note ? { note: input.note } : {}),
+    });
+    return updated as Assignment;
   }
 
   async start(tenantId: string, id: string): Promise<Assignment> {
     const assignment = await this.findOne(tenantId, id);
 
-    if (!['created', 'assigned'].includes(assignment.status)) {
+    if (assignment.status === 'active') {
+      return assignment;
+    }
+
+    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be started from status '${assignment.status}'`,
       );
@@ -358,6 +562,12 @@ export class AssignmentsService {
       driverId: assignment.driverId,
       vehicleId: assignment.vehicleId,
     };
+
+    if (assignment.contractStatus !== 'accepted' || !assignment.driverConfirmedAt) {
+      throw new BadRequestException(
+        'The driver must accept the assignment terms before the assignment can start.',
+      );
+    }
 
     const { vehicle } = await this.loadAssignmentResources(
       tenantId,
@@ -373,7 +583,7 @@ export class AssignmentsService {
         where: { id },
         data: {
           status: 'active',
-          startedAt: new Date(),
+          startedAt: assignment.driverConfirmedAt,
         },
       }),
     ];
@@ -388,14 +598,23 @@ export class AssignmentsService {
     }
 
     const [updated] = await this.prisma.$transaction(operations);
+    await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_activated', {
+      source: 'start_endpoint',
+      activatedAt: assignment.driverConfirmedAt.toISOString(),
+    });
     return updated as Assignment;
   }
 
   async end(
     tenantId: string,
     id: string,
-    resolution: 'completed' | 'cancelled',
-    notes?: string,
+    resolution: 'ended' | 'cancelled',
+    input?: {
+      notes?: string;
+      returnedBy?: string;
+      returnEvidence?: Record<string, unknown>;
+      closeCurrentRemittanceAs?: 'partially_settled' | 'cancelled_due_to_assignment_end';
+    },
   ): Promise<Assignment> {
     const assignment = await this.findOne(tenantId, id);
 
@@ -407,23 +626,83 @@ export class AssignmentsService {
       );
     }
 
-    if (resolution === 'completed' && assignment.status !== 'active') {
-      throw new BadRequestException(`Assignment '${id}' must be active before it can be completed`);
+    if (resolution === 'ended' && assignment.status !== 'active') {
+      throw new BadRequestException(
+        `Assignment '${id}' must be active before the vehicle can be returned`,
+      );
     }
 
-    // End the assignment and free the vehicle atomically.
+    const returnedAt = new Date();
+    const returnIso = toIsoDate(returnedAt);
+    const returnEvidence = input?.returnEvidence
+      ? (input.returnEvidence as Prisma.InputJsonValue)
+      : undefined;
     const [updated] = await this.prisma.$transaction([
       this.prisma.assignment.update({
         where: { id },
-        data: { status: resolution, endedAt: new Date(), notes: notes ?? assignment.notes },
+        data: {
+          status: resolution,
+          endedAt: returnedAt,
+          returnedAt,
+          returnedBy: input?.returnedBy ?? null,
+          ...(returnEvidence ? { returnEvidence } : {}),
+          notes: input?.notes ?? assignment.notes,
+        },
       }),
       this.prisma.vehicle.update({
         where: { id: assignment.vehicleId },
         data: { status: 'available' },
       }),
+      this.prisma.remittance.updateMany({
+        where: {
+          tenantId,
+          assignmentId: assignment.id,
+          status: 'pending',
+          dueDate: { gt: returnIso },
+        },
+        data: { status: 'cancelled_due_to_assignment_end', syncedAt: new Date() },
+      }),
+      ...(input?.closeCurrentRemittanceAs
+        ? [
+            this.prisma.remittance.updateMany({
+              where: {
+                tenantId,
+                assignmentId: assignment.id,
+                status: 'pending',
+                dueDate: returnIso,
+              },
+              data: { status: input.closeCurrentRemittanceAs, syncedAt: new Date() },
+            }),
+          ]
+        : []),
     ]);
 
-    return updated;
+    await this.recordAssignmentAudit(
+      tenantId,
+      (updated as Assignment).id,
+      'vehicle_returned',
+      {
+        returnedAt: returnedAt.toISOString(),
+        ...(input?.returnedBy ? { returnedBy: input.returnedBy } : {}),
+        ...(returnEvidence ? { returnEvidence } : {}),
+      } satisfies Prisma.InputJsonValue,
+    );
+    await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_ended', {
+      status: resolution,
+      returnedAt: returnedAt.toISOString(),
+    });
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'remittance',
+      entityId: assignment.id,
+      action: 'remittance_stopped',
+      metadata: {
+        assignmentId: assignment.id,
+        stoppedAt: returnedAt.toISOString(),
+        reason: resolution,
+      },
+    });
+    return updated as Assignment;
   }
 
   async importAssignmentsFromCsv(

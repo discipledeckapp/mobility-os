@@ -53,4 +53,38 @@ export class RecordRemittanceDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Client-generated idempotency key used for offline replay dedupe.' })
+  @IsOptional()
+  @IsString()
+  clientReferenceId?: string;
+
+  @ApiPropertyOptional({ description: 'Submission source: online | offline_queue' })
+  @IsOptional()
+  @IsString()
+  submissionSource?: string;
+
+  @ApiPropertyOptional({ description: 'Sync state: offline_submitted | synced' })
+  @IsOptional()
+  @IsString()
+  syncStatus?: string;
+
+  @ApiPropertyOptional({ description: 'Original client capture timestamp in ISO-8601 format.' })
+  @IsOptional()
+  @IsString()
+  originalCapturedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Structured evidence payload captured with the remittance.' })
+  @IsOptional()
+  evidence?: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  shiftCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  checkpointLabel?: string;
 }

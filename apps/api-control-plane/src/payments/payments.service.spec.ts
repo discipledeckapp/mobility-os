@@ -18,6 +18,9 @@ describe('PaymentsService', () => {
     hasEntryForReference: jest.fn(),
     createEntry: jest.fn(),
   };
+  const recordsService = {
+    issueDocument: jest.fn(),
+  };
   const tenantLifecycleService = {
     markPaymentRecovered: jest.fn(),
   };
@@ -39,6 +42,7 @@ describe('PaymentsService', () => {
       prisma as never,
       billingService as never,
       platformWalletsService as never,
+      recordsService as never,
       paymentProvidersService as never,
       configService as never,
       tenantLifecycleService as never,

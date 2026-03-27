@@ -14,7 +14,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
-import { getOperationalReadinessReport, listFleets } from '../../lib/api-core';
+import { getOperationalReadinessReport, getTenantApiToken, listFleets } from '../../lib/api-core';
 
 function toneForStatus(status: string) {
   switch (status) {
@@ -29,7 +29,11 @@ function toneForStatus(status: string) {
 }
 
 export default async function MaintenancePage() {
-  const [report, fleetsResult] = await Promise.all([getOperationalReadinessReport(), listFleets()]);
+  const token = await getTenantApiToken().catch(() => undefined);
+  const [report, fleetsResult] = await Promise.all([
+    getOperationalReadinessReport(token),
+    listFleets(token),
+  ]);
   const fleetNames = new Map(fleetsResult.map((fleet) => [fleet.id, fleet.name]));
   const maintenanceVehicles = report.vehicles.filter((vehicle) =>
     ['maintenance', 'inspection', 'inactive'].includes(vehicle.status),

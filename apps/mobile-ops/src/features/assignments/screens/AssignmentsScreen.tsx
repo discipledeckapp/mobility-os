@@ -24,8 +24,9 @@ import { tokens } from '../../../theme/tokens';
 
 const FILTER_OPTIONS: Array<{ label: string; value: AssignmentFilter }> = [
   { label: 'All', value: 'all' },
+  { label: 'Pending confirmation', value: ASSIGNMENT_STATUS.pendingDriverConfirmation },
   { label: 'Active', value: ASSIGNMENT_STATUS.active },
-  { label: 'Completed', value: ASSIGNMENT_STATUS.completed },
+  { label: 'Ended', value: ASSIGNMENT_STATUS.ended },
   { label: 'Cancelled', value: ASSIGNMENT_STATUS.cancelled },
 ];
 
@@ -222,8 +223,11 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                 Plate: {currentAssignment.vehicle?.plate ?? 'Not recorded'}
               </Text>
               <Text style={styles.meta}>
-                Started:{' '}
-                {formatDateTime(currentAssignment.startedAt, session?.formattingLocale)}
+                Confirmed:{' '}
+                {formatDateTime(
+                  currentAssignment.driverConfirmedAt ?? currentAssignment.startedAt,
+                  session?.formattingLocale,
+                )}
               </Text>
               <View style={styles.heroActions}>
                 <Button
@@ -247,7 +251,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
             </>
           ) : (
             <Text style={styles.muted}>
-              There is no active or assigned assignment to highlight right now.
+              There is no active or pending assignment to highlight right now.
             </Text>
           )}
         </Card>
@@ -358,19 +362,22 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'completed') {
+  if (status === 'ended') {
     return 'success';
   }
-  if (status === 'cancelled') {
+  if (status === 'cancelled' || status === 'declined') {
     return 'danger';
   }
-  if (status === 'assigned' || status === 'created' || status === 'active') {
+  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'active') {
     return 'warning';
   }
   return 'neutral';
 }
 
-function formatDateTime(value: string, locale?: string | null) {
+function formatDateTime(value?: string | null, locale?: string | null) {
+  if (!value) {
+    return 'Not recorded';
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -441,8 +448,14 @@ function readinessSummary(driver: DriverRecord) {
 
 function pickCurrentAssignment(assignments: AssignmentRecord[]): AssignmentRecord | null {
   const prioritized = assignments
-    .filter((assignment) => ['active', 'assigned', 'created'].includes(assignment.status))
-    .sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime());
+    .filter((assignment) =>
+      ['active', 'pending_driver_confirmation', 'created'].includes(assignment.status),
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.driverConfirmedAt ?? right.startedAt ?? right.createdAt).getTime() -
+        new Date(left.driverConfirmedAt ?? left.startedAt ?? left.createdAt).getTime(),
+    );
 
   return prioritized[0] ?? null;
 }

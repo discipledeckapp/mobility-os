@@ -167,7 +167,7 @@ export interface AssignmentRecord {
   driverId: string;
   vehicleId: string;
   status: string;
-  startedAt: string;
+  startedAt?: string | null;
   endedAt?: string | null;
   notes?: string | null;
   remittanceModel?: string | null;
@@ -176,6 +176,33 @@ export interface AssignmentRecord {
   remittanceCurrency?: string | null;
   remittanceStartDate?: string | null;
   remittanceCollectionDay?: number | null;
+  contractVersion?: string | null;
+  contractSnapshot?: {
+    paymentStructure?: string | null;
+    expectedRemittanceTerms?: string | null;
+    obligations?: string[];
+  } | null;
+  contractStatus?: string;
+  driverAcceptedTermsAt?: string | null;
+  driverAcceptanceEvidence?: {
+    acceptedFrom?: string;
+    acceptedAt?: string;
+    note?: string;
+  } | null;
+  driverConfirmedAt?: string | null;
+  driverConfirmationMethod?: string | null;
+  driverConfirmationEvidence?: {
+    timestamp?: string;
+    acceptedFrom?: string;
+    confirmationMethod?: string;
+    assignmentSnapshotHash?: string;
+    deviceInfo?: Record<string, unknown>;
+    signatureHash?: string;
+  } | null;
+  acceptanceSnapshotHash?: string | null;
+  returnedAt?: string | null;
+  returnedBy?: string | null;
+  returnEvidence?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   vehicle: {
@@ -201,7 +228,7 @@ export interface OperatorAssignmentRecord {
   driverId: string;
   vehicleId: string;
   status: string;
-  startedAt: string;
+  startedAt?: string | null;
   endedAt?: string | null;
   notes?: string | null;
   remittanceModel?: string | null;
@@ -235,6 +262,7 @@ export interface DriverRecord {
   identityStatus: string;
   identityReviewCaseId?: string | null;
   identityReviewStatus?: string | null;
+  identityLastDecision?: string | null;
   identityLastVerifiedAt?: string | null;
   riskBand?: string | null;
   isWatchlisted?: boolean | null;
@@ -254,12 +282,51 @@ export interface DriverRecord {
   assignmentReadinessReasons?: string[];
   remittanceReadiness?: string;
   remittanceReadinessReasons?: string[];
+  enforcementStatus?: string;
+  enforcementActions?: Array<{
+    id: string;
+    actionType: string;
+    reason: string;
+    status: string;
+    triggeredAt: string;
+    policyRuleId?: string | null;
+  }>;
   requireIdentityVerificationForActivation?: boolean;
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   kycPaymentVerified?: boolean;
+  verificationPaymentState?:
+    | 'not_required'
+    | 'required'
+    | 'pending'
+    | 'paid'
+    | 'reconciled';
+  verificationEntitlementState?:
+    | 'none'
+    | 'paid'
+    | 'reserved'
+    | 'consumed'
+    | 'expired'
+    | 'refunded'
+    | 'cancelled';
+  verificationState?:
+    | 'not_started'
+    | 'in_progress'
+    | 'provider_called'
+    | 'success'
+    | 'failed'
+    | 'abandoned'
+    | 'blocked';
+  verificationEntitlementCode?: string | null;
+  verificationPaymentReference?: string | null;
+  verificationConsumedAt?: string | null;
+  verificationAttemptCount?: number;
+  verificationBlockedReason?: string | null;
+  verificationPayer?: 'driver' | 'organisation';
+  verificationAmountMinorUnits?: number;
+  verificationCurrency?: string;
   verificationPaymentStatus?:
     | 'not_required'
     | 'ready'
@@ -374,6 +441,19 @@ export interface RemittanceRecord {
   dueDate: string;
   paidDate?: string | null;
   notes?: string | null;
+  clientReferenceId?: string | null;
+  submissionSource?: string;
+  syncStatus?: string;
+  originalCapturedAt?: string | null;
+  syncedAt?: string | null;
+  evidence?: {
+    note?: string;
+    localEvidenceUri?: string;
+    capturedOffline?: boolean;
+  } | null;
+  shiftCode?: string | null;
+  checkpointLabel?: string | null;
+  shortfallAmountMinorUnits?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -814,6 +894,17 @@ export interface RecordRemittanceInput {
   currency?: string;
   dueDate?: string;
   notes?: string;
+  clientReferenceId?: string;
+  submissionSource?: 'online' | 'offline_queue';
+  syncStatus?: 'offline_submitted' | 'synced';
+  originalCapturedAt?: string;
+  evidence?: {
+    note?: string;
+    localEvidenceUri?: string;
+    capturedOffline?: boolean;
+  };
+  shiftCode?: string;
+  checkpointLabel?: string;
 }
 
 export interface CreateAssignmentInput {
@@ -1430,12 +1521,18 @@ export function createGuarantorSelfServiceLivenessSession(
 export function resolveGuarantorSelfServiceIdentity(
   token: string,
   input: {
-    identifierType?: string;
-    identifierValue?: string;
+    identifiers?: Array<{
+      type: string;
+      value: string;
+      countryCode?: string;
+    }>;
     countryCode?: string;
     selfieImageBase64?: string;
-    livenessSessionId?: string;
-    consentAccepted: boolean;
+    livenessCheck?: {
+      provider?: string;
+      sessionId?: string;
+    };
+    subjectConsent: boolean;
   },
 ): Promise<DriverIdentityResolutionResult> {
   return apiFetch<DriverIdentityResolutionResult>(
@@ -1513,8 +1610,20 @@ export function initiateDriverKycCheckout(
   selfServiceToken: string,
   provider: 'paystack' | 'flutterwave' = 'paystack',
   returnUrl?: string,
-): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
-  return apiFetch<{ checkoutUrl: string; amountMinorUnits: number; currency: string }>(
+): Promise<{
+  status: 'checkout_required' | 'already_paid';
+  checkoutUrl?: string;
+  amountMinorUnits: number;
+  currency: string;
+  entitlementState?: 'none' | 'paid' | 'reserved' | 'consumed' | 'expired' | 'refunded' | 'cancelled';
+}> {
+  return apiFetch<{
+    status: 'checkout_required' | 'already_paid';
+    checkoutUrl?: string;
+    amountMinorUnits: number;
+    currency: string;
+    entitlementState?: 'none' | 'paid' | 'reserved' | 'consumed' | 'expired' | 'refunded' | 'cancelled';
+  }>(
     '/driver-self-service/kyc-checkout',
     {
       method: 'POST',
@@ -1561,6 +1670,29 @@ export function startAssignment(assignmentId: string): Promise<AssignmentRecord>
   return apiFetch<AssignmentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/start`, {
     method: 'POST',
     body: JSON.stringify({}),
+  });
+}
+
+export function acceptAssignmentTerms(
+  assignmentId: string,
+  input: { acceptedFrom?: string; note?: string } = {},
+): Promise<AssignmentRecord> {
+  return apiFetch<AssignmentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/accept-terms`, {
+    method: 'POST',
+    body: JSON.stringify({
+      acceptedFrom: input.acceptedFrom ?? 'driver_mobile',
+      ...(input.note ? { note: input.note } : {}),
+    }),
+  });
+}
+
+export function declineAssignment(
+  assignmentId: string,
+  notes?: string,
+): Promise<AssignmentRecord> {
+  return apiFetch<AssignmentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/decline`, {
+    method: 'POST',
+    body: JSON.stringify(notes ? { notes } : {}),
   });
 }
 

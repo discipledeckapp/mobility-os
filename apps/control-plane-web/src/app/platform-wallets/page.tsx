@@ -16,7 +16,11 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
-import { listPlatformWalletLedger, listPlatformWallets } from '../../lib/api-control-plane';
+import {
+  getPlatformApiToken,
+  listPlatformWalletLedger,
+  listPlatformWallets,
+} from '../../lib/api-control-plane';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -27,9 +31,10 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
 }
 
 export default async function PlatformWalletsPage() {
+  const token = await getPlatformApiToken().catch(() => undefined);
   const [wallets, ledger] = await Promise.all([
-    listPlatformWallets(),
-    listPlatformWalletLedger({ page: 1, limit: 20 }),
+    listPlatformWallets(token),
+    listPlatformWalletLedger({ page: 1, limit: 20 }, token),
   ]);
   const fundedWallets = wallets.filter((wallet) => wallet.balanceMinorUnits > 0).length;
   const balancesByCurrency = wallets.reduce<Record<string, number>>((totals, wallet) => {

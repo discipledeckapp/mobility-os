@@ -61,7 +61,7 @@ export class ReportsService {
       };
     }
 
-    if (!['assigned', 'active'].includes(input.assignmentStatus)) {
+    if (!['pending_driver_confirmation', 'active'].includes(input.assignmentStatus)) {
       return {
         status: 'at_risk',
         reason: `Assignment status is '${input.assignmentStatus}'.`,
@@ -154,7 +154,7 @@ export class ReportsService {
           tenantId,
           ...fleetScope,
           ...assignmentVehicleScope,
-          status: { in: ['assigned', 'active'] },
+          status: { in: ['pending_driver_confirmation', 'active'] },
           remittanceAmountMinorUnits: { not: null },
           remittanceCurrency: { not: null },
           remittanceFrequency: { not: null },
@@ -252,7 +252,7 @@ export class ReportsService {
             where: {
               tenantId,
               assignmentId: { in: hirePurchaseAssignmentIds },
-              status: 'confirmed',
+              status: 'completed',
               ...remittanceDateFilter,
             },
             select: {
@@ -428,7 +428,7 @@ export class ReportsService {
     const confirmedRemittances = await this.prisma.remittance.findMany({
       where: {
         tenantId,
-        status: 'confirmed',
+        status: 'completed',
         ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
       },
       select: { vehicleId: true, amountMinorUnits: true },
@@ -636,7 +636,7 @@ export class ReportsService {
           tenantId,
           ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
           ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
-          status: { in: ['assigned', 'active'] },
+          status: { in: ['pending_driver_confirmation', 'active'] },
         },
         orderBy: { startedAt: 'desc' },
       }),
@@ -712,7 +712,7 @@ export class ReportsService {
         tenantId,
         ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
         ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
-        status: 'confirmed',
+        status: 'completed',
       },
       select: {
         assignmentId: true,

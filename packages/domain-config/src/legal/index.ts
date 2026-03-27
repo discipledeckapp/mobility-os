@@ -24,6 +24,14 @@ export interface LegalDocumentDefinition {
   sections: LegalSection[];
 }
 
+export const PLATFORM_LEGAL_ISSUER = {
+  productName: 'Mobiris',
+  legalName: 'Growth Figures Limited',
+  jurisdiction: 'Nigeria',
+  website: 'growthfigures.com',
+  supportEmail: 'support@mobiris.ng',
+} as const;
+
 export const LEGAL_DOCUMENTS: Record<LegalDocumentKind, LegalDocumentDefinition> = {
   privacy: {
     title: 'Mobiris Privacy Policy',
@@ -34,8 +42,9 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKind, LegalDocumentDefinition>
       {
         heading: '1. Who we are',
         body: [
-          'Mobiris operates Mobility OS as a multi-tenant mobility operations platform for driver onboarding, verification, fleet operations, guarantor management, payments, and risk governance.',
-          'Mobiris acts as a platform provider and processor or controller depending on the workflow and applicable law. Tenant organisations using Mobility OS may separately act as controllers for their own operational records.',
+          'Mobiris is a product of Growth Figures Limited, a company registered in Nigeria, and operates Mobility OS as a multi-tenant mobility operations platform for driver onboarding, verification, fleet operations, guarantor management, payments, and risk governance.',
+          'Growth Figures Limited operates Mobiris as a platform provider and processor or controller depending on the workflow and applicable law. Tenant organisations using Mobility OS may separately act as controllers for their own operational records.',
+          'Platform issuer and owner website: growthfigures.com.',
           'For data requests or privacy questions, contact support@mobiris.ng unless a different privacy contact is shown in your organisation onboarding flow.',
         ],
       },
@@ -171,7 +180,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKind, LegalDocumentDefinition>
       {
         heading: '8. Intellectual property and platform restrictions',
         body: [
-          'The Mobility OS software, workflows, content, and platform marks remain the property of Mobiris or its licensors. You may not reverse engineer, scrape, misuse, or abuse the service.',
+          'The Mobility OS software, workflows, content, and platform marks remain the property of Growth Figures Limited, trading as Mobiris, or its licensors. You may not reverse engineer, scrape, misuse, or abuse the service.',
           'You may not use Mobility OS to conduct unlawful surveillance, discriminatory profiling, identity fraud, or unauthorised background screening.',
         ],
       },
@@ -185,6 +194,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKind, LegalDocumentDefinition>
       {
         heading: '10. Contact and updates',
         body: [
+          'Mobiris is a product of Growth Figures Limited, a company registered in Nigeria. Platform issuer and owner website: growthfigures.com.',
           'For support, legal notices, or questions about these terms, contact support@mobiris.ng unless a different contact is explicitly provided for your tenant or contract.',
           'We may update these terms from time to time. Updated terms will carry a new version and take effect as stated in the product or accompanying notice.',
         ],

@@ -245,6 +245,116 @@ exports.Prisma.CpPaymentAttemptScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.CpDisputeScalarFieldEnum = {
+  id: 'id',
+  disputeCode: 'disputeCode',
+  tenantId: 'tenantId',
+  disputeType: 'disputeType',
+  relatedEntityType: 'relatedEntityType',
+  relatedEntityId: 'relatedEntityId',
+  claimantType: 'claimantType',
+  claimantId: 'claimantId',
+  respondentType: 'respondentType',
+  respondentId: 'respondentId',
+  title: 'title',
+  reasonCode: 'reasonCode',
+  narrative: 'narrative',
+  status: 'status',
+  priority: 'priority',
+  assignedTo: 'assignedTo',
+  resolvedAt: 'resolvedAt',
+  resolvedByType: 'resolvedByType',
+  resolvedById: 'resolvedById',
+  resolutionSummary: 'resolutionSummary',
+  finalAmountMinorUnits: 'finalAmountMinorUnits',
+  currency: 'currency',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CpDisputeEvidenceScalarFieldEnum = {
+  id: 'id',
+  disputeId: 'disputeId',
+  tenantId: 'tenantId',
+  uploadedByType: 'uploadedByType',
+  uploadedById: 'uploadedById',
+  evidenceType: 'evidenceType',
+  description: 'description',
+  fileName: 'fileName',
+  contentType: 'contentType',
+  storageKey: 'storageKey',
+  fileUrl: 'fileUrl',
+  fileHash: 'fileHash',
+  integrityHash: 'integrityHash',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CpDisputeTimelineScalarFieldEnum = {
+  id: 'id',
+  disputeId: 'disputeId',
+  tenantId: 'tenantId',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  actionType: 'actionType',
+  message: 'message',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CpEvidenceRecordScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  evidenceType: 'evidenceType',
+  relatedEntityType: 'relatedEntityType',
+  relatedEntityId: 'relatedEntityId',
+  sourceEntityType: 'sourceEntityType',
+  sourceEntityId: 'sourceEntityId',
+  amountMinorUnits: 'amountMinorUnits',
+  currency: 'currency',
+  fileName: 'fileName',
+  contentType: 'contentType',
+  storageKey: 'storageKey',
+  fileUrl: 'fileUrl',
+  fileHash: 'fileHash',
+  integrityHash: 'integrityHash',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CpIssuedDocumentScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  documentNumber: 'documentNumber',
+  documentType: 'documentType',
+  status: 'status',
+  issuerType: 'issuerType',
+  issuerId: 'issuerId',
+  recipientType: 'recipientType',
+  recipientId: 'recipientId',
+  relatedEntityType: 'relatedEntityType',
+  relatedEntityId: 'relatedEntityId',
+  supersededById: 'supersededById',
+  version: 'version',
+  fingerprint: 'fingerprint',
+  signatureVersion: 'signatureVersion',
+  signedAt: 'signedAt',
+  signedBySystem: 'signedBySystem',
+  verificationReference: 'verificationReference',
+  fileName: 'fileName',
+  contentType: 'contentType',
+  storageKey: 'storageKey',
+  fileUrl: 'fileUrl',
+  fileHash: 'fileHash',
+  canonicalPayload: 'canonicalPayload',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.CpFeatureFlagScalarFieldEnum = {
   id: 'id',
   key: 'key',
@@ -343,6 +453,11 @@ exports.Prisma.ModelName = {
   CpPlatformWallet: 'CpPlatformWallet',
   CpWalletEntry: 'CpWalletEntry',
   CpPaymentAttempt: 'CpPaymentAttempt',
+  CpDispute: 'CpDispute',
+  CpDisputeEvidence: 'CpDisputeEvidence',
+  CpDisputeTimeline: 'CpDisputeTimeline',
+  CpEvidenceRecord: 'CpEvidenceRecord',
+  CpIssuedDocument: 'CpIssuedDocument',
   CpFeatureFlag: 'CpFeatureFlag',
   CpFeatureFlagOverride: 'CpFeatureFlagOverride',
   CpPlatformSetting: 'CpPlatformSetting',

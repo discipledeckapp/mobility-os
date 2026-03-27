@@ -188,11 +188,33 @@ export class AssignmentsController {
     });
   }
 
-  @Post(':id/complete')
+  @Post(':id/accept-terms')
   @RequirePermissions(Permission.AssignmentsWrite)
   @UseGuards(PermissionsGuard)
-  @ApiOkResponse({ type: AssignmentResponseDto, description: 'Assignment completed' })
-  complete(
+  @ApiOkResponse({ type: AssignmentResponseDto, description: 'Assignment terms accepted' })
+  acceptTerms(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('acceptedFrom') acceptedFrom?: string,
+    @Body('note') note?: string,
+  ): Promise<AssignmentResponseDto> {
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
+      assertFleetAccess(ctx, assignment.fleetId);
+      assertVehicleAccess(ctx, assignment.vehicleId);
+      return this.service.acceptDriverTerms(ctx.tenantId, id, {
+        acceptedFrom: acceptedFrom?.trim() || 'operator_console',
+        confirmationMethod: acceptedFrom?.trim() || 'operator_console',
+        ...(note ? { note } : {}),
+      });
+    });
+  }
+
+  @Post(':id/decline')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: AssignmentResponseDto, description: 'Assignment declined' })
+  decline(
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
     @Body('notes') notes?: string,
@@ -201,7 +223,32 @@ export class AssignmentsController {
       assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
-      return this.service.end(ctx.tenantId, id, 'completed', notes);
+      return this.service.decline(ctx.tenantId, id, {
+        declinedFrom: 'operator_console',
+        ...(notes ? { note: notes } : {}),
+      });
+    });
+  }
+
+  @Post(':id/complete')
+  @RequirePermissions(Permission.AssignmentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: AssignmentResponseDto, description: 'Assignment ended' })
+  complete(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('notes') notes?: string,
+    @Body('returnedBy') returnedBy?: string,
+  ): Promise<AssignmentResponseDto> {
+    return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
+      assertFleetAccess(ctx, assignment.fleetId);
+      assertVehicleAccess(ctx, assignment.vehicleId);
+      return this.service.end(ctx.tenantId, id, 'ended', {
+        ...(notes ? { notes } : {}),
+        returnedBy: returnedBy?.trim() || ctx.userId,
+        closeCurrentRemittanceAs: 'partially_settled',
+      });
     });
   }
 
@@ -218,7 +265,11 @@ export class AssignmentsController {
       assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
-      return this.service.end(ctx.tenantId, id, 'cancelled', notes);
+      return this.service.end(ctx.tenantId, id, 'cancelled', {
+        ...(notes ? { notes } : {}),
+        returnedBy: ctx.userId,
+        closeCurrentRemittanceAs: 'cancelled_due_to_assignment_end',
+      });
     });
   }
 }

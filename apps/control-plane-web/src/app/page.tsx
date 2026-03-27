@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
 import {
+  getPlatformApiToken,
   listFeatureFlags,
   listInvoices,
   listPlatformWalletLedger,
@@ -43,13 +44,14 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 }
 
 export default async function HomePage() {
+  const token = await getPlatformApiToken().catch(() => undefined);
   const [tenants, subscriptions, invoices, wallets, flags, ledger] = await Promise.all([
-    listTenants(),
-    listSubscriptions(),
-    listInvoices(),
-    listPlatformWallets(),
-    listFeatureFlags(),
-    listPlatformWalletLedger({ page: 1, limit: 8 }),
+    listTenants(token),
+    listSubscriptions(token),
+    listInvoices(token),
+    listPlatformWallets(token),
+    listFeatureFlags(token),
+    listPlatformWalletLedger({ page: 1, limit: 8 }, token),
   ]);
 
   const tenantStatusCounts = tenants.reduce<Record<string, number>>((acc, tenant) => {

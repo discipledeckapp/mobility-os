@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
 import { PlatformWalletsModule } from '../platform-wallets/platform-wallets.module';
+import { ControlPlaneRecordsModule } from '../records/records.module';
 import { TenantLifecycleModule } from '../tenant-lifecycle/tenant-lifecycle.module';
 import { PaymentProvidersService } from './payment-providers.service';
 import { PaymentsInternalController } from './payments-internal.controller';
@@ -14,6 +15,7 @@ import { PaymentsService } from './payments.service';
     AuthModule,
     forwardRef(() => BillingModule),
     PlatformWalletsModule,
+    ControlPlaneRecordsModule,
     TenantLifecycleModule,
   ],
   controllers: [PaymentsController, PaymentsInternalController, PaymentsWebhooksController],

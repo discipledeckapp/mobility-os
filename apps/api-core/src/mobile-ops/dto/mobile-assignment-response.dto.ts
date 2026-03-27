@@ -54,8 +54,8 @@ export class MobileAssignmentResponseDto {
   @ApiProperty()
   status!: string;
 
-  @ApiProperty()
-  startedAt!: Date;
+  @ApiPropertyOptional()
+  startedAt?: Date | null;
 
   @ApiPropertyOptional()
   endedAt?: Date | null;
@@ -80,6 +80,42 @@ export class MobileAssignmentResponseDto {
 
   @ApiPropertyOptional()
   remittanceCollectionDay?: number | null;
+
+  @ApiPropertyOptional()
+  contractVersion?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  contractSnapshot?: unknown | null;
+
+  @ApiPropertyOptional()
+  contractStatus?: string | null;
+
+  @ApiPropertyOptional()
+  driverAcceptedTermsAt?: Date | null;
+
+  @ApiPropertyOptional({ type: Object })
+  driverAcceptanceEvidence?: unknown | null;
+
+  @ApiPropertyOptional()
+  driverConfirmedAt?: Date | null;
+
+  @ApiPropertyOptional()
+  driverConfirmationMethod?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  driverConfirmationEvidence?: unknown | null;
+
+  @ApiPropertyOptional()
+  acceptanceSnapshotHash?: string | null;
+
+  @ApiPropertyOptional()
+  returnedAt?: Date | null;
+
+  @ApiPropertyOptional()
+  returnedBy?: string | null;
+
+  @ApiPropertyOptional({ type: Object })
+  returnEvidence?: unknown | null;
 
   @ApiProperty()
   createdAt!: Date;

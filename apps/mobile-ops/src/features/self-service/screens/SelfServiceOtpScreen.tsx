@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
@@ -19,7 +19,7 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
   const onSubmitOtp = async () => {
     if (!otpCode.trim()) {
-      Alert.alert('Driver verification', 'Enter the OTP code sent by your organisation.');
+      Alert.alert('Invitation code', 'Enter the invitation code from your organisation.');
       return;
     }
 
@@ -29,8 +29,8 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
       navigation.replace('SelfServiceResume', {});
     } catch (error) {
       Alert.alert(
-        'Verification access failed',
-        error instanceof Error ? error.message : 'Unable to exchange that OTP code right now.',
+        'Access failed',
+        error instanceof Error ? error.message : 'Unable to use that invitation code right now.',
       );
     } finally {
       setSubmittingOtp(false);
@@ -39,7 +39,7 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
   const onSubmitToken = async () => {
     if (!directToken.trim()) {
-      Alert.alert('Driver verification', 'Paste the verification token to continue.');
+      Alert.alert('Invite link', 'Paste the invitation token to continue.');
       return;
     }
 
@@ -49,8 +49,8 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
       navigation.replace('SelfServiceResume', {});
     } catch (error) {
       Alert.alert(
-        'Verification access failed',
-        error instanceof Error ? error.message : 'Unable to use that verification token right now.',
+        'Access failed',
+        error instanceof Error ? error.message : 'Unable to open that invite link right now.',
       );
     } finally {
       setSubmittingToken(false);
@@ -60,44 +60,48 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
   return (
     <Screen contentContainerStyle={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Mobiris driver onboarding</Text>
-        <Text style={styles.title}>Continue your verification</Text>
+        <Text style={styles.kicker}>Driver invite</Text>
+        <Text style={styles.title}>Start with your invitation</Text>
         <Text style={styles.copy}>
-          Enter the OTP code sent by your organisation to resume self-verification on this device.
+          Most drivers join Mobiris through an organisation invite. Enter the code from your message
+          or open the link directly.
         </Text>
       </View>
 
       <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>Invitation code</Text>
         <Input
           autoCapitalize="characters"
           autoCorrect={false}
-          label="OTP code"
+          label="Code"
           onChangeText={setOtpCode}
-          placeholder="Enter the verification code"
+          placeholder="Enter your code"
           value={otpCode}
         />
-        <Button label="Continue with OTP" loading={submittingOtp} onPress={onSubmitOtp} />
+        <Button label="Continue" loading={submittingOtp} onPress={onSubmitOtp} />
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Already have a direct token?</Text>
+        <Text style={styles.sectionTitle}>Already opened a link?</Text>
         <Input
           autoCapitalize="none"
           autoCorrect={false}
-          label="Verification token"
+          label="Invite token"
           onChangeText={setDirectToken}
           placeholder="Paste token"
           value={directToken}
         />
         <Button
-          label="Use verification token"
+          label="Open invite"
           loading={submittingToken}
           variant="secondary"
           onPress={onSubmitToken}
         />
       </Card>
 
-      <Button label="Back to sign in" variant="secondary" onPress={() => navigation.navigate('Login')} />
+      <Pressable onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.backText}>Back to entry</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -107,8 +111,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hero: {
-    gap: 10,
-    marginTop: 24,
+    gap: tokens.spacing.sm,
+    marginTop: tokens.spacing.lg,
   },
   kicker: {
     color: tokens.colors.primary,
@@ -118,7 +122,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: tokens.colors.ink,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '800',
   },
   copy: {
@@ -133,6 +137,12 @@ const styles = StyleSheet.create({
     color: tokens.colors.ink,
     fontSize: 18,
     fontWeight: '700',
+  },
+  backText: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

@@ -20,8 +20,10 @@ import { useToast } from '../../../contexts/toast-context';
 import { useDriverProfile } from '../../../hooks/use-driver-profile';
 import type { ScreenProps } from '../../../navigation/types';
 import {
+  acceptDriverAssignmentTerms,
   cancelDriverAssignment,
   completeDriverAssignment,
+  declineDriverAssignment,
   fetchAssignmentDetail,
   startDriverAssignment,
 } from '../../../services/assignment-service';
@@ -44,6 +46,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
   const [showIncidentSheet, setShowIncidentSheet] = useState(false);
   const [remittanceAmount, setRemittanceAmount] = useState('');
   const [remittanceDate, setRemittanceDate] = useState(new Date());
+  const [remittanceNotes, setRemittanceNotes] = useState('');
   const [showRemittanceDatePicker, setShowRemittanceDatePicker] = useState(false);
   const [incidentTitle, setIncidentTitle] = useState('');
   const [incidentDescription, setIncidentDescription] = useState('');
@@ -107,6 +110,8 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
 
   const queueActionIfOffline = async (
     type:
+      | typeof OFFLINE_ACTION_TYPE.assignmentAccept
+      | typeof OFFLINE_ACTION_TYPE.assignmentDecline
       | typeof OFFLINE_ACTION_TYPE.assignmentStart
       | typeof OFFLINE_ACTION_TYPE.assignmentComplete
       | typeof OFFLINE_ACTION_TYPE.assignmentCancel,
@@ -126,10 +131,12 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
     action: () => Promise<AssignmentRecord>,
     successMessage: string,
     offlineFallback?: {
-      type:
-        | typeof OFFLINE_ACTION_TYPE.assignmentStart
-        | typeof OFFLINE_ACTION_TYPE.assignmentComplete
-        | typeof OFFLINE_ACTION_TYPE.assignmentCancel;
+        type:
+          | typeof OFFLINE_ACTION_TYPE.assignmentAccept
+          | typeof OFFLINE_ACTION_TYPE.assignmentDecline
+          | typeof OFFLINE_ACTION_TYPE.assignmentStart
+          | typeof OFFLINE_ACTION_TYPE.assignmentComplete
+          | typeof OFFLINE_ACTION_TYPE.assignmentCancel;
       payload: { assignmentId: string; notes?: string };
       message: string;
     },
@@ -178,27 +185,45 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
     }
 
     setSubmitting(true);
+    const clientReferenceId = `remittance-${assignment.id}-${Date.now()}`;
     const payload = {
       assignmentId: assignment.id,
       amountMinorUnits,
       currency: currencyCode,
       dueDate: remittanceDate.toISOString().slice(0, 10),
+      ...(remittanceNotes.trim() ? { notes: remittanceNotes.trim() } : {}),
+      clientReferenceId,
+      submissionSource: 'online' as const,
+      syncStatus: 'synced' as const,
+      originalCapturedAt: new Date().toISOString(),
+      evidence: remittanceNotes.trim()
+        ? { note: remittanceNotes.trim(), capturedOffline: false }
+        : undefined,
     };
 
     try {
       await submitRemittance(payload);
       setShowRemittanceSheet(false);
       setRemittanceAmount('');
+      setRemittanceNotes('');
       setRemittanceDate(new Date());
       showToast('Remittance submitted successfully.', 'success');
     } catch (error) {
       if (mobileEnv.enableOfflineQueue && isNetworkError(error)) {
         await enqueueOfflineAction({
           type: OFFLINE_ACTION_TYPE.remittanceRecord,
-          payload,
+          payload: {
+            ...payload,
+            submissionSource: 'offline_queue',
+            syncStatus: 'offline_submitted',
+            evidence: remittanceNotes.trim()
+              ? { note: remittanceNotes.trim(), capturedOffline: true }
+              : { capturedOffline: true },
+          },
         });
         setShowRemittanceSheet(false);
         setRemittanceAmount('');
+        setRemittanceNotes('');
         setRemittanceDate(new Date());
         showToast(
           'You are offline. The remittance has been queued and will sync when you reconnect.',
@@ -313,7 +338,11 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
           </Text>
           <Text style={styles.meta}>Plate: {assignment.vehicle.plate ?? 'Not recorded'}</Text>
           <Text style={styles.meta}>
-            Started: {formatDateTime(assignment.startedAt, session?.formattingLocale)}
+            Confirmed:{' '}
+            {formatDateTime(
+              assignment.driverConfirmedAt ?? assignment.startedAt,
+              session?.formattingLocale,
+            )}
           </Text>
           <Text style={styles.meta}>
             Ended:{' '}
@@ -321,7 +350,21 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
               ? formatDateTime(assignment.endedAt, session?.formattingLocale)
               : 'Still active'}
           </Text>
+          <Text style={styles.meta}>
+            Terms:{' '}
+            {assignment.contractStatus === 'accepted'
+              ? 'Accepted'
+              : 'Pending acceptance before activation'}
+          </Text>
+          <Text style={styles.meta}>
+            Confirmation: {assignment.driverConfirmationMethod ?? 'Not recorded'}
+          </Text>
           {assignment.notes ? <Text style={styles.meta}>Notes: {assignment.notes}</Text> : null}
+          {assignment.contractSnapshot?.expectedRemittanceTerms ? (
+            <Text style={styles.meta}>
+              Contract: {assignment.contractSnapshot.expectedRemittanceTerms}
+            </Text>
+          ) : null}
         </Card>
 
         <Card style={styles.section}>
@@ -367,11 +410,54 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
             </Text>
           ) : (
             <View style={styles.actions}>
-              {['created', 'assigned'].includes(assignment.status) ? (
+              {assignment.contractStatus !== 'accepted' ? (
+                <Button
+                  accessibilityHint="Accept the assignment terms before the assignment starts"
+                  label="Accept assignment terms"
+                  loading={submitting}
+                  loadingLabel="Accepting terms"
+                  variant="secondary"
+                  onPress={() =>
+                    void runAction(
+                      () => acceptDriverAssignmentTerms(assignment.id),
+                      'Assignment terms accepted.',
+                      {
+                        type: OFFLINE_ACTION_TYPE.assignmentAccept,
+                        payload: { assignmentId: assignment.id },
+                        message:
+                          'You are offline. The acceptance has been queued and will sync when you reconnect.',
+                      },
+                    )
+                  }
+                />
+              ) : null}
+              {assignment.status === 'pending_driver_confirmation' ? (
+                <Button
+                  accessibilityHint="Decline this pending assignment"
+                  label="Decline assignment"
+                  loading={submitting}
+                  loadingLabel="Declining assignment"
+                  variant="secondary"
+                  onPress={() =>
+                    void runAction(
+                      () => declineDriverAssignment(assignment.id),
+                      'Assignment declined.',
+                      {
+                        type: OFFLINE_ACTION_TYPE.assignmentDecline,
+                        payload: { assignmentId: assignment.id },
+                        message:
+                          'You are offline. The decline has been queued and will sync when you reconnect.',
+                      },
+                    )
+                  }
+                />
+              ) : null}
+              {['created', 'pending_driver_confirmation'].includes(assignment.status) ? (
                 <Button
                   accessibilityHint="Mark this assignment as started"
                   label="Start assignment"
                   loading={submitting}
+                  disabled={assignment.contractStatus !== 'accepted'}
                   loadingLabel="Starting assignment"
                   onPress={() =>
                     void runAction(
@@ -391,18 +477,18 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                 <>
                   <Button
                     accessibilityHint="Mark this assignment as completed"
-                    label="Complete assignment"
+                    label="End assignment"
                     loading={submitting}
-                    loadingLabel="Completing assignment"
+                    loadingLabel="Ending assignment"
                     onPress={() =>
                       void runAction(
                         () => completeDriverAssignment(assignment.id),
-                        'Assignment has been completed.',
+                        'Assignment has been ended.',
                         {
                           type: OFFLINE_ACTION_TYPE.assignmentComplete,
                           payload: { assignmentId: assignment.id },
                           message:
-                            'You are offline. The completion has been queued and will sync when you reconnect.',
+                            'You are offline. The end action has been queued and will sync when you reconnect.',
                         },
                       )
                     }
@@ -466,6 +552,13 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
               label="Amount"
               onChangeText={setRemittanceAmount}
               value={remittanceAmount}
+            />
+            <Input
+              helperText="Optional evidence note for partial-day returns, cash handover, or disputes."
+              label="Evidence / notes"
+              multiline
+              onChangeText={setRemittanceNotes}
+              value={remittanceNotes}
             />
             <View style={styles.dateField}>
               <Text style={styles.dateLabel}>Collection date</Text>
@@ -636,19 +729,22 @@ function readinessSummary(
 }
 
 function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'completed') {
+  if (status === 'ended') {
     return 'success';
   }
-  if (status === 'cancelled') {
+  if (status === 'cancelled' || status === 'declined') {
     return 'danger';
   }
-  if (status === 'assigned' || status === 'created' || status === 'active') {
+  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'active') {
     return 'warning';
   }
   return 'neutral';
 }
 
-function formatDateTime(value: string, locale?: string | null) {
+function formatDateTime(value?: string | null, locale?: string | null) {
+  if (!value) {
+    return 'Not recorded';
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;

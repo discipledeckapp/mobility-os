@@ -43,9 +43,14 @@ export type VehicleStatusCode = keyof typeof VEHICLE_STATUS_CODES;
 
 export const ASSIGNMENT_STATUS_CODES = {
   created: { code: 'created', label: 'Created', terminal: false },
-  assigned: { code: 'assigned', label: 'Assigned', terminal: false },
+  pending_driver_confirmation: {
+    code: 'pending_driver_confirmation',
+    label: 'Pending Driver Confirmation',
+    terminal: false,
+  },
   active: { code: 'active', label: 'Active', terminal: false },
-  completed: { code: 'completed', label: 'Completed', terminal: true },
+  declined: { code: 'declined', label: 'Declined', terminal: true },
+  ended: { code: 'ended', label: 'Ended', terminal: true },
   cancelled: { code: 'cancelled', label: 'Cancelled', terminal: true },
 } as const satisfies Record<string, StatusCodeConfig>;
 
@@ -55,7 +60,13 @@ export type AssignmentStatusCode = keyof typeof ASSIGNMENT_STATUS_CODES;
 
 export const REMITTANCE_STATUS_CODES = {
   pending: { code: 'pending', label: 'Pending', terminal: false },
-  confirmed: { code: 'confirmed', label: 'Confirmed', terminal: true },
+  completed: { code: 'completed', label: 'Completed', terminal: true },
+  partially_settled: { code: 'partially_settled', label: 'Partially Settled', terminal: true },
+  cancelled_due_to_assignment_end: {
+    code: 'cancelled_due_to_assignment_end',
+    label: 'Cancelled Due To Assignment End',
+    terminal: true,
+  },
   disputed: { code: 'disputed', label: 'Disputed', terminal: true },
   waived: { code: 'waived', label: 'Waived', terminal: true },
 } as const satisfies Record<string, StatusCodeConfig>;

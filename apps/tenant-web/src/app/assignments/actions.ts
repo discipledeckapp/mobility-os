@@ -2,9 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  acceptAssignmentTerms,
   cancelAssignment,
   completeAssignment,
   createAssignment,
+  declineAssignment,
   importAssignmentsCsv,
   startAssignment,
   type CreateAssignmentInput,
@@ -157,7 +159,7 @@ export async function createAssignmentAction(
   revalidatePath('/assignments');
   revalidatePath('/');
   return {
-    success: 'Assignment reserved successfully. Start it when the trip begins.',
+    success: 'Assignment created and sent for driver confirmation.',
   };
 }
 
@@ -258,7 +260,40 @@ export async function startAssignmentAction(
   revalidatePath('/assignments');
   revalidatePath('/');
   return {
-    success: 'Assignment started.',
+    success: 'Assignment activation checked.',
+  };
+}
+
+export async function acceptAssignmentTermsAction(
+  _prevState: AssignmentResolutionActionState,
+  formData: FormData,
+): Promise<AssignmentResolutionActionState> {
+  const assignmentId = getTrimmedValue(
+    formData,
+    'assignmentId' as keyof CreateAssignmentInput,
+  );
+
+  if (!assignmentId) {
+    return { error: 'Assignment ID is required.' };
+  }
+
+  try {
+    await acceptAssignmentTerms(assignmentId, { acceptedFrom: 'operator_console' });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to confirm assignment acceptance at this time.',
+    };
+  }
+
+  revalidatePath('/assignments');
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath('/remittance');
+  revalidatePath('/');
+  return {
+    success: 'Assignment accepted and activated.',
   };
 }
 
@@ -289,9 +324,11 @@ export async function completeAssignmentAction(
   }
 
   revalidatePath('/assignments');
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath('/remittance');
   revalidatePath('/');
   return {
-    success: 'Assignment completed.',
+    success: 'Assignment ended and remittance stopped.',
   };
 }
 
@@ -322,8 +359,42 @@ export async function cancelAssignmentAction(
   }
 
   revalidatePath('/assignments');
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath('/remittance');
   revalidatePath('/');
   return {
     success: 'Assignment cancelled.',
+  };
+}
+
+export async function declineAssignmentAction(
+  _prevState: AssignmentResolutionActionState,
+  formData: FormData,
+): Promise<AssignmentResolutionActionState> {
+  const assignmentId = getTrimmedValue(
+    formData,
+    'assignmentId' as keyof CreateAssignmentInput,
+  );
+
+  if (!assignmentId) {
+    return { error: 'Assignment ID is required.' };
+  }
+
+  try {
+    await declineAssignment(assignmentId);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to decline assignment at this time.',
+    };
+  }
+
+  revalidatePath('/assignments');
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath('/');
+  return {
+    success: 'Assignment declined.',
   };
 }

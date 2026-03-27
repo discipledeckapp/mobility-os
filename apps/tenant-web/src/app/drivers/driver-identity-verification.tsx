@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Badge,
@@ -135,8 +136,9 @@ export function DriverIdentityVerification({
   onVerificationSubmitted?: (result: NonNullable<ResolveDriverVerificationActionState['result']>) => void;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
-  const [sendLinkPaysKyc, setSendLinkPaysKyc] = useState(orgDriverPaysKyc);
+  const [sendLinkPaysKyc, setSendLinkPaysKyc] = useState(driver.driverPaysKyc ?? orgDriverPaysKyc);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
     () =>
@@ -218,6 +220,9 @@ export function DriverIdentityVerification({
   const identityTone = getDriverIdentityTone(identityStatus);
   const identityLabel = getDriverIdentityLabel(identityStatus);
   const canSendSelfServiceLink = Boolean(driver.email);
+  const verificationFeeCopy = sendLinkPaysKyc
+    ? 'Driver will pay the verification fee during self-service onboarding.'
+    : 'Your organisation wallet will cover the verification fee for this driver.';
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64);
@@ -231,10 +236,17 @@ export function DriverIdentityVerification({
   }, []);
 
   useEffect(() => {
+    if (mode === 'operator' && resolveState.result) {
+      router.refresh();
+    }
     if (mode !== 'operator' && resolveState.result && onVerificationSubmitted) {
       onVerificationSubmitted(resolveState.result);
     }
-  }, [mode, onVerificationSubmitted, resolveState.result]);
+  }, [mode, onVerificationSubmitted, resolveState.result, router]);
+
+  useEffect(() => {
+    setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
+  }, [driver.driverPaysKyc, orgDriverPaysKyc]);
 
   // Attach stream to video element after it mounts (fixes black screen)
   useEffect(() => {
@@ -379,17 +391,22 @@ export function DriverIdentityVerification({
             <form action={sendLinkAction} className="flex flex-wrap items-center gap-2">
               <input name="driverId" type="hidden" value={driver.id} />
               <input name="driverPaysKycOverride" type="hidden" value={String(sendLinkPaysKyc)} />
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600 select-none">
+              <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600 select-none">
                 <input
                   checked={sendLinkPaysKyc}
                   className="size-3.5 accent-[var(--mobiris-primary)]"
                   onChange={(e) => setSendLinkPaysKyc(e.target.checked)}
                   type="checkbox"
                 />
-                Driver pays KYC
-                {orgDriverPaysKyc !== sendLinkPaysKyc ? (
-                  <span className="text-amber-600">(overriding org default)</span>
-                ) : null}
+                <span className="space-y-0.5">
+                  <span className="block font-medium text-slate-700">
+                    Charge verification to driver
+                  </span>
+                  <span className="block text-slate-500">{verificationFeeCopy}</span>
+                  {orgDriverPaysKyc !== sendLinkPaysKyc ? (
+                    <span className="block text-amber-600">This overrides the organisation default for this driver.</span>
+                  ) : null}
+                </span>
               </label>
               <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit" variant="ghost">
                 {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
@@ -398,6 +415,9 @@ export function DriverIdentityVerification({
           </span>
           <Button onClick={() => setIsOpen((current) => !current)} size="sm" variant="secondary">
             {isOpen ? 'Hide verification' : identityStatus === 'verified' ? 'Re-verify identity' : 'Verify identity'}
+          </Button>
+          <Button onClick={() => router.refresh()} size="sm" variant="ghost">
+            Refresh verification status
           </Button>
         </div>
       ) : null}
@@ -408,7 +428,50 @@ export function DriverIdentityVerification({
         </Text>
       ) : null}
       {mode === 'operator' && sendState.error ? <Text tone="danger">{sendState.error}</Text> : null}
-      {mode === 'operator' && sendState.success ? <Text tone="success">{sendState.success}</Text> : null}
+      {mode === 'operator' && sendState.success ? (
+        <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-emerald-50/55 p-3">
+          <Text tone="success">{sendState.success}</Text>
+          {sendState.delivery ? (
+            <>
+              <Text tone="muted">{sendState.delivery.verificationUrl}</Text>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(sendState.delivery?.verificationUrl ?? '');
+                    } catch {
+                      // Ignore clipboard failures; the link remains visible.
+                    }
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Copy invite link
+                </Button>
+                {'share' in navigator ? (
+                  <Button
+                    onClick={() =>
+                      void navigator.share({
+                        title: 'Mobiris driver onboarding invite',
+                        text: `Hello ${driver.firstName ?? 'Driver'},\n\nYou’ve been invited to join ${driver.organisationName ?? 'your organisation'} on Mobiris.\n\nClick the link below to create your account, complete verification, and get assigned to a vehicle.\n\n${sendState.delivery?.verificationUrl ?? ''}\n\nPlease complete this as soon as possible.`,
+                        ...(sendState.delivery?.verificationUrl
+                          ? { url: sendState.delivery.verificationUrl }
+                          : {}),
+                      })
+                    }
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Share
+                  </Button>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {mode === 'operator' && !driver.email ? (
         <Text tone="muted">Add an email address to this driver record to send a self-verification link.</Text>
       ) : null}

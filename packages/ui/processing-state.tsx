@@ -318,6 +318,7 @@ export function ActionPendingButtonState({
   variant = 'primary',
   size = 'md',
   className,
+  type = 'button',
 }: {
   label: string;
   pendingLabel: string;
@@ -325,6 +326,7 @@ export function ActionPendingButtonState({
   variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   className?: string | undefined;
+  type?: 'button' | 'submit' | 'reset';
 }) {
   return (
     <Button
@@ -332,6 +334,7 @@ export function ActionPendingButtonState({
       className={className}
       disabled={pending}
       size={size}
+      type={type}
       variant={variant}
     >
       <span className="flex items-center gap-2">

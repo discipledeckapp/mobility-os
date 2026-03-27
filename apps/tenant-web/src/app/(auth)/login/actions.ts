@@ -15,6 +15,16 @@ export interface LoginActionState {
   error?: string;
 }
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    typeof (error as { digest?: unknown }).digest === 'string' &&
+    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
+}
+
 function getTrimmedValue(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
@@ -53,6 +63,9 @@ export async function loginAction(
     const continuationPath = getSelfServiceContinuationPath(parseTenantJwtPayload(accessToken));
     redirect((continuationPath ?? '/') as Route);
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
     return {
       error: error instanceof Error ? error.message : 'Unable to log in at this time.',
     };

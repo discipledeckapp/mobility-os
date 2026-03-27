@@ -2,8 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  getOptionsToken,
+  getStorageToken,
+} from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
 import { BillingModule } from './billing/billing.module';
@@ -17,6 +23,7 @@ import { PlansModule } from './plans/plans.module';
 import { PlatformSettingsModule } from './platform-settings/platform-settings.module';
 import { PlatformWalletsModule } from './platform-wallets/platform-wallets.module';
 import { ProvisioningModule } from './provisioning/provisioning.module';
+import { ControlPlaneRecordsModule } from './records/records.module';
 import { StaffModule } from './staff/staff.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { TenantLifecycleModule } from './tenant-lifecycle/tenant-lifecycle.module';
@@ -127,6 +134,7 @@ function createLoggerModule() {
     TenantsModule,
     PlatformSettingsModule,
     BillingModule,
+    ControlPlaneRecordsModule,
     PlatformWalletsModule,
     MeteringModule,
     TenantLifecycleModule,
@@ -139,6 +147,17 @@ function createLoggerModule() {
     // SupportModule,
     // PlatformAdminModule,
   ],
-  providers: [ThrottlerGuard],
+  providers: [
+    {
+      provide: ThrottlerGuard,
+      useFactory: (options: object, storage: object) =>
+        new ThrottlerGuard(options as never, storage as never, new Reflector()),
+      inject: [getOptionsToken(), getStorageToken()],
+    },
+    {
+      provide: APP_GUARD,
+      useExisting: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

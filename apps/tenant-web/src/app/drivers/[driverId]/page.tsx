@@ -17,6 +17,7 @@ import {
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import {
+  getTenantApiToken,
   getDriver,
   getDriverGuarantor,
   getDriverMobileAccess,
@@ -74,12 +75,6 @@ function getIdentityCardClass(tone: 'success' | 'warning' | 'danger' | 'neutral'
   return 'border-slate-200 bg-slate-50/65';
 }
 
-function getGuarantorTone(status: string | null | undefined): 'success' | 'warning' | 'danger' {
-  if (status === 'active') return 'success';
-  if (status === 'disconnected') return 'warning';
-  return 'danger';
-}
-
 function getReadinessTone(status: string): 'success' | 'warning' | 'danger' {
   if (status === 'ready') return 'success';
   if (status === 'partially_ready') return 'warning';
@@ -92,6 +87,59 @@ function getReadinessLabel(status: string): string {
   return 'Not ready';
 }
 
+function getVerificationFeeLabel(driver: {
+  verificationPayer?: 'driver' | 'organisation';
+  verificationPaymentMessage?: string | null;
+}) {
+  return driver.verificationPayer === 'driver'
+    ? 'Driver pays verification fee'
+    : 'Organisation covers verification fee';
+}
+
+function getVerificationStepSummary(driver: {
+  identityStatus: string;
+  hasApprovedLicence: boolean;
+  hasGuarantor: boolean;
+  status: string;
+}) {
+  return [
+    {
+      label: 'Verification',
+      value:
+        driver.identityStatus === 'verified'
+          ? 'Complete'
+          : driver.identityStatus === 'pending_verification'
+            ? 'Pending'
+            : driver.identityStatus === 'review_needed'
+              ? 'In review'
+              : 'Not started',
+      tone: getDriverIdentityTone(driver.identityStatus),
+    },
+    {
+      label: 'Guarantor',
+      value: driver.hasGuarantor ? 'Linked' : 'Pending',
+      tone: driver.hasGuarantor ? 'success' : 'warning',
+    },
+    {
+      label: 'Activation',
+      value: driver.status === 'active' ? 'Active' : 'Pending',
+      tone: driver.status === 'active' ? 'success' : 'warning',
+    },
+  ] as const;
+}
+
+function getDriverDisplayName(input: {
+  firstName?: string | null;
+  lastName?: string | null;
+  identityStatus?: string | null;
+}): string {
+  const fullName = `${input.firstName ?? ''} ${input.lastName ?? ''}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+  return input.identityStatus === 'unverified' ? 'Onboarding in progress' : 'New Driver';
+}
+
 export default async function DriverDetailsPage({
   params,
   searchParams,
@@ -101,17 +149,22 @@ export default async function DriverDetailsPage({
 }) {
   const { driverId } = await params;
   const { tab, walletWarning } = await searchParams;
+  const token = await getTenantApiToken().catch(() => undefined);
 
   const [driver, assignments, remittances, vehicles, fleets, tenant, documents, guarantor, mobileAccess] = await Promise.all([
-    getDriver(driverId),
-    listAssignments({ limit: 200 }).then((result) => result.data).catch(() => [] as AssignmentRecord[]),
-    listRemittances({ limit: 200 }).then((result) => result.data).catch(() => [] as RemittanceRecord[]),
-    listVehicles({ limit: 200 }).then((result) => result.data).catch(() => [] as VehicleRecord[]),
-    listFleets().catch(() => [] as FleetRecord[]),
-    getTenantMe().catch(() => null),
-    listDriverDocuments(driverId).catch(() => []),
-    getDriverGuarantor(driverId).catch(() => null),
-    getDriverMobileAccess(driverId).catch(() => ({ linkedUser: null, suggestedUsers: [] })),
+    getDriver(driverId, token),
+    listAssignments({ driverId, limit: 50 }, token)
+      .then((result) => result.data)
+      .catch(() => [] as AssignmentRecord[]),
+    listRemittances({ driverId, limit: 100 }, token)
+      .then((result) => result.data)
+      .catch(() => [] as RemittanceRecord[]),
+    listVehicles({ limit: 200 }, token).then((result) => result.data).catch(() => [] as VehicleRecord[]),
+    listFleets(token).catch(() => [] as FleetRecord[]),
+    getTenantMe(token).catch(() => null),
+    listDriverDocuments(driverId, token).catch(() => []),
+    getDriverGuarantor(driverId, token).catch(() => null),
+    getDriverMobileAccess(driverId, token).catch(() => ({ linkedUser: null, suggestedUsers: [] })),
   ]);
   const locale = getFormattingLocale(tenant?.country);
 
@@ -124,19 +177,22 @@ export default async function DriverDetailsPage({
     (r) => r.status === 'due' || r.status === 'overdue',
   );
   const totalCollectedMinorUnits = driverRemittances
-    .filter((r) => r.status === 'confirmed')
+    .filter((r) => r.status === 'completed' || r.status === 'partially_settled')
     .reduce((sum, r) => sum + r.amountMinorUnits, 0);
   const latestAssignment = [...driverAssignments].sort((a, b) =>
-    b.startedAt.localeCompare(a.startedAt),
+    (b.startedAt ?? b.createdAt).localeCompare(a.startedAt ?? a.createdAt),
   )[0];
   const vehicleLabels = new Map(vehicles.map((v) => [v.id, getVehiclePrimaryLabel(v)]));
   const identityTone = getDriverIdentityTone(driver.identityStatus);
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
+  const driverDisplayName = getDriverDisplayName(driver);
+  const isUnverifiedDriver = driver.identityStatus !== 'verified';
+  const verificationSteps = getVerificationStepSummary(driver);
   return (
     <TenantAppShell
-      description="Identity, verification, risk signals, guarantor, documents, and operational history."
+      description="Driver readiness, verification, payment posture, risk, documents, and assignment context."
       eyebrow="Operators"
-      title={`${driver.firstName} ${driver.lastName}`}
+      title="Driver readiness"
     >
       {/* Wallet warning banner */}
       {walletWarning === '1' ? (
@@ -165,13 +221,13 @@ export default async function DriverDetailsPage({
       {/* Always-visible hero card */}
       <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
         <CardContent className="pt-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="grid gap-5 lg:grid-cols-[1.6fr_0.9fr]">
             <div className="flex items-start gap-4">
               {/* Avatar */}
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--mobiris-primary)]/10 ring-2 ring-white shadow-sm">
                 {driver.providerImageUrl ?? driver.photoUrl ? (
                   <img
-                    alt={`${driver.firstName} ${driver.lastName}`}
+                    alt={driverDisplayName}
                     className="h-14 w-14 rounded-full object-cover"
                     src={driver.providerImageUrl ?? driver.photoUrl ?? ''}
                   />
@@ -182,69 +238,150 @@ export default async function DriverDetailsPage({
                   </span>
                 )}
               </div>
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Heading size="h2">{`${driver.firstName} ${driver.lastName}`}</Heading>
-                <Badge tone={getDriverStatusTone(driver.status)}>{driver.status}</Badge>
-                <Badge tone={identityTone}>{identityLabel}</Badge>
-                {driver.guarantorIsAlsoDriver ? (
-                  <Badge tone="danger">Cross-role conflict</Badge>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" viewBox="0 0 16 16" width="14">
-                    <path d="M1 10V8.5L3.5 4h9L15 8.5V10" />
-                    <path d="M1 10h14" />
-                    <circle cx="4" cy="12.5" r="1.5" />
-                    <circle cx="12" cy="12.5" r="1.5" />
-                  </svg>
-                  {fleetName}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" viewBox="0 0 16 16" width="14">
-                    <rect height="9" rx="1.5" width="14" x="1" y="4" />
-                    <circle cx="8" cy="8.5" r="2" />
-                    <path d="M4 6.5v4M12 6.5v4" />
-                  </svg>
-                  {driver.phone}
-                </span>
-                {driver.email ? (
-                  <span>{driver.email}</span>
-                ) : null}
-                <span className="flex items-center gap-1.5">
-                  <span className="text-slate-400">Guarantor:</span>
-                  <Badge tone={getGuarantorTone(driver.guarantorStatus)} >
-                    {driver.guarantorStatus === 'active'
-                      ? 'Linked'
-                      : driver.guarantorStatus === 'disconnected'
-                        ? 'Disconnected'
-                        : 'Missing'}
-                  </Badge>
-                </span>
-                {driver.riskBand ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-slate-400">Risk:</span>
-                    <Badge
-                      tone={
-                        driver.riskBand === 'critical'
-                          ? 'danger'
-                          : driver.riskBand === 'high' || driver.riskBand === 'medium' || driver.isWatchlisted
-                            ? 'warning'
-                            : 'success'
-                      }
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Heading size="h2">{driverDisplayName}</Heading>
+                    <Badge tone={getDriverStatusTone(driver.status)}>{driver.status}</Badge>
+                    <Badge tone={identityTone}>{identityLabel}</Badge>
+                    {isUnverifiedDriver ? (
+                      <Badge tone="warning">
+                        {driver.status === 'active' && (driver.adminAssignmentOverride ?? false)
+                          ? 'Active (Unverified)'
+                          : 'Unverified Driver'}
+                      </Badge>
+                    ) : null}
+                    {driver.guarantorIsAlsoDriver ? (
+                      <Badge tone="danger">Cross-role conflict</Badge>
+                    ) : null}
+                  </div>
+                  <Text tone="muted">
+                    {driver.email ?? 'Email pending'} · {driver.phone ?? 'Phone pending'} · {fleetName}
+                  </Text>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {verificationSteps.map((step) => (
+                    <div
+                      key={step.label}
+                      className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white/90 p-3"
                     >
-                      {driver.isWatchlisted ? `${driver.riskBand} · watchlist` : driver.riskBand}
-                    </Badge>
-                  </span>
-                ) : null}
+                      <Text tone="muted">{step.label}</Text>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Badge tone={step.tone}>{step.value}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white/90 p-3">
+                    <Text tone="muted">Risk posture</Text>
+                    <div className="mt-2">
+                      {driver.riskBand ? (
+                        <Badge
+                          tone={
+                            driver.riskBand === 'critical'
+                              ? 'danger'
+                              : driver.riskBand === 'high' ||
+                                  driver.riskBand === 'medium' ||
+                                  driver.isWatchlisted
+                                ? 'warning'
+                                : 'success'
+                          }
+                        >
+                          {driver.isWatchlisted ? `${driver.riskBand} · watchlist` : driver.riskBand}
+                        </Badge>
+                      ) : (
+                        <Badge tone="neutral">
+                          {driver.identityStatus === 'verified' ? 'No signal' : 'Insufficient data'}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white/90 p-3">
+                    <Text tone="muted">Verification fee</Text>
+                    <div className="mt-2 space-y-1">
+                      <Badge tone={driver.verificationPayer === 'driver' ? 'warning' : 'neutral'}>
+                        {getVerificationFeeLabel(driver)}
+                      </Badge>
+                      {driver.verificationPaymentMessage ? (
+                        <Text tone="muted">{driver.verificationPaymentMessage}</Text>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white/90 p-3">
+                    <Text tone="muted">Current next step</Text>
+                    <Text className="mt-2">
+                      {driver.activationReadiness === 'ready'
+                        ? 'Activate driver and continue with assignment acceptance.'
+                        : driver.activationReadinessReasons[0] ?? 'Continue onboarding.'}
+                    </Text>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <Card className="border-slate-200 bg-white/90 shadow-none">
+                <CardHeader className="pb-3">
+                  <CardTitle>Action rail</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <DriverStatusActions driver={driver} />
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800"
+                      href={`/drivers/${driverId}?tab=verification`}
+                    >
+                      Open verification
+                    </Link>
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      href={`/drivers/${driverId}?tab=documents`}
+                    >
+                      Review documents
+                    </Link>
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      href={`/drivers/${driverId}?tab=overview`}
+                    >
+                      Open readiness
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {driver.activationReadinessReasons.length > 0 ? (
+                <Card className="border-amber-200 bg-amber-50/70 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle>Activation blockers</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {driver.activationReadinessReasons.slice(0, 3).map((reason) => (
+                      <Text key={reason}>{reason}</Text>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
             </div>
-            <DriverStatusActions driver={driver} />
           </div>
         </CardContent>
       </Card>
+
+      {isUnverifiedDriver ? (
+        <Card className="border-amber-200 bg-amber-50/70">
+          <CardContent className="pt-5 pb-4">
+            <Text className="font-semibold text-[var(--mobiris-ink)]">Unverified Driver</Text>
+            <Text tone="muted">
+              This driver has not completed identity verification. Risk is higher. Complete verification to reduce risk.
+            </Text>
+            <Text tone="muted">
+              Assignment acceptance is still required before remittance can start, even if an admin override is used.
+            </Text>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Tab layout */}
       <Suspense>
@@ -260,7 +397,7 @@ export default async function DriverDetailsPage({
                 <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1">
                     <Text tone="muted">Full name</Text>
-                    <Text>{`${driver.firstName} ${driver.lastName}`}</Text>
+                    <Text>{driverDisplayName}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Phone</Text>
@@ -301,7 +438,7 @@ export default async function DriverDetailsPage({
                         {driver.identityStatus === 'verified'
                           ? 'View verification details →'
                           : driver.identityStatus === 'pending_verification'
-                            ? 'Check verification status →'
+                            ? 'Refresh verification status →'
                             : driver.identityStatus === 'review_needed'
                               ? 'Review case open — see verification →'
                               : driver.identityStatus === 'failed'
@@ -316,7 +453,7 @@ export default async function DriverDetailsPage({
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Identity record</Text>
-                    <Text>{driver.hasResolvedIdentity ? 'Verified identity exists' : 'No verified identity yet'}</Text>
+                    <Text>{driver.hasResolvedIdentity ? 'Verified identity exists' : 'Verification not started'}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Risk score</Text>
@@ -381,6 +518,31 @@ export default async function DriverDetailsPage({
                 <CardContent className="space-y-2">
                   {driver.activationReadinessReasons.map((reason) => (
                     <Text key={reason}>{reason}</Text>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {driver.enforcementActions?.length ? (
+              <Card className="border-rose-200 bg-rose-50/40">
+                <CardHeader>
+                  <CardTitle>Active policy actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Text tone="muted">Enforcement status</Text>
+                    <Badge tone={driver.enforcementStatus === 'restricted' ? 'danger' : 'warning'}>
+                      {driver.enforcementStatus ?? 'flagged'}
+                    </Badge>
+                  </div>
+                  {driver.enforcementActions.map((action) => (
+                    <div
+                      key={action.id}
+                      className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-rose-100 bg-white/70 p-3"
+                    >
+                      <Text tone="strong">{action.actionType.replace(/_/g, ' ')}</Text>
+                      <Text>{action.reason}</Text>
+                    </div>
                   ))}
                 </CardContent>
               </Card>
@@ -470,8 +632,14 @@ export default async function DriverDetailsPage({
                         src={driver.selfieImageUrl ?? driver.photoUrl ?? ''}
                       />
                     ) : (
-                      <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
-                        <Text tone="muted">No stored live-selfie image yet.</Text>
+                      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                          <svg fill="none" height="28" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width="28">
+                            <path d="M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            <path d="M4 18a8 8 0 0 1 16 0" />
+                          </svg>
+                        </div>
+                        <Text tone="muted">No live selfie captured yet.</Text>
                       </div>
                     )}
                   </div>
@@ -486,8 +654,14 @@ export default async function DriverDetailsPage({
                         src={driver.providerImageUrl}
                       />
                     ) : (
-                      <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
-                        <Text tone="muted">No government-record image has been stored yet.</Text>
+                      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                          <svg fill="none" height="28" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width="28">
+                            <rect height="14" rx="2" width="18" x="3" y="5" />
+                            <path d="M7 9h10M7 13h6" />
+                          </svg>
+                        </div>
+                        <Text tone="muted">No reference identity image is stored yet.</Text>
                       </div>
                     )}
                   </div>

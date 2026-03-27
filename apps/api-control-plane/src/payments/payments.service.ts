@@ -7,6 +7,7 @@ import { BillingService } from '../billing/billing.service';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
+import { ControlPlaneRecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
 import type { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
@@ -30,6 +31,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly platformWalletsService: PlatformWalletsService,
+    private readonly recordsService: ControlPlaneRecordsService,
     private readonly paymentProvidersService: PaymentProvidersService,
     private readonly configService: ConfigService,
     private readonly tenantLifecycleService: TenantLifecycleService,
@@ -274,6 +276,32 @@ export class PaymentsService {
           appliedAt: new Date(),
         },
       });
+      await this.recordsService.issueDocument({
+        tenantId: invoice.tenantId,
+        documentType: 'subscription_payment_receipt',
+        issuerType: 'platform',
+        issuerId: 'api-control-plane',
+        recipientType: 'tenant',
+        recipientId: invoice.tenantId,
+        relatedEntityType: 'payment_attempt',
+        relatedEntityId: dto.reference,
+        title: `Subscription Payment Receipt ${dto.reference}`,
+        subjectLines: [
+          `Invoice: ${invoice.id}`,
+          `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
+          `Provider: ${dto.provider}`,
+          `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
+          `Purpose: invoice settlement`,
+        ],
+        canonicalPayload: {
+          reference: dto.reference,
+          invoiceId: invoice.id,
+          amountMinorUnits: verified.amountMinorUnits,
+          currency: verified.currency,
+          provider: dto.provider,
+          paidAt: verified.paidAt ?? null,
+        },
+      });
 
       return {
         provider: dto.provider,
@@ -290,6 +318,33 @@ export class PaymentsService {
       await this.prisma.cpPaymentAttempt.updateMany({
         where: { reference: dto.reference },
         data: { status: 'applied', appliedAt: new Date() },
+      });
+      await this.recordsService.issueDocument({
+        ...(tenantId ? { tenantId } : {}),
+        documentType: 'verification_fee_receipt',
+        issuerType: 'platform',
+        issuerId: 'api-control-plane',
+        recipientType: 'payer',
+        recipientId: dto.driverId ?? tenantId ?? dto.reference,
+        relatedEntityType: 'payment_attempt',
+        relatedEntityId: dto.reference,
+        title: `Verification Fee Receipt ${dto.reference}`,
+        subjectLines: [
+          `Reference: ${dto.reference}`,
+          `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
+          `Provider: ${dto.provider}`,
+          `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
+          `Purpose: identity verification`,
+        ],
+        canonicalPayload: {
+          reference: dto.reference,
+          tenantId: tenantId ?? null,
+          driverId: dto.driverId ?? null,
+          amountMinorUnits: verified.amountMinorUnits,
+          currency: verified.currency,
+          provider: dto.provider,
+          paidAt: verified.paidAt ?? null,
+        },
       });
       return {
         provider: dto.provider,
@@ -330,6 +385,32 @@ export class PaymentsService {
       data: {
         status: alreadyApplied ? 'applied' : 'applied',
         appliedAt: new Date(),
+      },
+    });
+    await this.recordsService.issueDocument({
+      tenantId,
+      documentType: 'wallet_funding_receipt',
+      issuerType: 'platform',
+      issuerId: 'api-control-plane',
+      recipientType: 'tenant',
+      recipientId: tenantId,
+      relatedEntityType: 'payment_attempt',
+      relatedEntityId: dto.reference,
+      title: `Wallet Funding Receipt ${dto.reference}`,
+      subjectLines: [
+        `Reference: ${dto.reference}`,
+        `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
+        `Provider: ${dto.provider}`,
+        `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
+        `Purpose: platform wallet top-up`,
+      ],
+      canonicalPayload: {
+        reference: dto.reference,
+        tenantId,
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        provider: dto.provider,
+        paidAt: verified.paidAt ?? null,
       },
     });
 

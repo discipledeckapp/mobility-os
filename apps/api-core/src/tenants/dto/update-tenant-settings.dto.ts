@@ -13,9 +13,6 @@ import {
   MinLength,
 } from 'class-validator';
 
-const DRIVER_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Driver).map(
-  (document) => document.slug,
-);
 const VEHICLE_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Vehicle).map(
   (document) => document.slug,
 );
@@ -78,10 +75,16 @@ export class UpdateTenantSettingsDto {
   @IsIn(DRIVER_IDENTIFIER_TYPES, { each: true })
   requiredDriverIdentifierTypes?: string[];
 
-  @ApiPropertyOptional({ type: [String], enum: DRIVER_DOCUMENT_TYPES })
+  @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsIn(DRIVER_DOCUMENT_TYPES, { each: true })
+  @IsString({ each: true })
+  customDriverDocumentTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   requiredDriverDocumentSlugs?: string[];
 
   @ApiPropertyOptional({ type: [String], enum: VEHICLE_DOCUMENT_TYPES })

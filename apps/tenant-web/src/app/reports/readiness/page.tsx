@@ -16,6 +16,7 @@ import {
 import Link from 'next/link';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import {
+  getTenantApiToken,
   getLicenceExpiryReport,
   getOperationalReadinessReport,
   getTenantMe,
@@ -43,11 +44,12 @@ function formatDate(value: string | null | undefined, locale: string) {
 }
 
 export default async function ReadinessReportPage() {
+  const token = await getTenantApiToken().catch(() => undefined);
   const [report, licenceExpiry, fleets, tenant] = await Promise.all([
-    getOperationalReadinessReport(),
-    getLicenceExpiryReport(),
-    listFleets().catch(() => []),
-    getTenantMe().catch(() => null),
+    getOperationalReadinessReport(token),
+    getLicenceExpiryReport(token),
+    listFleets(token).catch(() => []),
+    getTenantMe(token).catch(() => null),
   ]);
 
   const locale = getFormattingLocale(tenant?.country);
@@ -137,7 +139,7 @@ export default async function ReadinessReportPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{formatDate(driver.approvedLicenceExpiresAt, locale)}</TableCell>
-                    <TableCell>{driver.riskBand ?? 'No signal'}</TableCell>
+                    <TableCell>{driver.riskBand ?? 'Insufficient data'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

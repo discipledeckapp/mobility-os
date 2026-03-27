@@ -51,6 +51,7 @@ export class TenantsController {
         settings.operations.requireGovernmentVerificationLookup,
       enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
+      customDriverDocumentTypes: settings.operations.customDriverDocumentTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };
@@ -85,6 +86,7 @@ export class TenantsController {
         settings.operations.requireGovernmentVerificationLookup,
       enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
+      customDriverDocumentTypes: settings.operations.customDriverDocumentTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };
