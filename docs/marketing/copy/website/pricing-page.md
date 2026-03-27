@@ -32,7 +32,7 @@ For reference when setting and communicating pricing:
 
 ### Starter — ₦15,000/month
 
-**For:** Small operators (up to 10 vehicles) getting started with digital fleet management.
+**For:** Small operators (up to 10 vehicles) structuring their operations digitally for the first time.
 
 **Includes:**
 - Up to 10 active vehicles

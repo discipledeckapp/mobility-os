@@ -8,7 +8,7 @@ Target length: 13 slides + appendix.
 ## Slide 1 — Cover
 
 **Mobiris**
-> Fleet operations software for Africa.
+> Risk infrastructure for African transport.
 
 *Clean wordmark on navy background. No subtitle clutter.*
 
@@ -158,7 +158,7 @@ Three converging forces:
 | Generic ERP (Odoo, SAP) | Business operations | Wrong fit; no driver verification or remittance lifecycle |
 | WhatsApp + notebooks | Manual workaround | Free but leaks ₦1.5M+/month at 50 vehicles |
 
-**Our position**: The first purpose-built fleet operations platform for the vehicle-for-hire segment in Africa.
+**Our position**: The first purpose-built risk infrastructure layer for the vehicle-for-hire segment in Africa — verification, remittance enforcement, and cross-operator fraud intelligence in one platform.
 
 ---
 

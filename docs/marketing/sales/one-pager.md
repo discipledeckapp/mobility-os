@@ -17,11 +17,11 @@ There is no purpose-built software for this segment. Telematics tools track vehi
 
 ## What Mobiris Does
 
-Mobiris is the **fleet operations platform for vehicle-for-hire transport companies**.
+Mobiris is the **risk infrastructure for vehicle-for-hire transport companies** — the verification, accountability, and fraud intelligence layer that operators run on.
 
 | Module | What operators get |
 |---|---|
-| **Driver Management** | Biometric liveness verification + NIN/BVN/Ghana Card/KE ID cross-check at onboarding. Guarantor capture and independent verification. Driver self-service OTP link — drivers verify themselves from their Android. |
+| **Driver Verification** | Biometric liveness verification + NIN/BVN/Ghana Card/KE ID cross-check at onboarding. Guarantor capture and independent verification. Driver self-service OTP link — drivers verify themselves from their Android. |
 | **Fleet & Vehicles** | Vehicle catalog with automatic VIN decode. Status lifecycle management. Operational readiness report. Licence expiry alerts. |
 | **Assignments** | Driver-to-vehicle assignment with full lifecycle tracking — start, complete, cancel — all timestamped. |
 | **Remittance** | Record, confirm, dispute, waive — with timestamps on every action. Running operational wallet ledger per business entity. |

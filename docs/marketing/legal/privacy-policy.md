@@ -14,7 +14,7 @@ RC1957484 · 6, Addo-Badore Road, Ajah, Lagos, Nigeria
 
 This Privacy Policy is published by **Growth Figures Limited**, a company incorporated in Nigeria (RC1957484), trading as **Mobiris**, with registered offices at 6, Addo-Badore Road, Ajah, Lagos, Nigeria.
 
-We operate a fleet operations platform at app.mobiris.ng and mobiris.ng. References to "Mobiris", "we", "us", or "our" in this Policy refer to Growth Figures Limited.
+We operate a transport risk and operations platform at app.mobiris.ng and mobiris.ng. References to "Mobiris", "we", "us", or "our" in this Policy refer to Growth Figures Limited.
 
 We are committed to protecting the personal data of everyone who interacts with our platform — including the operators, team members, drivers, and guarantors whose data is processed through our services.
 

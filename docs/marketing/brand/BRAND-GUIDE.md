@@ -6,14 +6,16 @@ Version 1.0 · March 2026
 
 ## Brand Positioning
 
-Mobiris is a **B2B operations platform for transport operators** — built for the companies that run fleets, manage drivers, and collect remittance across African markets.
+Mobiris is **mobility risk infrastructure for transport operators** — the verification, accountability, and fraud intelligence layer that vehicle-for-hire companies in Africa run on.
 
 The brand should feel:
-- **Reliable** — operators trust Mobiris with their daily money and compliance
-- **Efficient** — the product saves time; the brand should not waste it
+- **Reliable** — operators trust Mobiris with their drivers, their daily money, and their compliance
+- **In control** — the product enforces structure; the brand should project that
 - **Professional** — enterprise-grade, not a startup toy
 
 It should not feel: flashy, consumer-facing, or over-designed.
+
+> For full approved/disallowed vocabulary and messaging rules, see [`/docs/positioning/mobiris-positioning.md`](../positioning/mobiris-positioning.md).
 
 ---
 
@@ -96,20 +98,22 @@ Use `icons/png/icon-1024.png` for App Store and Google Play submissions.
 
 | Do | Do not |
 |---|---|
-| Direct and specific ("Track every assignment in real time") | Vague and generic ("Unlock your potential") |
-| Operator-first language ("Your drivers", "Your fleets") | Tech jargon ("leverage", "synergy", "disrupt") |
+| Direct and specific ("Verify every driver before they get your keys") | Vague and generic ("Unlock your potential") |
+| Operator-first language ("Your drivers", "Your operation") | Tech jargon ("leverage", "synergy", "disrupt") |
 | Confident without arrogance | Hyperbolic claims without data |
-| Use numbers when available ("17 migrations, 3 planes, 0 cross-tenant leaks") | Passive voice |
+| Use numbers when available ("₦1M/month in remittance leakage for a 50-vehicle fleet") | Passive voice |
+| Enforcement and accountability verbs ("enforce", "verify", "control") | Passive management verbs as primary claims ("manage", "track", "handle") |
 
-**Primary audience vocabulary:** fleet operators, fleet managers, transport companies, operators, remittance, driver verification, compliance, assignment, dispatch.
+**Primary audience vocabulary:** transport operators, fleet managers, transport companies, operators, remittance accountability, driver verification, compliance, assignment, identity risk, fraud signals.
 
 ---
 
 ## What Mobiris Is Not
 
 - Not a consumer app — do not use casual emoji-heavy copy
-- Not a generic "logistics platform" — be specific about the transport operator use case
-- Not a fintech product — remittance and wallets are operational tools, not the primary product story
+- Not a fleet management platform — "fleet management" implies telematics/GPS dashboards; Mobiris is risk infrastructure
+- Not a generic "logistics platform" — be specific about the vehicle-for-hire transport operator use case
+- Not a fintech product — remittance and wallets are accountability tools, not the primary product story
 
 ---
 

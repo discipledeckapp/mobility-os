@@ -34,7 +34,7 @@ Terms used in this DPA have the meanings given in the Terms of Service and Priva
 
 | Element | Detail |
 |---|---|
-| **Nature** | Collection, storage, retrieval, use, disclosure, and deletion of personal data in connection with fleet operations management |
+| **Nature** | Collection, storage, retrieval, use, disclosure, and deletion of personal data in connection with transport operations and driver risk management |
 | **Purpose** | Driver and Guarantor identity verification; fleet, vehicle, and assignment management; remittance tracking; cross-operator risk signal generation (Intelligence Plane) |
 | **Categories of data subjects** | Drivers, Guarantors, and Authorised Users of the Controller |
 | **Categories of personal data** | Identity data (name, phone, government ID), biometric embeddings, employment and remittance records, uploaded documents |

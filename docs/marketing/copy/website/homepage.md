@@ -8,10 +8,10 @@ Tone: Direct, operator-first, no tech jargon.
 ## Hero
 
 **Headline:**
-> Run your fleet. Know your drivers. Track every naira.
+> Verify every driver. Enforce every payment. Stop fraud before it starts.
 
 **Subheadline:**
-> Mobiris is the operations platform for transport companies — driver verification, fleet assignment, and daily remittance tracking in one place. Purpose-built for how African operators actually work.
+> Mobiris is the risk infrastructure for transport companies — driver verification, remittance enforcement, and cross-operator fraud intelligence in one place. Purpose-built for how African operators actually work.
 
 **Primary CTA:** Start free — no credit card
 **Secondary CTA:** Watch a 3-min demo
@@ -133,10 +133,10 @@ Your drivers are protected. Your records are auditable.
 
 ## Final CTA Section
 
-**Headline:** Ready to stop managing your fleet on WhatsApp?
+**Headline:** Ready to stop running your operation on WhatsApp?
 
 **Body:**
-Join transport operators across Nigeria, Ghana, and Kenya who use Mobiris to verify their drivers, track their remittance, and run their fleets with confidence.
+Join transport operators across Nigeria, Ghana, and Kenya who use Mobiris to verify their drivers, enforce remittance accountability, and eliminate cross-operator fraud.
 
 **CTA:** Get started free — no credit card required.
 
@@ -148,6 +148,6 @@ Join transport operators across Nigeria, Ghana, and Kenya who use Mobiris to ver
 
 Links: Product · Pricing · About · Blog · Support · Terms of Service · Privacy Policy
 
-Tagline: **Mobiris — Fleet operations software for Africa.**
+Tagline: **Mobiris — Risk infrastructure for African transport operators.**
 
 Languages: English (primary). Yoruba, Swahili, Twi versions — roadmap.

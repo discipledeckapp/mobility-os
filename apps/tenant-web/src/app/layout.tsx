@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Mobiris',
-  description: 'Fleet operations console.',
+  description: 'Mobiris operations console.',
 };
 
 export default function RootLayout({

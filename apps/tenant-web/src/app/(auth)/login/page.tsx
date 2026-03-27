@@ -13,7 +13,7 @@ export default function LoginPage() {
           <div>
             <p className="text-base font-bold tracking-tight text-white">Mobiris</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-200/50">
-              Fleet Console
+              Operations Console
             </p>
           </div>
         </div>
@@ -22,13 +22,13 @@ export default function LoginPage() {
         <div className="space-y-6">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold leading-tight tracking-[-0.03em] text-white">
-              Fleet and driver
+              Verify drivers.
               <br />
-              operations, <span className="text-blue-200">simplified.</span>
+              Enforce accountability. <span className="text-blue-200">Reduce risk.</span>
             </h1>
             <p className="text-base leading-relaxed text-blue-100/70">
-              Manage drivers, vehicles, assignments, and daily remittance from a single operations
-              console built for transport operators.
+              Verify your drivers, enforce daily remittance, and control fleet assignments from a
+              single console built for transport operators.
             </p>
           </div>
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
           <div className="space-y-3">
             {[
               'Driver identity verification & risk scoring',
-              'Real-time vehicle assignment tracking',
+              'Structured vehicle assignment and completion records',
               'Daily remittance workflow & collections',
               'Guarantor management & watchlist alerts',
             ].map((item) => (
@@ -74,7 +74,7 @@ export default function LoginPage() {
               Organisation access
             </p>
             <h2 className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--mobiris-ink)]">
-              Sign in to your fleet console
+              Sign in to your console
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               Enter your email and password to continue.

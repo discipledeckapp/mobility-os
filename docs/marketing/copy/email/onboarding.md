@@ -143,7 +143,7 @@ Hi,
 
 **[Admin Name]** has invited you to join **[Tenant Name]**'s Mobiris account as **[Role]**.
 
-Mobiris is the fleet operations platform [Tenant Name] uses to manage their drivers, vehicles, assignments, and remittance.
+Mobiris is the operations console [Tenant Name] uses to verify drivers, control assignments, and enforce remittance accountability.
 
 [→ Accept your invitation and set up your account]
 

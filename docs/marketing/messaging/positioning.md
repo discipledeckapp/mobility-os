@@ -2,9 +2,11 @@
 
 ## Category
 
-**Fleet operations software for vehicle-for-hire operators in Africa.**
+**Mobility Risk Infrastructure for vehicle-for-hire operators in Africa.**
 
-Mobiris is not a generic logistics platform, a telematics tracker, or a fintech product. It is the operating system for companies that own vehicles, assign them to drivers daily, collect remittance, and need to know exactly who is behind the wheel — with a full audit trail.
+Mobiris is not a generic logistics platform, a telematics tracker, a fleet management dashboard, or a fintech product. It is the risk infrastructure layer for transport companies that need to verify who is behind the wheel, enforce remittance accountability, and surface cross-operator fraud signals — with a complete audit trail.
+
+> See [`/docs/positioning/mobiris-positioning.md`](../positioning/mobiris-positioning.md) for the canonical content rules, approved vocabulary, and disallowed phrases that govern all copy in this repository.
 
 ---
 
@@ -27,7 +29,7 @@ These operators — running danfo buses in Lagos, matatus in Nairobi, trotros in
 
 ## One-Line Position
 
-> Mobiris is the fleet operations platform that transport companies in Africa use to verify their drivers, dispatch assignments, and track remittance — with a cross-operator fraud detection layer that no single operator can build alone.
+> Mobiris is the risk infrastructure that transport companies in Africa use to verify drivers, enforce remittance accountability, and eliminate cross-operator fraud — built for how the vehicle-for-hire segment actually works.
 
 ---
 
@@ -63,7 +65,7 @@ Vehicle-for-hire operators run complex, cash-heavy operations with no fit-for-pu
 
 ## Positioning Statement (internal)
 
-*For vehicle-for-hire transport operators in African markets — running danfo fleets in Lagos, matatu SACCOs in Nairobi, trotro operators in Accra — who are losing money to remittance fraud, unverified drivers, and zero operational visibility, Mobiris is the purpose-built fleet operations platform that provides end-to-end control from driver onboarding and biometric verification to daily remittance tracking and cross-operator risk signals. Unlike telematics products that track vehicles but ignore the driver-remittance relationship, or generic ERP that doesn't fit the vehicle-for-hire model, Mobiris is built for exactly how these businesses work.*
+*For vehicle-for-hire transport operators in African markets — running danfo fleets in Lagos, matatu SACCOs in Nairobi, trotro operators in Accra — who are exposed to remittance fraud, unverified drivers, and cross-operator identity risk, Mobiris is the purpose-built risk infrastructure that gives operators end-to-end control: from biometric driver verification and document compliance to remittance enforcement and cross-operator fraud signals. Unlike telematics products that track vehicles but ignore the driver-remittance relationship, or generic ERP that doesn't fit the vehicle-for-hire model, Mobiris is built to verify, enforce, and protect — not just display.*
 
 ---
 

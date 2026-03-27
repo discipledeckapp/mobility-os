@@ -88,7 +88,7 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
 
   return (
     <TenantAppShell
-      description="Search and manage the organisation driver registry, then drill into each driver record for verification, review, assignment, and remittance context."
+      description="Search and verify drivers in the organisation registry, then drill into each record for identity status, document compliance, assignment history, and remittance accountability."
       eyebrow="Operators"
       title="Drivers"
     >

@@ -34,7 +34,7 @@ export default async function VehiclesPage() {
 
   return (
     <TenantAppShell
-      description="Search and manage the organisation vehicle registry, then drill into each asset for identification, valuation, assignment, and VIN context."
+      description="Search and control the organisation vehicle registry, then drill into each asset for identification, valuation, assignment history, and VIN context."
       eyebrow="Assets"
       title="Vehicles"
     >

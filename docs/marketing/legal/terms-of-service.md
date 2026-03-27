@@ -39,7 +39,7 @@ If you do not agree to these Terms, you must not access or use the platform.
 
 ### 3.1 Platform Description
 
-The Company provides a fleet operations platform that enables Operators to:
+The Company provides a transport risk and operations platform that enables Operators to:
 
 (a) manage driver onboarding, identity verification, and document storage;
 (b) manage vehicle and fleet records, assignments, and status tracking;
