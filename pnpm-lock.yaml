@@ -576,6 +576,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@mobility-os/domain-config':
+        specifier: workspace:*
+        version: link:../domain-config
       react:
         specifier: ^19.0.0
         version: 19.2.4
