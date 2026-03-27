@@ -177,7 +177,8 @@ export default async function DriverDetailsPage({
                   />
                 ) : (
                   <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">
-                    {driver.firstName[0]}{driver.lastName[0]}
+                    {(driver.firstName ?? 'D')[0]}
+                    {(driver.lastName ?? 'R')[0]}
                   </span>
                 )}
               </div>

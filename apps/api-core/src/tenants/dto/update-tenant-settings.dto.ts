@@ -19,6 +19,7 @@ const DRIVER_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Driver).map(
 const VEHICLE_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Vehicle).map(
   (document) => document.slug,
 );
+const DRIVER_IDENTIFIER_TYPES = ['NATIONAL_ID', 'BANK_ID', 'PASSPORT', 'DRIVERS_LICENSE', 'TAX_ID'];
 
 export class UpdateTenantSettingsDto {
   @ApiPropertyOptional()
@@ -64,6 +65,18 @@ export class UpdateTenantSettingsDto {
   @IsOptional()
   @IsBoolean()
   requireGovernmentVerificationLookup?: boolean;
+
+  @ApiPropertyOptional({ type: [String], enum: DRIVER_IDENTIFIER_TYPES })
+  @IsOptional()
+  @IsArray()
+  @IsIn(DRIVER_IDENTIFIER_TYPES, { each: true })
+  enabledDriverIdentifierTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String], enum: DRIVER_IDENTIFIER_TYPES })
+  @IsOptional()
+  @IsArray()
+  @IsIn(DRIVER_IDENTIFIER_TYPES, { each: true })
+  requiredDriverIdentifierTypes?: string[];
 
   @ApiPropertyOptional({ type: [String], enum: DRIVER_DOCUMENT_TYPES })
   @IsOptional()

@@ -66,7 +66,7 @@ export default async function DriverPathSelfServicePage({
           <div className="space-y-2">
             <Heading size="h1">{`${driver.firstName} ${driver.lastName}`}</Heading>
             <Text tone="muted">
-              Complete your identity verification with a live selfie or a manual identifier submission, then upload the supporting documents your organisation needs.
+              Complete your identity verification with a live selfie, then upload the supporting documents your organisation needs.
             </Text>
           </div>
         </section>
@@ -77,9 +77,7 @@ export default async function DriverPathSelfServicePage({
           </CardHeader>
           <CardContent className="space-y-2">
             <Text>Use this page on the same device that will capture the selfie if you are completing live verification.</Text>
-            <Text tone="muted">
-              If live liveness is unavailable, continue with manual verification only and let your organisation review the submission outcome.
-            </Text>
+            <Text tone="muted">If live verification is unavailable, retry on a supported device or contact your organisation.</Text>
           </CardContent>
         </Card>
 
@@ -88,12 +86,19 @@ export default async function DriverPathSelfServicePage({
           driver={driver}
           mode="self_service"
           selfServiceToken={token}
+          {...(driver.enabledDriverIdentifierTypes
+            ? { enabledIdentifierTypes: driver.enabledDriverIdentifierTypes }
+            : {})}
+          {...(driver.requiredDriverIdentifierTypes
+            ? { requiredIdentifierTypes: driver.requiredDriverIdentifierTypes }
+            : {})}
         />
         <DriverDocumentsPanel
           countryCode={driver.nationality}
           documents={documents}
           driverId={driver.id}
           mode="self_service"
+          requiredDocumentSlugs={driver.requiredDriverDocumentSlugs}
           selfServiceToken={token}
         />
       </div>

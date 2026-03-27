@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -165,16 +165,22 @@ export function DriverDocumentsPanel({
   documents,
   mode = 'operator',
   selfServiceToken,
+  requiredDocumentSlugs,
+  onUploadSuccess,
 }: {
   driverId: string;
   countryCode?: string | null | undefined;
   documents: DriverDocumentRecord[];
   mode?: 'operator' | 'self_service';
   selfServiceToken?: string | null | undefined;
+  requiredDocumentSlugs?: string[] | null | undefined;
+  onUploadSuccess?: () => void;
 }) {
   const [documentType, setDocumentType] = useState('');
   const requiredDriverDocumentSlugs =
-    countryCode && isCountrySupported(countryCode)
+    requiredDocumentSlugs?.length
+      ? requiredDocumentSlugs
+      : countryCode && isCountrySupported(countryCode)
       ? getCountryConfig(countryCode).requiredDriverDocumentSlugs
       : ['national-id', 'drivers-license'];
   const requiredDocumentOptions = getRequiredDocuments(
@@ -188,6 +194,13 @@ export function DriverDocumentsPanel({
     mode === 'self_service' ? uploadDriverSelfServiceDocumentAction : uploadDriverDocumentAction,
     initialState,
   );
+
+  useEffect(() => {
+    if (state.success && onUploadSuccess) {
+      onUploadSuccess();
+    }
+  }, [onUploadSuccess, state.success]);
+
   return (
     <Card className="border-slate-200 bg-white">
       <CardHeader>

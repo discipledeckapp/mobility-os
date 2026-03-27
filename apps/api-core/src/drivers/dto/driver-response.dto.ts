@@ -157,6 +157,41 @@ export class DriverResponseDto {
   })
   mobileAccessStatus?: string | null;
 
+  @ApiPropertyOptional({ type: [String] })
+  enabledDriverIdentifierTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredDriverIdentifierTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredDriverDocumentSlugs?: string[];
+
+  @ApiPropertyOptional()
+  driverPaysKyc?: boolean;
+
+  @ApiPropertyOptional()
+  kycPaymentVerified?: boolean;
+
+  @ApiPropertyOptional()
+  verificationPayer?: 'driver' | 'organisation';
+
+  @ApiPropertyOptional()
+  verificationAmountMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  verificationCurrency?: string | null;
+
+  @ApiPropertyOptional()
+  verificationPaymentStatus?:
+    | 'not_required'
+    | 'ready'
+    | 'driver_payment_required'
+    | 'wallet_missing'
+    | 'insufficient_balance';
+
+  @ApiPropertyOptional()
+  verificationPaymentMessage?: string | null;
+
   @ApiProperty()
   pendingDocumentCount!: number;
 

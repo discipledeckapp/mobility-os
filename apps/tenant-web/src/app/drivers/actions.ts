@@ -91,6 +91,14 @@ export interface DriverBulkImportActionState {
   success?: string;
 }
 
+function sanitizeSelfServiceErrorMessage(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('provider') || normalized.includes('fallback') || normalized.includes('internal_free_service')) {
+    return 'Live verification is unavailable right now. Please try again.';
+  }
+  return message;
+}
+
 function getTrimmedValue(formData: FormData, key: keyof CreateDriverInput): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
@@ -309,7 +317,7 @@ export async function startDriverSelfServiceVerificationAction(
         : 'Unable to start self-service verification at this time.';
 
     return {
-      error: message,
+      error: sanitizeSelfServiceErrorMessage(message),
       ...(message.toLowerCase().includes('live verification is unavailable')
         ? { errorCode: 'liveness_unavailable' as const }
         : {}),
@@ -328,7 +336,6 @@ export async function resolveDriverVerificationAction(
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const enteredIdentifiers = getIdentifierValues(formData);
-  const verificationMode = getOptionalTrimmedValue(formData, 'verificationMode');
 
   if (!driverId) {
     return {
@@ -336,7 +343,7 @@ export async function resolveDriverVerificationAction(
     };
   }
 
-  if (verificationMode !== 'manual' && !sessionId) {
+  if (!sessionId) {
     return {
       error: 'Start live verification before submitting this identity check.',
     };
@@ -375,14 +382,10 @@ export async function resolveDriverVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      ...(verificationMode !== 'manual'
-        ? {
-            livenessCheck: {
-              ...(providerName ? { provider: providerName } : {}),
-              sessionId,
-            },
-          }
-        : {}),
+      livenessCheck: {
+        ...(providerName ? { provider: providerName } : {}),
+        sessionId,
+      },
     });
 
     revalidatePath('/drivers');
@@ -394,10 +397,11 @@ export async function resolveDriverVerificationAction(
     };
   } catch (error) {
     return {
-      error:
+      error: sanitizeSelfServiceErrorMessage(
         error instanceof Error
           ? error.message
           : 'Unable to resolve identity at this time.',
+      ),
     };
   }
 }
@@ -497,7 +501,7 @@ export async function startGuarantorSelfServiceVerificationAction(
         : 'Unable to start guarantor verification at this time.';
 
     return {
-      error: message,
+      error: sanitizeSelfServiceErrorMessage(message),
       ...(message.toLowerCase().includes('live verification is unavailable')
         ? { errorCode: 'liveness_unavailable' as const }
         : {}),
@@ -516,13 +520,12 @@ export async function resolveGuarantorSelfServiceVerificationAction(
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const enteredIdentifiers = getIdentifierValues(formData);
-  const verificationMode = getOptionalTrimmedValue(formData, 'verificationMode');
 
   if (!token) {
     return { error: 'The guarantor verification link is missing or expired.' };
   }
 
-  if (verificationMode !== 'manual' && !sessionId) {
+  if (!sessionId) {
     return { error: 'Start live verification before submitting this identity check.' };
   }
 
@@ -544,14 +547,10 @@ export async function resolveGuarantorSelfServiceVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      ...(verificationMode !== 'manual'
-        ? {
-            livenessCheck: {
-              ...(providerName ? { provider: providerName } : {}),
-              sessionId,
-            },
-          }
-        : {}),
+      livenessCheck: {
+        ...(providerName ? { provider: providerName } : {}),
+        sessionId,
+      },
     });
 
     return {
@@ -560,10 +559,11 @@ export async function resolveGuarantorSelfServiceVerificationAction(
     };
   } catch (error) {
     return {
-      error:
+      error: sanitizeSelfServiceErrorMessage(
         error instanceof Error
           ? error.message
           : 'Unable to resolve guarantor identity at this time.',
+      ),
     };
   }
 }

@@ -511,6 +511,8 @@ export class AuthService {
       requireBiometricVerification: organisationSettings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup:
         organisationSettings.operations.requireGovernmentVerificationLookup,
+      enabledDriverIdentifierTypes: organisationSettings.operations.enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes: organisationSettings.operations.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: organisationSettings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: organisationSettings.operations.requiredVehicleDocumentSlugs,
       notificationPreferences: userSettings.notificationPreferences,

@@ -49,6 +49,8 @@ export class TenantsController {
       requireBiometricVerification: settings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup:
         settings.operations.requireGovernmentVerificationLookup,
+      enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };
@@ -81,6 +83,8 @@ export class TenantsController {
       requireBiometricVerification: settings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup:
         settings.operations.requireGovernmentVerificationLookup,
+      enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
     };

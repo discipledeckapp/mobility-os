@@ -1,5 +1,6 @@
 import {
   DRIVER_STATUS_CODES,
+  getCountryConfig,
   getDocumentType,
   isCountrySupported,
   normalizePhoneNumberForCountry,
@@ -193,6 +194,7 @@ type DriverDocumentReviewQueueItem = DriverDocumentRecord & {
 };
 
 const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
+const DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS = 500_000;
 const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
   Permission.DriversRead,
   Permission.AssignmentsRead,
@@ -223,6 +225,147 @@ export class DriversService {
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
+
+  private getVerificationAmountMinorUnits(currency?: string | null): number {
+    switch ((currency ?? '').toUpperCase()) {
+      case 'NGN':
+        return 500_000;
+      default:
+        return DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS;
+    }
+  }
+
+  private async getOperationalWalletFundingStatus(
+    tenantId: string,
+    businessEntityId: string,
+    amountMinorUnits: number,
+  ): Promise<'ready' | 'wallet_missing' | 'insufficient_balance'> {
+    const wallet = await this.prisma.operationalWallet.findUnique({
+      where: { businessEntityId },
+      select: { id: true },
+    });
+
+    if (!wallet) {
+      return 'wallet_missing';
+    }
+
+    const groupedEntries = await this.prisma.operationalWalletEntry.groupBy({
+      by: ['type'],
+      where: { walletId: wallet.id },
+      _sum: { amountMinorUnits: true },
+    });
+
+    let credits = 0;
+    let debits = 0;
+    for (const entry of groupedEntries) {
+      const amount = entry._sum.amountMinorUnits ?? 0;
+      if (entry.type === 'credit') {
+        credits = amount;
+      } else {
+        debits += amount;
+      }
+    }
+
+    const balanceMinorUnits = credits - debits;
+    return balanceMinorUnits >= amountMinorUnits ? 'ready' : 'insufficient_balance';
+  }
+
+  private async getSelfServiceVerificationPolicy(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+  ): Promise<{
+    enabledDriverIdentifierTypes: string[];
+    requiredDriverIdentifierTypes: string[];
+    requiredDriverDocumentSlugs: string[];
+    driverPaysKyc: boolean;
+    kycPaymentVerified: boolean;
+    verificationPayer: 'driver' | 'organisation';
+    verificationAmountMinorUnits: number;
+    verificationCurrency: string;
+    verificationPaymentStatus:
+      | 'not_required'
+      | 'ready'
+      | 'driver_payment_required'
+      | 'wallet_missing'
+      | 'insufficient_balance';
+    verificationPaymentMessage: string | null;
+  }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true, metadata: true },
+    });
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const countryCode = driver.nationality ?? tenant?.country ?? null;
+    const verificationCurrency =
+      countryCode && isCountrySupported(countryCode)
+        ? getCountryConfig(countryCode).currency
+        : 'NGN';
+    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(
+      verificationCurrency,
+    );
+    const driverPaysKyc =
+      (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
+      settings.operations.driverPaysKyc;
+    const kycPaymentVerified = Boolean(
+      (driver as Driver & { kycPaymentVerifiedAt?: Date | null }).kycPaymentVerifiedAt,
+    );
+
+    let verificationPaymentStatus:
+      | 'not_required'
+      | 'ready'
+      | 'driver_payment_required'
+      | 'wallet_missing'
+      | 'insufficient_balance' = 'not_required';
+    let verificationPaymentMessage: string | null = null;
+
+    if (driverPaysKyc) {
+      verificationPaymentStatus = kycPaymentVerified ? 'ready' : 'driver_payment_required';
+      verificationPaymentMessage = kycPaymentVerified
+        ? 'Your verification payment has been confirmed.'
+        : 'A verification payment is required before live verification can continue.';
+    } else if (settings.operations.requireIdentityVerificationForActivation) {
+      verificationPaymentStatus = await this.getOperationalWalletFundingStatus(
+        tenantId,
+        driver.businessEntityId,
+        verificationAmountMinorUnits,
+      );
+      verificationPaymentMessage =
+        verificationPaymentStatus === 'ready'
+          ? 'Your company has enabled verification for this onboarding flow.'
+          : verificationPaymentStatus === 'wallet_missing'
+            ? 'Your company must set up an operations wallet before verification can continue.'
+            : 'Your company wallet needs funding before verification can continue.';
+    }
+
+    return {
+      enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
+      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+      driverPaysKyc,
+      kycPaymentVerified,
+      verificationPayer: driverPaysKyc ? 'driver' : 'organisation',
+      verificationAmountMinorUnits,
+      verificationCurrency,
+      verificationPaymentStatus,
+      verificationPaymentMessage,
+    };
+  }
+
+  private async assertSelfServiceVerificationPaymentReady(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+  ): Promise<void> {
+    const policy = await this.getSelfServiceVerificationPolicy(tenantId, driver);
+    if (
+      policy.verificationPaymentStatus === 'driver_payment_required' ||
+      policy.verificationPaymentStatus === 'wallet_missing' ||
+      policy.verificationPaymentStatus === 'insufficient_balance'
+    ) {
+      throw new BadRequestException(
+        policy.verificationPaymentMessage ?? 'Verification cannot continue yet.',
+      );
+    }
+  }
 
   private async getOrganisationSettings(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -590,9 +733,21 @@ export class DriversService {
         requireIdentityVerificationForActivation?: boolean;
         requireBiometricVerification?: boolean;
         requireGovernmentVerificationLookup?: boolean;
+        enabledDriverIdentifierTypes?: string[];
+        requiredDriverIdentifierTypes?: string[];
         requiredDriverDocumentSlugs?: string[];
         driverPaysKyc?: boolean;
         kycPaymentVerified?: boolean;
+        verificationPayer?: 'driver' | 'organisation';
+        verificationAmountMinorUnits?: number;
+        verificationCurrency?: string;
+        verificationPaymentStatus?:
+          | 'not_required'
+          | 'ready'
+          | 'driver_payment_required'
+          | 'wallet_missing'
+          | 'insufficient_balance';
+        verificationPaymentMessage?: string | null;
       }
   > {
     const payload = await this.verifySelfServiceToken(token);
@@ -600,6 +755,7 @@ export class DriversService {
       this.findOne(payload.tenantId, payload.driverId),
       this.getOrganisationSettings(payload.tenantId),
     ]);
+    const verificationPolicy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
 
     return {
       ...driver,
@@ -608,13 +764,16 @@ export class DriversService {
       requireBiometricVerification: settings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup:
         settings.operations.requireGovernmentVerificationLookup,
-      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
-      // Driver-level override takes precedence over org setting.
-      driverPaysKyc:
-        (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
-        settings.operations.driverPaysKyc,
-      kycPaymentVerified: !!(driver as Driver & { kycPaymentVerifiedAt?: Date | null })
-        .kycPaymentVerifiedAt,
+      enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
+      requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
+      driverPaysKyc: verificationPolicy.driverPaysKyc,
+      kycPaymentVerified: verificationPolicy.kycPaymentVerified,
+      verificationPayer: verificationPolicy.verificationPayer,
+      verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+      verificationCurrency: verificationPolicy.verificationCurrency,
+      verificationPaymentStatus: verificationPolicy.verificationPaymentStatus,
+      verificationPaymentMessage: verificationPolicy.verificationPaymentMessage,
     };
   }
 
@@ -989,15 +1148,9 @@ export class DriversService {
   ): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const verificationPolicy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: payload.tenantId },
-      select: { name: true, country: true, metadata: true },
-    });
-
-    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-
-    if (!settings.operations.driverPaysKyc) {
+    if (!verificationPolicy.driverPaysKyc) {
       throw new BadRequestException(
         'This organisation does not require drivers to pay for their own KYC verification.',
       );
@@ -1009,17 +1162,6 @@ export class DriversService {
       );
     }
 
-    // Determine currency from tenant country config.
-    let currency = 'NGN';
-    if (tenant?.country) {
-      try {
-        const { getCountryConfig } = await import('@mobility-os/domain-config');
-        currency = getCountryConfig(tenant.country).currency ?? 'NGN';
-      } catch {
-        // fall through to default
-      }
-    }
-
     const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
     const redirectUrl = new URL('/driver-kyc/payment-return', tenantWebUrl);
     redirectUrl.searchParams.set('provider', provider);
@@ -1029,7 +1171,7 @@ export class DriversService {
       tenantId: payload.tenantId,
       driverId: driver.id,
       provider,
-      currency,
+      currency: verificationPolicy.verificationCurrency,
       customerEmail: driver.email,
       customerName: this.formatDriverName(driver),
       redirectUrl: redirectUrl.toString(),
@@ -1037,8 +1179,8 @@ export class DriversService {
 
     return {
       checkoutUrl: checkout.checkoutUrl,
-      amountMinorUnits: 500_000, // ₦5,000 in kobo
-      currency,
+      amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+      currency: verificationPolicy.verificationCurrency,
     };
   }
 
@@ -1662,11 +1804,15 @@ export class DriversService {
     fallbackChain: string[];
   }> {
     const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
     return this.initializeIdentityLivenessSession(payload.tenantId, payload.driverId, countryCode);
   }
 
   async resolveIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
     const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
     return this.resolveIdentity(payload.tenantId, payload.driverId, dto);
   }
 
@@ -2154,7 +2300,7 @@ export class DriversService {
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
         throw new ServiceUnavailableException(
-          'Live verification is unavailable right now. Try again, or continue with manual verification only if your process allows it.',
+          'Live verification is unavailable right now. Please try again in a moment.',
         );
       }
 

@@ -131,9 +131,9 @@ export interface DriverRecord {
   businessEntityId: string;
   operatingUnitId: string;
   status: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
   email?: string | null;
   photoUrl?: string | null;
   dateOfBirth?: string | null;
@@ -166,6 +166,24 @@ export interface DriverRecord {
   hasApprovedLicence: boolean;
   hasMobileAccess: boolean;
   mobileAccessStatus?: string | null;
+  enabledDriverIdentifierTypes?: string[];
+  requiredDriverIdentifierTypes?: string[];
+  requiredDriverDocumentSlugs?: string[];
+  driverPaysKyc?: boolean;
+  kycPaymentVerified?: boolean;
+  requireIdentityVerificationForActivation?: boolean;
+  requireBiometricVerification?: boolean;
+  requireGovernmentVerificationLookup?: boolean;
+  verificationPayer?: 'driver' | 'organisation';
+  verificationAmountMinorUnits?: number;
+  verificationCurrency?: string | null;
+  verificationPaymentStatus?:
+    | 'not_required'
+    | 'ready'
+    | 'driver_payment_required'
+    | 'wallet_missing'
+    | 'insufficient_balance';
+  verificationPaymentMessage?: string | null;
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
@@ -299,6 +317,12 @@ export interface DriverIdentityResolutionResult {
   livenessProviderName?: string;
   livenessConfidenceScore?: number;
   livenessReason?: string;
+}
+
+export interface DriverKycCheckoutRecord {
+  checkoutUrl: string;
+  amountMinorUnits: number;
+  currency: string;
 }
 
 export interface DriverReadinessReportRecord {
@@ -1824,6 +1848,39 @@ export async function uploadDriverSelfServiceDocument(
   return apiCoreFetch<DriverDocumentRecord>('/driver-self-service/documents', {
     method: 'POST',
     body: JSON.stringify({ token: selfServiceToken, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function createDriverSelfServiceAccount(
+  token: string,
+  input: { email: string; password: string },
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/driver-self-service/create-account', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function updateDriverSelfServiceContact(
+  token: string,
+  input: { email?: string },
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/driver-self-service/update-contact', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function initiateDriverKycCheckout(
+  token: string,
+  provider: 'paystack' | 'flutterwave' = 'paystack',
+): Promise<DriverKycCheckoutRecord> {
+  return apiCoreFetch<DriverKycCheckoutRecord>('/driver-self-service/kyc-checkout', {
+    method: 'POST',
+    body: JSON.stringify({ token, provider }),
     cache: 'no-store',
   });
 }

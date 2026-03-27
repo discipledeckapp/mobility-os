@@ -19,6 +19,8 @@ export interface OrganisationOperationsSettings {
   requireIdentityVerificationForActivation: boolean;
   requireBiometricVerification: boolean;
   requireGovernmentVerificationLookup: boolean;
+  enabledDriverIdentifierTypes: string[];
+  requiredDriverIdentifierTypes: string[];
   requiredDriverDocumentSlugs: string[];
   requiredVehicleDocumentSlugs: string[];
   /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
@@ -72,6 +74,30 @@ const VEHICLE_DOCUMENT_SLUGS = new Set(
   getDocumentTypesByScope(DocumentScope.Vehicle).map((document) => document.slug),
 );
 
+function getCountryIdentifierDefaults(countryCode?: string | null): {
+  enabledDriverIdentifierTypes: string[];
+  requiredDriverIdentifierTypes: string[];
+} {
+  if (!countryCode || !isCountrySupported(countryCode)) {
+    return {
+      enabledDriverIdentifierTypes: ['NATIONAL_ID'],
+      requiredDriverIdentifierTypes: ['NATIONAL_ID'],
+    };
+  }
+
+  const supportedIdentifiers = getCountryConfig(countryCode).supportedIdentifierTypes.filter(
+    (identifier) => identifier.type !== 'PHONE' && identifier.type !== 'EMAIL',
+  );
+  const requiredTypes = supportedIdentifiers
+    .filter((identifier) => identifier.required)
+    .map((identifier) => identifier.type);
+
+  return {
+    enabledDriverIdentifierTypes: requiredTypes,
+    requiredDriverIdentifierTypes: requiredTypes,
+  };
+}
+
 function getCountryDocumentDefaults(countryCode?: string | null): {
   requiredDriverDocumentSlugs: string[];
   requiredVehicleDocumentSlugs: string[];
@@ -107,6 +133,23 @@ function normalizeDocumentSlugList(
   return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
 }
 
+function normalizeIdentifierTypeList(
+  value: unknown,
+  allowedTypes: Set<string>,
+  fallback: string[],
+): string[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const normalized = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toUpperCase())
+    .filter((item) => item.length > 0 && allowedTypes.has(item));
+
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
+}
+
 export function getDefaultLanguageForCountry(countryCode?: string | null): SupportedLanguage {
   return FRANCOPHONE_COUNTRIES.has((countryCode ?? '').toUpperCase()) ? 'fr' : 'en';
 }
@@ -134,6 +177,26 @@ export function readOrganisationSettings(
       ? operations.defaultLanguage
       : getDefaultLanguageForCountry(countryCode);
   const documentDefaults = getCountryDocumentDefaults(countryCode);
+  const identifierDefaults = getCountryIdentifierDefaults(countryCode);
+  const allowedIdentifierTypes = new Set(
+    isCountrySupported(countryCode ?? '')
+      ? getCountryConfig(countryCode ?? '').supportedIdentifierTypes
+          .filter((identifier) => identifier.type !== 'PHONE' && identifier.type !== 'EMAIL')
+          .map((identifier) => identifier.type)
+      : identifierDefaults.enabledDriverIdentifierTypes,
+  );
+  const enabledDriverIdentifierTypes = normalizeIdentifierTypeList(
+    operations.enabledDriverIdentifierTypes,
+    allowedIdentifierTypes,
+    identifierDefaults.enabledDriverIdentifierTypes,
+  );
+  const requiredDriverIdentifierTypes = normalizeIdentifierTypeList(
+    operations.requiredDriverIdentifierTypes,
+    new Set(enabledDriverIdentifierTypes),
+    identifierDefaults.requiredDriverIdentifierTypes.filter((type) =>
+      enabledDriverIdentifierTypes.includes(type),
+    ),
+  );
   const guarantorLimitCandidate =
     typeof operations.guarantorMaxActiveDrivers === 'number' &&
     Number.isFinite(operations.guarantorMaxActiveDrivers) &&
@@ -171,6 +234,8 @@ export function readOrganisationSettings(
         typeof operations.requireGovernmentVerificationLookup === 'boolean'
           ? operations.requireGovernmentVerificationLookup
           : true,
+      enabledDriverIdentifierTypes,
+      requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredDriverDocumentSlugs,
         DRIVER_DOCUMENT_SLUGS,
@@ -208,6 +273,8 @@ export function writeOrganisationSettings(
     requireIdentityVerificationForActivation: boolean;
     requireBiometricVerification: boolean;
     requireGovernmentVerificationLookup: boolean;
+    enabledDriverIdentifierTypes: string[];
+    requiredDriverIdentifierTypes: string[];
     requiredDriverDocumentSlugs: string[];
     requiredVehicleDocumentSlugs: string[];
     driverPaysKyc: boolean;
@@ -243,6 +310,10 @@ export function writeOrganisationSettings(
     requireGovernmentVerificationLookup:
       input.requireGovernmentVerificationLookup ??
       settings.operations.requireGovernmentVerificationLookup,
+    enabledDriverIdentifierTypes:
+      input.enabledDriverIdentifierTypes ?? settings.operations.enabledDriverIdentifierTypes,
+    requiredDriverIdentifierTypes:
+      input.requiredDriverIdentifierTypes ?? settings.operations.requiredDriverIdentifierTypes,
     requiredDriverDocumentSlugs:
       input.requiredDriverDocumentSlugs ?? settings.operations.requiredDriverDocumentSlugs,
     requiredVehicleDocumentSlugs:

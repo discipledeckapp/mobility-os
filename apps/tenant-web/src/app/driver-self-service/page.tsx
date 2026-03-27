@@ -1,19 +1,28 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
 import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Heading,
+  Text,
+} from '@mobility-os/ui';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createDriverSelfServiceAccount,
   getDriverSelfServiceContext,
+  initiateDriverKycCheckout,
   listDriverSelfServiceDocuments,
+  updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
+  type DriverDocumentRecord,
+  type DriverRecord,
 } from '../../lib/api-core';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 import { DriverDocumentsPanel } from '../drivers/driver-documents-panel';
-
-// ─────────────────────────────────────────────────────────────
-// OTP entry form (shown when no token in URL)
-// ─────────────────────────────────────────────────────────────
 
 function OtpEntryForm() {
   const [code, setCode] = useState('');
@@ -78,11 +87,7 @@ function OtpEntryForm() {
                 autoComplete="one-time-code"
                 inputMode="text"
               />
-              {error && (
-                <Text tone="danger" className="text-sm">
-                  {error}
-                </Text>
-              )}
+              {error ? <Text tone="danger">{error}</Text> : null}
               <button
                 type="submit"
                 disabled={loading || code.trim().length < 6}
@@ -97,10 +102,6 @@ function OtpEntryForm() {
     </main>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Expired / invalid link card
-// ─────────────────────────────────────────────────────────────
 
 function ExpiredLinkCard() {
   return (
@@ -117,13 +118,13 @@ function ExpiredLinkCard() {
             <Text tone="muted">
               This onboarding link is no longer valid. Ask your organisation
               operator to send you a fresh link, or enter your 6-character code
-              below if you have one.
+              instead.
             </Text>
             <a
               href="/driver-self-service"
               className="inline-block rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Enter verification code instead
+              Enter verification code
             </a>
           </CardContent>
         </Card>
@@ -132,16 +133,97 @@ function ExpiredLinkCard() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Profile completion step (shown when driver has no name yet)
-// ─────────────────────────────────────────────────────────────
+type FlowStep = 'profile' | 'payment' | 'verification' | 'documents' | 'account' | 'complete';
+
+function isIdentitySubmitted(driver: DriverRecord): boolean {
+  return ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
+    driver.identityStatus,
+  );
+}
+
+function getMissingRequiredDocumentSlugs(
+  driver: DriverRecord,
+  documents: DriverDocumentRecord[],
+): string[] {
+  const uploadedTypes = new Set(documents.map((document) => document.documentType));
+  return (driver.requiredDriverDocumentSlugs ?? []).filter((slug) => !uploadedTypes.has(slug));
+}
+
+function getFlowStep(driver: DriverRecord, documents: DriverDocumentRecord[]): FlowStep {
+  if (!driver.firstName || !driver.lastName || !driver.dateOfBirth) {
+    return 'profile';
+  }
+  if (driver.verificationPaymentStatus === 'driver_payment_required') {
+    return 'payment';
+  }
+  if (
+    driver.verificationPaymentStatus === 'wallet_missing' ||
+    driver.verificationPaymentStatus === 'insufficient_balance'
+  ) {
+    return 'payment';
+  }
+  if (
+    driver.requireIdentityVerificationForActivation !== false &&
+    !isIdentitySubmitted(driver)
+  ) {
+    return 'verification';
+  }
+  if (getMissingRequiredDocumentSlugs(driver, documents).length > 0) {
+    return 'documents';
+  }
+  if (!driver.hasMobileAccess) {
+    return 'account';
+  }
+  return 'complete';
+}
+
+function formatMinorCurrency(amountMinorUnits: number, currency?: string | null): string {
+  const divisor = currency === 'NGN' ? 100 : 100;
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: currency ?? 'NGN',
+  }).format(amountMinorUnits / divisor);
+}
+
+function StepProgress({ currentStep }: { currentStep: FlowStep }) {
+  const steps: Array<{ key: FlowStep; label: string }> = [
+    { key: 'profile', label: 'Profile' },
+    { key: 'payment', label: 'Payment' },
+    { key: 'verification', label: 'Live verification' },
+    { key: 'documents', label: 'Documents' },
+    { key: 'account', label: 'App access' },
+    { key: 'complete', label: 'Complete' },
+  ];
+  const currentIndex = steps.findIndex((step) => step.key === currentStep);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+      {steps.map((step, index) => (
+        <div className="flex items-center gap-2" key={step.key}>
+          <span
+            className={`rounded-full px-2.5 py-0.5 ${
+              index < currentIndex
+                ? 'bg-emerald-500 text-white'
+                : index === currentIndex
+                  ? 'bg-[var(--mobiris-primary)] text-white'
+                  : 'bg-slate-100 text-slate-500'
+            }`}
+          >
+            {index < currentIndex ? '✓' : `Step ${index + 1}`}
+          </span>
+          <span>{step.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ProfileCompletionStep({
   token,
   onComplete,
 }: {
   token: string;
-  onComplete: (firstName: string, lastName: string) => void;
+  onComplete: () => Promise<void>;
 }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -151,8 +233,8 @@ function ProfileCompletionStep({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('First name and last name are required.');
+    if (!firstName.trim() || !lastName.trim() || !dateOfBirth.trim()) {
+      setError('First name, last name, and date of birth are required.');
       return;
     }
     setLoading(true);
@@ -161,9 +243,9 @@ function ProfileCompletionStep({
       await updateDriverSelfServiceProfile(token, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        ...(dateOfBirth.trim() ? { dateOfBirth: dateOfBirth.trim() } : {}),
+        dateOfBirth: dateOfBirth.trim(),
       });
-      onComplete(firstName.trim(), lastName.trim());
+      await onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save profile. Please try again.');
     } finally {
@@ -174,119 +256,278 @@ function ProfileCompletionStep({
   return (
     <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
       <CardHeader className="space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] text-xs font-bold text-white">1</div>
-          <CardTitle>Complete your profile</CardTitle>
-        </div>
+        <CardTitle>Complete your profile</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Text tone="muted">
-            Enter your details below. This information will be linked to your
-            driver record.
+            Enter the missing profile details before verification can continue.
           </Text>
-
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <label htmlFor="ss-firstName" className="text-sm font-medium text-slate-700">
-                First name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="ss-firstName"
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Emeka"
-                required
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="ss-lastName" className="text-sm font-medium text-slate-700">
-                Last name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="ss-lastName"
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Okonkwo"
-                required
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="ss-dob" className="text-sm font-medium text-slate-700">
-                Date of birth <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="ss-dob"
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                required
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="First name"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Last name"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
           </div>
-
-          {error ? (
-            <Text tone="danger" className="text-sm">
-              {error}
-            </Text>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={loading || !firstName.trim() || !lastName.trim() || !dateOfBirth.trim()}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-          >
+          {error ? <Text tone="danger">{error}</Text> : null}
+          <Button disabled={loading} type="submit">
             {loading ? 'Saving…' : 'Continue'}
-          </button>
+          </Button>
         </form>
       </CardContent>
     </Card>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Main flow (token-based)
-// ─────────────────────────────────────────────────────────────
+function AccountSetupStep({
+  token,
+  driver,
+  onComplete,
+}: {
+  token: string;
+  driver: DriverRecord;
+  onComplete: () => Promise<void>;
+}) {
+  const [email, setEmail] = useState(driver.email ?? '');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Enter the email address you will use to sign in.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Use a password with at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createDriverSelfServiceAccount(token, {
+        email: normalizedEmail,
+        password,
+      });
+      if (normalizedEmail !== (driver.email ?? '').toLowerCase()) {
+        await updateDriverSelfServiceContact(token, { email: normalizedEmail });
+      }
+      await onComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create your sign-in account.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+      <CardHeader className="space-y-2">
+        <CardTitle>Create your app sign-in</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Text tone="muted">
+            Create your app access now. Sign-in access is separate from activation and assignment approval.
+          </Text>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm password"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          {error ? <Text tone="danger">{error}</Text> : null}
+          <Button disabled={submitting} type="submit">
+            {submitting ? 'Creating account…' : 'Create sign-in account'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PaymentStep({
+  driver,
+  token,
+  onRefresh,
+}: {
+  driver: DriverRecord;
+  token: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCheckout() {
+    setLoading(true);
+    setError(null);
+    try {
+      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      window.location.href = checkout.checkoutUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to start payment right now.');
+      setLoading(false);
+    }
+  }
+
+  const amount = formatMinorCurrency(
+    driver.verificationAmountMinorUnits ?? 0,
+    driver.verificationCurrency,
+  );
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+      <CardHeader className="space-y-2">
+        <CardTitle>
+          {driver.verificationPayer === 'driver'
+            ? 'Verification payment required'
+            : 'Verification waiting on company funding'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Text tone="muted">
+          {driver.verificationPaymentMessage ??
+            'Verification cannot continue until the payment requirement is resolved.'}
+        </Text>
+        {driver.verificationPayer === 'driver' ? (
+          <>
+            <Text>Required amount: {amount}</Text>
+            <div className="flex flex-wrap gap-3">
+              <Button disabled={loading} onClick={() => void handleCheckout()} type="button">
+                {loading ? 'Opening payment…' : 'Pay now'}
+              </Button>
+              <Button onClick={() => void onRefresh()} type="button" variant="secondary">
+                I’ve completed payment
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Button onClick={() => void onRefresh()} type="button" variant="secondary">
+            Refresh company funding status
+          </Button>
+        )}
+        {error ? <Text tone="danger">{error}</Text> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CompletionStep({ driver, documents }: { driver: DriverRecord; documents: DriverDocumentRecord[] }) {
+  const missingDocuments = getMissingRequiredDocumentSlugs(driver, documents);
+  const statusLabel =
+    driver.identityStatus === 'verified'
+      ? 'Verification complete'
+      : driver.identityStatus === 'review_needed'
+        ? 'Verification under review'
+        : driver.identityStatus === 'failed'
+          ? 'Verification needs another attempt'
+          : 'Verification submitted';
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+      <CardHeader className="space-y-2">
+        <CardTitle>{statusLabel}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Text tone="muted">
+          {driver.identityStatus === 'verified'
+            ? 'Your verification and required onboarding steps are complete.'
+            : driver.identityStatus === 'review_needed'
+              ? 'Your verification has been submitted and is now under review.'
+              : driver.identityStatus === 'failed'
+                ? 'We could not complete verification yet. Review the required steps and try again.'
+                : 'Your verification has been submitted successfully.'}
+        </Text>
+        {missingDocuments.length > 0 ? (
+          <Text tone="muted">
+            Remaining required documents: {missingDocuments.join(', ')}.
+          </Text>
+        ) : null}
+        {!driver.hasMobileAccess ? (
+          <Text tone="muted">
+            Your sign-in account is not set up yet. Complete the app access step to sign in later.
+          </Text>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 function DriverVerificationFlow({ token }: { token: string }) {
-  type DriverRecord = Awaited<ReturnType<typeof getDriverSelfServiceContext>>;
-  type DocumentRecord = Awaited<ReturnType<typeof listDriverSelfServiceDocuments>>[number];
-
   const [driver, setDriver] = useState<DriverRecord | null>(null);
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [state, setState] = useState<'loading' | 'profile' | 'verify' | 'expired' | 'error'>('loading');
+  const [documents, setDocuments] = useState<DriverDocumentRecord[]>([]);
+  const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
+  const [currentStep, setCurrentStep] = useState<FlowStep>('profile');
   const loaded = useRef(false);
+
+  const refreshContext = useCallback(async () => {
+    const [nextDriver, nextDocuments] = await Promise.all([
+      getDriverSelfServiceContext(token),
+      listDriverSelfServiceDocuments(token).catch(() => [] as DriverDocumentRecord[]),
+    ]);
+    setDriver(nextDriver);
+    setDocuments(nextDocuments);
+    setCurrentStep(getFlowStep(nextDriver, nextDocuments));
+  }, [token]);
 
   useEffect(() => {
     if (loaded.current) return;
     loaded.current = true;
 
-    Promise.all([
-      getDriverSelfServiceContext(token),
-      listDriverSelfServiceDocuments(token).catch(() => [] as DocumentRecord[]),
-    ])
-      .then(([d, docs]) => {
-        setDriver(d);
-        setDocuments(docs);
-        // If driver has no name yet, show profile completion first
-        setState(!d.firstName || !d.lastName ? 'profile' : 'verify');
-      })
+    refreshContext()
+      .then(() => setState('ready'))
       .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : '';
-        if (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('invalid')) {
-          setState('expired');
-        } else {
-          setState('error');
-        }
+        const msg = err instanceof Error ? err.message.toLowerCase() : '';
+        setState(msg.includes('expired') || msg.includes('invalid') ? 'expired' : 'error');
       });
-  }, [token]);
+  }, [refreshContext]);
+
+  const missingDocumentSlugs = useMemo(
+    () => (driver ? getMissingRequiredDocumentSlugs(driver, documents) : []),
+    [documents, driver],
+  );
 
   if (state === 'loading') {
     return (
@@ -308,8 +549,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
             </CardHeader>
             <CardContent>
               <Text tone="muted">
-                We could not load your onboarding details. Please try clicking
-                the link in your email again.
+                We could not load your onboarding details. Please try the link in your email again.
               </Text>
             </CardContent>
           </Card>
@@ -323,43 +563,6 @@ function DriverVerificationFlow({ token }: { token: string }) {
       ? `${driver.firstName} ${driver.lastName}`
       : driver.email ?? 'Welcome';
 
-  if (state === 'profile') {
-    return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
-        <div className="mx-auto max-w-xl space-y-6">
-          <section className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
-              Mobiris driver onboarding
-            </Text>
-            <Heading size="h1">Set up your profile</Heading>
-            <Text tone="muted">
-              Your operator has invited you to complete your driver registration.
-              Start by entering your personal details.
-            </Text>
-          </section>
-
-          {/* Step progress */}
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-            <span className="rounded-full bg-[var(--mobiris-primary)] px-2.5 py-0.5 text-white">Step 1 of 3</span>
-            <span>Profile</span>
-            <span className="text-slate-300">→</span>
-            <span>Identity verification</span>
-            <span className="text-slate-300">→</span>
-            <span>Documents</span>
-          </div>
-
-          <ProfileCompletionStep
-            token={token}
-            onComplete={(firstName, lastName) => {
-              setDriver((current) => current ? { ...current, firstName, lastName } : current);
-              setState('verify');
-            }}
-          />
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -370,43 +573,80 @@ function DriverVerificationFlow({ token }: { token: string }) {
           <div className="space-y-2">
             <Heading size="h1">{driverDisplayName}</Heading>
             <Text tone="muted">
-              Complete your identity verification below. Your organisation will
-              receive the result automatically.
+              Complete the remaining onboarding steps below. Only the fields required by your organisation are shown here.
             </Text>
           </div>
         </section>
 
-        {/* Step progress */}
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-          <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-white">✓ Profile</span>
-          <span className="text-slate-300">→</span>
-          <span className="rounded-full bg-[var(--mobiris-primary)] px-2.5 py-0.5 text-white">Step 2 of 3</span>
-          <span>Identity verification</span>
-          <span className="text-slate-300">→</span>
-          <span>Documents</span>
-        </div>
+        <StepProgress currentStep={currentStep} />
 
-        <DriverIdentityVerification
-          defaultCountryCode={driver.nationality ?? null}
-          driver={driver}
-          mode="self_service"
-          selfServiceToken={token}
-        />
-        <DriverDocumentsPanel
-          countryCode={driver.nationality}
-          documents={documents}
-          driverId={driver.id}
-          mode="self_service"
-          selfServiceToken={token}
-        />
+        {currentStep === 'profile' ? (
+          <ProfileCompletionStep token={token} onComplete={refreshContext} />
+        ) : null}
+
+        {currentStep === 'payment' ? (
+          <PaymentStep driver={driver} token={token} onRefresh={refreshContext} />
+        ) : null}
+
+        {currentStep === 'verification' ? (
+          <DriverIdentityVerification
+            defaultCountryCode={driver.nationality ?? null}
+            driver={driver}
+            mode="self_service"
+            onVerificationSubmitted={() => {
+              void refreshContext();
+            }}
+            selfServiceToken={token}
+            {...(driver.enabledDriverIdentifierTypes
+              ? { enabledIdentifierTypes: driver.enabledDriverIdentifierTypes }
+              : {})}
+            {...(driver.requiredDriverIdentifierTypes
+              ? { requiredIdentifierTypes: driver.requiredDriverIdentifierTypes }
+              : {})}
+          />
+        ) : null}
+
+        {currentStep === 'documents' ? (
+          <>
+            <DriverDocumentsPanel
+              countryCode={driver.nationality}
+              documents={documents}
+              driverId={driver.id}
+              mode="self_service"
+              onUploadSuccess={() => {
+                void refreshContext();
+              }}
+              requiredDocumentSlugs={driver.requiredDriverDocumentSlugs}
+              selfServiceToken={token}
+            />
+            {missingDocumentSlugs.length === 0 ? (
+              <Card className="border-slate-200 bg-white">
+                <CardContent className="space-y-3 pt-6">
+                  <Text tone="success">All required documents have been uploaded.</Text>
+                  <Button onClick={() => setCurrentStep(!driver.hasMobileAccess ? 'account' : 'complete')} type="button">
+                    Continue
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
+          </>
+        ) : null}
+
+        {currentStep === 'account' ? (
+          <AccountSetupStep
+            driver={driver}
+            onComplete={refreshContext}
+            token={token}
+          />
+        ) : null}
+
+        {currentStep === 'complete' ? (
+          <CompletionStep documents={documents} driver={driver} />
+        ) : null}
       </div>
     </main>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Page entry point
-// ─────────────────────────────────────────────────────────────
 
 function DriverSelfServiceInner() {
   const searchParams = useSearchParams();

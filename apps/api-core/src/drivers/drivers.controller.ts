@@ -745,6 +745,34 @@ export class DriverSelfServiceController {
       hasApprovedLicence: (driver as Partial<DriverDocumentSummary>).hasApprovedLicence ?? false,
       hasMobileAccess: (driver as Partial<DriverMobileAccessSummary>).hasMobileAccess ?? false,
       mobileAccessStatus: (driver as Partial<DriverMobileAccessSummary>).mobileAccessStatus ?? null,
+      enabledDriverIdentifierTypes:
+        (driver as { enabledDriverIdentifierTypes?: string[] }).enabledDriverIdentifierTypes ?? [],
+      requiredDriverIdentifierTypes:
+        (driver as { requiredDriverIdentifierTypes?: string[] }).requiredDriverIdentifierTypes ?? [],
+      requiredDriverDocumentSlugs:
+        (driver as { requiredDriverDocumentSlugs?: string[] }).requiredDriverDocumentSlugs ?? [],
+      driverPaysKyc: (driver as { driverPaysKyc?: boolean }).driverPaysKyc ?? false,
+      kycPaymentVerified:
+        (driver as { kycPaymentVerified?: boolean }).kycPaymentVerified ?? false,
+      verificationPayer:
+        (driver as { verificationPayer?: 'driver' | 'organisation' }).verificationPayer ??
+        'organisation',
+      verificationAmountMinorUnits:
+        (driver as { verificationAmountMinorUnits?: number }).verificationAmountMinorUnits ?? 0,
+      verificationCurrency:
+        (driver as { verificationCurrency?: string }).verificationCurrency ?? null,
+      verificationPaymentStatus:
+        (driver as {
+          verificationPaymentStatus?:
+            | 'not_required'
+            | 'ready'
+            | 'driver_payment_required'
+            | 'wallet_missing'
+            | 'insufficient_balance';
+        }).verificationPaymentStatus ?? 'not_required',
+      verificationPaymentMessage:
+        (driver as { verificationPaymentMessage?: string | null }).verificationPaymentMessage ??
+        null,
       pendingDocumentCount: (driver as Partial<DriverDocumentSummary>).pendingDocumentCount ?? 0,
       rejectedDocumentCount: (driver as Partial<DriverDocumentSummary>).rejectedDocumentCount ?? 0,
       expiredDocumentCount: (driver as Partial<DriverDocumentSummary>).expiredDocumentCount ?? 0,

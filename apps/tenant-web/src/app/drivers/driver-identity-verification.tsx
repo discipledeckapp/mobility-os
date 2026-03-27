@@ -44,6 +44,19 @@ const initialStartState: StartDriverVerificationActionState = {};
 const initialResolveState: ResolveDriverVerificationActionState = {};
 const initialSendState: SendDriverSelfServiceLinkActionState = {};
 
+function sanitizeSelfServiceError(message?: string | null): string | null {
+  if (!message) return null;
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('provider') ||
+    normalized.includes('fallback') ||
+    normalized.includes('internal_free_service')
+  ) {
+    return 'Live verification is unavailable on this device right now. Please try again.';
+  }
+  return message;
+}
+
 // ── Identifier helpers ────────────────────────────────────────────────────────
 
 function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[] {
@@ -51,6 +64,22 @@ function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[
   return getCountryConfig(countryCode).supportedIdentifierTypes.filter(
     (id) => id.type !== 'PHONE' && id.type !== 'EMAIL',
   );
+}
+
+function getSelfServiceIdentifierTypes(
+  countryCode: string,
+  enabledTypes?: string[],
+  requiredTypes?: string[],
+): SupportedIdentifierType[] {
+  const supported = getManualIdentifierTypes(countryCode);
+  const enabledSet = new Set((enabledTypes ?? []).map((type) => type.toUpperCase()));
+  const requiredSet = new Set((requiredTypes ?? []).map((type) => type.toUpperCase()));
+  return supported
+    .filter((identifier) => enabledSet.size === 0 || enabledSet.has(identifier.type))
+    .map((identifier) => ({
+      ...identifier,
+      required: requiredSet.has(identifier.type),
+    }));
 }
 
 function validateIdentifierValue(value: string, config: SupportedIdentifierType): string | null {
@@ -92,12 +121,18 @@ export function DriverIdentityVerification({
   mode = 'operator',
   selfServiceToken,
   orgDriverPaysKyc = false,
+  enabledIdentifierTypes,
+  requiredIdentifierTypes,
+  onVerificationSubmitted,
 }: {
   driver: DriverRecord;
   defaultCountryCode?: string | null;
   mode?: 'operator' | 'self_service' | 'guarantor_self_service';
   selfServiceToken?: string | null;
   orgDriverPaysKyc?: boolean;
+  enabledIdentifierTypes?: string[];
+  requiredIdentifierTypes?: string[];
+  onVerificationSubmitted?: (result: NonNullable<ResolveDriverVerificationActionState['result']>) => void;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
   const [isOpen, setIsOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
@@ -112,7 +147,17 @@ export function DriverIdentityVerification({
     [],
   );
 
-  const identifierTypes = useMemo(() => getManualIdentifierTypes(countryCode), [countryCode]);
+  const identifierTypes = useMemo(
+    () =>
+      mode === 'self_service'
+        ? getSelfServiceIdentifierTypes(
+            countryCode,
+            enabledIdentifierTypes,
+            requiredIdentifierTypes,
+          )
+        : getManualIdentifierTypes(countryCode),
+    [countryCode, enabledIdentifierTypes, mode, requiredIdentifierTypes],
+  );
   const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
   const [identifierTouched, setIdentifierTouched] = useState<Record<string, boolean>>({});
 
@@ -184,6 +229,12 @@ export function DriverIdentityVerification({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (mode === 'self_service' && resolveState.result && onVerificationSubmitted) {
+      onVerificationSubmitted(resolveState.result);
+    }
+  }, [mode, onVerificationSubmitted, resolveState.result]);
 
   // Attach stream to video element after it mounts (fixes black screen)
   useEffect(() => {
@@ -400,7 +451,13 @@ export function DriverIdentityVerification({
                   <Button disabled={isStarting} type="submit">
                     {isStarting ? 'Starting...' : 'Start face verification'}
                   </Button>
-                  {startState.error ? <Text tone="danger">{startState.error}</Text> : null}
+                  {startState.error ? (
+                    <Text tone="danger">
+                      {mode === 'self_service'
+                        ? sanitizeSelfServiceError(startState.error)
+                        : startState.error}
+                    </Text>
+                  ) : null}
                 </form>
               ) : null}
 
@@ -413,7 +470,7 @@ export function DriverIdentityVerification({
                   </div>
 
                   {/* Video — always in DOM once session starts; hidden until stream ready */}
-                  <div className={`overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? 'max-h-72' : 'max-h-0 border-0'}`}>
+                  <div className={`overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? 'max-h-72 min-h-[18rem]' : 'max-h-0 border-0'}`}>
                     <video
                       autoPlay
                       className="w-full object-cover"
@@ -569,7 +626,6 @@ export function DriverIdentityVerification({
               ) : (
                 <input name="driverId" type="hidden" value={driver.id} />
               )}
-              <input name="verificationMode" type="hidden" value="live" />
               <input name="countryCode" type="hidden" value={countryCode} />
               <input name="providerName" type="hidden" value={session?.providerName ?? ''} />
               <input name="sessionId" type="hidden" value={session?.sessionId ?? ''} />
@@ -613,7 +669,13 @@ export function DriverIdentityVerification({
                 {isResolving ? 'Submitting...' : 'Submit verification'}
               </Button>
 
-              {resolveState.error ? <Text tone="danger">{resolveState.error}</Text> : null}
+              {resolveState.error ? (
+                <Text tone="danger">
+                  {mode === 'self_service'
+                    ? sanitizeSelfServiceError(resolveState.error)
+                    : resolveState.error}
+                </Text>
+              ) : null}
 
               {result ? (
                 <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
@@ -624,18 +686,13 @@ export function DriverIdentityVerification({
                   <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
                     <Text>{friendlyDecisionLabel(result.decision)}</Text>
                     <Text>
-                      Liveness:{' '}
                       {result.livenessPassed === true
-                        ? 'Passed'
+                        ? 'Live selfie completed'
                         : result.livenessPassed === false
-                          ? 'Did not pass'
-                          : 'Verification in progress'}
+                          ? 'Live selfie could not be confirmed'
+                          : 'Verification is being processed'}
                     </Text>
-                    {result.livenessConfidenceScore != null ? (
-                      <Text>Confidence: {(result.livenessConfidenceScore * 100).toFixed(0)}%</Text>
-                    ) : null}
                   </div>
-                  {result.livenessReason ? <Text tone="muted">{result.livenessReason}</Text> : null}
                   {identityStatus === 'review_needed' ? (
                     <Text>This driver cannot be activated yet. Your operations team will review the case and take action.</Text>
                   ) : null}

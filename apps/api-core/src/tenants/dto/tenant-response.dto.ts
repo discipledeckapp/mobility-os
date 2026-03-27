@@ -44,6 +44,12 @@ export class TenantResponseDto {
   requireGovernmentVerificationLookup?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
+  enabledDriverIdentifierTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  requiredDriverIdentifierTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
   requiredDriverDocumentSlugs?: string[];
 
   @ApiPropertyOptional({ type: [String] })
