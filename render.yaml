@@ -28,6 +28,8 @@ services:
         fromDatabase:
           name: mobility-os-postgres
           property: connectionString
+      - key: MIGRATION_DATABASE_URL
+        sync: false
       - key: DATABASE_CONNECTION_LIMIT
         value: 10
       - key: JWT_SECRET
@@ -115,6 +117,8 @@ services:
         fromDatabase:
           name: mobility-os-postgres
           property: connectionString
+      - key: MIGRATION_DATABASE_URL
+        sync: false
       - key: DATABASE_CONNECTION_LIMIT
         value: 10
       - key: PLATFORM_JWT_SECRET
@@ -177,6 +181,8 @@ services:
         fromDatabase:
           name: mobility-os-postgres
           property: connectionString
+      - key: MIGRATION_DATABASE_URL
+        sync: false
       - key: DATABASE_CONNECTION_LIMIT
         value: 10
       - key: PLATFORM_JWT_SECRET
