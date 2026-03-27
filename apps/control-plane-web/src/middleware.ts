@@ -7,8 +7,9 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get(PLATFORM_AUTH_COOKIE_NAME)?.value;
   const hasUsableSession = isPlatformJwtUsable(authCookie);
   const isLoginRoute = pathname === '/login';
+  const isPublicInviteRoute = pathname === '/staff/accept';
 
-  if (!hasUsableSession && !isLoginRoute) {
+  if (!hasUsableSession && !isLoginRoute && !isPublicInviteRoute) {
     const loginUrl = new URL('/login', request.url);
     const response = NextResponse.redirect(loginUrl);
     if (authCookie) {
@@ -17,7 +18,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (!hasUsableSession && isLoginRoute) {
+  if (!hasUsableSession && (isLoginRoute || isPublicInviteRoute)) {
     if (!authCookie) {
       return NextResponse.next();
     }

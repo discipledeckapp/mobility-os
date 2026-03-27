@@ -530,6 +530,9 @@ export interface StaffMemberRecord {
   role: string;
   isActive: boolean;
   createdAt: string;
+  invitationToken?: string | null;
+  invitationUrl?: string | null;
+  invitationExpiresAt?: string | null;
 }
 
 export interface CreateStaffMemberInput {
@@ -537,6 +540,19 @@ export interface CreateStaffMemberInput {
   email: string;
   role: string;
   password: string;
+}
+
+export interface CreateStaffInvitationInput {
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface StaffInvitationPreviewRecord {
+  name: string;
+  email: string;
+  role: string;
+  expiresAt: string;
 }
 
 export async function listStaffMembers(token?: string): Promise<StaffMemberRecord[]> {
@@ -553,6 +569,36 @@ export async function createStaffMember(
     method: 'POST',
     body: JSON.stringify(input),
     token: await getPlatformApiToken(token),
+  });
+}
+
+export async function createStaffInvitation(
+  input: CreateStaffInvitationInput,
+  token?: string,
+): Promise<StaffMemberRecord> {
+  return apiControlPlaneFetch<StaffMemberRecord>('/staff/invitations', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function resolveStaffInvitation(
+  token: string,
+): Promise<StaffInvitationPreviewRecord> {
+  const query = new URLSearchParams({ token }).toString();
+  return apiControlPlaneFetch<StaffInvitationPreviewRecord>(
+    `/staff/invitations/resolve?${query}`,
+  );
+}
+
+export async function completeStaffInvitation(input: {
+  token: string;
+  password: string;
+}): Promise<{ message: string }> {
+  return apiControlPlaneFetch<{ message: string }>('/staff/invitations/complete', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 
@@ -585,12 +631,34 @@ export interface PlatformWalletEntryInput {
   referenceType?: string;
 }
 
+export interface PlatformWalletEntryRecord {
+  id: string;
+  walletId: string;
+  type: string;
+  amountMinorUnits: number;
+  currency: string;
+  referenceId?: string | null;
+  referenceType?: string | null;
+  description?: string | null;
+  createdAt: string;
+}
+
 export async function getTenantPlatformWalletBalance(
   tenantId: string,
   token?: string,
 ): Promise<PlatformWalletBalanceRecord> {
   return apiControlPlaneFetch<PlatformWalletBalanceRecord>(
     `/platform-wallets/tenant/${tenantId}/balance`,
+    { token: await getPlatformApiToken(token) },
+  );
+}
+
+export async function listTenantPlatformWalletEntries(
+  tenantId: string,
+  token?: string,
+): Promise<PlatformWalletEntryRecord[]> {
+  return apiControlPlaneFetch<PlatformWalletEntryRecord[]>(
+    `/platform-wallets/tenant/${tenantId}/entries`,
     { token: await getPlatformApiToken(token) },
   );
 }
@@ -607,10 +675,41 @@ export interface CreatePlanInput {
   isActive?: boolean;
 }
 
+export interface CreateSubscriptionInput {
+  tenantId: string;
+  planId: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  trialEndsAt?: string;
+}
+
 export async function createPlan(input: CreatePlanInput, token?: string): Promise<PlanRecord> {
   return apiControlPlaneFetch<PlanRecord>('/plans', {
     method: 'POST',
     body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function createSubscription(
+  input: CreateSubscriptionInput,
+  token?: string,
+): Promise<SubscriptionListItem> {
+  return apiControlPlaneFetch<SubscriptionListItem>('/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function changeTenantSubscriptionPlan(
+  tenantId: string,
+  planId: string,
+  token?: string,
+): Promise<SubscriptionListItem> {
+  return apiControlPlaneFetch<SubscriptionListItem>(`/subscriptions/tenant/${tenantId}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ planId }),
     token: await getPlatformApiToken(token),
   });
 }

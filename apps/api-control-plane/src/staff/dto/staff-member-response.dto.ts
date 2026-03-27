@@ -18,4 +18,13 @@ export class StaffMemberResponseDto {
 
   @ApiProperty()
   createdAt!: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  invitationToken?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  invitationUrl?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  invitationExpiresAt?: string | null;
 }

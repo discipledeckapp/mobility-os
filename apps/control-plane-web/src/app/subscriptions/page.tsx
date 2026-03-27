@@ -15,6 +15,7 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listInvoices, listSubscriptions } from '../../lib/api-control-plane';
 
@@ -140,7 +141,12 @@ export default async function SubscriptionsPage({ searchParams }: SubscriptionsP
                     <TableRow key={subscription.id}>
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="font-medium text-slate-900">{subscription.tenantId}</p>
+                          <Link
+                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                            href={`/tenants/${subscription.tenantId}`}
+                          >
+                            {subscription.tenantId}
+                          </Link>
                           <p className="text-xs text-slate-500">{subscription.id}</p>
                         </div>
                       </TableCell>

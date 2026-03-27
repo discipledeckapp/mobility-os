@@ -28,6 +28,38 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
   return 'neutral';
 }
 
+function subscriptionTone(status?: string | null): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'active') return 'success';
+  if (status === 'trialing') return 'neutral';
+  if (status === 'past_due' || status === 'suspended') return 'warning';
+  if (status === 'cancelled' || status === 'terminated') return 'danger';
+  return 'neutral';
+}
+
+function planPosture(tenant: Awaited<ReturnType<typeof listTenants>>[number]): {
+  label: string;
+  detail: string;
+} {
+  if (tenant.planName && tenant.planTier) {
+    return {
+      label: tenant.planName,
+      detail: `${tenant.planTier} · ${tenant.subscriptionStatus ?? 'subscription attached'}`,
+    };
+  }
+
+  if (tenant.subscriptionStatus === 'trialing') {
+    return {
+      label: 'Trial subscription',
+      detail: 'Trialing without a paid tier assignment yet',
+    };
+  }
+
+  return {
+    label: 'No subscription attached',
+    detail: 'Assign a plan from the organisation detail page',
+  };
+}
+
 type TenantsPageProps = {
   searchParams?: Promise<{
     q?: string;
@@ -101,15 +133,17 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tenant</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Plan</TableHead>
+                    <TableHead>Lifecycle</TableHead>
+                    <TableHead>Plan / tier</TableHead>
+                    <TableHead>Subscription</TableHead>
                     <TableHead>Country</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTenants.map((tenant) => (
-                    <TableRow key={tenant.id}>
+                    <TableRow className="cursor-pointer" key={tenant.id}>
                       <TableCell>
                         <div className="space-y-1">
                           <Link
@@ -125,17 +159,30 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
                         <Badge tone={statusTone(tenant.status)}>{tenant.status}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium text-slate-900">
-                            {tenant.planName ?? 'Not assigned'}
-                          </p>
-                          <p className="text-xs uppercase tracking-wide text-slate-500">
-                            {tenant.planTier ?? 'No tier'}
-                          </p>
-                        </div>
+                        {(() => {
+                          const posture = planPosture(tenant);
+                          return (
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-900">{posture.label}</p>
+                              <p className="text-xs uppercase tracking-wide text-slate-500">
+                                {posture.detail}
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge tone={subscriptionTone(tenant.subscriptionStatus)}>
+                          {tenant.subscriptionStatus ?? 'missing'}
+                        </Badge>
                       </TableCell>
                       <TableCell>{tenant.country}</TableCell>
                       <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Link href={`/tenants/${tenant.id}`}>
+                          <Button variant="secondary">Open</Button>
+                        </Link>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

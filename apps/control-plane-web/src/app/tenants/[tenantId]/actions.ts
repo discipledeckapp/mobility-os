@@ -2,8 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  changeTenantSubscriptionPlan,
+  createFeatureFlagOverride,
+  createSubscription,
   transitionTenantLifecycle,
   createTenantPlatformWalletEntry,
+  removeFeatureFlagOverride,
+  listPlans,
 } from '../../../lib/api-control-plane';
 
 export interface TenantDetailActionState {
@@ -43,6 +48,11 @@ export interface CreditWalletActionState {
   success?: string;
 }
 
+const PLAN_PERIOD_MONTHS: Record<string, number> = {
+  monthly: 1,
+  annual: 12,
+};
+
 export async function creditTenantWalletAction(
   tenantId: string,
   _prevState: CreditWalletActionState,
@@ -73,6 +83,106 @@ export async function creditTenantWalletAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to credit wallet.',
+    };
+  }
+}
+
+export async function assignTenantPlanAction(
+  tenantId: string,
+  hasSubscription: boolean,
+  _prevState: TenantDetailActionState,
+  formData: FormData,
+): Promise<TenantDetailActionState> {
+  const planId = String(formData.get('planId') ?? '').trim();
+  const onboardingMode = String(formData.get('onboardingMode') ?? 'active').trim();
+
+  if (!planId) {
+    return { error: 'Choose a plan.' };
+  }
+
+  try {
+    if (hasSubscription) {
+      await changeTenantSubscriptionPlan(tenantId, planId);
+    } else {
+      const plans = await listPlans();
+      const selectedPlan = plans.find((plan) => plan.id === planId);
+
+      if (!selectedPlan) {
+        return { error: 'Selected plan no longer exists.' };
+      }
+
+      const currentPeriodStart = new Date();
+      const currentPeriodEnd = new Date(currentPeriodStart);
+      currentPeriodEnd.setMonth(
+        currentPeriodEnd.getMonth() + (PLAN_PERIOD_MONTHS[selectedPlan.billingInterval] ?? 1),
+      );
+      const trialEndsAt =
+        onboardingMode === 'trialing'
+          ? new Date(currentPeriodStart.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()
+          : undefined;
+
+      await createSubscription({
+        tenantId,
+        planId,
+        currentPeriodStart: currentPeriodStart.toISOString(),
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
+        ...(trialEndsAt ? { trialEndsAt } : {}),
+      });
+    }
+
+    revalidatePath(`/tenants/${tenantId}`);
+    revalidatePath('/tenants');
+    revalidatePath('/subscriptions');
+    return {
+      success: hasSubscription ? 'Subscription plan changed.' : 'Plan assigned to organisation.',
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to update subscription plan.',
+    };
+  }
+}
+
+export async function addTenantFeatureOverrideAction(
+  tenantId: string,
+  _previousState: TenantDetailActionState,
+  formData: FormData,
+): Promise<TenantDetailActionState> {
+  const flagKey = String(formData.get('flagKey') ?? '').trim();
+  const isEnabled = String(formData.get('isEnabled') ?? 'true') === 'true';
+
+  if (!flagKey) {
+    return { error: 'Choose a feature flag.' };
+  }
+
+  try {
+    await createFeatureFlagOverride(flagKey, {
+      tenantId,
+      isEnabled,
+      value: isEnabled,
+    });
+    revalidatePath(`/tenants/${tenantId}`);
+    revalidatePath('/feature-flags');
+    return { success: 'Tenant feature override saved.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to save tenant override.',
+    };
+  }
+}
+
+export async function removeTenantFeatureOverrideAction(
+  tenantId: string,
+  overrideId: string,
+): Promise<TenantDetailActionState> {
+  try {
+    await removeFeatureFlagOverride(overrideId);
+    revalidatePath(`/tenants/${tenantId}`);
+    revalidatePath('/feature-flags');
+    return { success: 'Tenant feature override removed.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to remove tenant override.',
     };
   }
 }

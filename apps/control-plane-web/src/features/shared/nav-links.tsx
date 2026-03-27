@@ -29,6 +29,7 @@ type NavLinksProps = {
 export function ResponsiveNavLinks({ variant = 'sidebar' }: NavLinksProps) {
   const pathname = usePathname();
   const isMobile = variant === 'mobile';
+  const currentPath = pathname ?? '/';
 
   return (
     <nav
@@ -37,7 +38,7 @@ export function ResponsiveNavLinks({ variant = 'sidebar' }: NavLinksProps) {
     >
       {navigationItems.map((item) => {
         const isActive =
-          item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
+          item.href === '/' ? currentPath === item.href : currentPath.startsWith(item.href);
 
         return (
           <Link

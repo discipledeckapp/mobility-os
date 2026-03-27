@@ -24,7 +24,7 @@ import { SelectField } from '../../features/shared/select-field';
 import type { StaffMemberRecord } from '../../lib/api-control-plane';
 import {
   type StaffActionState,
-  createStaffMemberAction,
+  createStaffInvitationAction,
   deactivateStaffMemberAction,
 } from './actions';
 
@@ -38,49 +38,11 @@ function roleLabel(role: string): string {
   return ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role;
 }
 
-function EyeIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" x2="23" y1="1" y2="23" />
-    </svg>
-  );
-}
-
 const initialState: StaffActionState = {};
 
 export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
   const [createState, createAction, createPending] = useActionState(
-    createStaffMemberAction,
+    createStaffInvitationAction,
     initialState,
   );
   const [deactivateState, deactivateAction, deactivatePending] = useActionState(
@@ -88,7 +50,6 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
     initialState,
   );
   const [showForm, setShowForm] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -112,8 +73,11 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
               action={createAction}
               className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4"
             >
-              <p className="text-sm font-semibold text-slate-700">Create new platform staff</p>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <p className="text-sm font-semibold text-slate-700">Invite platform staff</p>
+              <Text tone="muted">
+                Issue a secure invite link so the staff member can set their own password.
+              </Text>
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="staffName">Full name</Label>
                   <Input id="staffName" name="name" placeholder="Tobi Adesanya" required />
@@ -144,35 +108,34 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
                     ))}
                   </SelectField>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="staffPassword">Initial password</Label>
-                  <div className="relative">
-                    <Input
-                      className="pr-10"
-                      id="staffPassword"
-                      minLength={8}
-                      name="password"
-                      placeholder="Minimum 8 characters"
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                    />
-                    <button
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                      onClick={() => setShowPassword((v) => !v)}
-                      type="button"
-                    >
-                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                </div>
               </div>
               {createState.error ? <Text className="text-rose-700">{createState.error}</Text> : null}
               {createState.success ? (
-                <Text className="text-emerald-700">{createState.success}</Text>
+                <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <Text className="text-emerald-700">{createState.success}</Text>
+                  {createState.invitationUrl ? (
+                    <div className="space-y-2">
+                      <Input readOnly value={createState.invitationUrl} />
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={() => navigator.clipboard.writeText(createState.invitationUrl ?? '')}
+                          type="button"
+                          variant="secondary"
+                        >
+                          Copy invite link
+                        </Button>
+                        {createState.invitationExpiresAt ? (
+                          <Text className="text-xs text-emerald-800/70">
+                            Expires {new Date(createState.invitationExpiresAt).toLocaleString()}
+                          </Text>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
               <Button disabled={createPending} type="submit">
-                {createPending ? 'Creating…' : 'Create staff member'}
+                {createPending ? 'Creating invitation…' : 'Create invitation'}
               </Button>
             </form>
           )}
@@ -207,7 +170,7 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
                       {member.isActive ? (
                         <Badge tone="success">Active</Badge>
                       ) : (
-                        <Badge tone="danger">Inactive</Badge>
+                        <Badge tone="warning">Invitation pending</Badge>
                       )}
                     </TableCell>
                     <TableCell>

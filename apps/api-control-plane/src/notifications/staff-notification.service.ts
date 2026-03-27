@@ -111,6 +111,71 @@ export class StaffNotificationService {
     );
   }
 
+  async sendPlatformStaffInvitation(input: {
+    name: string;
+    email: string;
+    role: string;
+    invitationUrl: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    const apiKey = this.config.get<string>('ZEPTOMAIL_API_KEY');
+    if (!apiKey) {
+      this.logger.warn(
+        `Skipping staff invitation email — ZEPTOMAIL_API_KEY is not set. Invite for ${input.email}`,
+      );
+      return;
+    }
+
+    const fromAddress = this.config.get<string>('EMAIL_FROM_ADDRESS') ?? 'noreply@mobiris.ng';
+    const fromName = this.config.get<string>('EMAIL_FROM_NAME') ?? 'Mobiris';
+    const apiUrl =
+      this.config.get<string>('ZEPTOMAIL_API_URL') ?? 'https://api.zeptomail.com/v1.1/email';
+
+    const subject = 'Complete your Mobiris platform staff setup';
+    const htmlBody = renderAdminEmailShell(
+      'Set up your Mobiris staff account',
+      `
+        <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#334155;">Hello ${input.name}, you have been invited to the Mobility OS control plane as <strong>${input.role}</strong>.</p>
+        <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px 24px;margin-bottom:20px;">
+          <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Invitation</div>
+          <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#0f172a;">Use the secure link below to set your password and activate your platform staff account.</p>
+          <a href="${input.invitationUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:12px;">Accept invitation</a>
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This invitation expires on ${input.expiresAt.toISOString()}.</p>
+        </div>
+      `,
+    );
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Zoho-enczapikey ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: { address: fromAddress, name: fromName },
+          to: [{ email_address: { address: input.email, name: input.name } }],
+          subject,
+          htmlbody: htmlBody,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        this.logger.error(
+          `Staff invitation email failed — status=${response.status} body=${body}`,
+        );
+      } else {
+        this.logger.log(`Staff invitation sent — email=${input.email}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Staff invitation email threw — ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   private async sendAdminEmail(subject: string, htmlBody: string): Promise<void> {
     const notificationEmail = this.config.get<string>('PLATFORM_ADMIN_NOTIFICATION_EMAIL');
     if (!notificationEmail) {

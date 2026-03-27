@@ -7,7 +7,7 @@ export default async function StaffPage() {
 
   return (
     <ControlPlaneShell
-      description="Manage platform staff accounts and their access roles."
+      description="Invite platform staff, track pending invitations, and deactivate access when needed."
       eyebrow="Administration"
       title="Platform staff"
     >

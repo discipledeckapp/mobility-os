@@ -14,6 +14,7 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listPlatformWalletLedger, listPlatformWallets } from '../../lib/api-control-plane';
 
@@ -85,7 +86,12 @@ export default async function PlatformWalletsPage() {
                     <TableRow key={wallet.walletId}>
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="font-medium text-slate-900">{wallet.tenantId}</p>
+                          <Link
+                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                            href={`/tenants/${wallet.tenantId}`}
+                          >
+                            {wallet.tenantId}
+                          </Link>
                           <p className="text-xs text-slate-500">{wallet.walletId}</p>
                         </div>
                       </TableCell>
@@ -137,7 +143,14 @@ export default async function PlatformWalletsPage() {
                 <TableBody>
                   {ledger.data.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell>{entry.tenantId}</TableCell>
+                      <TableCell>
+                        <Link
+                          className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                          href={`/tenants/${entry.tenantId}`}
+                        >
+                          {entry.tenantId}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>
                           {entry.type}
