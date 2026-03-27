@@ -112,6 +112,24 @@ export function LoginForm() {
           Register your organisation →
         </Link>
       </p>
+
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+        <p className="font-semibold text-slate-800">Have an invitation code?</p>
+        <div className="mt-2 flex flex-wrap gap-3">
+          <Link
+            className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+            href="/driver-self-service"
+          >
+            Driver onboarding
+          </Link>
+          <Link
+            className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+            href="/guarantor-self-service"
+          >
+            Guarantor onboarding
+          </Link>
+        </div>
+      </div>
     </form>
   );
 }

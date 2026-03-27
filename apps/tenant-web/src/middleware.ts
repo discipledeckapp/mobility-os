@@ -1,16 +1,25 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { TENANT_AUTH_COOKIE_NAME, TENANT_REFRESH_COOKIE_NAME, isTenantJwtUsable } from './lib/auth';
+import {
+  TENANT_AUTH_COOKIE_NAME,
+  TENANT_REFRESH_COOKIE_NAME,
+  getSelfServiceContinuationPath,
+  isTenantJwtUsable,
+  parseTenantJwtPayload,
+} from './lib/auth';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
   const hasUsableSession = isTenantJwtUsable(authCookie);
+  const payload = parseTenantJwtPayload(authCookie);
+  const continuationPath = getSelfServiceContinuationPath(payload);
   const isPublicRoute =
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
     pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/driver-kyc/payment-return') ||
     pathname.startsWith('/driver-self-service') ||
     pathname.startsWith('/guarantor-self-service');
 
@@ -36,8 +45,12 @@ export function middleware(request: NextRequest) {
   }
 
   const isLoginRoute = pathname === '/login';
+  if (hasUsableSession && continuationPath && !pathname.startsWith('/driver-self-service') && !pathname.startsWith('/guarantor-self-service') && !pathname.startsWith('/driver-kyc/payment-return')) {
+    return NextResponse.redirect(new URL(continuationPath, request.url));
+  }
+
   if (hasUsableSession && isLoginRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL(continuationPath ?? '/', request.url));
   }
 
   return NextResponse.next();

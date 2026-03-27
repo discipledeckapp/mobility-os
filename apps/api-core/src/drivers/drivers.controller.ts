@@ -886,8 +886,13 @@ export class DriverSelfServiceController {
   initiateKycCheckout(
     @Body('token') token: string,
     @Body('provider') provider: 'paystack' | 'flutterwave',
+    @Body('returnUrl') returnUrl?: string,
   ) {
-    return this.service.initiateKycCheckoutFromSelfService(token, provider ?? 'paystack');
+    return this.service.initiateKycCheckoutFromSelfService(
+      token,
+      provider ?? 'paystack',
+      returnUrl,
+    );
   }
 
   @Post('verify-kyc-payment')
@@ -913,6 +918,13 @@ export class DriverSelfServiceController {
           : `/api/drivers/${document.driverId}/documents/${document.id}/content?token=${encodeURIComponent(token)}`,
       })),
     );
+  }
+
+  @Post('authenticated-token')
+  @UseGuards(TenantAuthGuard, TenantLifecycleGuard)
+  @ApiCreatedResponse({ type: Object })
+  issueAuthenticatedContinuationToken(@CurrentTenant() ctx: TenantContext) {
+    return this.service.issueDriverSelfServiceContinuationToken(ctx.tenantId, ctx.userId);
   }
 
   @Get('documents/:documentId/content')
@@ -964,5 +976,25 @@ export class GuarantorSelfServiceController {
   ) {
     const { token: _ignored, ...payload } = dto;
     return this.service.resolveGuarantorIdentityFromSelfService(token, payload);
+  }
+
+  @Post('create-account')
+  @ApiCreatedResponse({ type: Object })
+  createAccount(
+    @Body('token') token: string,
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    if (!token?.trim() || !email?.trim() || !password?.trim()) {
+      throw new BadRequestException('token, email and password are required');
+    }
+    return this.service.createGuarantorSelfServiceAccountFromSelfService(token, email, password);
+  }
+
+  @Post('authenticated-token')
+  @UseGuards(TenantAuthGuard, TenantLifecycleGuard)
+  @ApiCreatedResponse({ type: Object })
+  issueAuthenticatedContinuationToken(@CurrentTenant() ctx: TenantContext) {
+    return this.service.issueGuarantorSelfServiceContinuationToken(ctx.tenantId, ctx.userId);
   }
 }

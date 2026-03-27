@@ -27,6 +27,11 @@ export interface NotificationChannelPreference {
 
 export type NotificationPreferenceMap = Record<NotificationTopic, NotificationChannelPreference>;
 
+export interface SelfServiceLinkage {
+  subjectType: 'driver' | 'guarantor';
+  driverId: string;
+}
+
 export interface UserSettings {
   preferredLanguage: SupportedLanguage;
   notificationPreferences: NotificationPreferenceMap;
@@ -34,6 +39,7 @@ export interface UserSettings {
   assignedVehicleIds: string[];
   customPermissions: string[];
   accessMode: 'tenant_user' | 'driver_mobile';
+  selfServiceLinkage: SelfServiceLinkage | null;
 }
 
 function buildDefaultTopicPreference(
@@ -117,6 +123,7 @@ export function readUserSettings(
       assignedVehicleIds: [],
       customPermissions: [],
       accessMode: defaults.hasLinkedDriver ? 'driver_mobile' : 'tenant_user',
+      selfServiceLinkage: null,
     };
   }
 
@@ -161,6 +168,13 @@ export function readUserSettings(
     }),
   ) as NotificationPreferenceMap;
 
+  const selfServiceLinkage =
+    candidate.selfServiceLinkage &&
+    typeof candidate.selfServiceLinkage === 'object' &&
+    !Array.isArray(candidate.selfServiceLinkage)
+      ? (candidate.selfServiceLinkage as Record<string, unknown>)
+      : null;
+
   return {
     preferredLanguage,
     notificationPreferences: mergedPreferences,
@@ -185,6 +199,17 @@ export function readUserSettings(
         : defaults.hasLinkedDriver
           ? 'driver_mobile'
           : 'tenant_user',
+    selfServiceLinkage:
+      selfServiceLinkage &&
+      (selfServiceLinkage.subjectType === 'driver' ||
+        selfServiceLinkage.subjectType === 'guarantor') &&
+      typeof selfServiceLinkage.driverId === 'string' &&
+      selfServiceLinkage.driverId.trim().length > 0
+        ? {
+            subjectType: selfServiceLinkage.subjectType,
+            driverId: selfServiceLinkage.driverId,
+          }
+        : null,
   };
 }
 
@@ -225,5 +250,9 @@ export function writeUserSettings(
       nextSettings.accessMode === 'driver_mobile' || nextSettings.accessMode === 'tenant_user'
         ? nextSettings.accessMode
         : current.accessMode,
+    selfServiceLinkage:
+      'selfServiceLinkage' in nextSettings
+        ? nextSettings.selfServiceLinkage
+        : current.selfServiceLinkage,
   };
 }

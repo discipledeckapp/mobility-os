@@ -1106,6 +1106,7 @@ export class DriversService {
     driverId: string;
     tenantId: string;
     organisationName: string | null;
+    hasSelfServiceAccess: boolean;
   }> {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
     const [driver, tenant] = await Promise.all([
@@ -1139,12 +1140,95 @@ export class DriversService {
       driverId: driver.id,
       tenantId: driver.tenantId,
       organisationName,
+      hasSelfServiceAccess: Boolean(
+        await this.findGuarantorSelfServiceUser(driver.tenantId, driver.id),
+      ),
     };
+  }
+
+  private async findGuarantorSelfServiceUser(tenantId: string, driverId: string) {
+    const users = await this.prisma.user.findMany({
+      where: { tenantId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return (
+      users.find((user) => {
+        const settings = readUserSettings(user.settings, {
+          preferredLanguage: 'en',
+          role: user.role,
+          hasLinkedDriver: Boolean(user.driverId),
+        });
+        return (
+          settings.selfServiceLinkage?.subjectType === 'guarantor' &&
+          settings.selfServiceLinkage.driverId === driverId
+        );
+      }) ?? null
+    );
+  }
+
+  async issueDriverSelfServiceContinuationToken(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ token: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId, isActive: true },
+    });
+
+    if (!user?.driverId) {
+      throw new UnauthorizedException(
+        'This account is not linked to a resumable driver self-service onboarding flow.',
+      );
+    }
+
+    const token = await this.createSelfServiceToken(tenantId, user.driverId);
+    return { token };
+  }
+
+  async issueGuarantorSelfServiceContinuationToken(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ token: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId, isActive: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('The authenticated session is no longer valid.');
+    }
+
+    const settings = readUserSettings(user.settings, {
+      preferredLanguage: 'en',
+      role: user.role,
+      hasLinkedDriver: Boolean(user.driverId),
+    });
+
+    if (
+      settings.selfServiceLinkage?.subjectType !== 'guarantor' ||
+      !settings.selfServiceLinkage.driverId
+    ) {
+      throw new UnauthorizedException(
+        'This account is not linked to a resumable guarantor self-service onboarding flow.',
+      );
+    }
+
+    const driver = await this.findOne(tenantId, settings.selfServiceLinkage.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: driver.id },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const token = await this.createGuarantorSelfServiceToken(tenantId, driver.id);
+    return { token };
   }
 
   async initiateKycCheckoutFromSelfService(
     token: string,
     provider: 'paystack' | 'flutterwave',
+    returnUrl?: string,
   ): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
@@ -1166,6 +1250,10 @@ export class DriversService {
     const redirectUrl = new URL('/driver-kyc/payment-return', tenantWebUrl);
     redirectUrl.searchParams.set('provider', provider);
     redirectUrl.searchParams.set('token', token);
+    const safeReturnUrl = this.sanitizeSelfServiceReturnUrl(returnUrl);
+    if (safeReturnUrl) {
+      redirectUrl.searchParams.set('returnUrl', safeReturnUrl);
+    }
 
     const checkout = await this.controlPlaneBillingClient.initializeDriverKycCheckout({
       tenantId: payload.tenantId,
@@ -1880,6 +1968,88 @@ export class DriversService {
     ]);
 
     return { message: 'Account created. You can now sign in with your email and password.' };
+  }
+
+  async createGuarantorSelfServiceAccountFromSelfService(
+    token: string,
+    email: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const [driver, guarantor, tenant] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
+      this.prisma.tenant.findUnique({
+        where: { id: payload.tenantId },
+        select: { country: true },
+      }),
+    ]);
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const existingLinkedUser = await this.findGuarantorSelfServiceUser(payload.tenantId, driver.id);
+    if (existingLinkedUser) {
+      throw new ConflictException(
+        'A sign-in account already exists for this guarantor. Use the sign-in screen to continue.',
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingEmailUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, email: normalizedEmail },
+    });
+
+    if (existingEmailUser) {
+      throw new ConflictException(
+        'An account with this email already exists in this organisation. Use a different email address.',
+      );
+    }
+
+    const settings = writeUserSettings(
+      null,
+      {
+        accessMode: 'tenant_user',
+        customPermissions: [],
+        selfServiceLinkage: {
+          subjectType: 'guarantor',
+          driverId: driver.id,
+        },
+      },
+      {
+        preferredLanguage: getDefaultLanguageForCountry(tenant?.country),
+        role: TenantRole.ReadOnly,
+        hasLinkedDriver: false,
+      },
+    );
+
+    await this.prisma.$transaction([
+      this.prisma.user.create({
+        data: {
+          tenantId: payload.tenantId,
+          name: guarantor.name,
+          email: normalizedEmail,
+          phone: guarantor.phone,
+          role: TenantRole.ReadOnly,
+          passwordHash: hashPassword(password),
+          isActive: true,
+          isEmailVerified: true,
+          mobileAccessRevoked: false,
+          settings: settings as Prisma.InputJsonValue,
+        },
+      }),
+      ...(guarantor.email !== normalizedEmail
+        ? [
+            this.prisma.driverGuarantor.update({
+              where: { driverId: driver.id },
+              data: { email: normalizedEmail },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { message: 'Account created. You can now sign in and continue onboarding.' };
   }
 
   async updateContactFromSelfService(
@@ -3016,6 +3186,30 @@ export class DriversService {
   }
 
   private readonly guarantorSelfServicePurpose = 'guarantor_self_service';
+
+  private sanitizeSelfServiceReturnUrl(returnUrl?: string): string | null {
+    const normalized = returnUrl?.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    if (normalized.startsWith('mobiris://') || normalized.startsWith('mobiris-mobile-ops://')) {
+      return normalized;
+    }
+
+    try {
+      const candidate = new URL(normalized);
+      const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
+      const tenantOrigin = new URL(tenantWebUrl).origin;
+      if (candidate.origin === tenantOrigin || candidate.origin === 'http://localhost:3000') {
+        return candidate.toString();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
 
   private async createGuarantorSelfServiceToken(
     tenantId: string,

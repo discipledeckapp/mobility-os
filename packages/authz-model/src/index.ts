@@ -258,8 +258,15 @@ export function hasPermission(role: PlatformRole | TenantRole, permission: Permi
 export function getGrantedPermissions(
   role: PlatformRole | TenantRole,
   customPermissions: readonly string[] = [],
-  options?: { linkedDriverId?: string | null },
+  options?: {
+    linkedDriverId?: string | null;
+    selfServiceSubjectType?: 'driver' | 'guarantor' | null;
+  },
 ): ReadonlySet<string> {
+  if (options?.selfServiceSubjectType === 'guarantor') {
+    return new Set<string>();
+  }
+
   if (options?.linkedDriverId) {
     return new Set<string>(DRIVER_LINKED_TENANT_PERMISSIONS);
   }

@@ -4,7 +4,12 @@ import type { Route } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { loginTenantUser } from '../../../lib/api-core';
-import { TENANT_AUTH_COOKIE_NAME, TENANT_REFRESH_COOKIE_NAME } from '../../../lib/auth';
+import {
+  TENANT_AUTH_COOKIE_NAME,
+  TENANT_REFRESH_COOKIE_NAME,
+  getSelfServiceContinuationPath,
+  parseTenantJwtPayload,
+} from '../../../lib/auth';
 
 export interface LoginActionState {
   error?: string;
@@ -44,13 +49,14 @@ export async function loginAction(
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
+
+    const continuationPath = getSelfServiceContinuationPath(parseTenantJwtPayload(accessToken));
+    redirect((continuationPath ?? '/') as Route);
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to log in at this time.',
     };
   }
-
-  redirect('/');
 }
 
 export async function logoutAction(): Promise<void> {

@@ -26,6 +26,7 @@ import {
   createDriverSelfServiceLivenessSession,
   initiateDriverKycCheckout,
   resolveDriverSelfServiceIdentity,
+  updateDriverSelfServiceProfile,
   uploadDriverSelfServiceDocument,
   type DriverIdentityResolutionResult,
   type DriverLivenessSessionRecord,
@@ -38,12 +39,13 @@ import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
+import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
-type WizardStep = 'overview' | 'payment' | 'identity' | 'documents';
+type WizardStep = 'overview' | 'profile' | 'payment' | 'identity' | 'documents';
 
 function maskIdentifier(value: string): string {
   if (!value) return '';
@@ -58,18 +60,18 @@ interface VerificationDraft {
   selectedDocumentType: string;
 }
 
-const STEP_ORDER: WizardStep[] = ['overview', 'payment', 'identity', 'documents'];
+const STEP_ORDER: WizardStep[] = ['overview', 'profile', 'payment', 'identity', 'documents'];
 
 function getStepIndex(step: WizardStep, includePayment: boolean): number {
   if (!includePayment) {
-    const filtered: WizardStep[] = ['overview', 'identity', 'documents'];
+    const filtered: WizardStep[] = ['overview', 'profile', 'identity', 'documents'];
     return filtered.indexOf(step);
   }
   return STEP_ORDER.indexOf(step);
 }
 
 function getTotalSteps(includePayment: boolean): number {
-  return includePayment ? 4 : 3;
+  return includePayment ? 5 : 4;
 }
 
 export function SelfServiceVerificationScreen({
@@ -103,7 +105,13 @@ export function SelfServiceVerificationScreen({
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [initiatingPayment, setInitiatingPayment] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const previousCountryCodeRef = useRef(countryCode);
+  const [firstName, setFirstName] = useState(driver?.firstName ?? '');
+  const [lastName, setLastName] = useState(driver?.lastName ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(driver?.dateOfBirth ?? '');
+
+  const profileComplete = Boolean(firstName.trim() && lastName.trim() && dateOfBirth.trim());
 
   const identitySubmitted = useMemo(
     () =>
@@ -117,6 +125,9 @@ export function SelfServiceVerificationScreen({
 
   // Determine initial step
   const computeInitialStep = (): WizardStep => {
+    if (!profileComplete) {
+      return 'overview';
+    }
     if (identitySubmitted && (!driverPaysKyc || kycPaymentVerified)) {
       return 'documents';
     }
@@ -252,6 +263,15 @@ export function SelfServiceVerificationScreen({
         : requiredDocuments[0]?.slug ?? '',
     );
   }, [requiredDocuments]);
+
+  useEffect(() => {
+    if (!driver) {
+      return;
+    }
+    setFirstName((current) => current || driver.firstName || '');
+    setLastName((current) => current || driver.lastName || '');
+    setDateOfBirth((current) => current || driver.dateOfBirth || '');
+  }, [driver]);
 
   const identifiersReady = useMemo(
     () =>
@@ -433,7 +453,11 @@ export function SelfServiceVerificationScreen({
     if (!token) return;
     setInitiatingPayment(true);
     try {
-      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      const checkout = await initiateDriverKycCheckout(
+        token,
+        'paystack',
+        buildSelfServiceVerificationDeepLink(),
+      );
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
       Alert.alert(
@@ -442,6 +466,33 @@ export function SelfServiceVerificationScreen({
       );
     } finally {
       setInitiatingPayment(false);
+    }
+  };
+
+  const onSaveProfile = async () => {
+    if (!token) return;
+    if (!profileComplete) {
+      Alert.alert('Profile details', 'First name, last name, and date of birth are required.');
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      await updateDriverSelfServiceProfile(token, {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth: dateOfBirth.trim(),
+      });
+      await refreshSelfService();
+      showToast('Profile details saved.', 'success');
+      setCurrentStep(includePayment ? 'payment' : 'identity');
+    } catch (error) {
+      Alert.alert(
+        'Profile details',
+        error instanceof Error ? error.message : 'Unable to save your profile details.',
+      );
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -522,8 +573,9 @@ export function SelfServiceVerificationScreen({
   const currentStepIndex = getStepIndex(currentStep, includePayment);
 
   const goBack = () => {
-    if (currentStep === 'payment') setCurrentStep('overview');
-    else if (currentStep === 'identity') setCurrentStep(includePayment ? 'payment' : 'overview');
+    if (currentStep === 'profile') setCurrentStep('overview');
+    else if (currentStep === 'payment') setCurrentStep('profile');
+    else if (currentStep === 'identity') setCurrentStep(includePayment ? 'payment' : 'profile');
     else if (currentStep === 'documents') setCurrentStep('identity');
   };
 
@@ -622,7 +674,12 @@ export function SelfServiceVerificationScreen({
         ) : null}
 
         <Card style={styles.section}>
-          {identitySubmitted ? (
+          {!profileComplete ? (
+            <Button
+              label="Continue to profile"
+              onPress={() => setCurrentStep('profile')}
+            />
+          ) : identitySubmitted ? (
             <Button
               label="Continue to documents"
               onPress={() => setCurrentStep('documents')}
@@ -639,6 +696,35 @@ export function SelfServiceVerificationScreen({
             />
           )}
         </Card>
+      </Screen>
+    );
+  }
+
+  // ─── Step: payment ─────────────────────────────────────────────────────────
+
+  if (currentStep === 'profile') {
+    return (
+      <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
+        {renderProgressBar()}
+
+        <Card style={styles.section}>
+          <Text style={styles.stepLabel}>Step 2 — Profile details</Text>
+          <Text style={styles.sectionTitle}>Complete your profile</Text>
+          <Text style={styles.copy}>
+            Save the missing profile details now. Your onboarding progress is preserved after each step.
+          </Text>
+          <Input label="First name" onChangeText={setFirstName} value={firstName} />
+          <Input label="Last name" onChangeText={setLastName} value={lastName} />
+          <Input
+            label="Date of birth"
+            onChangeText={setDateOfBirth}
+            placeholder="YYYY-MM-DD"
+            value={dateOfBirth}
+          />
+          <Button label="Save and continue" loading={savingProfile} onPress={() => void onSaveProfile()} />
+        </Card>
+
+        <Button label="Back" variant="secondary" onPress={goBack} />
       </Screen>
     );
   }

@@ -48,8 +48,32 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { session, isLoading } = useAuth();
-  const { token: selfServiceToken, isLoading: isSelfServiceLoading } = useSelfService();
+  const {
+    token: selfServiceToken,
+    driver: selfServiceDriver,
+    documents: selfServiceDocuments,
+    isLoading: isSelfServiceLoading,
+  } = useSelfService();
   const isDriverMode = isDriverMobileSession(session);
+  const requiresSelfServiceContinuation =
+    isDriverMode &&
+    Boolean(
+      selfServiceDriver &&
+        (!selfServiceDriver.firstName ||
+          !selfServiceDriver.lastName ||
+          !selfServiceDriver.dateOfBirth ||
+          selfServiceDriver.verificationPaymentStatus === 'driver_payment_required' ||
+          selfServiceDriver.verificationPaymentStatus === 'wallet_missing' ||
+          selfServiceDriver.verificationPaymentStatus === 'insufficient_balance' ||
+          ((selfServiceDriver.requireIdentityVerificationForActivation ?? true) &&
+            !['pending_verification', 'verified', 'review_needed', 'failed'].includes(
+              selfServiceDriver.identityStatus,
+            )) ||
+          (selfServiceDriver.requiredDriverDocumentSlugs ?? []).some(
+            (slug) =>
+              !selfServiceDocuments.some((document) => document.documentType === slug),
+          )),
+    );
 
   if (isLoading || isSelfServiceLoading) {
     return (
@@ -76,22 +100,6 @@ export function RootNavigator() {
         {session ? (
           isDriverMode ? (
           <>
-            <Stack.Screen name="Home" component={AssignmentsScreen} options={{ title: 'Assignments' }} />
-            <Stack.Screen
-              name="AssignmentDetail"
-              component={AssignmentDetailScreen}
-              options={{ title: 'Assignment details' }}
-            />
-            <Stack.Screen
-              name="Remittance"
-              component={RemittanceScreen}
-              options={{ title: 'Record remittance' }}
-            />
-            <Stack.Screen
-              name="RemittanceHistory"
-              component={RemittanceHistoryScreen}
-              options={{ title: 'Remittance history' }}
-            />
             <Stack.Screen
               name="SelfServiceResume"
               component={SelfServiceResumeScreen}
@@ -127,6 +135,30 @@ export function RootNavigator() {
               component={ProfileScreen}
               options={{ title: 'Verification status' }}
             />
+            {!requiresSelfServiceContinuation ? (
+              <>
+                <Stack.Screen
+                  name="Home"
+                  component={AssignmentsScreen}
+                  options={{ title: 'Assignments' }}
+                />
+                <Stack.Screen
+                  name="AssignmentDetail"
+                  component={AssignmentDetailScreen}
+                  options={{ title: 'Assignment details' }}
+                />
+                <Stack.Screen
+                  name="Remittance"
+                  component={RemittanceScreen}
+                  options={{ title: 'Record remittance' }}
+                />
+                <Stack.Screen
+                  name="RemittanceHistory"
+                  component={RemittanceHistoryScreen}
+                  options={{ title: 'Remittance history' }}
+                />
+              </>
+            ) : null}
           </>
           ) : (
             <>

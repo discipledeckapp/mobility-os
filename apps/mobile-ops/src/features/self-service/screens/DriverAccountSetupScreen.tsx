@@ -7,11 +7,13 @@ import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
+import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
 export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAccountSetup'>) {
+  const { loginWithPassword } = useAuth();
   const { token, driver } = useSelfService();
   const [email, setEmail] = useState(driver?.email ?? '');
   const [password, setPassword] = useState('');
@@ -82,10 +84,11 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           // Non-fatal — account was created; email sync will be retried next context refresh
         });
       }
+      await loginWithPassword(normalizedEmail, password);
       Alert.alert(
         'Account created',
-        'Your sign-in account is ready. You can now return to the sign-in screen and log in, even if operational approval is still pending.',
-        [{ text: 'Go to sign in', onPress: () => navigation.navigate('Login') }],
+        'Your sign-in account is ready. You are now signed in and can continue onboarding from where you left off.',
+        [{ text: 'Continue onboarding', onPress: () => navigation.replace('SelfServiceResume') }],
       );
     } catch (error) {
       Alert.alert(

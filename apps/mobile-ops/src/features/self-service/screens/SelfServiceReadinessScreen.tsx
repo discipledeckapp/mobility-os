@@ -8,6 +8,7 @@ import { EmptyState } from '../../../components/empty-state';
 import { Screen } from '../../../components/screen';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
+import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 import { initiateDriverKycCheckout } from '../../../api';
@@ -20,7 +21,11 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
   const onPayKyc = async () => {
     if (!token) return;
     try {
-      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      const checkout = await initiateDriverKycCheckout(
+        token,
+        'paystack',
+        buildSelfServiceVerificationDeepLink(),
+      );
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
       Alert.alert(

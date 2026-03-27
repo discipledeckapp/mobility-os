@@ -231,7 +231,7 @@ export function DriverIdentityVerification({
   }, []);
 
   useEffect(() => {
-    if (mode === 'self_service' && resolveState.result && onVerificationSubmitted) {
+    if (mode !== 'operator' && resolveState.result && onVerificationSubmitted) {
       onVerificationSubmitted(resolveState.result);
     }
   }, [mode, onVerificationSubmitted, resolveState.result]);

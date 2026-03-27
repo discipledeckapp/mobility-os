@@ -1,12 +1,11 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Text } from '@mobility-os/ui';
 
 function DriverKycPaymentReturnInner() {
   const params = useSearchParams();
-  const router = useRouter();
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const called = useRef(false);
@@ -14,6 +13,7 @@ function DriverKycPaymentReturnInner() {
   const provider = params?.get('provider') ?? null;
   const token = params?.get('token') ?? null;
   const reference = params?.get('reference') ?? params?.get('trxref') ?? null;
+  const returnUrl = params?.get('returnUrl') ?? null;
 
   useEffect(() => {
     if (called.current || !provider || !token || !reference) {
@@ -45,6 +45,26 @@ function DriverKycPaymentReturnInner() {
       });
   }, [provider, token, reference]);
 
+  useEffect(() => {
+    if (state !== 'success') {
+      return;
+    }
+
+    const nextUrl =
+      returnUrl ??
+      (token ? `/driver-self-service?token=${encodeURIComponent(token)}` : '/driver-self-service/continue');
+
+    const timeout = window.setTimeout(() => {
+      if (nextUrl.startsWith('mobiris://')) {
+        window.location.href = nextUrl;
+        return;
+      }
+      window.location.href = nextUrl;
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [returnUrl, state, token]);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#eff6ff_0%,#f1f5f9_100%)] px-4 py-10">
       <div className="w-full max-w-md">
@@ -65,8 +85,7 @@ function DriverKycPaymentReturnInner() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Text tone="muted">
-                Your ₦5,000 identity verification payment has been confirmed. You can now return to
-                the Mobiris app to complete your identity verification.
+                Your verification payment has been confirmed. We are taking you back to the next onboarding step now.
               </Text>
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
                 <Text className="text-sm font-semibold text-emerald-800">
@@ -75,10 +94,21 @@ function DriverKycPaymentReturnInner() {
               </div>
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => {
+                  const nextUrl =
+                    returnUrl ??
+                    (token
+                      ? `/driver-self-service?token=${encodeURIComponent(token)}`
+                      : '/driver-self-service/continue');
+                  if (nextUrl.startsWith('mobiris://')) {
+                    window.location.href = nextUrl;
+                    return;
+                  }
+                  window.location.href = nextUrl;
+                }}
                 className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
               >
-                Return to app
+                Continue onboarding
               </button>
             </CardContent>
           </Card>

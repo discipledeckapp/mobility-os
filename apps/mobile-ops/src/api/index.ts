@@ -78,6 +78,8 @@ export interface SessionRecord {
   accessMode?: 'tenant_user' | 'driver_mobile';
   mobileRole?: 'driver' | 'field_officer' | null;
   mobileAccessRevoked?: boolean | null;
+  selfServiceSubjectType?: 'driver' | 'guarantor' | null;
+  selfServiceDriverId?: string | null;
 }
 
 export interface NotificationChannelPreferenceRecord {
@@ -198,10 +200,11 @@ export interface DriverRecord {
   operatingUnitId?: string;
   fleetId?: string;
   status: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
   email?: string | null;
+  dateOfBirth?: string | null;
   nationality?: string | null;
   identityStatus: string;
   identityReviewCaseId?: string | null;
@@ -231,6 +234,13 @@ export interface DriverRecord {
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   kycPaymentVerified?: boolean;
+  verificationPaymentStatus?:
+    | 'not_required'
+    | 'ready'
+    | 'driver_payment_required'
+    | 'wallet_missing'
+    | 'insufficient_balance';
+  verificationPaymentMessage?: string | null;
 }
 
 export interface DriverSelfServiceDocumentRecord {
@@ -1214,12 +1224,36 @@ export function createDriverMobileAccount(
   );
 }
 
+export function issueAuthenticatedDriverSelfServiceContinuationToken(): Promise<{ token: string }> {
+  return apiFetch<{ token: string }>(
+    '/driver-self-service/authenticated-token',
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    },
+  );
+}
+
 export function updateDriverSelfServiceContact(
   selfServiceToken: string,
   input: { email?: string },
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(
     '/driver-self-service/update-contact',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function updateDriverSelfServiceProfile(
+  selfServiceToken: string,
+  input: { firstName?: string; lastName?: string; dateOfBirth?: string },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/update-profile',
     {
       method: 'POST',
       body: JSON.stringify({ token: selfServiceToken, ...input }),
@@ -1251,12 +1285,17 @@ export function submitDriverSelfServiceGuarantor(
 export function initiateDriverKycCheckout(
   selfServiceToken: string,
   provider: 'paystack' | 'flutterwave' = 'paystack',
+  returnUrl?: string,
 ): Promise<{ checkoutUrl: string; amountMinorUnits: number; currency: string }> {
   return apiFetch<{ checkoutUrl: string; amountMinorUnits: number; currency: string }>(
     '/driver-self-service/kyc-checkout',
     {
       method: 'POST',
-      body: JSON.stringify({ token: selfServiceToken, provider }),
+      body: JSON.stringify({
+        token: selfServiceToken,
+        provider,
+        ...(returnUrl ? { returnUrl } : {}),
+      }),
     },
     false,
   );

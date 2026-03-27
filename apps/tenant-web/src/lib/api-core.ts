@@ -804,6 +804,12 @@ export interface TenantAuthSessionRecord {
   assignedFleetIds?: string[];
   assignedVehicleIds?: string[];
   customPermissions?: string[];
+  linkedDriverId?: string | null;
+  accessMode?: 'tenant_user' | 'driver_mobile';
+  mobileRole?: 'driver' | 'field_officer' | null;
+  mobileAccessRevoked?: boolean | null;
+  selfServiceSubjectType?: 'driver' | 'guarantor' | null;
+  selfServiceDriverId?: string | null;
 }
 
 export interface TenantBillingSubscriptionRecord {
@@ -1863,6 +1869,17 @@ export async function createDriverSelfServiceAccount(
   });
 }
 
+export async function issueDriverSelfServiceContinuationToken(
+  token?: string,
+): Promise<{ token: string }> {
+  return apiCoreFetch<{ token: string }>('/driver-self-service/authenticated-token', {
+    method: 'POST',
+    body: JSON.stringify({}),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function updateDriverSelfServiceContact(
   token: string,
   input: { email?: string },
@@ -1877,10 +1894,11 @@ export async function updateDriverSelfServiceContact(
 export async function initiateDriverKycCheckout(
   token: string,
   provider: 'paystack' | 'flutterwave' = 'paystack',
+  returnUrl?: string,
 ): Promise<DriverKycCheckoutRecord> {
   return apiCoreFetch<DriverKycCheckoutRecord>('/driver-self-service/kyc-checkout', {
     method: 'POST',
-    body: JSON.stringify({ token, provider }),
+    body: JSON.stringify({ token, provider, ...(returnUrl ? { returnUrl } : {}) }),
     cache: 'no-store',
   });
 }
@@ -1920,6 +1938,7 @@ export async function getGuarantorSelfServiceContext(
   driverId: string;
   tenantId: string;
   organisationName: string | null;
+  hasSelfServiceAccess: boolean;
 }> {
   return apiCoreFetch('/guarantor-self-service/context', {
     method: 'POST',
@@ -1935,6 +1954,28 @@ export async function exchangeGuarantorSelfServiceOtp(
     method: 'POST',
     body: JSON.stringify({ otpCode }),
     cache: 'no-store',
+  });
+}
+
+export async function createGuarantorSelfServiceAccount(
+  token: string,
+  input: { email: string; password: string },
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/guarantor-self-service/create-account', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function issueGuarantorSelfServiceContinuationToken(
+  token?: string,
+): Promise<{ token: string }> {
+  return apiCoreFetch<{ token: string }>('/guarantor-self-service/authenticated-token', {
+    method: 'POST',
+    body: JSON.stringify({}),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
   });
 }
 

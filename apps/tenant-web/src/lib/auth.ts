@@ -8,6 +8,10 @@ interface JwtPayload {
   businessEntityId?: string;
   role?: string;
   operatingUnitId?: string;
+  accessMode?: 'tenant_user' | 'driver_mobile';
+  linkedDriverId?: string;
+  selfServiceSubjectType?: 'driver' | 'guarantor';
+  selfServiceDriverId?: string;
 }
 
 function decodeBase64Url(value: string): string | null {
@@ -82,4 +86,24 @@ export function parseTenantJwtPayload(token: string | undefined): JwtPayload | n
   } catch {
     return null;
   }
+}
+
+export function getSelfServiceContinuationPath(payload: JwtPayload | null): string | null {
+  if (!payload) {
+    return null;
+  }
+
+  if (payload.selfServiceSubjectType === 'guarantor') {
+    return '/guarantor-self-service/continue';
+  }
+
+  if (
+    payload.selfServiceSubjectType === 'driver' ||
+    payload.accessMode === 'driver_mobile' ||
+    typeof payload.linkedDriverId === 'string'
+  ) {
+    return '/driver-self-service/continue';
+  }
+
+  return null;
 }

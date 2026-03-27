@@ -11,11 +11,13 @@ import {
 import {
   exchangeDriverSelfServiceOtp,
   getDriverSelfServiceContext,
+  issueAuthenticatedDriverSelfServiceContinuationToken,
   listDriverSelfServiceDocuments,
   type DriverRecord,
   type DriverSelfServiceDocumentRecord,
 } from '../api';
 import { STORAGE_KEYS } from '../constants';
+import { useAuth } from './auth-context';
 
 interface SelfServiceContextValue {
   token: string | null;
@@ -32,6 +34,7 @@ interface SelfServiceContextValue {
 const SelfServiceContext = createContext<SelfServiceContextValue | null>(null);
 
 export function SelfServiceProvider({ children }: PropsWithChildren) {
+  const { session } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [documents, setDocuments] = useState<DriverSelfServiceDocumentRecord[]>([]);
@@ -116,6 +119,23 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
     const restore = async () => {
       const storedToken = await SecureStore.getItemAsync(STORAGE_KEYS.selfServiceToken);
       if (!storedToken) {
+        const canResumeFromAuthenticatedSession =
+          session?.selfServiceSubjectType === 'driver' ||
+          session?.accessMode === 'driver_mobile' ||
+          session?.mobileRole === 'driver';
+
+        if (canResumeFromAuthenticatedSession) {
+          try {
+            const continuation = await issueAuthenticatedDriverSelfServiceContinuationToken();
+            await loadContext(continuation.token);
+          } catch {
+            await clearSelfService();
+          } finally {
+            setIsLoading(false);
+          }
+          return;
+        }
+
         setIsLoading(false);
         return;
       }
@@ -133,7 +153,13 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
       await clearSelfService();
       setIsLoading(false);
     });
-  }, [clearSelfService, loadContext]);
+  }, [
+    clearSelfService,
+    loadContext,
+    session?.accessMode,
+    session?.mobileRole,
+    session?.selfServiceSubjectType,
+  ]);
 
   const value = useMemo<SelfServiceContextValue>(
     () => ({

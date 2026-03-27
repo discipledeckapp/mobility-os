@@ -116,16 +116,24 @@ function ExpiredLinkCard() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Text tone="muted">
-              This onboarding link is no longer valid. Ask your organisation
-              operator to send you a fresh link, or enter your 6-character code
-              instead.
+              This onboarding link is no longer valid. If you already created your sign-in account,
+              use sign in to continue onboarding. Otherwise ask your organisation operator to send a
+              fresh link, or enter your 6-character code instead.
             </Text>
-            <a
-              href="/driver-self-service"
-              className="inline-block rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Enter verification code
-            </a>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="/login"
+                className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Sign in to continue
+              </a>
+              <a
+                href="/driver-self-service"
+                className="inline-block rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Enter verification code
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -133,7 +141,7 @@ function ExpiredLinkCard() {
   );
 }
 
-type FlowStep = 'profile' | 'payment' | 'verification' | 'documents' | 'account' | 'complete';
+type FlowStep = 'account' | 'profile' | 'payment' | 'verification' | 'documents' | 'complete';
 
 function isIdentitySubmitted(driver: DriverRecord): boolean {
   return ['pending_verification', 'verified', 'review_needed', 'failed'].includes(
@@ -150,6 +158,9 @@ function getMissingRequiredDocumentSlugs(
 }
 
 function getFlowStep(driver: DriverRecord, documents: DriverDocumentRecord[]): FlowStep {
+  if (!driver.hasMobileAccess) {
+    return 'account';
+  }
   if (!driver.firstName || !driver.lastName || !driver.dateOfBirth) {
     return 'profile';
   }
@@ -171,9 +182,6 @@ function getFlowStep(driver: DriverRecord, documents: DriverDocumentRecord[]): F
   if (getMissingRequiredDocumentSlugs(driver, documents).length > 0) {
     return 'documents';
   }
-  if (!driver.hasMobileAccess) {
-    return 'account';
-  }
   return 'complete';
 }
 
@@ -187,11 +195,11 @@ function formatMinorCurrency(amountMinorUnits: number, currency?: string | null)
 
 function StepProgress({ currentStep }: { currentStep: FlowStep }) {
   const steps: Array<{ key: FlowStep; label: string }> = [
+    { key: 'account', label: 'Sign-in account' },
     { key: 'profile', label: 'Profile' },
     { key: 'payment', label: 'Payment' },
     { key: 'verification', label: 'Live verification' },
     { key: 'documents', label: 'Documents' },
-    { key: 'account', label: 'App access' },
     { key: 'complete', label: 'Complete' },
   ];
   const currentIndex = steps.findIndex((step) => step.key === currentStep);
@@ -261,7 +269,7 @@ function ProfileCompletionStep({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Text tone="muted">
-            Enter the missing profile details before verification can continue.
+            Save the missing profile details now. Your onboarding progress is persisted after each step.
           </Text>
           <div className="grid gap-4 md:grid-cols-2">
             <input
@@ -287,7 +295,7 @@ function ProfileCompletionStep({
           </div>
           {error ? <Text tone="danger">{error}</Text> : null}
           <Button disabled={loading} type="submit">
-            {loading ? 'Saving…' : 'Continue'}
+            {loading ? 'Saving…' : 'Save and continue'}
           </Button>
         </form>
       </CardContent>
@@ -404,7 +412,11 @@ function PaymentStep({
     setLoading(true);
     setError(null);
     try {
-      const checkout = await initiateDriverKycCheckout(token, 'paystack');
+      const checkout = await initiateDriverKycCheckout(
+        token,
+        'paystack',
+        `${window.location.origin}/driver-self-service?token=${encodeURIComponent(token)}`,
+      );
       window.location.href = checkout.checkoutUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to start payment right now.');
@@ -499,7 +511,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [documents, setDocuments] = useState<DriverDocumentRecord[]>([]);
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
-  const [currentStep, setCurrentStep] = useState<FlowStep>('profile');
+  const [currentStep, setCurrentStep] = useState<FlowStep>('account');
   const loaded = useRef(false);
 
   const refreshContext = useCallback(async () => {
@@ -580,6 +592,14 @@ function DriverVerificationFlow({ token }: { token: string }) {
 
         <StepProgress currentStep={currentStep} />
 
+        {currentStep === 'account' ? (
+          <AccountSetupStep
+            driver={driver}
+            onComplete={refreshContext}
+            token={token}
+          />
+        ) : null}
+
         {currentStep === 'profile' ? (
           <ProfileCompletionStep token={token} onComplete={refreshContext} />
         ) : null}
@@ -630,14 +650,6 @@ function DriverVerificationFlow({ token }: { token: string }) {
               </Card>
             ) : null}
           </>
-        ) : null}
-
-        {currentStep === 'account' ? (
-          <AccountSetupStep
-            driver={driver}
-            onComplete={refreshContext}
-            token={token}
-          />
         ) : null}
 
         {currentStep === 'complete' ? (

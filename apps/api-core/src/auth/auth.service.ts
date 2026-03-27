@@ -65,6 +65,33 @@ function deriveMobileRole(user: {
   return null;
 }
 
+function resolveSelfServiceLinkage(user: {
+  driverId?: string | null;
+  settings?: Prisma.JsonValue | null;
+  role: string;
+}): {
+  subjectType: 'driver' | 'guarantor' | null;
+  driverId: string | null;
+} {
+  const userSettings = readUserSettings(user.settings, {
+    preferredLanguage: 'en',
+    role: user.role,
+    hasLinkedDriver: Boolean(user.driverId),
+  });
+
+  if (user.driverId) {
+    return {
+      subjectType: 'driver',
+      driverId: user.driverId,
+    };
+  }
+
+  return {
+    subjectType: userSettings.selfServiceLinkage?.subjectType ?? null,
+    driverId: userSettings.selfServiceLinkage?.driverId ?? null,
+  };
+}
+
 function getExpiryDate(expiresIn: string): Date {
   const match = /^(\d+)([smhd])$/.exec(expiresIn.trim());
   if (!match) {
@@ -162,6 +189,7 @@ export class AuthService {
     settings?: Prisma.JsonValue | null;
   }): Promise<{ accessToken: string; refreshToken: string }> {
     const accessScope = await this.resolveUserAccessScope(user);
+    const selfServiceLinkage = resolveSelfServiceLinkage(user);
     const linkedDriver = accessScope.driverId
       ? await this.getLinkedDriverForUser(user.tenantId, { driverId: accessScope.driverId })
       : null;
@@ -196,6 +224,10 @@ export class AuthService {
         assignedVehicleIds: userSettings.assignedVehicleIds,
         customPermissions: userSettings.customPermissions,
         ...(accessScope.driverId ? { linkedDriverId: accessScope.driverId } : {}),
+        ...(selfServiceLinkage.subjectType
+          ? { selfServiceSubjectType: selfServiceLinkage.subjectType }
+          : {}),
+        ...(selfServiceLinkage.driverId ? { selfServiceDriverId: selfServiceLinkage.driverId } : {}),
         ...(accessScope.businessEntityId
           ? { businessEntityId: accessScope.businessEntityId }
           : {}),
@@ -470,6 +502,7 @@ export class AuthService {
 
     const linkedDriver = await this.getLinkedDriverForUser(tenantId, user);
     const accessScope = await this.resolveUserAccessScope(user);
+    const selfServiceLinkage = resolveSelfServiceLinkage(user);
     const tenantCountry = user.tenant.country;
     const defaultCurrency = isCountrySupported(tenantCountry)
       ? getCountryConfig(tenantCountry).currency
@@ -519,6 +552,7 @@ export class AuthService {
       permissions: Array.from(
         getGrantedPermissions(user.role as TenantRole, userSettings.customPermissions, {
           linkedDriverId: accessScope.driverId,
+          selfServiceSubjectType: selfServiceLinkage.subjectType,
         }),
       ),
       assignedFleetIds:
@@ -539,6 +573,8 @@ export class AuthService {
         accessMode: accessScope.accessMode,
       }),
       mobileAccessRevoked: user.mobileAccessRevoked ?? null,
+      selfServiceSubjectType: selfServiceLinkage.subjectType,
+      selfServiceDriverId: selfServiceLinkage.driverId,
     };
   }
 

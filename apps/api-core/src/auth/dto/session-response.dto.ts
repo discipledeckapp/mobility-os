@@ -112,4 +112,10 @@ export class AuthSessionResponseDto {
 
   @ApiPropertyOptional()
   mobileAccessRevoked?: boolean | null;
+
+  @ApiPropertyOptional()
+  selfServiceSubjectType?: 'driver' | 'guarantor' | null;
+
+  @ApiPropertyOptional()
+  selfServiceDriverId?: string | null;
 }
