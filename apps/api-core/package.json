@@ -4,7 +4,7 @@
   "private": true,
   "description": "Tenant operations API — fleet, drivers, remittance, accounting",
   "scripts": {
-    "build": "nest build",
+    "build": "prisma generate --schema=src/database/prisma/schema.prisma && nest build",
     "dev": "nest start --watch",
     "dev:local": "PORT=3001 TENANT_WEB_URL=http://localhost:3000 nest start --watch",
     "start": "node dist/main",

@@ -54,6 +54,7 @@ export const API_PATHS = {
   passwordResetRequest: '/auth/password-reset/request',
   passwordResetConfirm: '/auth/password-reset/confirm',
   selfServiceExchangeOtp: '/driver-self-service/exchange-otp',
+  selfServiceLogin: '/driver-self-service/login',
   selfServiceContext: '/driver-self-service/context',
   selfServiceDocuments: '/driver-self-service/documents/list',
   mobileAssignments: '/mobile-ops/assignments',

@@ -47,9 +47,13 @@ export interface IdentityProviderAdapter {
 }
 
 // YouVerify-specific path segments per identifier type (provider API contract, not country logic)
+// See: https://app.youverify.co/user/dashboard/documentation
 const YOUVERIFY_IDENTIFIER_PATH: Record<string, string> = {
   NATIONAL_ID: 'nin',
   BANK_ID: 'bvn',
+  PASSPORT: 'international-passport',
+  DRIVERS_LICENSE: 'drivers-license',
+  VOTERS_CARD: 'voter-card',
 };
 
 function firstIdentifier(
@@ -420,6 +424,9 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
 const SMILE_IDENTITY_ID_TYPE_MAP: Record<string, string> = {
   NATIONAL_ID: 'NIN_NO_PHOTO',
   BANK_ID: 'BVN',
+  PASSPORT: 'PASSPORT',
+  DRIVERS_LICENSE: 'DRIVERS_LICENSE',
+  VOTERS_CARD: 'VOTER_ID',
 };
 
 function smileIdentitySignature(apiKey: string, partnerId: string, timestamp: string): string {

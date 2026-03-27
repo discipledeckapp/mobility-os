@@ -59,6 +59,21 @@ function getExceptionMessage(exception: unknown): { message: string | string[]; 
   };
 }
 
+// Prisma error codes that indicate a pending migration rather than a code bug.
+// P2021 — The table `{table}` does not exist in the current database.
+// P2022 — The column `{column}` does not exist in the current database.
+function isPrismaMissingTableError(exception: unknown): boolean {
+  if (!(exception instanceof Error)) return false;
+  // Prisma wraps errors; the code is available as .code on PrismaClientKnownRequestError
+  const code = (exception as { code?: string }).code;
+  if (code === 'P2021' || code === 'P2022') return true;
+  // Fallback: detect by message text in case the Prisma client version differs.
+  return (
+    exception.message.includes('does not exist in the current database') ||
+    exception.message.includes('Invalid `prisma.')
+  );
+}
+
 function getStatusCode(exception: unknown): number {
   if (exception instanceof HttpException) {
     return exception.getStatus();
@@ -68,7 +83,25 @@ function getStatusCode(exception: unknown): number {
     return HttpStatus.FORBIDDEN;
   }
 
+  if (isPrismaMissingTableError(exception)) {
+    // Return 503 so load balancers / health checks detect the deployment issue
+    // without leaking raw schema details to the caller.
+    return HttpStatus.SERVICE_UNAVAILABLE;
+  }
+
   return HttpStatus.INTERNAL_SERVER_ERROR;
+}
+
+function sanitizePrismaMessage(exception: unknown): string {
+  // Replace raw Prisma error detail with a migration-actionable message.
+  if (isPrismaMissingTableError(exception)) {
+    return (
+      'A required database table is missing. ' +
+      'The service requires a pending migration to be applied. ' +
+      'Run: pnpm --filter api-core db:migrate'
+    );
+  }
+  return '';
 }
 
 @Catch()
@@ -78,7 +111,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<HttpReplyLike>();
     const request = ctx.getRequest<HttpRequestLike>();
     const statusCode = getStatusCode(exception);
-    const { message, error } = getExceptionMessage(exception);
+
+    // Override the message for missing-table Prisma errors so callers and operators
+    // get an actionable message rather than raw Prisma internals.
+    const prismaMessage = sanitizePrismaMessage(exception);
+    const { message, error } = prismaMessage
+      ? { message: prismaMessage, error: 'MigrationRequired' }
+      : getExceptionMessage(exception);
 
     response.status(statusCode).send({
       statusCode,

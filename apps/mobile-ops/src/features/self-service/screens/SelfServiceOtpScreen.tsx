@@ -11,11 +11,14 @@ import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
 export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp'>) {
-  const { bootstrapToken, exchangeOtpCode } = useSelfService();
+  const { bootstrapToken, exchangeOtpCode, loginWithPassword } = useSelfService();
   const [otpCode, setOtpCode] = useState('');
   const [directToken, setDirectToken] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [submittingOtp, setSubmittingOtp] = useState(false);
   const [submittingToken, setSubmittingToken] = useState(false);
+  const [submittingPassword, setSubmittingPassword] = useState(false);
 
   const onSubmitOtp = async () => {
     if (!otpCode.trim()) {
@@ -54,6 +57,26 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
       );
     } finally {
       setSubmittingToken(false);
+    }
+  };
+
+  const onSubmitPassword = async () => {
+    if (!identifier.trim() || !password) {
+      Alert.alert('Sign in', 'Enter your email or phone number and password.');
+      return;
+    }
+
+    setSubmittingPassword(true);
+    try {
+      await loginWithPassword(identifier, password);
+      navigation.replace('SelfServiceResume', {});
+    } catch (error) {
+      Alert.alert(
+        'Sign in failed',
+        error instanceof Error ? error.message : 'Unable to sign in right now. Check your details and try again.',
+      );
+    } finally {
+      setSubmittingPassword(false);
     }
   };
 
@@ -96,6 +119,34 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
           loading={submittingToken}
           variant="secondary"
           onPress={onSubmitToken}
+        />
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>Returning driver</Text>
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          label="Email or phone number"
+          onChangeText={setIdentifier}
+          placeholder="Enter your email or phone"
+          value={identifier}
+        />
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
+          label="Password"
+          onChangeText={setPassword}
+          placeholder="Enter your password"
+          secureTextEntry
+          value={password}
+        />
+        <Button
+          label="Sign in"
+          loading={submittingPassword}
+          variant="secondary"
+          onPress={onSubmitPassword}
         />
       </Card>
 

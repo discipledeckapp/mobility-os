@@ -37,7 +37,7 @@ import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-mete
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import { AuditService } from '../audit/audit.service';
 import { generateOtpCode, hashAuthSecret } from '../auth/auth-token-utils';
-import { hashPassword } from '../auth/password-utils';
+import { hashPassword, verifyPassword } from '../auth/password-utils';
 import { readUserSettings, writeUserSettings } from '../auth/user-settings';
 import { PolicyService, type EnforcementSummary } from '../policy/policy.service';
 import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
@@ -1370,6 +1370,165 @@ export class DriversService {
     };
   }
 
+  // Backend-driven onboarding state machine.
+  // Returns the single next required step and enough context for the frontend
+  // to render it without guessing.  The frontend should always call this endpoint
+  // after completing a step to know where to go next.
+  async getOnboardingStep(token: string): Promise<{
+    step:
+      | 'account'
+      | 'profile'
+      | 'consent'
+      | 'payment'
+      | 'identity_verification'
+      | 'document_verification'
+      | 'manual_review'
+      | 'complete';
+    reason: string;
+    // Contextual fields the frontend needs to render the step.
+    paymentStatus?: string;
+    paymentMessage?: string | null;
+    verificationPaymentStatus?: string;
+    identityStatus?: string;
+    hasConsentOnFile?: boolean;
+    requiredDocumentTypes?: string[];
+    verifiedDocumentTypes?: string[];
+  }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const [driver, settings] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.getOrganisationSettings(payload.tenantId),
+    ]);
+    const policy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
+
+    // Step 1: account setup
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { tenantId: payload.tenantId, driverId: driver.id },
+      select: { id: true },
+    });
+
+    if (!linkedUser) {
+      return { step: 'account', reason: 'Driver needs to create a sign-in account.' };
+    }
+
+    // Step 2: profile completeness
+    if (!driver.firstName || !driver.lastName || !driver.dateOfBirth) {
+      return { step: 'profile', reason: 'Driver profile is incomplete.' };
+    }
+
+    // Step 3: verification consent
+    const existingConsent = await this.prisma.userConsent.findFirst({
+      where: {
+        tenantId: payload.tenantId,
+        userId: linkedUser.id,
+        subjectType: 'driver',
+        subjectId: driver.id,
+        policyDocument: 'verification_sensitive_processing',
+        granted: true,
+      },
+      select: { id: true },
+    });
+
+    // Step 4: payment decision (checked before verification)
+    const paymentBlocked =
+      policy.verificationPaymentStatus === 'driver_payment_required' ||
+      policy.verificationPaymentStatus === 'wallet_missing' ||
+      policy.verificationPaymentStatus === 'insufficient_balance';
+
+    if (!existingConsent && paymentBlocked) {
+      // Show payment step — consent will be captured alongside payment
+      return {
+        step: 'payment',
+        reason: 'Verification payment is required.',
+        paymentStatus: policy.verificationPaymentStatus,
+        paymentMessage: policy.verificationPaymentMessage,
+        hasConsentOnFile: false,
+      };
+    }
+
+    if (!existingConsent) {
+      // Payment is not blocking but consent is still missing — capture before verification
+      return {
+        step: 'consent',
+        reason: 'Driver has not yet provided verification consent.',
+        hasConsentOnFile: false,
+      };
+    }
+
+    if (paymentBlocked) {
+      return {
+        step: 'payment',
+        reason: 'Verification payment is required.',
+        paymentStatus: policy.verificationPaymentStatus,
+        paymentMessage: policy.verificationPaymentMessage,
+        hasConsentOnFile: true,
+      };
+    }
+
+    // Step 5: identity verification (liveness + biometric)
+    const requireIdentityVerification =
+      settings.operations.requireIdentityVerificationForActivation !== false;
+    const identityDone =
+      driver.identityStatus === 'verified' ||
+      driver.identityStatus === 'review_needed' ||
+      Boolean(driver.identityLastVerifiedAt || driver.identityLastDecision) &&
+        driver.identityStatus === 'pending_verification';
+
+    if (requireIdentityVerification && !identityDone) {
+      return {
+        step: 'identity_verification',
+        reason: 'Identity verification has not been submitted.',
+        identityStatus: driver.identityStatus,
+        verificationPaymentStatus: policy.verificationPaymentStatus,
+      };
+    }
+
+    // Step 6: document verification (zero-trust ID number)
+    const requiredDocumentSlugs = policy.requiredDriverDocumentSlugs ?? [];
+    if (requiredDocumentSlugs.length > 0) {
+      const verifiedDocVerifications = await this.prisma.driverDocumentVerification.findMany({
+        where: {
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          status: 'verified',
+        },
+        select: { documentType: true },
+      });
+      const verifiedTypes = new Set(verifiedDocVerifications.map((v) => v.documentType.toLowerCase()));
+      const missingDocTypes = requiredDocumentSlugs.filter(
+        (slug) => !verifiedTypes.has(slug.toLowerCase()),
+      );
+
+      if (missingDocTypes.length > 0) {
+        return {
+          step: 'document_verification',
+          reason: `Required document verification not complete: ${missingDocTypes.join(', ')}.`,
+          requiredDocumentTypes: requiredDocumentSlugs,
+          verifiedDocumentTypes: [...verifiedTypes],
+        };
+      }
+    }
+
+    // Step 7: manual review if identity was submitted but decision is pending
+    if (
+      driver.identityStatus === 'review_needed' ||
+      driver.identityStatus === 'pending_verification'
+    ) {
+      return {
+        step: 'manual_review',
+        reason: 'Your verification submission is under review.',
+        identityStatus: driver.identityStatus,
+      };
+    }
+
+    // All steps done
+    return {
+      step: 'complete',
+      reason: 'All onboarding requirements are met.',
+      identityStatus: driver.identityStatus,
+    };
+  }
+
   async getMobileAccess(
     tenantId: string,
     driverId: string,
@@ -1661,6 +1820,53 @@ export class DriversService {
     });
 
     const token = await this.createSelfServiceToken(otp.tenantId, otp.subjectId);
+    return { token };
+  }
+
+  // Returning driver login: exchange email+password for a self-service continuation token.
+  // This is the password-based equivalent of exchangeDriverSelfServiceOtp for drivers
+  // who have already completed the account-creation step and want to resume onboarding
+  // or re-enter the self-service flow without a fresh invitation OTP.
+  async loginDriverSelfServiceWithPassword(
+    identifier: string,
+    password: string,
+  ): Promise<{ token: string }> {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+
+    // Resolve user by email or phone across all tenants that have a driver linked.
+    // We look for active users who are linked to a driver so we can issue a
+    // driver-scoped self-service token.
+    const user = await this.prisma.user.findFirst({
+      where: {
+        isActive: true,
+        driverId: { not: null },
+        OR: [
+          { email: normalizedIdentifier },
+          { phone: identifier.trim() },
+        ],
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        driverId: true,
+        passwordHash: true,
+        isActive: true,
+      },
+    });
+
+    // Use the same timing-safe check regardless of whether the user was found,
+    // to prevent user enumeration via timing attacks.
+    const passwordValid = user?.passwordHash
+      ? verifyPassword(password, user.passwordHash)
+      : false;
+
+    if (!user || !passwordValid) {
+      throw new UnauthorizedException(
+        'No driver account found with those credentials. Check your email or phone and password.',
+      );
+    }
+
+    const token = await this.createSelfServiceToken(user.tenantId, user.driverId as string);
     return { token };
   }
 
@@ -2672,6 +2878,194 @@ export class DriversService {
     return this.getDocumentContent(payload.tenantId, payload.driverId, documentId);
   }
 
+  // Zero-trust document verification: driver submits document type + ID number.
+  // We call the configured identity provider (YouVerify etc.) to verify the
+  // document number and retrieve provider-returned demographics.  The result is
+  // stored in driver_document_verifications and returned to the caller.
+  // No file upload is required or expected for this path.
+  async verifyDocumentIdFromSelfService(
+    token: string,
+    dto: {
+      documentType: string;
+      idNumber: string;
+      countryCode: string;
+      firstName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+    },
+  ): Promise<{
+    id: string;
+    status: string;
+    providerMatch: boolean | null;
+    providerFirstName: string | null;
+    providerLastName: string | null;
+    providerDateOfBirth: string | null;
+    providerExpiryDate: string | null;
+    failureReason: string | null;
+  }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+
+    // Payment must be resolved before document verification proceeds.
+    await this.assertSelfServiceVerificationPaymentReady(payload.tenantId, driver);
+
+    // Normalise inputs
+    const documentType = dto.documentType.trim().toUpperCase();
+    const idNumber = dto.idNumber.trim();
+    const countryCode = dto.countryCode.trim().toUpperCase();
+
+    if (!documentType || !idNumber || !countryCode) {
+      throw new BadRequestException('documentType, idNumber, and countryCode are required.');
+    }
+
+    // Create a pending verification record first so we have a stable id to return
+    const verificationRecord = await this.prisma.driverDocumentVerification.create({
+      data: {
+        tenantId: payload.tenantId,
+        driverId: driver.id,
+        documentType,
+        idNumber,
+        countryCode,
+        status: 'pending',
+      },
+    });
+
+    let status: string;
+    let providerMatch: boolean | null = null;
+    let providerFirstName: string | null = null;
+    let providerLastName: string | null = null;
+    let providerDateOfBirth: string | null = null;
+    let providerExpiryDate: string | null = null;
+    let failureReason: string | null = null;
+    let providerName: string | null = null;
+    // biome-ignore lint/suspicious/noExplicitAny: provider result shape is opaque
+    let providerResult: any = null;
+
+    try {
+      const result = await this.intelligenceClient.verifyDocumentIdentifier({
+        tenantId: payload.tenantId,
+        countryCode,
+        identifierType: documentType,
+        identifierValue: idNumber,
+        validationData: {
+          ...(dto.firstName ? { firstName: dto.firstName } : {}),
+          ...(dto.lastName ? { lastName: dto.lastName } : {}),
+          ...(dto.dateOfBirth ? { dateOfBirth: dto.dateOfBirth } : {}),
+        },
+      });
+
+      providerName = result.providerName ?? null;
+      providerResult = result;
+
+      if (
+        result.decision === 'enrolled' ||
+        result.decision === 'matched' ||
+        result.isVerifiedMatch === true
+      ) {
+        status = 'verified';
+        providerMatch = true;
+      } else if (
+        result.providerLookupStatus === 'no_match' ||
+        result.decision === 'no_match'
+      ) {
+        status = 'failed';
+        providerMatch = false;
+        failureReason = 'The document number could not be found in the provider database.';
+      } else if (result.decision === 'review') {
+        status = 'manual_review';
+        providerMatch = null;
+        failureReason = 'Automated verification was inconclusive. Manual review required.';
+      } else {
+        status = 'manual_review';
+        failureReason = result.providerLookupStatus ?? 'Provider returned an inconclusive result.';
+      }
+
+      if (result.verifiedProfile) {
+        providerFirstName = result.verifiedProfile.fullName?.split(' ')[0] ?? null;
+        providerLastName = result.verifiedProfile.fullName?.split(' ').slice(1).join(' ') ?? null;
+        providerDateOfBirth = result.verifiedProfile.dateOfBirth ?? null;
+      }
+    } catch (err) {
+      // Provider error — route to manual review rather than crashing the onboarding flow.
+      status = 'manual_review';
+      failureReason =
+        err instanceof Error
+          ? `Provider verification failed: ${err.message}`
+          : 'Provider verification failed. Manual review will be required.';
+    }
+
+    // Update the record with the outcome
+    await this.prisma.driverDocumentVerification.update({
+      where: { id: verificationRecord.id },
+      data: {
+        provider: providerName ?? 'unknown',
+        status,
+        providerMatch,
+        providerFirstName,
+        providerLastName,
+        providerDateOfBirth,
+        providerExpiryDate,
+        failureReason,
+        providerResult: providerResult ?? undefined,
+        verifiedAt: status === 'verified' ? new Date() : undefined,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      id: verificationRecord.id,
+      status,
+      providerMatch,
+      providerFirstName,
+      providerLastName,
+      providerDateOfBirth,
+      providerExpiryDate,
+      failureReason,
+    };
+  }
+
+  async listDocumentVerificationsFromSelfService(
+    token: string,
+  ): Promise<
+    Array<{
+      id: string;
+      documentType: string;
+      idNumber: string;
+      countryCode: string;
+      status: string;
+      providerMatch: boolean | null;
+      providerFirstName: string | null;
+      providerLastName: string | null;
+      providerDateOfBirth: string | null;
+      providerExpiryDate: string | null;
+      failureReason: string | null;
+      verifiedAt: string | null;
+      createdAt: string;
+    }>
+  > {
+    const payload = await this.verifySelfServiceToken(token);
+    const verifications = await this.prisma.driverDocumentVerification.findMany({
+      where: { tenantId: payload.tenantId, driverId: payload.driverId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return verifications.map((v) => ({
+      id: v.id,
+      documentType: v.documentType,
+      idNumber: v.idNumber,
+      countryCode: v.countryCode,
+      status: v.status,
+      providerMatch: v.providerMatch,
+      providerFirstName: v.providerFirstName,
+      providerLastName: v.providerLastName,
+      providerDateOfBirth: v.providerDateOfBirth,
+      providerExpiryDate: v.providerExpiryDate,
+      failureReason: v.failureReason,
+      verifiedAt: v.verifiedAt ? v.verifiedAt.toISOString() : null,
+      createdAt: v.createdAt.toISOString(),
+    }));
+  }
+
   async initializeIdentityLivenessSessionFromSelfService(
     token: string,
     countryCode?: string,
@@ -2937,25 +3331,42 @@ export class DriversService {
       );
     }
 
-    await this.prisma.userConsent.create({
-      data: {
+    // Idempotent: if consent for this policy version already exists, skip creation
+    // so that retried requests (e.g. double-tap on "Pay now") do not crash.
+    const existingConsent = await this.prisma.userConsent.findFirst({
+      where: {
         tenantId: payload.tenantId,
         userId: linkedUser.id,
         subjectType: 'driver',
         subjectId: driver.id,
         policyDocument: 'verification_sensitive_processing',
         policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
-        consentScope: CONSENT_SCOPES.sensitive_identity_verification,
         granted: true,
-        metadata: {
-          legalDocuments: {
-            privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
-            terms: LEGAL_DOCUMENT_VERSIONS.terms,
-          },
-          channel: 'driver_self_service',
-        },
       },
+      select: { id: true },
     });
+
+    if (!existingConsent) {
+      await this.prisma.userConsent.create({
+        data: {
+          tenantId: payload.tenantId,
+          userId: linkedUser.id,
+          subjectType: 'driver',
+          subjectId: driver.id,
+          policyDocument: 'verification_sensitive_processing',
+          policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+          consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+          granted: true,
+          metadata: {
+            legalDocuments: {
+              privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+              terms: LEGAL_DOCUMENT_VERSIONS.terms,
+            },
+            channel: 'driver_self_service',
+          },
+        },
+      });
+    }
 
     return { message: 'Verification consent recorded.' };
   }
@@ -4702,17 +5113,30 @@ export class DriversService {
     const driverIds = drivers.map((driver) => driver.id);
     await this.syncExpiredDocuments(tenantId, driverIds);
 
-    const documents = await this.driverDocuments.findMany({
-      where: {
-        tenantId,
-        driverId: { in: driverIds },
-      },
-      select: {
-        driverId: true,
-        documentType: true,
-        status: true,
-      },
-    });
+    const [documents, zeroTrustVerifications] = await Promise.all([
+      this.driverDocuments.findMany({
+        where: {
+          tenantId,
+          driverId: { in: driverIds },
+        },
+        select: {
+          driverId: true,
+          documentType: true,
+          status: true,
+        },
+      }),
+      this.prisma.driverDocumentVerification.findMany({
+        where: {
+          tenantId,
+          driverId: { in: driverIds },
+          status: 'verified',
+        },
+        select: {
+          driverId: true,
+          documentType: true,
+        },
+      }),
+    ]);
 
     const summaries = new Map<string, DriverDocumentSummary>();
     for (const driver of drivers) {
@@ -4747,6 +5171,23 @@ export class DriversService {
       }
       if (document.status === 'expired') {
         summary.expiredDocumentCount += 1;
+      }
+    }
+
+    // Zero-trust verified ID numbers count toward approved document types.
+    // Deduplicate by documentType per driver so a repeated verification
+    // does not inflate the approved list.
+    for (const verification of zeroTrustVerifications) {
+      const summary = summaries.get(verification.driverId);
+      if (!summary) continue;
+      if (!summary.approvedDocumentTypes.includes(verification.documentType)) {
+        summary.approvedDocumentTypes.push(verification.documentType);
+      }
+      if (
+        verification.documentType === DRIVER_LICENCE_DOCUMENT_TYPE &&
+        !summary.hasApprovedLicence
+      ) {
+        summary.hasApprovedLicence = true;
       }
     }
 

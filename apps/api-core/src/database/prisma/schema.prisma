@@ -285,7 +285,8 @@ model Driver {
   updatedAt DateTime @updatedAt
 
   fleet Fleet @relation(fields: [fleetId], references: [id], onDelete: Restrict)
-  documents DriverDocument[]
+  documents             DriverDocument[]
+  documentVerifications DriverDocumentVerification[]
   guarantor DriverGuarantor?
   guarantorLinks GuarantorDriverLink[]
   linkedUsers User[]
@@ -466,6 +467,56 @@ model DriverDocument {
   @@index([storageKey])
   @@index([storageUrl])
   @@map("driver_documents")
+}
+
+// ── Driver Document Verifications ─────────────────────────────────────────────
+// Zero-trust document verification using ID number + provider API.
+// Replaces the file-upload-first approach for primary document verification.
+// An upload (DriverDocument) remains available as a secondary/admin exception path
+// controlled by fleet settings, but this is the canonical verification record.
+
+model DriverDocumentVerification {
+  id           String @id @default(cuid())
+  tenantId     String
+  driverId     String
+  // References domain-config DOCUMENT_TYPES slug (e.g. 'national_id', 'drivers_license').
+  documentType String
+  // The identifier value submitted by the driver (e.g. NIN, passport number).
+  idNumber     String
+  // ISO 3166-1 alpha-2 country of issuance.
+  countryCode  String
+  // Provider used to verify: 'youverify' | 'smile_identity' | 'manual' | 'mock'.
+  provider     String?
+  // pending | verified | failed | manual_review | expired
+  status       String  @default("pending")
+  // Whether the provider returned a match against the submitted demographics.
+  providerMatch Boolean?
+  // Raw provider confidence score (0–100) where available.
+  providerConfidence Int?
+  // Demographics returned by the provider for cross-check.
+  providerFirstName  String?
+  providerLastName   String?
+  providerDateOfBirth String?
+  providerExpiryDate  String?
+  // Why verification failed or was routed to manual review.
+  failureReason      String?
+  // Full provider response for audit, stored as JSONB.
+  providerResult     Json?
+  // Timestamp when provider returned a response.
+  verifiedAt  DateTime?
+  // Admin who completed manual review (null if automated).
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, driverId, documentType])
+  @@index([tenantId, status])
+  @@map("driver_document_verifications")
 }
 
 // ── Vehicles ──────────────────────────────────────────────────────────────────

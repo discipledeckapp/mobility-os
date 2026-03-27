@@ -2283,6 +2283,95 @@ export async function exchangeDriverSelfServiceOtp(
   });
 }
 
+// Returning driver: exchange email/phone + password for a self-service token.
+export async function loginDriverSelfServiceWithPassword(
+  identifier: string,
+  password: string,
+): Promise<{ token: string }> {
+  return apiCoreFetch<{ token: string }>('/driver-self-service/login', {
+    method: 'POST',
+    body: JSON.stringify({ identifier, password }),
+    cache: 'no-store',
+  });
+}
+
+export type OnboardingStepRecord = {
+  step:
+    | 'account'
+    | 'profile'
+    | 'consent'
+    | 'payment'
+    | 'identity_verification'
+    | 'document_verification'
+    | 'manual_review'
+    | 'complete';
+  reason: string;
+  paymentStatus?: string;
+  paymentMessage?: string | null;
+  verificationPaymentStatus?: string;
+  identityStatus?: string;
+  hasConsentOnFile?: boolean;
+  requiredDocumentTypes?: string[];
+  verifiedDocumentTypes?: string[];
+};
+
+export async function getDriverOnboardingStep(
+  selfServiceToken: string,
+): Promise<OnboardingStepRecord> {
+  return apiCoreFetch<OnboardingStepRecord>('/driver-self-service/onboarding-step', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken }),
+    cache: 'no-store',
+  });
+}
+
+export type DocumentVerificationRecord = {
+  id: string;
+  documentType: string;
+  idNumber: string;
+  countryCode: string;
+  status: string;
+  providerMatch: boolean | null;
+  providerFirstName: string | null;
+  providerLastName: string | null;
+  providerDateOfBirth: string | null;
+  providerExpiryDate: string | null;
+  failureReason: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+};
+
+export async function verifyDriverDocumentId(
+  selfServiceToken: string,
+  input: {
+    documentType: string;
+    idNumber: string;
+    countryCode: string;
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+  },
+): Promise<DocumentVerificationRecord> {
+  return apiCoreFetch<DocumentVerificationRecord>('/driver-self-service/verify-document-id', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function listDriverDocumentVerifications(
+  selfServiceToken: string,
+): Promise<DocumentVerificationRecord[]> {
+  return apiCoreFetch<DocumentVerificationRecord[]>(
+    '/driver-self-service/document-verifications/list',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+      cache: 'no-store',
+    },
+  );
+}
+
 export async function getGuarantorSelfServiceContext(
   selfServiceToken: string,
 ): Promise<{

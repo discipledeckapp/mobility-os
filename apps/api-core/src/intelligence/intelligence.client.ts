@@ -173,6 +173,41 @@ export class IntelligenceClient {
     return this.get<PersonRolePresence>(`/api/v1/query/persons/${personId}/role-presence`);
   }
 
+  // Lightweight document ID verification — sends a single identifier to the provider
+  // without triggering a full biometric enrollment.  Used for the zero-trust document
+  // verification step where the driver submits a document type + ID number.
+  async verifyDocumentIdentifier(input: {
+    tenantId: string;
+    countryCode: string;
+    identifierType: string;
+    identifierValue: string;
+    validationData?: {
+      firstName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+    };
+  }): Promise<MatchingResult> {
+    return this.post<MatchingResult>('/api/v1/internal/matching/enrollments', {
+      tenantId: input.tenantId,
+      countryCode: input.countryCode,
+      identifiers: [
+        {
+          type: input.identifierType,
+          value: input.identifierValue,
+          countryCode: input.countryCode,
+        },
+      ],
+      ...(input.validationData
+        ? {
+            providerVerification: {
+              subjectConsent: true,
+              validationData: input.validationData,
+            },
+          }
+        : {}),
+    });
+  }
+
   async retireBiometricAssetUrls(urls: string[]): Promise<{ affectedPeople: number }> {
     return this.post<{ affectedPeople: number }>('/api/v1/internal/persons/retire-biometric-assets', {
       urls,

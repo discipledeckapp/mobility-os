@@ -1288,6 +1288,20 @@ export function syncMaintenanceReminders(): Promise<{ created: number }> {
   });
 }
 
+export function loginDriverSelfServiceWithPassword(
+  identifier: string,
+  password: string,
+): Promise<DriverSelfServiceTokenExchangeResponse> {
+  return apiFetch<DriverSelfServiceTokenExchangeResponse>(
+    API_PATHS.selfServiceLogin,
+    {
+      method: 'POST',
+      body: JSON.stringify({ identifier, password }),
+    },
+    false,
+  );
+}
+
 export function exchangeDriverSelfServiceOtp(
   otpCode: string,
 ): Promise<DriverSelfServiceTokenExchangeResponse> {

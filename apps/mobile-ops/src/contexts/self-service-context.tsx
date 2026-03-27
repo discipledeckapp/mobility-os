@@ -13,6 +13,7 @@ import {
   getDriverSelfServiceContext,
   issueAuthenticatedDriverSelfServiceContinuationToken,
   listDriverSelfServiceDocuments,
+  loginDriverSelfServiceWithPassword,
   type DriverRecord,
   type DriverSelfServiceDocumentRecord,
 } from '../api';
@@ -27,6 +28,7 @@ interface SelfServiceContextValue {
   isRefreshing: boolean;
   bootstrapToken: (token: string) => Promise<void>;
   exchangeOtpCode: (otpCode: string) => Promise<void>;
+  loginWithPassword: (identifier: string, password: string) => Promise<void>;
   refreshSelfService: () => Promise<void>;
   clearSelfService: () => Promise<void>;
 }
@@ -102,6 +104,19 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
     [loadContext],
   );
 
+  const loginWithPassword = useCallback(
+    async (identifier: string, password: string) => {
+      const normalizedIdentifier = identifier.trim();
+      if (!normalizedIdentifier || !password) {
+        throw new Error('Email or phone number and password are required.');
+      }
+
+      const result = await loginDriverSelfServiceWithPassword(normalizedIdentifier, password);
+      await loadContext(result.token);
+    },
+    [loadContext],
+  );
+
   const refreshSelfService = useCallback(async () => {
     if (!token) {
       return;
@@ -170,6 +185,7 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
       isRefreshing,
       bootstrapToken,
       exchangeOtpCode,
+      loginWithPassword,
       refreshSelfService,
       clearSelfService,
     }),
@@ -181,6 +197,7 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
       isRefreshing,
       bootstrapToken,
       exchangeOtpCode,
+      loginWithPassword,
       refreshSelfService,
       clearSelfService,
     ],

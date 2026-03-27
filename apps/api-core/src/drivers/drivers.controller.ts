@@ -761,6 +761,33 @@ export class DriverSelfServiceController {
     return this.service.exchangeDriverSelfServiceOtp(otpCode);
   }
 
+  // Password-based login for returning drivers who have already completed account setup.
+  // Returns the same self-service token shape as exchange-otp so the frontend can
+  // use a single token-bearing flow regardless of entry point.
+  @Post('login')
+  @ApiCreatedResponse({ type: Object })
+  loginWithPassword(
+    @Body('identifier') identifier: string,
+    @Body('password') password: string,
+  ): Promise<{ token: string }> {
+    if (!identifier?.trim() || !password?.trim()) {
+      throw new BadRequestException('identifier and password are required');
+    }
+    return this.service.loginDriverSelfServiceWithPassword(identifier, password);
+  }
+
+  // Backend-driven state machine: returns the single next required onboarding step.
+  // The frontend must call this after each step completion instead of computing
+  // flow state itself from raw driver fields.
+  @Post('onboarding-step')
+  @ApiCreatedResponse({ type: Object })
+  getOnboardingStep(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.getOnboardingStep(token);
+  }
+
   @Post('context')
   @ApiCreatedResponse({ type: DriverResponseDto })
   async getContext(@Body('token') token: string): Promise<DriverResponseDto> {
@@ -1067,6 +1094,42 @@ export class DriverSelfServiceController {
           : `/api/drivers/${document.driverId}/documents/${document.id}/content?token=${encodeURIComponent(token)}`,
       })),
     );
+  }
+
+  // Zero-trust document verification: submit document type + ID number.
+  // Calls the configured identity provider and stores the result.
+  @Post('verify-document-id')
+  @ApiCreatedResponse({ type: Object })
+  verifyDocumentId(
+    @Body('token') token: string,
+    @Body('documentType') documentType: string,
+    @Body('idNumber') idNumber: string,
+    @Body('countryCode') countryCode: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+    @Body('dateOfBirth') dateOfBirth?: string,
+  ) {
+    if (!token?.trim() || !documentType?.trim() || !idNumber?.trim() || !countryCode?.trim()) {
+      throw new BadRequestException('token, documentType, idNumber, and countryCode are required');
+    }
+    return this.service.verifyDocumentIdFromSelfService(token, {
+      documentType,
+      idNumber,
+      countryCode,
+      ...(firstName ? { firstName } : {}),
+      ...(lastName ? { lastName } : {}),
+      ...(dateOfBirth ? { dateOfBirth } : {}),
+    });
+  }
+
+  // List all document verification records for the self-service driver.
+  @Post('document-verifications/list')
+  @ApiCreatedResponse({ type: Object })
+  listDocumentVerifications(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.listDocumentVerificationsFromSelfService(token);
   }
 
   @Post('authenticated-token')
