@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { ProcessingScreen } from '../components/processing-state';
 import { useAuth } from '../contexts/auth-context';
 import { useSelfService } from '../contexts/self-service-context';
 import { AssignmentDetailScreen } from '../features/assignments/screens/AssignmentDetailScreen';
@@ -77,10 +78,21 @@ export function RootNavigator() {
 
   if (isLoading || isSelfServiceLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={tokens.colors.primary} size="large" />
-        <Text style={styles.loadingText}>Restoring secure session…</Text>
-      </View>
+      <ProcessingScreen
+        activeStep={1}
+        message="Recovering your account access, restoring onboarding progress, and preparing the right surface for this session."
+        steps={[
+          'Checking account access',
+          'Restoring onboarding progress',
+          'Preparing your workspace',
+        ]}
+        tips={[
+          'Verified onboarding progress can be resumed across sessions.',
+          'Keeping access and readiness separate makes recovery faster.',
+        ]}
+        title="Restoring your secure session"
+        variant="onboarding"
+      />
     );
   }
 
@@ -354,16 +366,4 @@ export function RootNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    backgroundColor: tokens.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacing.sm,
-  },
-  loadingText: {
-    color: tokens.colors.inkSoft,
-    fontSize: 14,
-  },
-});
+const styles = StyleSheet.create({});

@@ -35,6 +35,7 @@ import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
+import { FullScreenBlockingLoader, InlineProcessingCard } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
 import { useSelfService } from '../../../contexts/self-service-context';
@@ -110,6 +111,29 @@ export function SelfServiceVerificationScreen({
   const [firstName, setFirstName] = useState(driver?.firstName ?? '');
   const [lastName, setLastName] = useState(driver?.lastName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(driver?.dateOfBirth ?? '');
+  const isProcessing =
+    submittingIdentity || uploadingDocument || initiatingPayment || savingProfile;
+  const processingVariant = submittingIdentity
+    ? 'verification'
+    : uploadingDocument
+      ? 'upload'
+      : initiatingPayment
+        ? 'payment'
+        : 'onboarding';
+  const processingTitle = submittingIdentity
+    ? 'Submitting verification'
+    : uploadingDocument
+      ? 'Uploading document'
+      : initiatingPayment
+        ? 'Starting payment'
+        : 'Saving onboarding details';
+  const processingMessage = submittingIdentity
+    ? 'Validating your live selfie, checking identity records, and recording the verification result.'
+    : uploadingDocument
+      ? 'Preparing your document, uploading it securely, and attaching it to your onboarding record.'
+      : initiatingPayment
+        ? 'Preparing your checkout and linking it to the next verification step.'
+        : 'Saving your profile details and preserving your onboarding progress.';
 
   const profileComplete = Boolean(firstName.trim() && lastName.trim() && dateOfBirth.trim());
 
@@ -558,13 +582,17 @@ export function SelfServiceVerificationScreen({
   if (!token || !driver) {
     return (
       <Screen contentContainerStyle={styles.centered}>
-        <Card style={styles.section}>
-          <Text style={styles.title}>Verification session missing</Text>
-          <Text style={styles.copy}>
-            Start from the verification access screen before attempting identity capture.
-          </Text>
-          <Button label="Enter verification code" onPress={() => navigation.replace('SelfServiceOtp')} />
-        </Card>
+        <InlineProcessingCard
+          message="Verification access is missing on this device. Restore your onboarding session to continue."
+          steps={[
+            'Recover verification access',
+            'Restore onboarding progress',
+            'Resume live verification',
+          ]}
+          title="Verification session missing"
+          variant="onboarding"
+        />
+        <Button label="Enter verification code" onPress={() => navigation.replace('SelfServiceOtp')} />
       </Screen>
     );
   }
@@ -721,10 +749,31 @@ export function SelfServiceVerificationScreen({
             placeholder="YYYY-MM-DD"
             value={dateOfBirth}
           />
-          <Button label="Save and continue" loading={savingProfile} onPress={() => void onSaveProfile()} />
+          <Button
+            label="Save and continue"
+            loading={savingProfile}
+            loadingLabel="Saving profile"
+            onPress={() => void onSaveProfile()}
+          />
         </Card>
 
         <Button label="Back" variant="secondary" onPress={goBack} />
+        <FullScreenBlockingLoader
+          visible={isProcessing}
+          activeStep={1}
+          message={processingMessage}
+          steps={
+            submittingIdentity
+              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              : uploadingDocument
+                ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
+                : initiatingPayment
+                  ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
+                  : ['Validating profile details', 'Saving onboarding progress', 'Preparing next step']
+          }
+          title={processingTitle}
+          variant={processingVariant}
+        />
       </Screen>
     );
   }
@@ -762,6 +811,7 @@ export function SelfServiceVerificationScreen({
               <Button
                 label="Pay now"
                 loading={initiatingPayment}
+                loadingLabel="Starting payment"
                 onPress={() => void onInitiatePayment()}
               />
               <Button
@@ -779,6 +829,22 @@ export function SelfServiceVerificationScreen({
         </Card>
 
         <Button label="Back" variant="secondary" onPress={goBack} />
+        <FullScreenBlockingLoader
+          visible={isProcessing}
+          activeStep={1}
+          message={processingMessage}
+          steps={
+            submittingIdentity
+              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              : uploadingDocument
+                ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
+                : initiatingPayment
+                  ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
+                  : ['Validating profile details', 'Saving onboarding progress', 'Preparing next step']
+          }
+          title={processingTitle}
+          variant={processingVariant}
+        />
       </Screen>
     );
   }
@@ -976,6 +1042,7 @@ export function SelfServiceVerificationScreen({
                   label={governmentLookupRequired ? 'Submit identity verification' : 'Save for organisation review'}
                   disabled={!canSubmitIdentity}
                   loading={submittingIdentity}
+                  loadingLabel="Submitting verification"
                   onPress={() => void onSubmitIdentity()}
                 />
               ) : (
@@ -998,6 +1065,22 @@ export function SelfServiceVerificationScreen({
         </Card>
 
         <Button label="Back" variant="secondary" onPress={goBack} />
+        <FullScreenBlockingLoader
+          visible={isProcessing}
+          activeStep={1}
+          message={processingMessage}
+          steps={
+            submittingIdentity
+              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              : uploadingDocument
+                ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
+                : initiatingPayment
+                  ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
+                  : ['Validating profile details', 'Saving onboarding progress', 'Preparing next step']
+          }
+          title={processingTitle}
+          variant={processingVariant}
+        />
       </Screen>
     );
   }
@@ -1031,6 +1114,7 @@ export function SelfServiceVerificationScreen({
           label="Upload selected document"
           disabled={!selectedDocumentType}
           loading={uploadingDocument}
+          loadingLabel="Uploading document"
           onPress={() => void onUploadDocument()}
         />
 
@@ -1073,6 +1157,22 @@ export function SelfServiceVerificationScreen({
       </Card>
 
       <Button label="Back" variant="secondary" onPress={goBack} />
+      <FullScreenBlockingLoader
+        visible={isProcessing}
+        activeStep={1}
+        message={processingMessage}
+        steps={
+          submittingIdentity
+            ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+            : uploadingDocument
+              ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
+              : initiatingPayment
+                ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
+                : ['Validating profile details', 'Saving onboarding progress', 'Preparing next step']
+        }
+        title={processingTitle}
+        variant={processingVariant}
+      />
     </Screen>
   );
 }

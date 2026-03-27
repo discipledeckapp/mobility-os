@@ -5,6 +5,7 @@ export * from './card';
 export * from './input';
 export * from './layout';
 export * from './loading-state';
+export * from './processing-state';
 export * from './registry-table';
 export * from './searchable-select';
 export * from './table';

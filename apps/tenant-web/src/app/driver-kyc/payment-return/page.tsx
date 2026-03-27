@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Text } from '@mobility-os/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, ProcessingStateCard, Text } from '@mobility-os/ui';
 
 function DriverKycPaymentReturnInner() {
   const params = useSearchParams();
@@ -69,12 +69,22 @@ function DriverKycPaymentReturnInner() {
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#eff6ff_0%,#f1f5f9_100%)] px-4 py-10">
       <div className="w-full max-w-md">
         {state === 'loading' ? (
-          <Card className="border-slate-200 bg-white">
-            <CardContent className="py-10 text-center">
-              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-              <Text className="text-slate-600">Verifying your payment…</Text>
-            </CardContent>
-          </Card>
+          <ProcessingStateCard
+            activeStep={1}
+            message="We are confirming your transaction, recording the payment, and unlocking the next onboarding step."
+            progressLabel="Verifying your payment"
+            steps={[
+              'Confirming transaction status',
+              'Recording payment against onboarding',
+              'Returning you to verification',
+            ]}
+            tips={[
+              'Payment confirmation keeps your verification step unlocked across devices.',
+              'Recorded verification payments prevent duplicate charges.',
+            ]}
+            title="Confirming your payment"
+            variant="payment"
+          />
         ) : state === 'success' ? (
           <Card className="border-emerald-200 bg-white">
             <CardHeader className="space-y-2">
@@ -92,8 +102,7 @@ function DriverKycPaymentReturnInner() {
                   ✓ Payment reference: {reference}
                 </Text>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={() => {
                   const nextUrl =
                     returnUrl ??
@@ -106,10 +115,9 @@ function DriverKycPaymentReturnInner() {
                   }
                   window.location.href = nextUrl;
                 }}
-                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Continue onboarding
-              </button>
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -146,7 +154,14 @@ export default function DriverKycPaymentReturnPage() {
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#eff6ff_0%,#f1f5f9_100%)]">
-          <Text tone="muted">Loading…</Text>
+          <div className="w-full max-w-md px-4">
+            <ProcessingStateCard
+              compact
+              message="Preparing the payment callback and recovering your onboarding session."
+              title="Loading payment status"
+              variant="payment"
+            />
+          </div>
         </main>
       }
     >

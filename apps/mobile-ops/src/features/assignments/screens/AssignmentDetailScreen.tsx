@@ -10,6 +10,7 @@ import { Card } from '../../../components/card';
 import { ConfirmationModal } from '../../../components/confirmation-modal';
 import { Input } from '../../../components/input';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { FullScreenBlockingLoader, InlineProcessingCard, SkeletonCard } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { mobileEnv } from '../../../config/env';
 import { OFFLINE_ACTION_TYPE } from '../../../constants';
@@ -49,6 +50,21 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
   const [incidentCategory, setIncidentCategory] = useState('collision');
   const [incidentSeverity, setIncidentSeverity] = useState('minor');
   const [incidentEstimatedCost, setIncidentEstimatedCost] = useState('');
+  const processingVariant = showIncidentSheet
+    ? 'generic_action'
+    : showRemittanceSheet
+      ? 'remittance'
+      : 'assignment';
+  const processingTitle = showIncidentSheet
+    ? 'Submitting vehicle incident'
+    : showRemittanceSheet
+      ? 'Recording remittance'
+      : 'Updating assignment';
+  const processingMessage = showIncidentSheet
+    ? 'Saving the incident report and attaching it to the assignment record.'
+    : showRemittanceSheet
+      ? 'Recording the collection and refreshing assignment finance status.'
+      : 'Applying the assignment change and refreshing the latest driver context.';
 
   const canWriteAssignments = useMemo(
     () => session?.permissions.includes('assignments:write') ?? false,
@@ -251,11 +267,18 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
   if (loading || !assignment) {
     return (
       <Screen>
-        <Card style={styles.section}>
-          <LoadingSkeleton height={28} width="52%" />
-          <LoadingSkeleton height={18} width="90%" />
-          <LoadingSkeleton height={18} width="60%" />
-        </Card>
+        <InlineProcessingCard
+          activeStep={1}
+          message="Loading assignment detail, refreshing readiness signals, and preparing driver actions."
+          steps={[
+            'Loading assignment detail',
+            'Refreshing readiness status',
+            'Preparing field actions',
+          ]}
+          title="Preparing assignment workspace"
+          variant="assignment"
+        />
+        <SkeletonCard lines={3} />
         <Card style={styles.section}>
           <LoadingSkeleton height={48} />
           <LoadingSkeleton height={48} />
@@ -349,6 +372,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                   accessibilityHint="Mark this assignment as started"
                   label="Start assignment"
                   loading={submitting}
+                  loadingLabel="Starting assignment"
                   onPress={() =>
                     void runAction(
                       () => startDriverAssignment(assignment.id),
@@ -369,6 +393,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                     accessibilityHint="Mark this assignment as completed"
                     label="Complete assignment"
                     loading={submitting}
+                    loadingLabel="Completing assignment"
                     onPress={() =>
                       void runAction(
                         () => completeDriverAssignment(assignment.id),
@@ -462,6 +487,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
               <Button
                 label="Submit"
                 loading={submitting}
+                loadingLabel="Submitting remittance"
                 onPress={() => void onSubmitRemittance()}
               />
             </View>
@@ -517,11 +543,30 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
             />
             <View style={styles.sheetActions}>
               <Button label="Close" variant="secondary" onPress={() => setShowIncidentSheet(false)} />
-              <Button label="Submit" loading={submitting} onPress={() => void onSubmitIncident()} />
+              <Button
+                label="Submit"
+                loading={submitting}
+                loadingLabel="Submitting incident"
+                onPress={() => void onSubmitIncident()}
+              />
             </View>
           </View>
         </View>
       </Modal>
+      <FullScreenBlockingLoader
+        visible={submitting}
+        activeStep={1}
+        message={processingMessage}
+        steps={
+          showIncidentSheet
+            ? ['Capturing incident details', 'Saving incident record', 'Refreshing assignment']
+            : showRemittanceSheet
+              ? ['Preparing collection data', 'Recording remittance', 'Refreshing assignment']
+              : ['Applying assignment action', 'Syncing operational state', 'Refreshing assignment']
+        }
+        title={processingTitle}
+        variant={processingVariant}
+      />
     </>
   );
 }

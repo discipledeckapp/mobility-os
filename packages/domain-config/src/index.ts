@@ -91,3 +91,10 @@ export {
   normalizeRemittanceFrequency,
   toIsoDate,
 } from './remittance-planning/index';
+
+export {
+  type ProcessingVariant,
+  type ProcessingContentDefinition,
+  PROCESSING_CONTENT,
+  getProcessingContent,
+} from './processing-content/index';

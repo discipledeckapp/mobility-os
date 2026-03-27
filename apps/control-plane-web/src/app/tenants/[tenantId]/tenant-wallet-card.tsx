@@ -1,7 +1,17 @@
 'use client';
 
 import { useActionState } from 'react';
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Text } from '@mobility-os/ui';
+import {
+  ActionPendingButtonState,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  InlineLoadingState,
+  Input,
+  Label,
+  Text,
+} from '@mobility-os/ui';
 import type { PlatformWalletBalanceRecord } from '../../../lib/api-control-plane';
 import { creditTenantWalletAction, type CreditWalletActionState } from './actions';
 
@@ -74,9 +84,19 @@ export function TenantWalletCard({
           </div>
           {state.error ? <Text tone="danger">{state.error}</Text> : null}
           {state.success ? <Text tone="success">{state.success}</Text> : null}
-          <Button disabled={pending} type="submit" variant="secondary">
-            {pending ? 'Crediting…' : 'Credit wallet'}
-          </Button>
+          {pending ? (
+            <InlineLoadingState
+              message="Recording the wallet credit and refreshing the current platform balance."
+              title="Crediting platform wallet"
+              variant="payment"
+            />
+          ) : null}
+          <ActionPendingButtonState
+            label="Credit wallet"
+            pending={pending}
+            pendingLabel="Crediting wallet"
+            variant="secondary"
+          />
         </form>
       </CardContent>
     </Card>

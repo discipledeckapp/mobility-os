@@ -3,11 +3,13 @@
 import { describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActionPendingButtonState,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
+  InlineLoadingState,
   CardTitle,
   Input,
   Label,
@@ -333,21 +335,32 @@ export function CreateAssignmentForm({
           ) : null}
 
           <div className="flex items-end">
-            <Button
-              disabled={
-                isPending ||
+            <ActionPendingButtonState
+              label="Create assignment"
+              pending={isPending}
+              pendingLabel="Creating assignment"
+              className={
                 selectableFleets.length === 0 ||
                 !fleetId ||
                 !driverId ||
                 !vehicleId ||
                 Boolean(selectedDriver && !selectedDriver.hasApprovedLicence)
+                  ? 'pointer-events-none opacity-55'
+                  : undefined
               }
-              type="submit"
-            >
-              {isPending ? 'Creating...' : 'Create assignment'}
-            </Button>
+            />
           </div>
         </form>
+
+        {isPending ? (
+          <div className="mt-4">
+            <InlineLoadingState
+              message="Checking driver eligibility, vehicle availability, and assignment readiness before we lock this pairing."
+              title="Creating assignment"
+              variant="assignment"
+            />
+          </div>
+        ) : null}
 
         {state.error ? (
           <Text className="mt-4" tone="danger">{state.error}</Text>

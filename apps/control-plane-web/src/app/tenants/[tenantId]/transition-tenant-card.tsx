@@ -1,6 +1,15 @@
 'use client';
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Text } from '@mobility-os/ui';
+import {
+  ActionPendingButtonState,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  InlineLoadingState,
+  Input,
+  Text,
+} from '@mobility-os/ui';
 import { useActionState } from 'react';
 import { type TenantDetailActionState, transitionTenantAction } from './actions';
 
@@ -35,9 +44,18 @@ export function TransitionTenantCard({ tenantId }: { tenantId: string }) {
           <Input name="reason" placeholder="Reason (optional)" />
           {state.error ? <Text tone="danger">{state.error}</Text> : null}
           {state.success ? <Text tone="success">{state.success}</Text> : null}
-          <Button disabled={pending} type="submit">
-            {pending ? 'Applying…' : 'Apply transition'}
-          </Button>
+          {pending ? (
+            <InlineLoadingState
+              message="Applying the lifecycle transition and updating tenant status across control-plane records."
+              title="Applying transition"
+              variant="generic_action"
+            />
+          ) : null}
+          <ActionPendingButtonState
+            label="Apply transition"
+            pending={pending}
+            pendingLabel="Applying transition"
+          />
         </form>
       </CardContent>
     </Card>

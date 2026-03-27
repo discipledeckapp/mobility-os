@@ -1,12 +1,14 @@
 'use client';
 
 import {
+  ActionPendingButtonState,
   Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
+  InlineLoadingState,
   CardTitle,
   Table,
   TableBody,
@@ -90,10 +92,19 @@ function OverrideModal({
             </select>
             {state.error ? <Text tone="danger">{state.error}</Text> : null}
             {state.success ? <Text tone="success">{state.success}</Text> : null}
+            {pending ? (
+              <InlineLoadingState
+                message="Saving the scoped override and refreshing the feature flag posture."
+                title="Saving override"
+                variant="generic_action"
+              />
+            ) : null}
             <div className="flex gap-3">
-              <Button disabled={pending} type="submit">
-                {pending ? 'Saving…' : 'Save override'}
-              </Button>
+              <ActionPendingButtonState
+                label="Save override"
+                pending={pending}
+                pendingLabel="Saving override"
+              />
               <Button onClick={onClose} type="button" variant="secondary">
                 Close
               </Button>
@@ -146,6 +157,13 @@ export function FeatureFlagsPanel({
 
         {error ? <Text tone="danger">{error}</Text> : null}
         {feedback ? <Text tone="success">{feedback}</Text> : null}
+        {pending ? (
+          <InlineLoadingState
+            message="Applying the latest control-plane change and refreshing the registry."
+            title="Updating feature posture"
+            variant="generic_action"
+          />
+        ) : null}
 
         <Card>
           <CardHeader>

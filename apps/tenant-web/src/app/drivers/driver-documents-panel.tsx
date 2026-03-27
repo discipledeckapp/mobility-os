@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import {
+  ActionPendingButtonState,
   Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
+  InlineLoadingState,
   CardTitle,
   Input,
   Label,
@@ -237,12 +239,21 @@ export function DriverDocumentsPanel({
             </Text>
           </div>
           <div className="flex items-end">
-            <Button disabled={isPending} type="submit">
-              {isPending ? 'Uploading...' : 'Upload document'}
-            </Button>
+            <ActionPendingButtonState
+              label="Upload document"
+              pending={isPending}
+              pendingLabel="Uploading securely"
+            />
           </div>
         </form>
 
+        {isPending ? (
+          <InlineLoadingState
+            message="Preparing the file, validating it, and attaching it to the driver record."
+            title="Uploading document"
+            variant="upload"
+          />
+        ) : null}
         {state.error ? <Text tone="danger">{state.error}</Text> : null}
         {state.success ? <Text tone="success">{state.success}</Text> : null}
         <div className="space-y-3">

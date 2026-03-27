@@ -3,11 +3,13 @@
 import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
+  ActionPendingButtonState,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
+  InlineLoadingState,
   CardTitle,
   Input,
   Label,
@@ -251,19 +253,28 @@ export function CreateRemittanceForm({
           </div>
 
           <div className="flex items-end">
-            <Button
-              disabled={
-                isPending ||
-                selectableFleets.length === 0 ||
-                !fleetId ||
-                !assignmentId
+            <ActionPendingButtonState
+              label="Record remittance"
+              pending={isPending}
+              pendingLabel="Recording remittance"
+              className={
+                selectableFleets.length === 0 || !fleetId || !assignmentId
+                  ? 'pointer-events-none opacity-55'
+                  : undefined
               }
-              type="submit"
-            >
-              {isPending ? 'Recording...' : 'Record remittance'}
-            </Button>
+            />
           </div>
         </form>
+
+        {isPending ? (
+          <div className="mt-4">
+            <InlineLoadingState
+              message="Recording the collection, validating the assignment context, and updating remittance history."
+              title="Recording remittance"
+              variant="remittance"
+            />
+          </div>
+        ) : null}
 
         {state.error ? (
           <Text className="mt-4" tone="danger">{state.error}</Text>

@@ -12,6 +12,7 @@ import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
 import { Input } from '../../../components/input';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { FullScreenBlockingLoader, InlineProcessingCard, SkeletonCard } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { mobileEnv } from '../../../config/env';
 import { OFFLINE_ACTION_TYPE } from '../../../constants';
@@ -227,10 +228,17 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           />
         </View>
         {historyLoading ? (
-          <>
-            <LoadingSkeleton height={72} />
-            <LoadingSkeleton height={72} />
-          </>
+          <InlineProcessingCard
+            activeStep={1}
+            message="Loading recent collections and checking the latest remittance state for this mobile account."
+            steps={[
+              'Loading recent collections',
+              'Refreshing remittance status',
+              'Preparing assignment options',
+            ]}
+            title="Preparing remittance history"
+            variant="remittance"
+          />
         ) : history.length === 0 ? (
           <Text style={styles.muted}>No collections have been recorded from this mobile account yet.</Text>
         ) : (
@@ -263,8 +271,8 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         />
         {loading ? (
           <>
-            <LoadingSkeleton height={72} />
-            <LoadingSkeleton height={72} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
           </>
         ) : filteredAssignments.length === 0 ? (
           <EmptyState
@@ -369,6 +377,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           accessibilityHint="Submit this remittance record"
           label="Submit remittance"
           loading={submitting}
+          loadingLabel="Submitting remittance"
           onPress={() => void onSubmit()}
         />
       </Card>
@@ -381,6 +390,18 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           onChange={onDateChange}
         />
       ) : null}
+      <FullScreenBlockingLoader
+        visible={submitting}
+        activeStep={1}
+        message="Recording the collection, updating remittance history, and refreshing assignment context."
+        steps={[
+          'Preparing collection data',
+          'Recording remittance',
+          'Refreshing assignment history',
+        ]}
+        title="Processing remittance"
+        variant="remittance"
+      />
     </Screen>
   );
 }

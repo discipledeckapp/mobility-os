@@ -6,7 +6,7 @@ import { getLicenceExpiryReport, getOperationalReadinessReport, getReportsOvervi
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
-import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { InlineProcessingCard, SkeletonCard } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
@@ -47,7 +47,20 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
           <Badge label={`${queuedDrivers} in readiness queue`} tone={queuedDrivers > 0 ? 'warning' : 'neutral'} />
         </View>
         {readinessQuery.isLoading ? (
-          <LoadingSkeleton height={120} />
+          <>
+            <InlineProcessingCard
+              activeStep={1}
+              message="Refreshing operational readiness, licence signals, and fleet performance snapshots."
+              steps={[
+                'Loading readiness signals',
+                'Preparing fleet summaries',
+                'Shaping mobile insights',
+              ]}
+              title="Preparing reports"
+              variant="reporting"
+            />
+            <SkeletonCard lines={3} />
+          </>
         ) : (
           readinessQuery.data?.drivers.slice(0, 5).map((driver) => (
             <Card key={driver.id} style={styles.innerCard}>
@@ -86,7 +99,7 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Licence expiry</Text>
         {expiryQuery.isLoading ? (
-          <LoadingSkeleton height={120} />
+          <SkeletonCard lines={3} />
         ) : (
           expiryQuery.data?.slice(0, 5).map((item) => (
             <Card key={item.driverId} style={styles.innerCard}>
