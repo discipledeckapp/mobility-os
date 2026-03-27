@@ -2198,7 +2198,7 @@ export class DriversService {
 
     const identifiers = [
       ...(dto.identifiers ?? []),
-      { type: 'PHONE', value: driver.phone },
+      ...(driver.phone ? [{ type: 'PHONE', value: driver.phone }] : []),
       ...(driver.email ? [{ type: 'EMAIL', value: driver.email }] : []),
     ];
 
@@ -2212,8 +2212,8 @@ export class DriversService {
       providerVerification: {
         subjectConsent: dto.subjectConsent ?? false,
         validationData: {
-          firstName: driver.firstName,
-          lastName: driver.lastName,
+          ...(driver.firstName ? { firstName: driver.firstName } : {}),
+          ...(driver.lastName ? { lastName: driver.lastName } : {}),
           ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
         },
         ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),

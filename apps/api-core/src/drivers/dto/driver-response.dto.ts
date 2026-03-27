@@ -24,14 +24,14 @@ export class DriverResponseDto {
   @ApiProperty({ description: 'DriverStatus: active | inactive | suspended | terminated' })
   status!: string;
 
-  @ApiProperty()
-  firstName!: string;
+  @ApiPropertyOptional()
+  firstName?: string | null;
 
-  @ApiProperty()
-  lastName!: string;
+  @ApiPropertyOptional()
+  lastName?: string | null;
 
-  @ApiProperty({ description: 'E.164 format' })
-  phone!: string;
+  @ApiPropertyOptional({ description: 'E.164 format' })
+  phone?: string | null;
 
   @ApiPropertyOptional()
   email?: string | null;
