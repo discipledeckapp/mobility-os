@@ -66,7 +66,7 @@ export function DriverAdminOverridePanel({
           disabled={saving || (!adminAssignmentOverride && !canEnable)}
           onClick={handleToggle}
           size="sm"
-          variant={adminAssignmentOverride ? 'destructive' : 'default'}
+          variant={adminAssignmentOverride ? 'ghost' : 'primary'}
         >
           {saving
             ? 'Saving…'

@@ -81,7 +81,12 @@ export function AssignmentRemittancePlanForm({
 
       <div className="space-y-2">
         <Label htmlFor="remittanceAmountDisplay">Expected remittance amount</Label>
-        <AmountField currency={currency} initialMinorUnits={remittanceAmountMinorUnits} />
+        <AmountField
+          currency={currency}
+          {...(remittanceAmountMinorUnits !== undefined
+            ? { initialMinorUnits: remittanceAmountMinorUnits }
+            : {})}
+        />
       </div>
 
       <div className="space-y-2">
