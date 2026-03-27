@@ -313,6 +313,22 @@
 		</div>
 	</footer><!-- #site-footer -->
 
+	<!-- WhatsApp Floating Button -->
+	<a
+		href="https://wa.me/2348053108039?text=<?php echo rawurlencode( 'Hello, I want to reduce loss in my transport business' ); ?>"
+		class="whatsapp-float"
+		target="_blank"
+		rel="noopener noreferrer"
+		aria-label="Chat with Mobiris on WhatsApp"
+		data-lang-en="Chat on WhatsApp"
+		data-lang-fr="Discuter sur WhatsApp"
+	>
+		<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+			<path d="M14 0C6.27 0 0 6.27 0 14c0 2.48.65 4.79 1.78 6.79L0 28l7.4-1.74A13.93 13.93 0 0014 28c7.73 0 14-6.27 14-14S21.73 0 14 0zm7.22 19.73c-.3.86-1.5 1.57-2.45 1.77-.66.13-1.52.24-4.38-.94C10.7 19.06 8.28 15.77 8.1 15.54c-.18-.23-1.52-2.03-1.52-3.87 0-1.83.96-2.73 1.48-2.91.52-.18.86-.14 1.22-.14.3 0 .62 0 .88.67.3.73 1.01 2.46 1.1 2.65.08.18.14.39.02.63-.11.24-.17.39-.33.6-.17.21-.35.47-.5.64-.17.18-.34.38-.15.73.2.35.84 1.39 1.8 2.24 1.25 1.1 2.3 1.45 2.62 1.61.33.16.52.13.71-.07.2-.2.83-.96 1.05-1.29.22-.33.44-.27.75-.17.3.11 1.93.9 2.27 1.07.33.17.56.24.64.38.08.14.08.81-.22 1.66z" fill="white"/>
+		</svg>
+		<span class="whatsapp-float__label">Chat on WhatsApp</span>
+	</a>
+
 	<?php wp_footer(); ?>
 
 </body>

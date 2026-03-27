@@ -142,6 +142,107 @@ add_action( 'wp_ajax_mobiris_newsletter', 'mobiris_handle_newsletter' );
 add_action( 'wp_ajax_nopriv_mobiris_newsletter', 'mobiris_handle_newsletter' );
 
 /**
+ * Handle lead capture form AJAX submission
+ *
+ * Saves the lead as a 'mobiris_lead' custom post type and sends
+ * an email notification to hello@mobiris.ng.
+ *
+ * @since 1.0.0
+ * @return void Exits with JSON response
+ */
+function mobiris_save_lead() {
+	// Verify nonce
+	if ( ! isset( $_POST['lead_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['lead_nonce'] ) ), 'mobiris_lead_nonce' ) ) {
+		wp_send_json_error( array( 'message' => 'Security check failed.' ) );
+		return;
+	}
+
+	// Sanitize inputs
+	$name     = isset( $_POST['lead_name'] ) ? sanitize_text_field( wp_unslash( $_POST['lead_name'] ) ) : '';
+	$phone    = isset( $_POST['lead_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['lead_phone'] ) ) : '';
+	$email    = isset( $_POST['lead_email'] ) ? sanitize_email( wp_unslash( $_POST['lead_email'] ) ) : '';
+	$vehicles = isset( $_POST['lead_vehicles'] ) ? absint( $_POST['lead_vehicles'] ) : 0;
+	$country  = isset( $_POST['lead_country'] ) ? sanitize_text_field( wp_unslash( $_POST['lead_country'] ) ) : '';
+
+	// Required fields
+	if ( empty( $name ) ) {
+		wp_send_json_error( array( 'message' => 'Name is required.' ) );
+		return;
+	}
+
+	if ( empty( $phone ) ) {
+		wp_send_json_error( array( 'message' => 'Phone number is required.' ) );
+		return;
+	}
+
+	if ( $vehicles < 1 ) {
+		wp_send_json_error( array( 'message' => 'Please enter your vehicle count.' ) );
+		return;
+	}
+
+	// Create the lead post
+	$post_id = wp_insert_post( array(
+		'post_type'   => 'mobiris_lead',
+		'post_title'  => sanitize_text_field( $name ) . ' — ' . sanitize_text_field( $phone ),
+		'post_status' => 'publish',
+		'meta_input'  => array(
+			'_lead_name'     => $name,
+			'_lead_phone'    => $phone,
+			'_lead_email'    => $email,
+			'_lead_vehicles' => $vehicles,
+			'_lead_country'  => $country,
+			'_lead_source'   => isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : home_url(),
+			'_lead_date'     => current_time( 'mysql' ),
+		),
+	) );
+
+	if ( is_wp_error( $post_id ) ) {
+		wp_send_json_error( array( 'message' => 'Could not save your details. Please try again.' ) );
+		return;
+	}
+
+	// Send notification email
+	$recipient    = get_theme_mod( 'mobiris_email', 'hello@mobiris.ng' );
+	$email_subject = sprintf( '[Mobiris Lead] %s — %d vehicles (%s)', $name, $vehicles, strtoupper( $country ) );
+	$email_body    = sprintf(
+		"New lead from mobiris.ng\n\nName: %s\nPhone/WhatsApp: %s\nEmail: %s\nVehicles: %d\nCountry: %s\n\nAdmin: %s\n\nReach them on WhatsApp: https://wa.me/%s",
+		$name,
+		$phone,
+		$email,
+		$vehicles,
+		$country,
+		esc_url( admin_url( 'post.php?post=' . $post_id . '&action=edit' ) ),
+		preg_replace( '/[^0-9]/', '', $phone )
+	);
+
+	wp_mail(
+		$recipient,
+		$email_subject,
+		$email_body,
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+
+	wp_send_json_success( array(
+		'message' => 'Got it! We\'ll reach you on WhatsApp or phone within 24 hours.',
+	) );
+}
+add_action( 'wp_ajax_mobiris_save_lead', 'mobiris_save_lead' );
+add_action( 'wp_ajax_nopriv_mobiris_save_lead', 'mobiris_save_lead' );
+
+/**
+ * Profit calculator shortcode — standalone page embed
+ *
+ * @since 1.0.0
+ * @return string
+ */
+function mobiris_shortcode_profit_calculator() {
+	ob_start();
+	get_template_part( 'template-parts/home/profit-calculator' );
+	return ob_get_clean();
+}
+add_shortcode( 'mobiris_profit_calculator', 'mobiris_shortcode_profit_calculator' );
+
+/**
  * Get customizer value with fallback default
  *
  * Wrapper around get_theme_mod() with built-in defaults.
@@ -227,79 +328,88 @@ add_action( 'init', 'mobiris_disable_emoji' );
  * @return void
  */
 function mobiris_setup_theme_on_activation() {
-	// Array of pages to create with their properties
+	// Array of pages to create with their properties.
+	// 9 core pages as required by the Mobiris growth system.
 	$pages = array(
 		array(
 			'title'    => __( 'Home', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'home',
 			'template' => '',
 			'is_home'  => true,
+			'content'  => '',
 		),
 		array(
 			'title'    => __( 'Blog', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'blog',
 			'template' => '',
 			'is_posts' => true,
+			'content'  => '',
 		),
 		array(
-			'title'    => __( 'About', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'about',
-			'template' => '',
-		),
-		array(
-			'title'    => __( 'Platform', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'platform',
-			'template' => 'template-platform.php',
-		),
-		array(
-			'title'    => __( 'Features', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'features',
-			'template' => 'template-features.php',
-		),
-		array(
-			'title'    => __( 'Solutions', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'solutions',
+			'title'    => __( 'Start Your Transport Business', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'start-transport-business',
 			'template' => 'template-solutions.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Everything you need to run a compliant, profitable transport business in Nigeria, Ghana, Kenya, or South Africa — from driver verification to daily remittance tracking.</p>\n<!-- /wp:paragraph -->",
 		),
 		array(
-			'title'    => __( 'Pricing', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'pricing',
-			'template' => 'template-pricing.php',
+			'title'    => __( 'Why You\'re Losing Money', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'why-losing-money',
+			'template' => 'template-platform.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Most transport operators lose 10–20% of their monthly remittance to untracked shortfalls, unreported disputes, and drivers who know there is no system. This page explains exactly how the leakage happens — and how to stop it.</p>\n<!-- /wp:paragraph -->",
 		),
 		array(
-			'title'    => __( 'Guides', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'guides',
-			'template' => 'template-resources.php',
+			'title'    => __( 'How Mobiris Works', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'how-mobiris-works',
+			'template' => 'template-features.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>From driver onboarding to daily remittance reconciliation — here's how the Mobiris platform works for your fleet.</p>\n<!-- /wp:paragraph -->",
 		),
 		array(
-			'title'    => __( 'FAQ', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'faq',
-			'template' => 'template-faq-page.php',
+			'title'    => __( 'For Fleet Owners', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'for-fleet-owners',
+			'template' => 'template-solutions.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Mobiris is built for operators managing 5 to 500+ vehicles across keke, danfo, korope, matatu, and minibus taxi operations. Verify drivers, track payments, and build a compliance record — starting today.</p>\n<!-- /wp:paragraph -->",
+		),
+		array(
+			'title'    => __( 'For Investors', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'for-investors',
+			'template' => 'template-about.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Mobiris is building risk infrastructure for Africa's 10M+ commercial vehicles. We are the first purpose-built platform combining biometric driver verification, remittance enforcement, and cross-operator fraud intelligence for the vehicle-for-hire segment.</p>\n<!-- /wp:paragraph -->",
+		),
+		array(
+			'title'    => __( 'Profit Calculator', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'profit-calculator',
+			'template' => 'template-platform.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Calculate how much remittance your fleet may be losing every month — and what you could recover with Mobiris.</p>\n<!-- /wp:paragraph -->\n[mobiris_profit_calculator]",
 		),
 		array(
 			'title'    => __( 'Contact', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'contact',
 			'template' => 'template-contact.php',
+			'content'  => "<!-- wp:paragraph -->\n<p>Get in touch with the Mobiris team. We'll respond within 24 hours — usually on WhatsApp.</p>\n<!-- /wp:paragraph -->",
 		),
 		array(
 			'title'    => __( 'Get the App', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'get-the-app',
 			'template' => 'template-app-download.php',
+			'content'  => '',
 		),
 		array(
-			'title'    => __( 'Access & Login', MOBIRIS_TEXT_DOMAIN ),
-			'slug'     => 'access-login',
-			'template' => 'template-access.php',
+			'title'    => __( 'Pricing', MOBIRIS_TEXT_DOMAIN ),
+			'slug'     => 'pricing',
+			'template' => 'template-pricing.php',
+			'content'  => '',
 		),
 		array(
 			'title'    => __( 'Privacy Policy', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'privacy-policy',
 			'template' => '',
+			'content'  => '',
 		),
 		array(
 			'title'    => __( 'Terms of Service', MOBIRIS_TEXT_DOMAIN ),
 			'slug'     => 'terms-of-service',
 			'template' => '',
+			'content'  => '',
 		),
 	);
 
@@ -316,7 +426,7 @@ function mobiris_setup_theme_on_activation() {
 				'post_title'   => $page['title'],
 				'post_name'    => $page['slug'],
 				'post_status'  => 'publish',
-				'post_content' => '',
+				'post_content' => isset( $page['content'] ) ? $page['content'] : '',
 			) );
 
 			if ( ! is_wp_error( $page_id ) ) {
@@ -363,7 +473,7 @@ function mobiris_setup_theme_on_activation() {
 	}
 
 	// Add pages to primary menu in order
-	$menu_pages = array( 'About', 'Platform', 'Features', 'Solutions', 'Pricing', 'Guides', 'Blog', 'Contact' );
+	$menu_pages = array( 'How Mobiris Works', 'For Fleet Owners', 'Pricing', 'Why You\'re Losing Money', 'For Investors', 'Blog', 'Contact' );
 	$menu_order = 1;
 
 	foreach ( $menu_pages as $page_title ) {

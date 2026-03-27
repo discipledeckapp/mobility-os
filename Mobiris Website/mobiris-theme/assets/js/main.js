@@ -761,3 +761,260 @@ window.addEventListener('beforeunload', () => {
     window.mobirisMain.destroy();
   }
 });
+
+/* ============================================================================
+   BILINGUAL LANGUAGE TOGGLE
+   Switches all [data-lang-en] / [data-lang-fr] elements on the page.
+   State is stored in localStorage so it persists across pages.
+   ============================================================================ */
+
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'mobiris_lang';
+  let currentLang = localStorage.getItem(STORAGE_KEY) || 'en';
+
+  /**
+   * Apply the current language to all bilingual elements.
+   * @param {string} lang - 'en' or 'fr'
+   */
+  function applyLang(lang) {
+    currentLang = lang;
+    localStorage.setItem(STORAGE_KEY, lang);
+
+    // Update text content for all labelled elements
+    document.querySelectorAll('[data-lang-en]').forEach(function (el) {
+      const text = el.getAttribute('data-lang-' + lang);
+      if (!text) return;
+
+      // For inputs/buttons with value, update value; otherwise textContent
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.placeholder = text;
+      } else {
+        el.textContent = text;
+      }
+    });
+
+    // Update toggle button states
+    document.querySelectorAll('.lang-btn').forEach(function (btn) {
+      const isActive = btn.getAttribute('data-lang') === lang;
+      btn.classList.toggle('lang-btn--active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+
+    // Update <html> lang attribute
+    document.documentElement.setAttribute('lang', lang === 'fr' ? 'fr' : 'en');
+  }
+
+  // Attach click handlers to all language toggle buttons
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn) return;
+    const lang = btn.getAttribute('data-lang');
+    if (lang && lang !== currentLang) {
+      applyLang(lang);
+    }
+  });
+
+  // Apply persisted language on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { applyLang(currentLang); });
+  } else {
+    applyLang(currentLang);
+  }
+})();
+
+/* ============================================================================
+   PROFIT / LEAKAGE CALCULATOR
+   Reads vehicle count, vehicle type, and days/month.
+   Outputs: monthly remittance total, estimated leakage, Mobiris plan cost, net ROI.
+   ============================================================================ */
+
+(function () {
+  'use strict';
+
+  // Daily remittance midpoints per vehicle type (NGN equivalent)
+  const DAILY_RATES = {
+    keke:   4500,   // ₦3,000–6,000
+    danfo:  11250,  // ₦7,500–15,000
+    korope: 9000,   // ₦6,000–12,000
+    matatu: 10000,  // KES 800–2,500 → ~₦10,000 equivalent
+  };
+
+  // Leakage rate (conservative 12%)
+  const LEAKAGE_RATE = 0.12;
+
+  // Plan cost logic
+  function getPlanCost(vehicles) {
+    if (vehicles <= 10) return 15000;       // Starter
+    if (vehicles <= 20) return 35000;       // Growth base
+    return 35000 + Math.max(0, vehicles - 20) * 1500; // Growth + uplift
+  }
+
+  function formatNaira(amount) {
+    if (amount >= 1000000) {
+      return '₦' + (amount / 1000000).toFixed(1) + 'M';
+    }
+    if (amount >= 1000) {
+      return '₦' + Math.round(amount / 1000) + 'K';
+    }
+    return '₦' + Math.round(amount).toLocaleString();
+  }
+
+  function getSelectedVehicleType() {
+    const checked = document.querySelector('input[name="vehicle_type"]:checked');
+    return checked ? checked.value : 'danfo';
+  }
+
+  function calculate() {
+    const vehiclesInput = document.getElementById('calc-vehicles');
+    const daysInput = document.getElementById('calc-days');
+    if (!vehiclesInput || !daysInput) return;
+
+    const vehicles = Math.max(1, parseInt(vehiclesInput.value, 10) || 30);
+    const days     = Math.max(10, Math.min(30, parseInt(daysInput.value, 10) || 26));
+    const type     = getSelectedVehicleType();
+    const daily    = DAILY_RATES[type] || DAILY_RATES.danfo;
+
+    const monthlyTotal   = vehicles * daily * days;
+    const monthlyLeakage = monthlyTotal * LEAKAGE_RATE;
+    const planCost       = getPlanCost(vehicles);
+    const net            = monthlyLeakage - planCost;
+    const roi            = planCost > 0 ? (monthlyLeakage / planCost) : 0;
+
+    // Update DOM
+    const leakageEl = document.getElementById('result-leakage');
+    const costEl    = document.getElementById('result-plan-cost');
+    const netEl     = document.getElementById('result-net');
+    const roiBar    = document.getElementById('result-roi-bar');
+    const roiText   = document.getElementById('result-roi-text');
+
+    if (leakageEl) leakageEl.textContent = formatNaira(monthlyLeakage);
+    if (costEl) {
+      const label = vehicles <= 10 ? 'Starter plan /month (up to 10 vehicles)' :
+                    vehicles <= 20 ? 'Growth plan /month (up to 20 vehicles)' :
+                    'Growth plan /month (' + vehicles + ' vehicles, ₦1,500/vehicle above 20)';
+      costEl.textContent = formatNaira(planCost);
+      const sub = costEl.parentElement && costEl.parentElement.querySelector('.calc-result-sub');
+      if (sub) sub.textContent = label;
+    }
+    if (netEl) {
+      netEl.textContent = net > 0 ? formatNaira(net) : '₦0';
+      netEl.style.color = net > 0 ? '' : 'var(--color-ink-muted)';
+    }
+
+    const roiCapped = Math.min(roi, 20); // cap at 20× for bar display
+    if (roiBar) roiBar.style.width = Math.round((roiCapped / 20) * 100) + '%';
+    if (roiText) roiText.textContent = roi.toFixed(1) + '×';
+
+    // Update days display
+    const daysDisplay = document.getElementById('calc-days-display');
+    if (daysDisplay) {
+      const dayWord = document.documentElement.lang === 'fr' ? 'jours' : 'days';
+      daysDisplay.textContent = days + ' ' + dayWord;
+    }
+
+    if (daysInput) daysInput.setAttribute('aria-valuenow', String(days));
+  }
+
+  function initCalculator() {
+    const form = document.getElementById('leakage-calculator');
+    if (!form) return;
+
+    // Live recalculation on any input change
+    form.addEventListener('input', calculate);
+    form.addEventListener('change', calculate);
+
+    // Initial calculation
+    calculate();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCalculator);
+  } else {
+    initCalculator();
+  }
+})();
+
+/* ============================================================================
+   LEAD CAPTURE FORM
+   AJAX submission to wp_ajax_mobiris_save_lead.
+   ============================================================================ */
+
+(function () {
+  'use strict';
+
+  function initLeadForm() {
+    const form = document.getElementById('lead-capture-form');
+    if (!form) return;
+
+    const statusWrap  = form.querySelector('.lead-form__status');
+    const successMsg  = form.querySelector('.lead-form__success');
+    const errorMsg    = form.querySelector('.lead-form__error');
+    const submitBtn   = form.querySelector('.lead-form__submit');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // Basic validation
+      const name     = form.querySelector('#lead-name');
+      const phone    = form.querySelector('#lead-phone');
+      const vehicles = form.querySelector('#lead-vehicles');
+
+      if (!name || !name.value.trim()) { name && name.focus(); return; }
+      if (!phone || !phone.value.trim()) { phone && phone.focus(); return; }
+      if (!vehicles || parseInt(vehicles.value, 10) < 1) { vehicles && vehicles.focus(); return; }
+
+      // Loading state
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '...';
+      }
+
+      const formData = new FormData(form);
+      formData.set('action', 'mobiris_save_lead');
+
+      const ajaxUrl = (window.mobirisSite && window.mobirisSite.ajaxUrl)
+        ? window.mobirisSite.ajaxUrl
+        : '/wp-admin/admin-ajax.php';
+
+      fetch(ajaxUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (statusWrap) { statusWrap.hidden = false; }
+          if (data.success) {
+            if (successMsg) { successMsg.hidden = false; }
+            if (errorMsg) { errorMsg.hidden = true; }
+            form.reset();
+          } else {
+            if (errorMsg) { errorMsg.hidden = false; }
+            if (successMsg) { successMsg.hidden = true; }
+          }
+        })
+        .catch(function () {
+          if (statusWrap) { statusWrap.hidden = false; }
+          if (errorMsg) { errorMsg.hidden = false; }
+          if (successMsg) { successMsg.hidden = true; }
+        })
+        .finally(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            const lang = localStorage.getItem('mobiris_lang') || 'en';
+            submitBtn.textContent = lang === 'fr'
+              ? 'Contactez-nous — nous vous appellerons'
+              : "Get in touch — we'll call you";
+          }
+        });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLeadForm);
+  } else {
+    initLeadForm();
+  }
+})();

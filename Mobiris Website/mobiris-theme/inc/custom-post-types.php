@@ -257,6 +257,39 @@ function mobiris_register_post_types() {
 			'taxonomies'          => array( 'feature_module' ),
 		)
 	);
+
+	// Lead Capture post type — stores website leads from the homepage form.
+	register_post_type(
+		'mobiris_lead',
+		array(
+			'labels'              => array(
+				'name'               => __( 'Leads', 'mobiris' ),
+				'singular_name'      => __( 'Lead', 'mobiris' ),
+				'menu_name'          => __( 'Website Leads', 'mobiris' ),
+				'all_items'          => __( 'All Leads', 'mobiris' ),
+				'add_new'            => __( 'Add New Lead', 'mobiris' ),
+				'add_new_item'       => __( 'Add New Lead', 'mobiris' ),
+				'edit_item'          => __( 'View Lead', 'mobiris' ),
+				'not_found'          => __( 'No leads yet', 'mobiris' ),
+				'not_found_in_trash' => __( 'No leads in trash', 'mobiris' ),
+			),
+			'public'              => false,
+			'publicly_queryable'  => false,
+			'show_ui'             => true,
+			'show_in_menu'        => true,
+			'show_in_rest'        => false,
+			'has_archive'         => false,
+			'query_var'           => false,
+			'can_export'          => true,
+			'rewrite'             => false,
+			'supports'            => array( 'title', 'custom-fields' ),
+			'menu_icon'           => 'dashicons-businessman',
+			'capabilities'        => array(
+				'create_posts' => 'do_not_allow',
+			),
+			'map_meta_cap'        => true,
+		)
+	);
 }
 add_action( 'init', 'mobiris_register_post_types' );
 
@@ -489,3 +522,54 @@ function mobiris_sortable_columns( $sortable ) {
 }
 add_filter( 'manage_edit-guide_sortable_columns', 'mobiris_sortable_columns' );
 add_filter( 'manage_edit-testimonial_sortable_columns', 'mobiris_sortable_columns' );
+
+/**
+ * Custom columns for Lead list table.
+ *
+ * @param array $columns Default columns.
+ * @return array Modified columns.
+ */
+function mobiris_lead_columns( $columns ) {
+	return array(
+		'cb'             => $columns['cb'],
+		'title'          => __( 'Name / Phone', 'mobiris' ),
+		'lead_vehicles'  => __( 'Vehicles', 'mobiris' ),
+		'lead_country'   => __( 'Country', 'mobiris' ),
+		'lead_email'     => __( 'Email', 'mobiris' ),
+		'lead_whatsapp'  => __( 'WhatsApp', 'mobiris' ),
+		'date'           => __( 'Date', 'mobiris' ),
+	);
+}
+add_filter( 'manage_mobiris_lead_posts_columns', 'mobiris_lead_columns' );
+
+/**
+ * Populate lead list table custom columns.
+ *
+ * @param string $column Column name.
+ * @param int    $post_id Post ID.
+ * @return void
+ */
+function mobiris_lead_column_content( $column, $post_id ) {
+	switch ( $column ) {
+		case 'lead_vehicles':
+			echo esc_html( get_post_meta( $post_id, '_lead_vehicles', true ) ?: '—' );
+			break;
+		case 'lead_country':
+			echo esc_html( get_post_meta( $post_id, '_lead_country', true ) ?: '—' );
+			break;
+		case 'lead_email':
+			$email = get_post_meta( $post_id, '_lead_email', true );
+			echo $email ? '<a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a>' : '—';
+			break;
+		case 'lead_whatsapp':
+			$phone = get_post_meta( $post_id, '_lead_phone', true );
+			if ( $phone ) {
+				$number = preg_replace( '/[^0-9]/', '', $phone );
+				echo '<a href="https://wa.me/' . esc_attr( $number ) . '?text=' . rawurlencode( 'Hello, I am following up on your Mobiris enquiry.' ) . '" target="_blank" rel="noopener">WhatsApp</a>';
+			} else {
+				echo '—';
+			}
+			break;
+	}
+}
+add_action( 'manage_mobiris_lead_posts_custom_column', 'mobiris_lead_column_content', 10, 2 );
