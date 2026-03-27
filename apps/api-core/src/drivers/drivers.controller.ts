@@ -846,11 +846,15 @@ export class DriverSelfServiceController {
   updateContact(
     @Body('token') token: string,
     @Body('email') email?: string,
+    @Body('phone') phone?: string,
   ): Promise<{ message: string }> {
     if (!token?.trim()) {
       throw new BadRequestException('token is required');
     }
-    return this.service.updateContactFromSelfService(token, { ...(email ? { email } : {}) });
+    return this.service.updateContactFromSelfService(token, {
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
+    });
   }
 
   @Post('update-profile')
@@ -996,5 +1000,27 @@ export class GuarantorSelfServiceController {
   @ApiCreatedResponse({ type: Object })
   issueAuthenticatedContinuationToken(@CurrentTenant() ctx: TenantContext) {
     return this.service.issueGuarantorSelfServiceContinuationToken(ctx.tenantId, ctx.userId);
+  }
+
+  @Post('update-profile')
+  @ApiCreatedResponse({ type: Object })
+  updateProfile(
+    @Body('token') token: string,
+    @Body('name') name?: string,
+    @Body('phone') phone?: string,
+    @Body('email') email?: string,
+    @Body('countryCode') countryCode?: string,
+    @Body('relationship') relationship?: string,
+  ) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.updateGuarantorProfileFromSelfService(token, {
+      ...(name ? { name } : {}),
+      ...(phone ? { phone } : {}),
+      ...(email ? { email } : {}),
+      ...(countryCode ? { countryCode } : {}),
+      ...(relationship ? { relationship } : {}),
+    });
   }
 }

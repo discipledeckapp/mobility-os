@@ -224,7 +224,7 @@ model CpPaymentAttempt {
   id               String    @id @default(cuid())
   provider         String
   reference        String    @unique
-  // 'invoice_settlement' | 'platform_wallet_topup'
+  // 'invoice_settlement' | 'platform_wallet_topup' | 'identity_verification'
   purpose          String
   tenantId         String?
   invoiceId        String?

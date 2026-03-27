@@ -1882,7 +1882,7 @@ export async function issueDriverSelfServiceContinuationToken(
 
 export async function updateDriverSelfServiceContact(
   token: string,
-  input: { email?: string },
+  input: { email?: string; phone?: string },
 ): Promise<{ message: string }> {
   return apiCoreFetch<{ message: string }>('/driver-self-service/update-contact', {
     method: 'POST',
@@ -1962,6 +1962,23 @@ export async function createGuarantorSelfServiceAccount(
   input: { email: string; password: string },
 ): Promise<{ message: string }> {
   return apiCoreFetch<{ message: string }>('/guarantor-self-service/create-account', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function updateGuarantorSelfServiceProfile(
+  token: string,
+  input: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    countryCode?: string;
+    relationship?: string;
+  },
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/guarantor-self-service/update-profile', {
     method: 'POST',
     body: JSON.stringify({ token, ...input }),
     cache: 'no-store',

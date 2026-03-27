@@ -83,6 +83,7 @@ export interface TenantPaymentApplication {
   currency: string;
   invoiceId?: string;
   tenantId?: string;
+  driverId?: string;
 }
 
 @Injectable()
@@ -184,6 +185,7 @@ export class ControlPlaneBillingClient {
     purpose: string;
     invoiceId?: string;
     tenantId?: string;
+    driverId?: string;
   }): Promise<TenantPaymentApplication> {
     return this.request('/internal/payments/verify-and-apply', {
       method: 'POST',

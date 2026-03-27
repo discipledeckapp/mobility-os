@@ -18,6 +18,12 @@ import type { VerifyAndApplyPaymentDto } from './dto/verify-and-apply-payment.dt
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PaymentProvidersService } from './payment-providers.service';
 
+type PaymentPurpose =
+  | 'invoice_settlement'
+  | 'platform_wallet_topup'
+  | 'identity_verification'
+  | 'driver_kyc';
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -132,12 +138,20 @@ export class PaymentsService {
     NGN: 500_000,
   };
 
+  private normalizePurpose(purpose: string): PaymentPurpose {
+    if (purpose === 'driver_kyc') {
+      return 'identity_verification';
+    }
+
+    return purpose as PaymentPurpose;
+  }
+
   async initializeDriverKycPayment(
     dto: InitializeDriverKycPaymentDto,
   ): Promise<PaymentCheckoutResponseDto> {
     const currency = dto.currency.toUpperCase();
     const amountMinorUnits = this.KYC_AMOUNT_BY_CURRENCY[currency] ?? 500_000;
-    const reference = this.buildReference('driver_kyc', dto.driverId, dto.provider);
+    const reference = this.buildReference('identity_verification', dto.driverId, dto.provider);
     const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
     const initialized = await this.paymentProvidersService.initializePayment({
       provider: dto.provider,
@@ -149,7 +163,7 @@ export class PaymentsService {
       ...(dto.customerName ? { customerName: dto.customerName } : {}),
       description: `Mobiris identity verification fee`,
       metadata: {
-        purpose: 'driver_kyc',
+        purpose: 'identity_verification',
         tenantId: dto.tenantId,
         driverId: dto.driverId,
       },
@@ -159,7 +173,7 @@ export class PaymentsService {
       data: {
         provider: dto.provider,
         reference,
-        purpose: 'driver_kyc',
+        purpose: 'identity_verification',
         tenantId: dto.tenantId,
         status: 'checkout_initialized',
         amountMinorUnits,
@@ -176,7 +190,7 @@ export class PaymentsService {
       reference,
       checkoutUrl: initialized.checkoutUrl,
       ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
-      purpose: 'driver_kyc',
+      purpose: 'identity_verification',
     };
   }
 
@@ -186,6 +200,24 @@ export class PaymentsService {
     const attempt = await this.prisma.cpPaymentAttempt.findUnique({
       where: { reference: dto.reference },
     });
+    const normalizedAttemptPurpose = attempt?.purpose
+      ? this.normalizePurpose(attempt.purpose)
+      : null;
+    const normalizedDtoPurpose = this.normalizePurpose(dto.purpose);
+
+    if (attempt?.status === 'applied') {
+      return {
+        provider: dto.provider,
+        reference: dto.reference,
+        purpose: normalizedAttemptPurpose ?? normalizedDtoPurpose,
+        status: 'already_applied',
+        amountMinorUnits: attempt.amountMinorUnits,
+        currency: attempt.currency,
+        ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
+        ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
+        ...(dto.driverId ? { driverId: dto.driverId } : {}),
+      };
+    }
     const verified = await this.paymentProvidersService.verifyPayment(dto.provider, dto.reference);
 
     await this.prisma.cpPaymentAttempt.updateMany({
@@ -210,7 +242,7 @@ export class PaymentsService {
       );
     }
 
-    const purpose = attempt?.purpose ?? dto.purpose;
+    const purpose = normalizedAttemptPurpose ?? normalizedDtoPurpose;
     const invoiceId = attempt?.invoiceId ?? dto.invoiceId;
     const tenantId = attempt?.tenantId ?? dto.tenantId;
 
@@ -254,9 +286,7 @@ export class PaymentsService {
       };
     }
 
-    // Driver KYC payment — just mark as applied. The api-core side handles
-    // the driver's kycPaymentVerifiedAt update after calling this endpoint.
-    if (purpose === 'driver_kyc') {
+    if (purpose === 'identity_verification') {
       await this.prisma.cpPaymentAttempt.updateMany({
         where: { reference: dto.reference },
         data: { status: 'applied', appliedAt: new Date() },
@@ -269,6 +299,7 @@ export class PaymentsService {
         amountMinorUnits: verified.amountMinorUnits,
         currency: verified.currency,
         tenantId: tenantId ?? '',
+        ...(dto.driverId ? { driverId: dto.driverId } : {}),
       };
     }
 
@@ -339,7 +370,10 @@ export class PaymentsService {
     return this.verifyAndApplyPayment({
       provider,
       reference,
-      purpose: attempt.purpose as 'invoice_settlement' | 'platform_wallet_topup',
+      purpose: this.normalizePurpose(attempt.purpose) as
+        | 'invoice_settlement'
+        | 'platform_wallet_topup'
+        | 'identity_verification',
       ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
       ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
     });
@@ -377,7 +411,7 @@ export class PaymentsService {
   }
 
   private buildReference(
-    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'driver_kyc',
+    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'identity_verification',
     targetId: string,
     provider: string,
   ): string {

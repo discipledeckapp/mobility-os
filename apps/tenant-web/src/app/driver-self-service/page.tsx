@@ -228,14 +228,18 @@ function StepProgress({ currentStep }: { currentStep: FlowStep }) {
 
 function ProfileCompletionStep({
   token,
+  driver,
   onComplete,
 }: {
   token: string;
+  driver: DriverRecord;
   onComplete: () => Promise<void>;
 }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [firstName, setFirstName] = useState(driver.firstName ?? '');
+  const [lastName, setLastName] = useState(driver.lastName ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(driver.dateOfBirth ?? '');
+  const [phone, setPhone] = useState(driver.phone ?? '');
+  const [email, setEmail] = useState(driver.email ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -248,11 +252,17 @@ function ProfileCompletionStep({
     setLoading(true);
     setError(null);
     try {
-      await updateDriverSelfServiceProfile(token, {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-      });
+      await Promise.all([
+        updateDriverSelfServiceProfile(token, {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          dateOfBirth: dateOfBirth.trim(),
+        }),
+        updateDriverSelfServiceContact(token, {
+          ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
+          ...(phone.trim() ? { phone: phone.trim() } : {}),
+        }),
+      ]);
       await onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save profile. Please try again.');
@@ -290,6 +300,20 @@ function ProfileCompletionStep({
               type="date"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </div>
@@ -601,7 +625,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
         ) : null}
 
         {currentStep === 'profile' ? (
-          <ProfileCompletionStep token={token} onComplete={refreshContext} />
+          <ProfileCompletionStep driver={driver} token={token} onComplete={refreshContext} />
         ) : null}
 
         {currentStep === 'payment' ? (

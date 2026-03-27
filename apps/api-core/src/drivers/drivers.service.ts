@@ -1278,23 +1278,38 @@ export class DriversService {
     reference: string,
   ): Promise<{ status: string }> {
     const payload = await this.verifySelfServiceToken(token);
+    const normalizedReference = reference.trim();
+    const existingDriverWithReference = await this.prisma.driver.findFirst({
+      where: {
+        tenantId: payload.tenantId,
+        kycPaymentReference: normalizedReference,
+      },
+      select: { id: true },
+    });
 
-    await this.controlPlaneBillingClient.verifyAndApplyPayment({
+    if (existingDriverWithReference && existingDriverWithReference.id !== payload.driverId) {
+      throw new ConflictException(
+        'This payment reference is already linked to another verification flow.',
+      );
+    }
+
+    const applied = await this.controlPlaneBillingClient.verifyAndApplyPayment({
       provider,
-      reference,
-      purpose: 'driver_kyc',
+      reference: normalizedReference,
+      purpose: 'identity_verification',
       tenantId: payload.tenantId,
+      driverId: payload.driverId,
     });
 
     await this.prisma.driver.update({
       where: { id: payload.driverId },
       data: {
-        kycPaymentReference: reference,
+        kycPaymentReference: normalizedReference,
         kycPaymentVerifiedAt: new Date(),
       } as never,
     });
 
-    return { status: 'verified' };
+    return { status: applied.status === 'already_applied' ? 'already_applied' : 'verified' };
   }
 
   async initializeGuarantorLivenessSessionFromSelfService(
@@ -2054,12 +2069,15 @@ export class DriversService {
 
   async updateContactFromSelfService(
     token: string,
-    contact: { email?: string },
+    contact: { email?: string; phone?: string },
   ): Promise<{ message: string }> {
     const payload = await this.verifySelfServiceToken(token);
-    const updates: { email?: string } = {};
+    const updates: { email?: string; phone?: string } = {};
     if (contact.email) {
       updates.email = contact.email.trim().toLowerCase();
+    }
+    if (contact.phone) {
+      updates.phone = contact.phone.trim();
     }
     if (Object.keys(updates).length === 0) {
       return { message: 'No changes.' };
@@ -2090,11 +2108,102 @@ export class DriversService {
         where: { id: payload.driverId },
         data: updates,
       }),
-      ...(linkedUser && updates.email
-        ? [this.prisma.user.update({ where: { id: linkedUser.id }, data: { email: updates.email } })]
+      ...(linkedUser
+        ? [
+            this.prisma.user.update({
+              where: { id: linkedUser.id },
+              data: {
+                ...(updates.email ? { email: updates.email } : {}),
+                ...(updates.phone ? { phone: updates.phone } : {}),
+              },
+            }),
+          ]
         : []),
     ]);
     return { message: 'Contact details updated.' };
+  }
+
+  async updateGuarantorProfileFromSelfService(
+    token: string,
+    profile: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      countryCode?: string;
+      relationship?: string;
+    },
+  ): Promise<{ message: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: payload.driverId },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const linkedUser = await this.findGuarantorSelfServiceUser(payload.tenantId, driver.id);
+    const updates: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      countryCode?: string;
+      relationship?: string;
+    } = {};
+
+    if (profile.name?.trim()) updates.name = profile.name.trim();
+    if (profile.phone?.trim()) updates.phone = profile.phone.trim();
+    if (profile.email?.trim()) {
+      updates.email = profile.email.trim().toLowerCase();
+    }
+    if (profile.countryCode?.trim()) {
+      updates.countryCode = profile.countryCode.trim().toUpperCase();
+    }
+    if (profile.relationship?.trim()) {
+      updates.relationship = profile.relationship.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return { message: 'No changes.' };
+    }
+
+    if (updates.email) {
+      const conflictingUser = await this.prisma.user.findFirst({
+        where: {
+          tenantId: payload.tenantId,
+          email: updates.email,
+          ...(linkedUser ? { NOT: { id: linkedUser.id } } : {}),
+        },
+      });
+
+      if (conflictingUser) {
+        throw new ConflictException(
+          'An account with this email already exists in this organisation. Use a different email address.',
+        );
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.driverGuarantor.update({
+        where: { driverId: payload.driverId },
+        data: updates,
+      }),
+      ...(linkedUser
+        ? [
+            this.prisma.user.update({
+              where: { id: linkedUser.id },
+              data: {
+                ...(updates.name ? { name: updates.name } : {}),
+                ...(updates.email ? { email: updates.email } : {}),
+                ...(updates.phone ? { phone: updates.phone } : {}),
+              },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { message: 'Guarantor profile updated.' };
   }
 
   async updateProfileFromSelfService(

@@ -15,6 +15,33 @@ function DriverKycPaymentReturnInner() {
   const reference = params?.get('reference') ?? params?.get('trxref') ?? null;
   const returnUrl = params?.get('returnUrl') ?? null;
 
+  function getNextUrl() {
+    return (
+      returnUrl ??
+      (token ? `/driver-self-service?token=${encodeURIComponent(token)}` : '/driver-self-service/continue')
+    );
+  }
+
+  function mapDriverSafeError(message?: string) {
+    const normalized = message?.toLowerCase() ?? '';
+    if (
+      normalized.includes('already_applied') ||
+      normalized.includes('already applied')
+    ) {
+      return 'Your payment was already confirmed. Continue onboarding.';
+    }
+    if (
+      normalized.includes('pending') ||
+      normalized.includes('temporar') ||
+      normalized.includes('unavailable') ||
+      normalized.includes('timeout') ||
+      normalized.includes('failed')
+    ) {
+      return 'We could not finish confirming your payment yet. Retry verification now.';
+    }
+    return 'We could not finish confirming your payment yet. Retry verification now.';
+  }
+
   useEffect(() => {
     if (called.current || !provider || !token || !reference) {
       if (!provider || !token || !reference) {
@@ -41,7 +68,7 @@ function DriverKycPaymentReturnInner() {
       })
       .catch((err: unknown) => {
         setState('error');
-        setErrorMsg(err instanceof Error ? err.message : 'Payment verification failed.');
+        setErrorMsg(mapDriverSafeError(err instanceof Error ? err.message : undefined));
       });
   }, [provider, token, reference]);
 
@@ -50,9 +77,7 @@ function DriverKycPaymentReturnInner() {
       return;
     }
 
-    const nextUrl =
-      returnUrl ??
-      (token ? `/driver-self-service?token=${encodeURIComponent(token)}` : '/driver-self-service/continue');
+    const nextUrl = getNextUrl();
 
     const timeout = window.setTimeout(() => {
       if (nextUrl.startsWith('mobiris://')) {
@@ -63,7 +88,7 @@ function DriverKycPaymentReturnInner() {
     }, 1200);
 
     return () => window.clearTimeout(timeout);
-  }, [returnUrl, state, token]);
+  }, [state]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#eff6ff_0%,#f1f5f9_100%)] px-4 py-10">
@@ -104,11 +129,7 @@ function DriverKycPaymentReturnInner() {
               </div>
               <Button
                 onClick={() => {
-                  const nextUrl =
-                    returnUrl ??
-                    (token
-                      ? `/driver-self-service?token=${encodeURIComponent(token)}`
-                      : '/driver-self-service/continue');
+                  const nextUrl = getNextUrl();
                   if (nextUrl.startsWith('mobiris://')) {
                     window.location.href = nextUrl;
                     return;
@@ -130,10 +151,22 @@ function DriverKycPaymentReturnInner() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Text tone="muted">{errorMsg}</Text>
-              <Text tone="muted">
-                If you completed the payment, please contact your fleet manager or our support team
-                with your payment reference.
-              </Text>
+              <Button
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                Retry verification
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const nextUrl = getNextUrl();
+                  window.location.href = nextUrl;
+                }}
+              >
+                Return to onboarding
+              </Button>
               {reference ? (
                 <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                   <Text className="text-sm text-slate-600">

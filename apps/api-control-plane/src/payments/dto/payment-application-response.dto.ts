@@ -24,4 +24,7 @@ export class PaymentApplicationResponseDto {
 
   @ApiPropertyOptional()
   tenantId?: string;
+
+  @ApiPropertyOptional()
+  driverId?: string;
 }

@@ -191,4 +191,54 @@ describe('PaymentsService', () => {
       referenceId: 'ref_webhook_1',
     });
   });
+
+  it('applies identity verification payments and returns already_applied on retry', async () => {
+    prisma.cpPaymentAttempt.findUnique
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        status: 'checkout_initialized',
+        amountMinorUnits: 500000,
+        currency: 'NGN',
+      })
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        status: 'applied',
+        amountMinorUnits: 500000,
+        currency: 'NGN',
+      });
+    prisma.cpPaymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+    paymentProvidersService.verifyPayment.mockResolvedValue({
+      provider: 'paystack',
+      reference: 'ref_kyc_1',
+      status: 'successful',
+      amountMinorUnits: 500000,
+      currency: 'NGN',
+    });
+
+    const first = await service.verifyAndApplyPayment({
+      provider: 'paystack',
+      reference: 'ref_kyc_1',
+      purpose: 'identity_verification',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    const second = await service.verifyAndApplyPayment({
+      provider: 'paystack',
+      reference: 'ref_kyc_1',
+      purpose: 'identity_verification',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+
+    expect(first.purpose).toBe('identity_verification');
+    expect(first.status).toBe('applied');
+    expect(second.status).toBe('already_applied');
+    expect(second.driverId).toBe('driver_1');
+  });
 });

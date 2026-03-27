@@ -2,7 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 const PAYMENT_PROVIDER_NAMES = ['flutterwave', 'paystack'] as const;
-const PAYMENT_PURPOSES = ['invoice_settlement', 'platform_wallet_topup'] as const;
+const PAYMENT_PURPOSES = [
+  'invoice_settlement',
+  'platform_wallet_topup',
+  'identity_verification',
+  // Legacy in-flight references created before the purpose rename.
+  'driver_kyc',
+] as const;
 
 export class VerifyAndApplyPaymentDto {
   @ApiProperty({ enum: PAYMENT_PROVIDER_NAMES })
@@ -27,4 +33,9 @@ export class VerifyAndApplyPaymentDto {
   @IsOptional()
   @IsString()
   tenantId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  driverId?: string;
 }

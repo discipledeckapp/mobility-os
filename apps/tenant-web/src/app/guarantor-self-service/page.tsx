@@ -7,6 +7,7 @@ import {
   createGuarantorSelfServiceAccount,
   exchangeGuarantorSelfServiceOtp,
   getGuarantorSelfServiceContext,
+  updateGuarantorSelfServiceProfile,
 } from '../../lib/api-core';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 
@@ -213,18 +214,50 @@ function GuarantorAccountStep({
 
 function GuarantorAgreementCard({
   context,
+  token,
   onAccept,
 }: {
   context: GuarantorContext;
-  onAccept: () => void;
+  token: string;
+  onAccept: () => Promise<void>;
 }) {
+  const [name, setName] = useState(context.guarantorName);
+  const [phone, setPhone] = useState(context.guarantorPhone);
+  const [email, setEmail] = useState(context.guarantorEmail ?? '');
+  const [countryCode, setCountryCode] = useState(context.guarantorCountryCode ?? '');
+  const [relationship, setRelationship] = useState(context.guarantorRelationship ?? '');
   const [accepted, setAccepted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const org = context.organisationName ?? 'the operator';
   const today = new Date().toLocaleDateString('en-NG', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
   });
+
+  async function handleContinue() {
+    if (!accepted) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await updateGuarantorSelfServiceProfile(token, {
+        name: name.trim(),
+        phone: phone.trim(),
+        ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
+        ...(countryCode.trim() ? { countryCode: countryCode.trim().toUpperCase() } : {}),
+        ...(relationship.trim() ? { relationship: relationship.trim() } : {}),
+      });
+      await onAccept();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save guarantor details.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
@@ -267,6 +300,45 @@ function GuarantorAgreementCard({
           </div>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Full name"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+          />
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Phone number"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+          />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email address"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+          />
+          <input
+            type="text"
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+            placeholder="Country code"
+            maxLength={2}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+          />
+          <input
+            type="text"
+            value={relationship}
+            onChange={(e) => setRelationship(e.target.value)}
+            placeholder="Relationship"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100 md:col-span-2"
+          />
+        </div>
+
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <input
             type="checkbox"
@@ -280,13 +352,16 @@ function GuarantorAgreementCard({
           </span>
         </label>
 
+        {error ? <Text tone="danger">{error}</Text> : null}
         <button
           type="button"
-          disabled={!accepted}
-          onClick={onAccept}
+          disabled={!accepted || saving || !name.trim() || !phone.trim()}
+          onClick={() => {
+            void handleContinue();
+          }}
           className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Continue to live verification
+          {saving ? 'Saving details…' : 'Continue to live verification'}
         </button>
       </CardContent>
     </Card>
@@ -426,7 +501,11 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
         {currentStep === 'agreement' ? (
           <GuarantorAgreementCard
             context={context}
-            onAccept={() => setCurrentStep('verification')}
+            token={token}
+            onAccept={async () => {
+              await refreshContext();
+              setCurrentStep('verification');
+            }}
           />
         ) : null}
 

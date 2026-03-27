@@ -26,6 +26,7 @@ import {
   createDriverSelfServiceLivenessSession,
   initiateDriverKycCheckout,
   resolveDriverSelfServiceIdentity,
+  updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
   uploadDriverSelfServiceDocument,
   type DriverIdentityResolutionResult,
@@ -111,6 +112,8 @@ export function SelfServiceVerificationScreen({
   const [firstName, setFirstName] = useState(driver?.firstName ?? '');
   const [lastName, setLastName] = useState(driver?.lastName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(driver?.dateOfBirth ?? '');
+  const [phone, setPhone] = useState(driver?.phone ?? '');
+  const [email, setEmail] = useState(driver?.email ?? '');
   const isProcessing =
     submittingIdentity || uploadingDocument || initiatingPayment || savingProfile;
   const processingVariant = submittingIdentity
@@ -295,7 +298,19 @@ export function SelfServiceVerificationScreen({
     setFirstName((current) => current || driver.firstName || '');
     setLastName((current) => current || driver.lastName || '');
     setDateOfBirth((current) => current || driver.dateOfBirth || '');
+    setPhone((current) => current || driver.phone || '');
+    setEmail((current) => current || driver.email || '');
   }, [driver]);
+
+  useEffect(() => {
+    if (!driverPaysKyc || !kycPaymentVerified) {
+      return;
+    }
+
+    if (currentStep === 'payment') {
+      setCurrentStep(identitySubmitted ? 'documents' : 'identity');
+    }
+  }, [currentStep, driverPaysKyc, identitySubmitted, kycPaymentVerified]);
 
   const identifiersReady = useMemo(
     () =>
@@ -502,11 +517,17 @@ export function SelfServiceVerificationScreen({
 
     setSavingProfile(true);
     try {
-      await updateDriverSelfServiceProfile(token, {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-      });
+      await Promise.all([
+        updateDriverSelfServiceProfile(token, {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          dateOfBirth: dateOfBirth.trim(),
+        }),
+        updateDriverSelfServiceContact(token, {
+          ...(phone.trim() ? { phone: phone.trim() } : {}),
+          ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
+        }),
+      ]);
       await refreshSelfService();
       showToast('Profile details saved.', 'success');
       setCurrentStep(includePayment ? 'payment' : 'identity');
@@ -748,6 +769,22 @@ export function SelfServiceVerificationScreen({
             onChangeText={setDateOfBirth}
             placeholder="YYYY-MM-DD"
             value={dateOfBirth}
+          />
+          <Input
+            keyboardType="phone-pad"
+            label="Phone number"
+            onChangeText={setPhone}
+            placeholder="08012345678"
+            value={phone}
+          />
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            label="Email address"
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            value={email}
           />
           <Button
             label="Save and continue"

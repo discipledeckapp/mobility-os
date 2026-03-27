@@ -1236,7 +1236,7 @@ export function issueAuthenticatedDriverSelfServiceContinuationToken(): Promise<
 
 export function updateDriverSelfServiceContact(
   selfServiceToken: string,
-  input: { email?: string },
+  input: { email?: string; phone?: string },
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(
     '/driver-self-service/update-contact',
