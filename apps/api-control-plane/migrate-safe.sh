@@ -46,7 +46,7 @@ if [ "$ALLOW_BASELINE" != "true" ]; then
   exit 1
 fi
 
-echo "[migrate-safe] Deploy failed — ALLOW_MIGRATION_BASELINE=true, attempting explicit baseline..."
+echo "[migrate-safe] Deploy failed - ALLOW_MIGRATION_BASELINE=true, attempting explicit baseline..."
 
 for migration_dir in "$MIGRATION_DIR"/*/; do
   migration_name=$(basename "$migration_dir")

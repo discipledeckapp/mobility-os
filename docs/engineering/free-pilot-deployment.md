@@ -89,7 +89,10 @@ Required:
 - `PORT=10000`
 - `DATABASE_URL`
   - separate intelligence database
+  - pooled or direct runtime URL
   - must have `pgvector` enabled
+- `MIGRATION_DATABASE_URL`
+  - direct Postgres URL for Prisma migrations
 - `PLATFORM_JWT_SECRET`
 - `INTELLIGENCE_API_KEY`
   - shared with `api-core`
@@ -138,7 +141,9 @@ Optional:
 
 ### Migration safety
 
-- `api-core` production deploys now fail closed on migration errors.
+- `api-core`, `api-control-plane`, and `api-intelligence` production deploys now fail closed on migration errors.
+- On Neon or any managed Postgres with a pooler, keep `DATABASE_URL` as the pooled runtime URL and set `MIGRATION_DATABASE_URL` to the direct Postgres URL for `prisma migrate deploy`.
+- `migrate-safe.sh` will prefer `MIGRATION_DATABASE_URL`, then `DIRECT_DATABASE_URL`, and fall back to `DATABASE_URL` only when no direct migration URL is provided.
 - Automatic baselining is disabled by default because it can mark migrations as applied while the schema is only partially present.
 - Only use `ALLOW_MIGRATION_BASELINE=true` for a deliberate one-time recovery on a known legacy database after verifying the live schema manually.
 - Do not leave `ALLOW_MIGRATION_BASELINE=true` enabled for normal deploys.
@@ -150,10 +155,12 @@ Optional:
 3. Enable `pgvector` on the intelligence database.
 4. Create the `api-intelligence` Render web service from [render.yaml](/Users/seyiadelaju/mobility-os/render.yaml).
 5. Set `api-intelligence` env vars on Render.
+   For Neon: set `DATABASE_URL` to the pooled connection string and `MIGRATION_DATABASE_URL` to the direct connection string.
 6. Confirm `api-intelligence` deploy succeeds.
 7. Create the `api-core` Render web service from [render.yaml](/Users/seyiadelaju/mobility-os/render.yaml).
 8. Set `api-core` env vars on Render, including the deployed `api-intelligence` URL and shared intelligence API key.
    If intelligence integration is not being deployed yet, leave both `INTELLIGENCE_API_URL` and `INTELLIGENCE_API_KEY` unset.
+   For Neon: set `DATABASE_URL` to the pooled connection string and `MIGRATION_DATABASE_URL` to the direct connection string.
 9. Confirm `api-core` deploy succeeds and `/api/v1/auth/login` responds.
 10. Create Vercel project with root directory `apps/tenant-web`.
 11. Set `NEXT_PUBLIC_API_URL` on Vercel to the Render `api-core` URL.
