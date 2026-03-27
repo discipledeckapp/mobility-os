@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PersonsModule } from '../persons/persons.module';
 import { ReviewCasesModule } from '../review-cases/review-cases.module';
+import { IdentifiersController } from './identifiers.controller';
 import { IdentifiersService } from './identifiers.service';
-
-// No controller yet — identifiers are managed through the matching engine
-// in the normal flow. A staff controller will be added alongside the
-// MatchingModule in a later batch.
 
 @Module({
   imports: [PersonsModule, ReviewCasesModule],
+  controllers: [IdentifiersController],
   providers: [IdentifiersService],
   exports: [IdentifiersService],
 })

@@ -8,8 +8,12 @@ export function middleware(request: NextRequest) {
   const hasUsableSession = isPlatformJwtUsable(authCookie);
   const isLoginRoute = pathname === '/login';
   const isPublicInviteRoute = pathname === '/staff/accept';
+  const isForgotPasswordRoute = pathname === '/forgot-password';
+  const isResetPasswordRoute = pathname === '/reset-password';
+  const isPublicRoute =
+    isLoginRoute || isPublicInviteRoute || isForgotPasswordRoute || isResetPasswordRoute;
 
-  if (!hasUsableSession && !isLoginRoute && !isPublicInviteRoute) {
+  if (!hasUsableSession && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);
     const response = NextResponse.redirect(loginUrl);
     if (authCookie) {
@@ -18,7 +22,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (!hasUsableSession && (isLoginRoute || isPublicInviteRoute)) {
+  if (!hasUsableSession && isPublicRoute) {
     if (!authCookie) {
       return NextResponse.next();
     }
@@ -28,7 +32,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (hasUsableSession && isLoginRoute) {
+  if (hasUsableSession && (isLoginRoute || isForgotPasswordRoute || isResetPasswordRoute)) {
     return NextResponse.redirect(new URL('/tenants', request.url));
   }
 

@@ -36,6 +36,7 @@ import { RemittanceHistoryScreen } from '../features/remittance/screens/Remittan
 import { RemittanceScreen } from '../features/remittance/screens/RemittanceScreen';
 import { DriverAccountSetupScreen } from '../features/self-service/screens/DriverAccountSetupScreen';
 import { DriverGuarantorScreen } from '../features/self-service/screens/DriverGuarantorScreen';
+import { GuarantorSelfServiceScreen } from '../features/self-service/screens/GuarantorSelfServiceScreen';
 import { SelfServiceOtpScreen } from '../features/self-service/screens/SelfServiceOtpScreen';
 import { SelfServiceReadinessScreen } from '../features/self-service/screens/SelfServiceReadinessScreen';
 import { SelfServiceResumeScreen } from '../features/self-service/screens/SelfServiceResumeScreen';
@@ -56,6 +57,7 @@ export function RootNavigator() {
     isLoading: isSelfServiceLoading,
   } = useSelfService();
   const isDriverMode = isDriverMobileSession(session);
+  const isGuarantorSelfServiceSession = session?.selfServiceSubjectType === 'guarantor';
   const requiresSelfServiceContinuation =
     isDriverMode &&
     Boolean(
@@ -110,7 +112,21 @@ export function RootNavigator() {
         }}
       >
         {session ? (
-          isDriverMode ? (
+          isGuarantorSelfServiceSession ? (
+          <>
+            <Stack.Screen
+              name="GuarantorSelfService"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor onboarding' }}
+            />
+            <Stack.Screen
+              name="GuarantorSelfServiceOtp"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor access' }}
+            />
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          </>
+          ) : isDriverMode ? (
           <>
             <Stack.Screen
               name="SelfServiceResume"
@@ -308,6 +324,16 @@ export function RootNavigator() {
               component={DriverGuarantorScreen}
               options={{ title: 'Add guarantor' }}
             />
+            <Stack.Screen
+              name="GuarantorSelfService"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor onboarding' }}
+            />
+            <Stack.Screen
+              name="GuarantorSelfServiceOtp"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor access' }}
+            />
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           </>
         ) : (
@@ -358,6 +384,16 @@ export function RootNavigator() {
               name="DriverGuarantor"
               component={DriverGuarantorScreen}
               options={{ title: 'Add guarantor' }}
+            />
+            <Stack.Screen
+              name="GuarantorSelfService"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor onboarding' }}
+            />
+            <Stack.Screen
+              name="GuarantorSelfServiceOtp"
+              component={GuarantorSelfServiceScreen}
+              options={{ title: 'Guarantor access' }}
             />
           </>
         )}

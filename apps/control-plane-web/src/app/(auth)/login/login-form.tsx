@@ -1,5 +1,7 @@
 'use client';
 
+import type { Route } from 'next';
+import Link from 'next/link';
 import {
   Button,
   Card,
@@ -111,6 +113,14 @@ export function LoginForm() {
         </form>
 
         {state.error ? <Text className="mt-4 text-rose-700">{state.error}</Text> : null}
+        <div className="mt-4">
+          <Link
+            className="text-sm font-medium text-[var(--mobiris-primary-dark)]"
+            href={'/forgot-password' as Route}
+          >
+            Forgot your password?
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

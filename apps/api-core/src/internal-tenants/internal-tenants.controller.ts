@@ -1,6 +1,7 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { InternalServiceAuthGuard } from '../auth/guards/internal-service-auth.guard';
+import { InternalTenantOwnerSummaryDto } from '../tenants/dto/internal-tenant-owner-summary.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantsService } from '../tenants/tenants.service';
 
@@ -25,5 +26,11 @@ export class InternalTenantsController {
   @ApiOkResponse({ description: 'Single tenant for internal platform consumers' })
   findOne(@Param('tenantId') tenantId: string) {
     return this.tenantsService.findById(tenantId);
+  }
+
+  @Get(':tenantId/owner-summary')
+  @ApiOkResponse({ type: InternalTenantOwnerSummaryDto })
+  ownerSummary(@Param('tenantId') tenantId: string) {
+    return this.tenantsService.getOwnerSummary(tenantId);
   }
 }

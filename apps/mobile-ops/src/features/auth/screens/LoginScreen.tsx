@@ -145,6 +145,13 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
         <View style={styles.divider} />
         <TouchableOpacity
           style={styles.secondaryButton}
+          onPress={() => navigation.navigate('GuarantorSelfServiceOtp')}
+        >
+          <Text style={styles.secondaryButtonText}>I'm a guarantor — continue onboarding</Text>
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity
+          style={styles.secondaryButton}
           onPress={() => navigation.navigate('Signup')}
         >
           <Text style={styles.secondaryButtonText}>Create an organisation</Text>

@@ -257,6 +257,21 @@ export interface DriverSelfServiceTokenExchangeResponse {
   token: string;
 }
 
+export interface GuarantorSelfServiceContextRecord {
+  guarantorName: string;
+  guarantorPhone: string;
+  guarantorEmail?: string | null;
+  guarantorCountryCode?: string | null;
+  guarantorRelationship?: string | null;
+  guarantorPersonId?: string | null;
+  guarantorStatus: string;
+  driverName: string;
+  driverId: string;
+  tenantId: string;
+  organisationName?: string | null;
+  hasSelfServiceAccess: boolean;
+}
+
 export interface DriverLivenessSessionRecord {
   providerName: string;
   sessionId: string;
@@ -1231,6 +1246,111 @@ export function issueAuthenticatedDriverSelfServiceContinuationToken(): Promise<
       method: 'POST',
       body: JSON.stringify({}),
     },
+  );
+}
+
+export function exchangeGuarantorSelfServiceOtp(
+  otpCode: string,
+): Promise<DriverSelfServiceTokenExchangeResponse> {
+  return apiFetch<DriverSelfServiceTokenExchangeResponse>(
+    '/guarantor-self-service/exchange-otp',
+    {
+      method: 'POST',
+      body: JSON.stringify({ otpCode }),
+    },
+    false,
+  );
+}
+
+export function getGuarantorSelfServiceContext(
+  selfServiceToken: string,
+): Promise<GuarantorSelfServiceContextRecord> {
+  return apiFetch<GuarantorSelfServiceContextRecord>(
+    '/guarantor-self-service/context',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+    },
+    false,
+  );
+}
+
+export function createGuarantorSelfServiceAccount(
+  token: string,
+  input: { email: string; password: string },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/guarantor-self-service/create-account',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...input }),
+    },
+    false,
+  );
+}
+
+export function issueAuthenticatedGuarantorSelfServiceContinuationToken(): Promise<{ token: string }> {
+  return apiFetch<{ token: string }>(
+    '/guarantor-self-service/authenticated-token',
+    {
+      method: 'POST',
+    },
+    true,
+  );
+}
+
+export function updateGuarantorSelfServiceProfile(
+  token: string,
+  input: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    countryCode?: string;
+    relationship?: string;
+  },
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/guarantor-self-service/update-profile',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...input }),
+    },
+    false,
+  );
+}
+
+export function createGuarantorSelfServiceLivenessSession(
+  token: string,
+  countryCode?: string,
+): Promise<DriverLivenessSessionRecord> {
+  return apiFetch<DriverLivenessSessionRecord>(
+    '/guarantor-self-service/liveness-sessions',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...(countryCode ? { countryCode } : {}) }),
+    },
+    false,
+  );
+}
+
+export function resolveGuarantorSelfServiceIdentity(
+  token: string,
+  input: {
+    identifierType?: string;
+    identifierValue?: string;
+    countryCode?: string;
+    selfieImageBase64?: string;
+    livenessSessionId?: string;
+    consentAccepted: boolean;
+  },
+): Promise<DriverIdentityResolutionResult> {
+  return apiFetch<DriverIdentityResolutionResult>(
+    '/guarantor-self-service/identity-resolution',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...input }),
+    },
+    false,
   );
 }
 

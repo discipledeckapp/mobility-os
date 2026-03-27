@@ -27,11 +27,20 @@ describe('AuthService', () => {
     signAsync: jest.fn(),
   } as unknown as JwtService;
 
+  const staffNotificationService = {
+    sendPlatformPasswordReset: jest.fn(),
+  };
+
   let service: AuthService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new AuthService(prisma as never, configService, jwtService);
+    service = new AuthService(
+      prisma as never,
+      configService,
+      jwtService,
+      staffNotificationService as never,
+    );
   });
 
   it('seeds the bootstrap admin user on module init', async () => {

@@ -200,6 +200,57 @@ export default async function TenantDetailPage({
                     {new Date(tenant.createdAt).toLocaleDateString()}
                   </p>
                 </div>
+                <div>
+                  <Text tone="muted">Primary owner</Text>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {tenant.ownerSummary?.ownerName ?? 'Not projected yet'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {tenant.ownerSummary?.ownerEmail ?? 'No owner email available'}
+                  </p>
+                </div>
+                <div>
+                  <Text tone="muted">Owner access</Text>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {tenant.ownerSummary?.ownerRole ?? 'Unspecified'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {tenant.ownerSummary?.ownerIsActive ? 'Active' : 'Inactive or unavailable'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Staff and ownership context</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {tenant.ownerSummary?.adminContacts?.length ? (
+                  tenant.ownerSummary.adminContacts.map((contact) => (
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3" key={contact.userId}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+                          <p className="text-sm text-slate-600">{contact.email}</p>
+                          <p className="text-xs text-slate-500">
+                            {contact.phone ?? 'No phone on file'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge tone={contact.isActive ? 'success' : 'warning'}>
+                            {contact.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                          <p className="mt-2 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                            {contact.role}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <Text>No tenant owner or admin contacts have been projected into the control plane yet.</Text>
+                )}
               </CardContent>
             </Card>
 

@@ -1,11 +1,15 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navigationItems = [
   { href: '/', label: 'Dashboard' },
   { href: '/tenants', label: 'Organisations' },
+  { href: '/intelligence/review-cases', label: 'Review cases' },
+  { href: '/intelligence/persons', label: 'Persons' },
+  { href: '/platform-settings', label: 'Platform settings' },
   { href: '/tenant-lifecycle', label: 'Lifecycle' },
   { href: '/subscriptions', label: 'Subscriptions' },
   { href: '/billing-operations', label: 'Billing operations' },
@@ -52,7 +56,7 @@ export function ResponsiveNavLinks({ variant = 'sidebar' }: NavLinksProps) {
                   ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
                   : 'block text-blue-50/55 hover:bg-white/8 hover:text-white',
             )}
-            href={item.href}
+            href={item.href as Route}
             key={item.href}
           >
             {item.label}

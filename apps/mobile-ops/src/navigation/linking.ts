@@ -16,6 +16,8 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
       SelfServiceVerification: 'self-service/verify',
       SelfServiceReadiness: 'self-service/readiness',
       SelfServiceResume: 'self-service/:token?',
+      GuarantorSelfServiceOtp: 'guarantor-self-service/otp',
+      GuarantorSelfService: 'guarantor-self-service/:token?',
       OperatorDashboard: 'operator/dashboard',
       OperatorDrivers: 'operator/drivers',
       OperatorDriverDetail: 'operator/drivers/:driverId',

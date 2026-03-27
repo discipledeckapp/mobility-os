@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type Tenant } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import type { InternalTenantOwnerSummaryDto } from './dto/internal-tenant-owner-summary.dto';
 import type { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { writeOrganisationSettings } from './tenant-settings';
 
@@ -89,5 +90,46 @@ export class TenantsService {
       where: { id: tenantId },
       data: { metadata: metadata as Prisma.InputJsonValue },
     });
+  }
+
+  async getOwnerSummary(tenantId: string): Promise<InternalTenantOwnerSummaryDto> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        OR: [{ role: 'TENANT_OWNER' }, { role: 'TENANT_ADMIN' }, { role: 'ADMIN' }],
+      },
+      orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    const owner =
+      users.find((user) => user.role === 'TENANT_OWNER') ??
+      users.find((user) => user.role === 'TENANT_ADMIN') ??
+      users[0] ??
+      null;
+
+    return {
+      ownerUserId: owner?.id ?? null,
+      ownerName: owner?.name ?? null,
+      ownerEmail: owner?.email ?? null,
+      ownerPhone: owner?.phone ?? null,
+      ownerRole: owner?.role ?? null,
+      ownerIsActive: owner?.isActive ?? null,
+      adminContacts: users.map((user) => ({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone ?? null,
+        role: user.role,
+        isActive: user.isActive,
+      })),
+    };
   }
 }

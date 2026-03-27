@@ -14,6 +14,8 @@ export type RootStackParamList = {
   SelfServiceResume: { token?: string } | undefined;
   SelfServiceVerification: undefined;
   SelfServiceReadiness: undefined;
+  GuarantorSelfServiceOtp: undefined;
+  GuarantorSelfService: { token?: string } | undefined;
   DriverAccountSetup: undefined;
   DriverGuarantor: undefined;
   Home: undefined;

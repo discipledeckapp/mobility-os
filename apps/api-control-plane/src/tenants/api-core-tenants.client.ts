@@ -17,6 +17,23 @@ interface ApiCoreTenantRecord {
   updatedAt: string;
 }
 
+interface ApiCoreTenantOwnerSummaryRecord {
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerPhone?: string | null;
+  ownerRole?: string | null;
+  ownerIsActive?: boolean | null;
+  adminContacts?: Array<{
+    userId: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role: string;
+    isActive: boolean;
+  }>;
+}
+
 @Injectable()
 export class ApiCoreTenantsClient {
   constructor(private readonly configService: ConfigService) {}
@@ -54,5 +71,9 @@ export class ApiCoreTenantsClient {
 
   getTenant(tenantId: string): Promise<ApiCoreTenantRecord> {
     return this.request(`/internal/tenants/${tenantId}`);
+  }
+
+  getTenantOwnerSummary(tenantId: string): Promise<ApiCoreTenantOwnerSummaryRecord> {
+    return this.request(`/internal/tenants/${tenantId}/owner-summary`);
   }
 }

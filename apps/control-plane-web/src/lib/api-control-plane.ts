@@ -279,6 +279,22 @@ export interface TenantDetailRecord {
   }>;
   lifecycleState?: TenantLifecycleStateRecord | null;
   lifecycleEvents: TenantLifecycleEventRecord[];
+  ownerSummary?: {
+    ownerUserId?: string | null;
+    ownerName?: string | null;
+    ownerEmail?: string | null;
+    ownerPhone?: string | null;
+    ownerRole?: string | null;
+    ownerIsActive?: boolean | null;
+    adminContacts?: Array<{
+      userId: string;
+      name: string;
+      email: string;
+      phone?: string | null;
+      role: string;
+      isActive: boolean;
+    }>;
+  } | null;
 }
 
 async function getPlatformApiToken(explicitToken?: string): Promise<string> {
@@ -342,6 +358,25 @@ export async function loginPlatformUser(
   input: PlatformLoginInput,
 ): Promise<{ accessToken: string }> {
   return apiControlPlaneFetch<{ accessToken: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function requestPlatformPasswordReset(
+  email: string,
+): Promise<{ message: string }> {
+  return apiControlPlaneFetch<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPlatformPassword(input: {
+  token: string;
+  password: string;
+}): Promise<{ message: string }> {
+  return apiControlPlaneFetch<{ message: string }>('/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -734,4 +769,33 @@ export async function createTenantPlatformWalletEntry(
       token: await getPlatformApiToken(token),
     },
   );
+}
+
+// ── Platform settings ─────────────────────────────────────────────────────────
+
+export interface PlatformSettingRecord {
+  id: string;
+  key: string;
+  description?: string | null;
+  value: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listPlatformSettings(token?: string): Promise<PlatformSettingRecord[]> {
+  return apiControlPlaneFetch<PlatformSettingRecord[]>('/platform-settings', {
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function upsertPlatformSetting(
+  key: string,
+  input: { description?: string | null; value: Record<string, unknown> },
+  token?: string,
+): Promise<PlatformSettingRecord> {
+  return apiControlPlaneFetch<PlatformSettingRecord>(`/platform-settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
 }

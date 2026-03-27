@@ -44,7 +44,7 @@ export class TenantsService {
   }
 
   async getTenantDetail(tenantId: string): Promise<TenantDetailDto> {
-    const [tenant, subscription, invoices, lifecycleState, lifecycleEvents, overrides] =
+    const [tenant, subscription, invoices, lifecycleState, lifecycleEvents, overrides, ownerSummary] =
       await Promise.all([
         this.apiCoreTenantsClient.getTenant(tenantId),
         this.prisma.cpSubscription.findUnique({
@@ -78,6 +78,7 @@ export class TenantsService {
           include: { flag: true },
           orderBy: { createdAt: 'desc' },
         }),
+        this.apiCoreTenantsClient.getTenantOwnerSummary(tenantId).catch(() => null),
       ]);
 
     if (!tenant) {
@@ -122,6 +123,7 @@ export class TenantsService {
           }
         : null,
       lifecycleEvents,
+      ownerSummary,
     };
   }
 }

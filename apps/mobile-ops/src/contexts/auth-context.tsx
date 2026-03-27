@@ -26,6 +26,7 @@ import {
 import { DEFAULT_REFRESH_LEAD_TIME_MS, STORAGE_KEYS } from '../constants';
 import { getRefreshDelayMs, parseJwtExpiry } from '../lib/jwt';
 import { configureMobileLogContext } from '../services/mobile-log-service';
+import { flushOfflineQueue, subscribeToNetworkReconnect } from '../services/offline-queue-service';
 import {
   cacheOfflineSession,
   clearOfflineSessionArtifacts,
@@ -34,6 +35,7 @@ import {
   isBiometricLoginEnabled as readBiometricLoginEnabled,
   setBiometricLoginEnabled as writeBiometricLoginEnabled,
 } from '../services/offline-session-service';
+import { registerCurrentPushDevice } from '../services/push-notification-service';
 
 interface AuthContextValue {
   token: string | null;
@@ -183,6 +185,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     tryRefreshTokenRef.current = tryRefreshToken;
   }, [tryRefreshToken]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToNetworkReconnect(async () => {
+      try {
+        await flushOfflineQueue();
+      } catch {
+        // Best-effort background recovery only.
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -362,6 +378,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
       configureMobileLogContext(null);
     };
   }, [session?.tenantId, session?.userId]);
+
+  useEffect(() => {
+    if (!session || isOfflineSession) {
+      return;
+    }
+
+    registerCurrentPushDevice().catch(() => {
+      // Non-blocking. Push registration should never block access.
+    });
+  }, [isOfflineSession, session]);
 
   useEffect(() => {
     const restore = async () => {

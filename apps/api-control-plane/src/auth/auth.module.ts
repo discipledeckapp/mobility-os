@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '../database/database.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { InternalServiceAuthGuard } from './guards/internal-service-auth.guard';
@@ -11,6 +12,7 @@ import { PlatformAuthGuard } from './guards/platform-auth.guard';
 @Module({
   imports: [
     DatabaseModule,
+    NotificationsModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

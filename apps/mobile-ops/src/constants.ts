@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   selfServiceVerificationDraft: 'mobility_os.mobile_ops.self_service_verification_draft',
   pendingTenantPayment: 'mobility_os.mobile_ops.pending_tenant_payment',
   queryCache: 'mobility_os.mobile_ops.query_cache',
+  pushDeviceToken: 'mobility_os.mobile_ops.push_device_token',
+  guarantorSelfServiceToken: 'mobility_os.mobile_ops.guarantor_self_service_token',
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {
