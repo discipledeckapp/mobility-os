@@ -51,7 +51,11 @@ const PASSWORD_RESET_SUCCESS_MESSAGE = 'Your password has been reset successfull
 function deriveMobileRole(user: {
   role: string;
   driverId?: string | null;
+  accessMode?: 'tenant_user' | 'driver_mobile';
 }): 'driver' | 'field_officer' | null {
+  if (user.accessMode === 'driver_mobile') {
+    return 'driver';
+  }
   if (user.driverId) {
     return 'driver';
   }
@@ -153,12 +157,14 @@ export class AuthService {
   private async issueTokens(user: {
     id: string;
     tenantId: string;
-    businessEntityId?: string | null;
-    operatingUnitId?: string | null;
     role: string;
     driverId?: string | null;
     settings?: Prisma.JsonValue | null;
-  }) {
+  }): Promise<{ accessToken: string; refreshToken: string }> {
+    const accessScope = await this.resolveUserAccessScope(user);
+    const linkedDriver = accessScope.driverId
+      ? await this.getLinkedDriverForUser(user.tenantId, { driverId: accessScope.driverId })
+      : null;
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: user.tenantId },
       select: { country: true },
@@ -169,18 +175,31 @@ export class AuthService {
       role: user.role,
       hasLinkedDriver: Boolean(user.driverId),
     });
+    const assignedFleetIds =
+      userSettings.assignedFleetIds.length > 0
+        ? userSettings.assignedFleetIds
+        : linkedDriver?.fleetId
+          ? [linkedDriver.fleetId]
+          : [];
 
     const accessToken = await this.jwtService.signAsync(
       {
         sub: user.id,
         tenantId: user.tenantId,
-        businessEntityId: user.businessEntityId,
         role: user.role,
-        mobileRole: deriveMobileRole(user),
-        assignedFleetIds: userSettings.assignedFleetIds,
+        mobileRole: deriveMobileRole({
+          role: user.role,
+          driverId: accessScope.driverId,
+          accessMode: accessScope.accessMode,
+        }),
+        assignedFleetIds,
         assignedVehicleIds: userSettings.assignedVehicleIds,
         customPermissions: userSettings.customPermissions,
-        ...(user.operatingUnitId ? { operatingUnitId: user.operatingUnitId } : {}),
+        ...(accessScope.driverId ? { linkedDriverId: accessScope.driverId } : {}),
+        ...(accessScope.businessEntityId
+          ? { businessEntityId: accessScope.businessEntityId }
+          : {}),
+        ...(accessScope.operatingUnitId ? { operatingUnitId: accessScope.operatingUnitId } : {}),
       },
       {
         secret: this.config.getOrThrow<string>('JWT_SECRET'),
@@ -227,6 +246,49 @@ export class AuthService {
     return null;
   }
 
+  private async resolveUserAccessScope(user: {
+    tenantId: string;
+    role: string;
+    driverId?: string | null;
+    businessEntityId?: string | null;
+    operatingUnitId?: string | null;
+    settings?: Prisma.JsonValue | null;
+  }): Promise<{
+    businessEntityId: string | null;
+    operatingUnitId: string | null;
+    driverId: string | null;
+    accessMode: 'tenant_user' | 'driver_mobile';
+  }> {
+    const userSettings = readUserSettings(user.settings, {
+      preferredLanguage: 'en',
+      role: user.role,
+      hasLinkedDriver: Boolean(user.driverId),
+    });
+
+    if (user.driverId || userSettings.accessMode === 'driver_mobile') {
+      const linkedDriver = await this.getLinkedDriverForUser(user.tenantId, user);
+      if (!linkedDriver) {
+        throw new UnauthorizedException(
+          'This mobile access account is not linked to a valid driver profile.',
+        );
+      }
+
+      return {
+        businessEntityId: linkedDriver.businessEntityId,
+        operatingUnitId: linkedDriver.operatingUnitId,
+        driverId: linkedDriver.id,
+        accessMode: 'driver_mobile',
+      };
+    }
+
+    return {
+      businessEntityId: user.businessEntityId ?? null,
+      operatingUnitId: user.operatingUnitId ?? null,
+      driverId: null,
+      accessMode: 'tenant_user',
+    };
+  }
+
   async login(dto: LoginDto): Promise<{ accessToken: string; refreshToken: string }> {
     const { user } = await this.findSingleUserByIdentifier(dto.identifier);
 
@@ -236,12 +298,6 @@ export class AuthService {
 
     if (!user.passwordHash || !verifyPassword(dto.password, user.passwordHash)) {
       throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!user.businessEntityId) {
-      throw new UnauthorizedException(
-        'User is missing business-entity scope required for tenant access.',
-      );
     }
 
     return this.issueTokens(user);
@@ -413,6 +469,7 @@ export class AuthService {
     }
 
     const linkedDriver = await this.getLinkedDriverForUser(tenantId, user);
+    const accessScope = await this.resolveUserAccessScope(user);
     const tenantCountry = user.tenant.country;
     const defaultCurrency = isCountrySupported(tenantCountry)
       ? getCountryConfig(tenantCountry).currency
@@ -435,8 +492,8 @@ export class AuthService {
       phone: user.phone ?? null,
       name: user.name,
       role: user.role,
-      businessEntityId: user.businessEntityId ?? null,
-      operatingUnitId: user.operatingUnitId ?? null,
+      businessEntityId: accessScope.businessEntityId,
+      operatingUnitId: accessScope.operatingUnitId,
       tenantName: user.tenant.name,
       tenantCountry,
       defaultCurrency,
@@ -458,15 +515,27 @@ export class AuthService {
       requiredVehicleDocumentSlugs: organisationSettings.operations.requiredVehicleDocumentSlugs,
       notificationPreferences: userSettings.notificationPreferences,
       permissions: Array.from(
-        getGrantedPermissions(user.role as TenantRole, userSettings.customPermissions),
+        getGrantedPermissions(user.role as TenantRole, userSettings.customPermissions, {
+          linkedDriverId: accessScope.driverId,
+        }),
       ),
-      assignedFleetIds: userSettings.assignedFleetIds,
+      assignedFleetIds:
+        userSettings.assignedFleetIds.length > 0
+          ? userSettings.assignedFleetIds
+          : linkedDriver?.fleetId
+            ? [linkedDriver.fleetId]
+            : [],
       assignedVehicleIds: userSettings.assignedVehicleIds,
       customPermissions: userSettings.customPermissions,
       linkedDriverId: linkedDriver?.id ?? null,
       linkedDriverStatus: linkedDriver?.status ?? null,
       linkedDriverIdentityStatus: linkedDriver?.identityStatus ?? null,
-      mobileRole: deriveMobileRole(user),
+      accessMode: accessScope.accessMode,
+      mobileRole: deriveMobileRole({
+        role: user.role,
+        driverId: accessScope.driverId,
+        accessMode: accessScope.accessMode,
+      }),
       mobileAccessRevoked: user.mobileAccessRevoked ?? null,
     };
   }

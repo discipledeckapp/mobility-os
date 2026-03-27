@@ -35,6 +35,7 @@ export class PermissionsGuard implements CanActivate {
     const grantedPermissions = getGrantedPermissions(
       role as TenantRole,
       request.tenantContext?.customPermissions ?? [],
+      { linkedDriverId: request.tenantContext?.linkedDriverId ?? null },
     );
     if (grantedPermissions.size === 0) {
       throw new ForbiddenException('Your role is not allowed to perform this action.');

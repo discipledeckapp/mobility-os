@@ -16,6 +16,9 @@ export class DriverMobileAccessUserDto {
   @ApiProperty()
   role!: string;
 
+  @ApiPropertyOptional()
+  accessMode?: 'tenant_user' | 'driver_mobile' | null;
+
   @ApiProperty()
   isActive!: boolean;
 

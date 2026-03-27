@@ -10,6 +10,74 @@ import type { UpdateOperatingUnitDto } from './dto/update-operating-unit.dto';
 export class OperatingUnitsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly openAssignmentStatuses = ['created', 'assigned', 'active'] as const;
+
+  private async syncOperatingUnitHierarchy(
+    prisma: PrismaService,
+    operatingUnitId: string,
+    businessEntityId: string,
+  ): Promise<void> {
+    const fleets = await prisma.fleet.findMany({
+      where: { operatingUnitId },
+      select: { id: true },
+    });
+    const fleetIds = fleets.map((fleet) => fleet.id);
+
+    if (fleetIds.length === 0) {
+      return;
+    }
+
+    const drivers = await prisma.driver.findMany({
+      where: { fleetId: { in: fleetIds } },
+      select: { id: true },
+    });
+    const driverIds = drivers.map((driver) => driver.id);
+
+    await prisma.driver.updateMany({
+      where: { fleetId: { in: fleetIds } },
+      data: { operatingUnitId, businessEntityId },
+    });
+
+    await prisma.vehicle.updateMany({
+      where: { fleetId: { in: fleetIds } },
+      data: { operatingUnitId, businessEntityId },
+    });
+
+    if (driverIds.length > 0) {
+      await prisma.user.updateMany({
+        where: { driverId: { in: driverIds } },
+        data: { operatingUnitId, businessEntityId },
+      });
+    }
+
+    const openAssignments = await prisma.assignment.findMany({
+      where: {
+        fleetId: { in: fleetIds },
+        status: { in: [...this.openAssignmentStatuses] },
+      },
+      select: { id: true },
+    });
+    const openAssignmentIds = openAssignments.map((assignment) => assignment.id);
+
+    await prisma.assignment.updateMany({
+      where: {
+        fleetId: { in: fleetIds },
+        status: { in: [...this.openAssignmentStatuses] },
+      },
+      data: { operatingUnitId, businessEntityId },
+    });
+
+    if (openAssignmentIds.length > 0) {
+      await prisma.remittance.updateMany({
+        where: {
+          assignmentId: { in: openAssignmentIds },
+          status: 'pending',
+        },
+        data: { operatingUnitId, businessEntityId },
+      });
+    }
+  }
+
   async list(tenantId: string, businessEntityId?: string): Promise<OperatingUnit[]> {
     return this.prisma.operatingUnit.findMany({
       where: {
@@ -59,7 +127,9 @@ export class OperatingUnitsService {
     id: string,
     dto: UpdateOperatingUnitDto,
   ): Promise<OperatingUnit> {
-    await this.findOne(tenantId, id);
+    const currentUnit = await this.findOne(tenantId, id);
+
+    let nextBusinessEntityId = currentUnit.businessEntityId;
 
     if (dto.businessEntityId) {
       const entity = await this.prisma.businessEntity.findUnique({
@@ -71,14 +141,23 @@ export class OperatingUnitsService {
       }
 
       assertTenantOwnership(asTenantId(entity.tenantId), asTenantId(tenantId));
+      nextBusinessEntityId = entity.id;
     }
 
-    return this.prisma.operatingUnit.update({
-      where: { id },
-      data: {
-        ...(dto.name ? { name: dto.name } : {}),
-        ...(dto.businessEntityId ? { businessEntityId: dto.businessEntityId } : {}),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const unit = await tx.operatingUnit.update({
+        where: { id },
+        data: {
+          ...(dto.name ? { name: dto.name } : {}),
+          ...(dto.businessEntityId ? { businessEntityId: dto.businessEntityId } : {}),
+        },
+      });
+
+      if (nextBusinessEntityId !== currentUnit.businessEntityId) {
+        await this.syncOperatingUnitHierarchy(tx as never, id, nextBusinessEntityId);
+      }
+
+      return unit;
     });
   }
 

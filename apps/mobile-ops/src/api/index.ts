@@ -75,6 +75,7 @@ export interface SessionRecord {
   linkedDriverId?: string | null;
   linkedDriverStatus?: string | null;
   linkedDriverIdentityStatus?: string | null;
+  accessMode?: 'tenant_user' | 'driver_mobile';
   mobileRole?: 'driver' | 'field_officer' | null;
   mobileAccessRevoked?: boolean | null;
 }
@@ -216,10 +217,14 @@ export interface DriverRecord {
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
+  authenticationAccess?: string;
+  authenticationAccessReasons?: string[];
   activationReadiness?: string;
   activationReadinessReasons?: string[];
   assignmentReadiness?: string;
   assignmentReadinessReasons?: string[];
+  remittanceReadiness?: string;
+  remittanceReadinessReasons?: string[];
   requireIdentityVerificationForActivation?: boolean;
   requireBiometricVerification?: boolean;
   requireGovernmentVerificationLookup?: boolean;

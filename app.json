@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.discipledeckapp.mobilityos"
+  },
+  "ios": {
+    "bundleIdentifier": "com.discipledeckapp.mobilityos"
+  }
+}

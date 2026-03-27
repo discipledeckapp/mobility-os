@@ -63,19 +63,36 @@ export class TeamService {
     };
   }
 
+  private isOperatorUser(user: {
+    role: string;
+    driverId?: string | null;
+    settings?: unknown;
+  }): boolean {
+    return (
+      readUserSettings(user.settings, {
+        preferredLanguage: 'en',
+        role: user.role,
+        hasLinkedDriver: Boolean(user.driverId),
+      }).accessMode === 'tenant_user'
+    );
+  }
+
   async listMembers(tenantId: string): Promise<TeamMemberResponseDto[]> {
     const users = await this.prisma.user.findMany({
-      where: { tenantId, driverId: null },
+      where: { tenantId },
       orderBy: { createdAt: 'asc' },
     });
 
-    return Promise.all(users.map((user) => this.mapTeamMember(user)));
+    return Promise.all(
+      users.filter((user) => this.isOperatorUser(user)).map((user) => this.mapTeamMember(user)),
+    );
   }
 
   async inviteMember(tenantId: string, dto: InviteTeamMemberDto): Promise<TeamMemberResponseDto> {
-    const activeSeatCount = await this.prisma.user.count({
-      where: { tenantId, driverId: null, isActive: true },
+    const activeUsers = await this.prisma.user.findMany({
+      where: { tenantId, isActive: true },
     });
+    const activeSeatCount = activeUsers.filter((user) => this.isOperatorUser(user)).length;
     await this.subscriptionEntitlementsService.enforceSeatCapacity(tenantId, activeSeatCount);
 
     const existingUser = await this.prisma.user.findFirst({
@@ -132,10 +149,10 @@ export class TeamService {
     dto: UpdateTeamMemberAccessDto,
   ): Promise<TeamMemberResponseDto> {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId, driverId: null },
+      where: { id: userId, tenantId },
     });
 
-    if (!user) {
+    if (!user || !this.isOperatorUser(user)) {
       throw new NotFoundException('Team member not found.');
     }
 
@@ -201,10 +218,10 @@ export class TeamService {
 
   async deactivateMember(tenantId: string, userId: string): Promise<{ message: string }> {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId, driverId: null },
+      where: { id: userId, tenantId },
     });
 
-    if (!user) {
+    if (!user || !this.isOperatorUser(user)) {
       throw new NotFoundException('Team member not found.');
     }
 
@@ -222,10 +239,10 @@ export class TeamService {
 
   async resendInvite(tenantId: string, userId: string): Promise<{ message: string }> {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId, driverId: null, isActive: true },
+      where: { id: userId, tenantId, isActive: true },
     });
 
-    if (!user) {
+    if (!user || !this.isOperatorUser(user)) {
       throw new NotFoundException('Team member not found.');
     }
 

@@ -1,6 +1,55 @@
 import type { TenantContext } from '@mobility-os/tenancy-domain';
 import { ForbiddenException } from '@nestjs/common';
 
+export function getLinkedDriverId(ctx: TenantContext): string | null {
+  return typeof ctx.linkedDriverId === 'string' && ctx.linkedDriverId.trim().length > 0
+    ? ctx.linkedDriverId
+    : null;
+}
+
+export function assertLinkedDriverAccess(ctx: TenantContext, driverId: string): void {
+  const linkedDriverId = getLinkedDriverId(ctx);
+  if (linkedDriverId && linkedDriverId !== driverId) {
+    throw new ForbiddenException('This session can only access its linked driver record.');
+  }
+}
+
+export function assertLinkedAssignmentAccess(
+  ctx: TenantContext,
+  assignmentDriverId: string,
+): void {
+  const linkedDriverId = getLinkedDriverId(ctx);
+  if (linkedDriverId && linkedDriverId !== assignmentDriverId) {
+    throw new ForbiddenException('This session can only access assignments for its linked driver.');
+  }
+}
+
+export function applyLinkedDriverScope<T extends object>(
+  input: T,
+  ctx: TenantContext,
+): T & { driverId?: string } {
+  const linkedDriverId = getLinkedDriverId(ctx);
+  if (!linkedDriverId) {
+    return input;
+  }
+
+  const candidate = (input as { driverId?: unknown }).driverId;
+  if (typeof candidate === 'string' && candidate !== linkedDriverId) {
+    throw new ForbiddenException('This session can only query its linked driver.');
+  }
+
+  return {
+    ...input,
+    driverId: linkedDriverId,
+  };
+}
+
+export function assertNoLinkedDriverMutation(ctx: TenantContext, action: string): void {
+  if (getLinkedDriverId(ctx)) {
+    throw new ForbiddenException(`Driver-linked sessions cannot ${action}.`);
+  }
+}
+
 export function getAssignedFleetIds(ctx: TenantContext): string[] {
   return Array.isArray(ctx.assignedFleetIds)
     ? ctx.assignedFleetIds.filter((value) => value.trim().length > 0).map((value) => value)

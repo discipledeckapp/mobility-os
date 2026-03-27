@@ -33,6 +33,7 @@ export interface UserSettings {
   assignedFleetIds: string[];
   assignedVehicleIds: string[];
   customPermissions: string[];
+  accessMode: 'tenant_user' | 'driver_mobile';
 }
 
 function buildDefaultTopicPreference(
@@ -115,6 +116,7 @@ export function readUserSettings(
       assignedFleetIds: [],
       assignedVehicleIds: [],
       customPermissions: [],
+      accessMode: defaults.hasLinkedDriver ? 'driver_mobile' : 'tenant_user',
     };
   }
 
@@ -177,6 +179,12 @@ export function readUserSettings(
           (value): value is string => typeof value === 'string' && value.trim().length > 0,
         )
       : [],
+    accessMode:
+      candidate.accessMode === 'driver_mobile' || candidate.accessMode === 'tenant_user'
+        ? candidate.accessMode
+        : defaults.hasLinkedDriver
+          ? 'driver_mobile'
+          : 'tenant_user',
   };
 }
 
@@ -213,5 +221,9 @@ export function writeUserSettings(
       'customPermissions' in nextSettings && Array.isArray(nextSettings.customPermissions)
         ? nextSettings.customPermissions
         : current.customPermissions,
+    accessMode:
+      nextSettings.accessMode === 'driver_mobile' || nextSettings.accessMode === 'tenant_user'
+        ? nextSettings.accessMode
+        : current.accessMode,
   };
 }

@@ -89,6 +89,11 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
     );
   }
 
+  const signInReady =
+    driver.authenticationAccess === 'ready' &&
+    driver.hasMobileAccess === true &&
+    driver.mobileAccessStatus === 'linked';
+
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <Card style={styles.section}>
@@ -100,22 +105,22 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
         <View style={styles.badgeRow}>
           <Badge label={formatIdentityStatus(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
           <Badge
-            label={formatReadinessLabel(driver.activationReadiness ?? 'not_ready')}
-            tone={readinessTone(driver.activationReadiness ?? 'not_ready')}
+            label={`Sign in ${formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}`}
+            tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
           />
         </View>
       </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Current status</Text>
-        <Text style={styles.meta}>Phone: {driver.phone}</Text>
+        <Text style={styles.meta}>Phone: {driver.phone ?? 'Not added yet'}</Text>
         {driver.email ? <Text style={styles.meta}>Email: {driver.email}</Text> : null}
         <Text style={styles.meta}>Identity: {formatIdentityStatus(driver.identityStatus)}</Text>
         <Text style={styles.meta}>
-          Approved licence: {driver.hasApprovedLicence ? 'Yes' : 'No'}
+          Sign-in access: {formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}
         </Text>
         <Text style={styles.meta}>
-          Assignment readiness: {formatReadinessLabel(driver.assignmentReadiness ?? 'not_ready')}
+          Activation readiness: {formatReadinessLabel(driver.activationReadiness ?? 'not_ready')}
         </Text>
       </Card>
 
@@ -143,13 +148,15 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Next step</Text>
         <Text style={styles.copy}>
-          Open the readiness checklist to see what still blocks activation or assignment access, then continue verification tasks from there.
+          Open the readiness checklist to review sign-in access separately from activation, assignment, and remittance readiness, then continue any remaining verification tasks.
         </Text>
         <Button label="Open readiness checklist" onPress={() => navigation.navigate('SelfServiceReadiness')} />
         <Button label="Continue verification" variant="secondary" onPress={() => navigation.navigate('SelfServiceVerification')} />
         <Button label="Refresh status" onPress={() => void onRefresh()} />
         <Button label="Use another verification code" variant="secondary" onPress={() => void onClear()} />
-        <Button label="Back to sign in" variant="secondary" onPress={() => navigation.navigate('Login')} />
+        {signInReady ? (
+          <Button label="Back to sign in" variant="secondary" onPress={() => navigation.navigate('Login')} />
+        ) : null}
       </Card>
     </Screen>
   );

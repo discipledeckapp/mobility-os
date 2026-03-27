@@ -587,7 +587,7 @@ export function SelfServiceVerificationScreen({
 
           {driverPaysKyc ? (
             <View style={styles.paymentNotice}>
-              <Text style={styles.paymentNoticeTitle}>₦5,000 verification fee required</Text>
+              <Text style={styles.paymentNoticeTitle}>Verification fee required</Text>
               <Text style={styles.paymentNoticeBody}>
                 Your organisation requires you to pay for your own identity verification before the process can begin.
               </Text>
@@ -654,13 +654,13 @@ export function SelfServiceVerificationScreen({
           <Text style={styles.kicker}>Identity verification fee</Text>
           <Text style={styles.title}>Pay before verification</Text>
           <Text style={styles.copy}>
-            Your organisation requires you to pay ₦5,000 before your identity verification can begin. This is a one-time payment per verification.
+            Your organisation requires you to pay the verification fee before your identity verification can begin. This is a one-time payment per verification.
           </Text>
 
           <View style={styles.breakdownCard}>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Biometric identity verification</Text>
-              <Text style={styles.breakdownAmount}>₦5,000</Text>
+              <Text style={styles.breakdownAmount}>Verification fee</Text>
             </View>
           </View>
 
@@ -798,7 +798,7 @@ export function SelfServiceVerificationScreen({
           {!identitySubmitted ? (
             <Button
               label={selfiePreviewUri ? 'Retake selfie' : biometricVerificationRequired ? 'Open camera for selfie' : 'Take profile photo'}
-              variant={selfiePreviewUri ? 'secondary' : 'default'}
+              variant={selfiePreviewUri ? 'secondary' : 'primary'}
               onPress={() => void onCaptureSelfie()}
             />
           ) : null}
@@ -971,7 +971,7 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.copy}>
           {!driver.hasMobileAccess
             ? 'Set up your sign-in email and password so you can log into the app once approved.'
-            : 'Check your readiness status to see what's still needed for activation.'}
+            : "Check your readiness status to see what's still needed for activation."}
         </Text>
         {!driver.hasMobileAccess ? (
           <Button

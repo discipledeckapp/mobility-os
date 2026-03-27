@@ -93,6 +93,14 @@ export enum Permission {
   SupportRead = 'support:read',
 }
 
+const DRIVER_LINKED_TENANT_PERMISSIONS = new Set<Permission>([
+  Permission.DriversRead,
+  Permission.AssignmentsRead,
+  Permission.AssignmentsWrite,
+  Permission.RemittanceRead,
+  Permission.RemittanceWrite,
+]);
+
 // ── Role → Permission sets ────────────────────────────────────────────────────
 
 /** All read permissions across the tenant operational plane. */
@@ -250,7 +258,12 @@ export function hasPermission(role: PlatformRole | TenantRole, permission: Permi
 export function getGrantedPermissions(
   role: PlatformRole | TenantRole,
   customPermissions: readonly string[] = [],
+  options?: { linkedDriverId?: string | null },
 ): ReadonlySet<string> {
+  if (options?.linkedDriverId) {
+    return new Set<string>(DRIVER_LINKED_TENANT_PERMISSIONS);
+  }
+
   const granted = new Set<string>(rolePermissions[role] ?? []);
   for (const permission of customPermissions) {
     if (typeof permission === 'string' && permission.trim()) {

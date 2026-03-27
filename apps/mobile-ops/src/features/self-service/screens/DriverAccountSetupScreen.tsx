@@ -18,26 +18,53 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const passwordChecks = useMemo(() => ({
-    length: password.length >= 8,
-    upper: /[A-Z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[^A-Za-z0-9]/.test(password),
-  }), [password]);
+  const normalizedEmail = email.trim().toLowerCase();
+  const passwordChecks = useMemo(
+    () => ({
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password),
+    }),
+    [password],
+  );
 
   const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
+  const emailError =
+    email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+      ? 'Enter a valid email address.'
+      : undefined;
+  const passwordError =
+    password.length > 0 && passwordStrength < 4
+      ? 'Use all 4 password requirements below.'
+      : undefined;
+  const confirmPasswordError =
+    confirmPassword.length > 0 && confirmPassword !== password
+      ? 'Passwords do not match.'
+      : undefined;
+  const canSubmit =
+    normalizedEmail.length > 0 &&
+    !emailError &&
+    passwordStrength === 4 &&
+    confirmPassword === password &&
+    confirmPassword.length > 0 &&
+    !submitting;
 
   const onSubmit = async () => {
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       Alert.alert('Create account', 'Enter the email address you want to use to sign in.');
       return;
     }
-    if (password.length < 8) {
-      Alert.alert('Create account', 'Password must be at least 8 characters.');
+    if (emailError) {
+      Alert.alert('Create account', emailError);
       return;
     }
-    if (password !== confirmPassword) {
-      Alert.alert('Create account', 'Passwords do not match.');
+    if (passwordStrength < 4) {
+      Alert.alert('Create account', 'Your password must meet all listed requirements.');
+      return;
+    }
+    if (confirmPassword !== password) {
+      Alert.alert('Create account', 'Confirm your password to continue.');
       return;
     }
     if (!token) {
@@ -48,16 +75,16 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
 
     setSubmitting(true);
     try {
-      await createDriverMobileAccount(token, { email: email.trim(), password });
+      await createDriverMobileAccount(token, { email: normalizedEmail, password });
       // If the email differs from what the operator originally recorded, sync it back
-      if (email.trim().toLowerCase() !== (driver?.email ?? '').toLowerCase()) {
-        await updateDriverSelfServiceContact(token, { email: email.trim() }).catch(() => {
+      if (normalizedEmail !== (driver?.email ?? '').toLowerCase()) {
+        await updateDriverSelfServiceContact(token, { email: normalizedEmail }).catch(() => {
           // Non-fatal — account was created; email sync will be retried next context refresh
         });
       }
       Alert.alert(
         'Account created',
-        'Your sign-in account is ready. Return to the sign-in screen and log in with your email and password.',
+        'Your sign-in account is ready. You can now return to the sign-in screen and log in, even if operational approval is still pending.',
         [{ text: 'Go to sign in', onPress: () => navigation.navigate('Login') }],
       );
     } catch (error) {
@@ -78,12 +105,19 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           {driver ? `Welcome, ${driver.firstName}` : 'Create your sign-in'}
         </Text>
         <Text style={styles.copy}>
-          Choose an email and password. You will use these to sign in to the Mobiris driver app
-          once your operator activates your profile.
+          Choose the email and password you will use to access the driver app. Account access is
+          separate from operational approval, so you can sign in before assignment eligibility is complete.
         </Text>
       </View>
 
       <Card style={styles.card}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>What happens next</Text>
+          <Text style={styles.infoCopy}>
+            Creating this account gives you app access. Your operator can still keep activation,
+            assignment, or remittance actions restricted until your readiness checks are complete.
+          </Text>
+        </View>
         {driver?.phone ? (
           <Input
             editable={false}
@@ -100,6 +134,8 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           label="Email address"
           onChangeText={setEmail}
           placeholder="your@email.com"
+          helperText="Use an email you can access. It becomes your sign-in username."
+          errorText={emailError}
           value={email}
         />
         <Input
@@ -107,6 +143,8 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           label="Password"
           onChangeText={setPassword}
           secureTextEntry
+          helperText="Your password must satisfy every requirement below."
+          errorText={passwordError}
           value={password}
         />
         {password.length > 0 ? (
@@ -152,15 +190,12 @@ export function DriverAccountSetupScreen({ navigation }: ScreenProps<'DriverAcco
           label="Confirm password"
           onChangeText={setConfirmPassword}
           secureTextEntry
-          errorText={
-            confirmPassword.length > 0 && confirmPassword !== password
-              ? 'Passwords do not match'
-              : undefined
-          }
+          errorText={confirmPasswordError}
           value={confirmPassword}
         />
         <Button
-          label="Create account"
+          label="Create sign-in account"
+          disabled={!canSubmit}
           loading={submitting}
           onPress={onSubmit}
         />
@@ -200,6 +235,24 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: tokens.spacing.md,
+  },
+  infoCard: {
+    backgroundColor: '#F7F9FC',
+    borderColor: tokens.colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: tokens.spacing.xs,
+    padding: tokens.spacing.md,
+  },
+  infoTitle: {
+    color: tokens.colors.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  infoCopy: {
+    color: tokens.colors.inkSoft,
+    fontSize: 13,
+    lineHeight: 20,
   },
   strengthWrap: {
     gap: tokens.spacing.xs,

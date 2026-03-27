@@ -32,6 +32,9 @@ describe('AuthService', () => {
       findFirst: jest.fn(),
       update: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+    },
   };
 
   const jwtService = {
@@ -78,6 +81,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.tenant.findUnique.mockResolvedValue({ country: 'NG' });
     service = new AuthService(prisma as never, jwtService, config, authEmailService);
   });
 
@@ -273,6 +277,55 @@ describe('AuthService', () => {
         expiresAt: expect.any(Date),
       },
     });
+  });
+
+  it('allows a linked driver mobile account to log in without an operator business-entity scope', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: 'user_driver_mobile',
+        tenantId: 'tenant_driver_mobile',
+        businessEntityId: null,
+        operatingUnitId: null,
+        role: 'FIELD_OFFICER',
+        driverId: 'driver_9',
+        isActive: true,
+        email: 'driver@tenant.com',
+        phone: '+2348044444444',
+        passwordHash: hashPassword('password123'),
+        settings: { accessMode: 'driver_mobile' },
+      },
+    ]);
+    prisma.driver.findFirst.mockResolvedValue({
+      id: 'driver_9',
+      tenantId: 'tenant_driver_mobile',
+      businessEntityId: 'be_driver',
+      operatingUnitId: 'ou_driver',
+      status: 'inactive',
+      identityStatus: 'pending_verification',
+    });
+    (jwtService.signAsync as jest.Mock)
+      .mockResolvedValueOnce('driver-access-token')
+      .mockResolvedValueOnce('driver-refresh-token');
+
+    await expect(
+      service.login({
+        identifier: 'driver@tenant.com',
+        password: 'password123',
+      }),
+    ).resolves.toEqual({
+      accessToken: 'driver-access-token',
+      refreshToken: 'driver-refresh-token',
+    });
+
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        businessEntityId: 'be_driver',
+        operatingUnitId: 'ou_driver',
+        mobileRole: 'driver',
+      }),
+      expect.any(Object),
+    );
   });
 
   it('rejects login with the wrong password', async () => {

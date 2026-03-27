@@ -147,9 +147,12 @@ export class DriversController {
         const q = query.q?.trim().toLowerCase();
         const matchesQuery =
           !q ||
-          [driver.firstName, driver.lastName, driver.phone, driver.email ?? ''].some((value) =>
-            value.toLowerCase().includes(q),
-          );
+          [
+            driver.firstName ?? '',
+            driver.lastName ?? '',
+            driver.phone ?? '',
+            driver.email ?? '',
+          ].some((value) => value.toLowerCase().includes(q));
         const matchesFleet = !query.fleetId || driver.fleetId === query.fleetId;
         const matchesStatus = !query.status || driver.status === query.status;
         const matchesIdentityStatus =

@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../../database/prisma.service';
+import { readUserSettings } from '../user-settings';
 
 interface RequestWithAuthorizationHeader {
   headers: {
@@ -67,11 +68,17 @@ export class MobileAuthGuard {
       throw new UnauthorizedException('Mobile access has been revoked for this account.');
     }
 
-    const mobileRole = user.driverId
-      ? 'driver'
-      : user.role === 'FIELD_OFFICER'
-        ? 'field_officer'
-        : null;
+    const userSettings = readUserSettings(user.settings, {
+      preferredLanguage: 'en',
+      role: user.role,
+      hasLinkedDriver: Boolean(user.driverId),
+    });
+    const mobileRole =
+      userSettings.accessMode === 'driver_mobile' || user.driverId
+        ? 'driver'
+        : user.role === 'FIELD_OFFICER'
+          ? 'field_officer'
+          : null;
 
     if (!mobileRole) {
       throw new UnauthorizedException('This account does not have mobile operations access.');

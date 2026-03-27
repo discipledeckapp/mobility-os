@@ -24,14 +24,18 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import {
+  applyLinkedDriverScope,
   applyFleetScope,
   applyVehicleScope,
+  assertLinkedAssignmentAccess,
+  assertNoLinkedDriverMutation,
   assertFleetAccess,
   assertVehicleAccess,
   getAssignedFleetIds,
   getAssignedVehicleIds,
 } from '../auth/tenant-access';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { AssignmentsService } from '../assignments/assignments.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { ListRemittanceDto } from './dto/list-remittance.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -49,7 +53,10 @@ type HeaderWritableResponse = {
 @UseGuards(TenantAuthGuard, TenantLifecycleGuard)
 @Controller('remittance')
 export class RemittanceController {
-  constructor(private readonly service: RemittanceService) {}
+  constructor(
+    private readonly service: RemittanceService,
+    private readonly assignmentsService: AssignmentsService,
+  ) {}
 
   @Get()
   @RequirePermissions(Permission.RemittanceRead)
@@ -62,7 +69,10 @@ export class RemittanceController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListRemittanceDto,
   ): Promise<PaginatedResponse<RemittanceResponseDto>> {
-    return this.service.list(ctx.tenantId, applyVehicleScope(applyFleetScope(query, ctx), ctx));
+    return this.service.list(
+      ctx.tenantId,
+      applyLinkedDriverScope(applyVehicleScope(applyFleetScope(query, ctx), ctx), ctx),
+    );
   }
 
   @Get('export.csv')
@@ -93,6 +103,7 @@ export class RemittanceController {
     @Param('id') id: string,
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertLinkedAssignmentAccess(ctx, record.driverId);
       assertFleetAccess(ctx, record.fleetId);
       assertVehicleAccess(ctx, record.vehicleId);
       return record;
@@ -107,7 +118,10 @@ export class RemittanceController {
     @CurrentTenant() ctx: TenantContext,
     @Body() dto: RecordRemittanceDto,
   ): Promise<RemittanceResponseDto> {
-    return this.service.record(ctx.tenantId, dto);
+    return this.assignmentsService.findOne(ctx.tenantId, dto.assignmentId).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
+      return this.service.record(ctx.tenantId, dto);
+    });
   }
 
   @Post(':id/confirm')
@@ -120,6 +134,8 @@ export class RemittanceController {
     @Body('paidDate') paidDate: string,
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertNoLinkedDriverMutation(ctx, 'confirm remittance');
+      assertLinkedAssignmentAccess(ctx, record.driverId);
       assertFleetAccess(ctx, record.fleetId);
       assertVehicleAccess(ctx, record.vehicleId);
       return this.service.confirm(ctx.tenantId, id, paidDate);
@@ -136,6 +152,7 @@ export class RemittanceController {
     @Body('notes') notes: string,
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertLinkedAssignmentAccess(ctx, record.driverId);
       assertFleetAccess(ctx, record.fleetId);
       assertVehicleAccess(ctx, record.vehicleId);
       return this.service.dispute(ctx.tenantId, id, notes);
@@ -152,6 +169,8 @@ export class RemittanceController {
     @Body('notes') notes: string,
   ): Promise<RemittanceResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((record) => {
+      assertNoLinkedDriverMutation(ctx, 'waive remittance');
+      assertLinkedAssignmentAccess(ctx, record.driverId);
       assertFleetAccess(ctx, record.fleetId);
       assertVehicleAccess(ctx, record.vehicleId);
       return this.service.waive(ctx.tenantId, id, notes, ctx.role);

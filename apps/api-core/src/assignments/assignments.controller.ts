@@ -25,8 +25,11 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import {
+  applyLinkedDriverScope,
   applyFleetScope,
   applyVehicleScope,
+  assertLinkedAssignmentAccess,
+  assertNoLinkedDriverMutation,
   assertFleetAccess,
   assertVehicleAccess,
   getAssignedFleetIds,
@@ -65,7 +68,10 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Query() query: ListAssignmentsDto,
   ): Promise<PaginatedResponse<AssignmentResponseDto>> {
-    return this.service.list(ctx.tenantId, applyVehicleScope(applyFleetScope(query, ctx), ctx));
+    return this.service.list(
+      ctx.tenantId,
+      applyLinkedDriverScope(applyVehicleScope(applyFleetScope(query, ctx), ctx), ctx),
+    );
   }
 
   @Get('import-template.csv')
@@ -110,6 +116,7 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Body('csvContent') csvContent: string,
   ) {
+    assertNoLinkedDriverMutation(ctx, 'import assignments');
     return this.service.importAssignmentsFromCsv(ctx.tenantId, csvContent);
   }
 
@@ -122,6 +129,7 @@ export class AssignmentsController {
     @Param('id') id: string,
   ): Promise<AssignmentResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
       return assignment;
@@ -136,6 +144,7 @@ export class AssignmentsController {
     @CurrentTenant() ctx: TenantContext,
     @Body() dto: CreateAssignmentDto,
   ): Promise<AssignmentResponseDto> {
+    assertNoLinkedDriverMutation(ctx, 'create assignments');
     if (dto.fleetId) {
       assertFleetAccess(ctx, dto.fleetId);
     }
@@ -155,6 +164,8 @@ export class AssignmentsController {
     @Body() dto: UpdateAssignmentRemittancePlanDto,
   ): Promise<AssignmentResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertNoLinkedDriverMutation(ctx, 'update assignment remittance plans');
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
       return this.service.updateRemittancePlan(ctx.tenantId, id, dto);
@@ -170,6 +181,7 @@ export class AssignmentsController {
     @Param('id') id: string,
   ): Promise<AssignmentResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
       return this.service.start(ctx.tenantId, id);
@@ -186,6 +198,7 @@ export class AssignmentsController {
     @Body('notes') notes?: string,
   ): Promise<AssignmentResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
       return this.service.end(ctx.tenantId, id, 'completed', notes);
@@ -202,6 +215,7 @@ export class AssignmentsController {
     @Body('notes') notes?: string,
   ): Promise<AssignmentResponseDto> {
     return this.service.findOne(ctx.tenantId, id).then((assignment) => {
+      assertLinkedAssignmentAccess(ctx, assignment.driverId);
       assertFleetAccess(ctx, assignment.fleetId);
       assertVehicleAccess(ctx, assignment.vehicleId);
       return this.service.end(ctx.tenantId, id, 'cancelled', notes);

@@ -60,9 +60,15 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     );
   }
 
+  const signInReady =
+    driver.authenticationAccess === 'ready' &&
+    driver.hasMobileAccess === true &&
+    driver.mobileAccessStatus === 'linked';
   const allReasons = [
+    ...(driver.authenticationAccessReasons ?? []),
     ...(driver.activationReadinessReasons ?? []),
     ...(driver.assignmentReadinessReasons ?? []),
+    ...(driver.remittanceReadinessReasons ?? []),
   ].filter((reason, index, items) => items.indexOf(reason) === index);
 
   const requiresIdentity =
@@ -73,25 +79,23 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     driver.pendingDocumentCount > 0 ||
     driver.rejectedDocumentCount > 0 ||
     driver.expiredDocumentCount > 0;
-  const canSignIn =
-    driver.activationReadiness === 'ready' &&
-    driver.assignmentReadiness === 'ready' &&
-    driver.identityStatus === 'verified' &&
-    driver.hasApprovedLicence &&
-    driver.pendingDocumentCount === 0 &&
-    driver.rejectedDocumentCount === 0 &&
-    driver.expiredDocumentCount === 0;
+  const canResumeVerification = requiresIdentity || hasDocumentBlockers;
+  const mobileAccessLabel = formatMobileAccessLabel(driver.mobileAccessStatus);
+  const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <Card style={styles.section}>
         <Text style={styles.kicker}>Driver readiness</Text>
-        <Text style={styles.title}>Checklist before operations</Text>
+        <Text style={styles.title}>Access and operations checklist</Text>
         <Text style={styles.copy}>
-          Use this screen to confirm what still blocks activation, assignment access, or mobile
-          operations.
+          Track your sign-in access separately from activation, assignment eligibility, and remittance readiness.
         </Text>
         <View style={styles.badgeRow}>
+          <Badge
+            label={`Sign in: ${formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}`}
+            tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
+          />
           <Badge
             label={formatIdentityStatus(driver.identityStatus)}
             tone={identityTone(driver.identityStatus)}
@@ -110,6 +114,17 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Status summary</Text>
         <View style={styles.row}>
+          <Text style={styles.label}>Sign-in access</Text>
+          <Badge
+            label={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}
+            tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Mobile account status</Text>
+          <Badge label={mobileAccessLabel} tone={mobileAccessTone} />
+        </View>
+        <View style={styles.row}>
           <Text style={styles.label}>Identity verification</Text>
           <Badge
             label={formatIdentityStatus(driver.identityStatus)}
@@ -118,7 +133,31 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Approved licence</Text>
-          <Badge label={driver.hasApprovedLicence ? 'Available' : 'Missing'} tone={driver.hasApprovedLicence ? 'success' : 'warning'} />
+          <Badge
+            label={driver.hasApprovedLicence ? 'Available' : 'Missing'}
+            tone={driver.hasApprovedLicence ? 'success' : 'warning'}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Activation readiness</Text>
+          <Badge
+            label={formatReadinessLabel(driver.activationReadiness ?? 'not_ready')}
+            tone={readinessTone(driver.activationReadiness ?? 'not_ready')}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Assignment readiness</Text>
+          <Badge
+            label={formatReadinessLabel(driver.assignmentReadiness ?? 'not_ready')}
+            tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Remittance readiness</Text>
+          <Badge
+            label={formatReadinessLabel(driver.remittanceReadiness ?? 'not_ready')}
+            tone={readinessTone(driver.remittanceReadiness ?? 'not_ready')}
+          />
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Uploaded documents</Text>
@@ -156,11 +195,11 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         <Card style={[styles.section, styles.kycPaymentCard]}>
           <Text style={styles.sectionTitle}>Identity verification payment</Text>
           <Text style={styles.copy}>
-            Your organisation requires you to pay a ₦5,000 verification fee before your identity
-            check can proceed. This covers the cost of the biometric identity check.
+            Your organisation requires you to pay the verification fee before your identity check
+            can proceed.
           </Text>
           <Button
-            label="Pay ₦5,000 for identity verification"
+            label="Pay verification fee"
             onPress={() => void onPayKyc()}
           />
           <Text style={styles.kycNote}>
@@ -197,31 +236,51 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         </Card>
       )}
 
-      {!driver.hasMobileAccess ? (
+      {driver.mobileAccessStatus === 'missing' ? (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Sign-in account</Text>
           <Text style={styles.copy}>
-            Create your email and password so you can sign in to the app once your operator
-            approves your profile.
+            Create your email and password so you can sign in to the app. Account access does not
+            wait for assignment approval.
           </Text>
           <Button
             label="Set up sign-in account"
             onPress={() => navigation.navigate('DriverAccountSetup')}
           />
         </Card>
+      ) : !signInReady ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Sign-in account</Text>
+          <Text style={styles.copy}>
+            Your account exists, but access is currently {mobileAccessLabel.toLowerCase()}. Contact
+            your operator if this status looks wrong.
+          </Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Access state</Text>
+            <Badge label={mobileAccessLabel} tone={mobileAccessTone} />
+          </View>
+        </Card>
       ) : (
         <Card style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.label}>Sign-in account</Text>
-            <Badge label="Active" tone="success" />
+            <Badge label="Ready" tone="success" />
           </View>
         </Card>
       )}
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Recommended next action</Text>
-        <Text style={styles.copy}>{recommendedAction(driver.identityStatus, hasDocumentBlockers, canSignIn)}</Text>
-        {requiresIdentity || hasDocumentBlockers ? (
+        <Text style={styles.copy}>
+          {recommendedAction({
+            authenticationAccess: driver.authenticationAccess ?? 'not_ready',
+            mobileAccessStatus: driver.mobileAccessStatus ?? null,
+            identityStatus: driver.identityStatus,
+            hasDocumentBlockers,
+            signInReady,
+          })}
+        </Text>
+        {canResumeVerification ? (
           <Button
             label="Open verification tasks"
             onPress={() => navigation.navigate('SelfServiceVerification')}
@@ -234,7 +293,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             onPress={() => void onRefresh()}
           />
         ) : null}
-        {canSignIn && driver.hasMobileAccess ? (
+        {signInReady ? (
           <Button
             label="Return to sign in"
             variant="secondary"
@@ -272,27 +331,55 @@ function readinessTone(status: string): 'neutral' | 'success' | 'warning' | 'dan
   if (status === 'ready') {
     return 'success';
   }
-  if (status === 'blocked') {
+  if (status === 'blocked' || status === 'not_ready') {
     return 'danger';
   }
   return 'warning';
 }
 
-function recommendedAction(
-  identityStatus: string,
-  hasDocumentBlockers: boolean,
-  canSignIn: boolean,
-) {
-  if (canSignIn) {
-    return 'Verification and document requirements are clear. Return to sign in and wait for assignment access.';
+function formatMobileAccessLabel(status?: string | null) {
+  if (status === 'linked') return 'Active';
+  if (status === 'inactive') return 'Inactive';
+  if (status === 'revoked') return 'Revoked';
+  return 'Not created';
+}
+
+function mobileAccessStatusTone(status?: string | null): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'linked') return 'success';
+  if (status === 'revoked') return 'danger';
+  if (status === 'inactive') return 'warning';
+  return 'neutral';
+}
+
+function recommendedAction(input: {
+  authenticationAccess: string;
+  mobileAccessStatus?: string | null;
+  identityStatus: string;
+  hasDocumentBlockers: boolean;
+  signInReady: boolean;
+}) {
+  if (!input.mobileAccessStatus || input.mobileAccessStatus === 'missing') {
+    return 'Set up your sign-in account first so you can access the app while the rest of your onboarding continues.';
   }
-  if (identityStatus === 'review_needed') {
+  if (input.authenticationAccess !== 'ready') {
+    return 'Your account exists, but access is not active yet. Refresh this screen or contact your operator if the restriction should already be cleared.';
+  }
+  if (input.signInReady && input.identityStatus !== 'verified') {
+    return 'You can sign in already, but you still need to finish identity verification before operational approval can move forward.';
+  }
+  if (input.signInReady && input.hasDocumentBlockers) {
+    return 'You can sign in already. Next, upload or replace the required documents so activation and assignment approval can continue.';
+  }
+  if (input.signInReady) {
+    return 'Your app access is ready. Sign in now, then monitor this checklist for any remaining operational restrictions.';
+  }
+  if (input.identityStatus === 'review_needed') {
     return 'Your verification is under manual review. Refresh this screen for updates or contact your fleet manager if the delay continues.';
   }
-  if (identityStatus !== 'verified') {
+  if (input.identityStatus !== 'verified') {
     return 'Complete the identity section and live selfie capture before operations can continue.';
   }
-  if (hasDocumentBlockers) {
+  if (input.hasDocumentBlockers) {
     return 'Upload or replace the required driver documents so the organisation can approve your readiness.';
   }
   return 'Refresh the checklist after your organisation updates your readiness state.';

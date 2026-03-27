@@ -62,7 +62,8 @@ export interface TenantContext {
   tenantId: TenantId;
   /** The subject claim from the JWT — identifies the user record. */
   userId: string;
-  businessEntityId: BusinessEntityId;
+  /** Optional for tenant-wide operators and access modes resolved from linked driver records. */
+  businessEntityId?: BusinessEntityId;
   /** Role string — use @mobility-os/authz-model TenantRole for typed checks. */
   role: string;
   /** Present when the user is scoped to a specific operating unit. */
@@ -73,6 +74,10 @@ export interface TenantContext {
   assignedVehicleIds?: VehicleId[];
   /** Optional per-user permission overrides merged with the base role grants. */
   customPermissions?: string[];
+  /** Present when this session is explicitly linked to a driver record. */
+  linkedDriverId?: string;
+  /** Optional mobile role derived from the tenant user linkage. */
+  mobileRole?: 'driver' | 'field_officer';
 }
 
 /**
@@ -82,31 +87,30 @@ export interface TenantContext {
 export function tenantContextFromJwt(payload: Record<string, unknown>): TenantContext {
   const { tenantId, sub, businessEntityId, role } = payload as Record<string, unknown>;
 
-  if (
-    typeof tenantId !== 'string' ||
-    typeof sub !== 'string' ||
-    typeof businessEntityId !== 'string' ||
-    typeof role !== 'string'
-  ) {
+  if (typeof tenantId !== 'string' || typeof sub !== 'string' || typeof role !== 'string') {
     throw new Error(
       'Invalid JWT payload: required claims missing or wrong type. ' +
-        'Expected: tenantId (string), sub (string), businessEntityId (string), role (string).',
+        'Expected: tenantId (string), sub (string), role (string), and optional businessEntityId (string).',
     );
   }
 
   const ctx: TenantContext = {
     tenantId: asTenantId(tenantId),
     userId: sub,
-    businessEntityId: asBusinessEntityId(businessEntityId),
     role,
   };
+
+  if (typeof businessEntityId === 'string') {
+    ctx.businessEntityId = asBusinessEntityId(businessEntityId);
+  }
 
   const { operatingUnitId } = payload as Record<string, unknown>;
   if (typeof operatingUnitId === 'string') {
     ctx.operatingUnitId = asOperatingUnitId(operatingUnitId);
   }
 
-  const { assignedFleetIds, assignedVehicleIds, customPermissions } = payload as Record<string, unknown>;
+  const { assignedFleetIds, assignedVehicleIds, customPermissions, linkedDriverId, mobileRole } =
+    payload as Record<string, unknown>;
   if (Array.isArray(assignedFleetIds)) {
     ctx.assignedFleetIds = assignedFleetIds
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -121,6 +125,12 @@ export function tenantContextFromJwt(payload: Record<string, unknown>): TenantCo
     ctx.customPermissions = customPermissions.filter(
       (value): value is string => typeof value === 'string' && value.trim().length > 0,
     );
+  }
+  if (typeof linkedDriverId === 'string' && linkedDriverId.trim().length > 0) {
+    ctx.linkedDriverId = linkedDriverId;
+  }
+  if (mobileRole === 'driver' || mobileRole === 'field_officer') {
+    ctx.mobileRole = mobileRole;
   }
 
   return ctx;

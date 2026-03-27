@@ -755,12 +755,18 @@ export class DriversService {
 
   async unlinkUserFromDriver(tenantId: string, driverId: string, userId: string): Promise<void> {
     const driver = await this.findOne(tenantId, driverId);
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: userId,
-        tenantId,
-      },
-    });
+    const [user, tenant] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          tenantId,
+        },
+      }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { country: true },
+      }),
+    ]);
 
     if (!user || user.driverId !== driver.id) {
       throw new NotFoundException('No linked mobile access account was found for this driver.');
@@ -778,7 +784,7 @@ export class DriversService {
             customPermissions: [],
           },
           {
-            preferredLanguage: getDefaultLanguageForCountry(driver.nationality),
+            preferredLanguage: getDefaultLanguageForCountry(tenant?.country),
             role: user.role,
             hasLinkedDriver: false,
           },

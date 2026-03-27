@@ -165,19 +165,25 @@ export class AssignmentsService {
     allowedVehicleStatuses: string[] = ['available'],
   ) {
     const [driver, vehicle] = await Promise.all([
-      this.prisma.driver.findUnique({ where: { id: dto.driverId } }),
+      this.driversService.findOne(tenantId, dto.driverId),
       this.prisma.vehicle.findUnique({ where: { id: dto.vehicleId } }),
     ]);
 
-    if (!driver) {
-      throw new NotFoundException(`Driver '${dto.driverId}' not found`);
-    }
     if (!vehicle) {
       throw new NotFoundException(`Vehicle '${dto.vehicleId}' not found`);
     }
 
     assertTenantOwnership(asTenantId(driver.tenantId), asTenantId(tenantId));
     assertTenantOwnership(asTenantId(vehicle.tenantId), asTenantId(tenantId));
+
+    if (
+      driver.businessEntityId !== vehicle.businessEntityId ||
+      driver.operatingUnitId !== vehicle.operatingUnitId
+    ) {
+      throw new BadRequestException(
+        'Driver and vehicle must belong to the same tenant hierarchy before assignment can be created.',
+      );
+    }
 
     if (driver.fleetId !== vehicle.fleetId) {
       throw new BadRequestException(
@@ -192,15 +198,46 @@ export class AssignmentsService {
       );
     }
 
-    if (driver.status !== 'active') {
+    if (driver.assignmentReadiness !== 'ready') {
       throw new BadRequestException(
-        `Driver '${dto.driverId}' must be active to create an assignment (current: '${driver.status}')`,
+        driver.assignmentReadinessReasons[0] ??
+          'This driver is not ready for assignment yet.',
       );
     }
 
-    if (!(await this.driversService.hasApprovedLicence(tenantId, driver.id))) {
+    const fleet = await this.prisma.fleet.findUnique({
+      where: { id: driver.fleetId },
+      include: {
+        operatingUnit: {
+          select: {
+            id: true,
+            businessEntityId: true,
+          },
+        },
+      },
+    });
+
+    if (!fleet) {
+      throw new NotFoundException(`Fleet '${driver.fleetId}' not found`);
+    }
+
+    assertTenantOwnership(asTenantId(fleet.tenantId), asTenantId(tenantId));
+
+    if (
+      driver.operatingUnitId !== fleet.operatingUnit.id ||
+      driver.businessEntityId !== fleet.operatingUnit.businessEntityId
+    ) {
       throw new BadRequestException(
-        'This driver cannot be assigned yet because no approved driver licence is on file.',
+        `Driver '${dto.driverId}' has hierarchy data that no longer matches fleet '${driver.fleetId}'. Repair the driver hierarchy before assignment.`,
+      );
+    }
+
+    if (
+      vehicle.operatingUnitId !== fleet.operatingUnit.id ||
+      vehicle.businessEntityId !== fleet.operatingUnit.businessEntityId
+    ) {
+      throw new BadRequestException(
+        `Vehicle '${dto.vehicleId}' has hierarchy data that no longer matches fleet '${driver.fleetId}'. Repair the vehicle hierarchy before assignment.`,
       );
     }
 
@@ -414,7 +451,11 @@ export class AssignmentsService {
     ]);
 
     const fleetByName = new Map(fleets.map((fleet) => [fleet.name.trim().toLowerCase(), fleet.id]));
-    const driverByPhone = new Map(drivers.map((driver) => [driver.phone.trim(), driver.id]));
+    const driverByPhone = new Map(
+      drivers.flatMap((driver) =>
+        driver.phone ? [[driver.phone.trim(), driver.id] as const] : [],
+      ),
+    );
     const vehicleByCode = new Map(
       vehicles.flatMap((vehicle) => {
         const entries: Array<[string, string]> = [];

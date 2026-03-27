@@ -99,6 +99,9 @@ export class AuthSessionResponseDto {
   linkedDriverIdentityStatus?: string | null;
 
   @ApiPropertyOptional()
+  accessMode?: 'tenant_user' | 'driver_mobile';
+
+  @ApiPropertyOptional()
   mobileRole?: 'driver' | 'field_officer' | null;
 
   @ApiPropertyOptional()

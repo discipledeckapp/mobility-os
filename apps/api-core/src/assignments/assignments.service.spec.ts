@@ -20,11 +20,14 @@ describe('AssignmentsService', () => {
     tenant: {
       findUnique: jest.fn(),
     },
+    fleet: {
+      findUnique: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
   const driversService = {
-    hasApprovedLicence: jest.fn(),
+    findOne: jest.fn(),
   };
 
   const vehicleRiskService = {
@@ -34,8 +37,16 @@ describe('AssignmentsService', () => {
   let service: AssignmentsService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    driversService.hasApprovedLicence.mockResolvedValue(true);
+    jest.resetAllMocks();
+    driversService.findOne.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      assignmentReadiness: 'ready',
+      assignmentReadinessReasons: [],
+    });
     vehicleRiskService.getVehicleRisk.mockResolvedValue({
       vehicleId: 'vehicle_1',
       score: 100,
@@ -45,6 +56,11 @@ describe('AssignmentsService', () => {
       evaluatedAt: new Date(),
     });
     prisma.tenant.findUnique.mockResolvedValue({ country: 'NG' });
+    prisma.fleet.findUnique.mockResolvedValue({
+      id: 'fleet_1',
+      tenantId: 'tenant_1',
+      operatingUnit: { id: 'ou_1', businessEntityId: 'be_1' },
+    });
     service = new AssignmentsService(
       prisma as never,
       driversService as never,
@@ -53,18 +69,12 @@ describe('AssignmentsService', () => {
   });
 
   it('creates an assignment in assigned status and reserves the vehicle', async () => {
-    prisma.driver.findUnique.mockResolvedValue({
-      id: 'driver_1',
-      tenantId: 'tenant_1',
-      fleetId: 'fleet_1',
-      operatingUnitId: 'ou_1',
-      businessEntityId: 'be_1',
-      status: 'active',
-    });
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'available',
     });
     prisma.assignment.findFirst.mockResolvedValue(null);
@@ -104,22 +114,24 @@ describe('AssignmentsService', () => {
     expect(result.status).toBe('assigned');
   });
 
-  it('blocks create when the driver has no approved licence on file', async () => {
-    prisma.driver.findUnique.mockResolvedValue({
+  it('blocks create when the driver is not assignment-ready', async () => {
+    driversService.findOne.mockResolvedValue({
       id: 'driver_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
       operatingUnitId: 'ou_1',
       businessEntityId: 'be_1',
-      status: 'active',
+      assignmentReadiness: 'not_ready',
+      assignmentReadinessReasons: ['An approved driver licence is required.'],
     });
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'available',
     });
-    driversService.hasApprovedLicence.mockResolvedValue(false);
 
     await expect(
       service.create('tenant_1', {
@@ -127,9 +139,7 @@ describe('AssignmentsService', () => {
         vehicleId: 'vehicle_1',
         remittanceAmountMinorUnits: 250000,
       }),
-    ).rejects.toThrow(
-      'This driver cannot be assigned yet because no approved driver licence is on file.',
-    );
+    ).rejects.toThrow('An approved driver licence is required.');
   });
 
   it('starts an assigned assignment and moves it to active', async () => {
@@ -142,18 +152,12 @@ describe('AssignmentsService', () => {
       status: 'assigned',
       notes: null,
     });
-    prisma.driver.findUnique.mockResolvedValue({
-      id: 'driver_1',
-      tenantId: 'tenant_1',
-      fleetId: 'fleet_1',
-      operatingUnitId: 'ou_1',
-      businessEntityId: 'be_1',
-      status: 'active',
-    });
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'assigned',
     });
     prisma.assignment.findFirst.mockResolvedValue(null);
@@ -193,17 +197,22 @@ describe('AssignmentsService', () => {
     );
   });
 
-  it('rejects create when the driver is not active', async () => {
-    prisma.driver.findUnique.mockResolvedValue({
+  it('rejects create when the driver is not assignment-ready', async () => {
+    driversService.findOne.mockResolvedValue({
       id: 'driver_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
-      status: 'inactive',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      assignmentReadiness: 'not_ready',
+      assignmentReadinessReasons: ['Driver status must be active before assignment can start.'],
     });
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'available',
     });
 
@@ -213,15 +222,17 @@ describe('AssignmentsService', () => {
         vehicleId: 'vehicle_1',
         remittanceAmountMinorUnits: 250000,
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toThrow('Driver status must be active before assignment can start.');
   });
 
   it('rejects create when the driver does not exist', async () => {
-    prisma.driver.findUnique.mockResolvedValue(null);
+    driversService.findOne.mockRejectedValue(new NotFoundException("Driver 'driver_1' not found"));
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'available',
     });
 
@@ -235,18 +246,12 @@ describe('AssignmentsService', () => {
   });
 
   it('rejects create when selected fleet does not match driver and vehicle fleet', async () => {
-    prisma.driver.findUnique.mockResolvedValue({
-      id: 'driver_1',
-      tenantId: 'tenant_1',
-      fleetId: 'fleet_1',
-      operatingUnitId: 'ou_1',
-      businessEntityId: 'be_1',
-      status: 'active',
-    });
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
       fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
       status: 'available',
     });
 
@@ -258,5 +263,35 @@ describe('AssignmentsService', () => {
         remittanceAmountMinorUnits: 250000,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects create when driver and vehicle tenant hierarchy do not match', async () => {
+    driversService.findOne.mockResolvedValueOnce({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_stale',
+      businessEntityId: 'be_stale',
+      assignmentReadiness: 'ready',
+      assignmentReadinessReasons: [],
+    });
+    prisma.vehicle.findUnique.mockResolvedValue({
+      id: 'vehicle_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      status: 'available',
+    });
+
+    await expect(
+      service.create('tenant_1', {
+        driverId: 'driver_1',
+        vehicleId: 'vehicle_1',
+        remittanceAmountMinorUnits: 250000,
+      }),
+    ).rejects.toThrow(
+      'Driver and vehicle must belong to the same tenant hierarchy before assignment can be created.',
+    );
   });
 });

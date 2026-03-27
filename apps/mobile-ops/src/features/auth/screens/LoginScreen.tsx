@@ -68,8 +68,8 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           <View style={styles.badgeRow}>
             <Badge label={formatStatusLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
             <Badge
-              label={formatStatusLabel(driver.assignmentReadiness ?? 'not_ready')}
-              tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
+              label={`Sign in ${formatStatusLabel(driver.authenticationAccess ?? 'not_ready')}`}
+              tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
             />
           </View>
           <Text style={styles.driverSummary}>{resumeSummary(driver)}</Text>
@@ -162,21 +162,15 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
 function resumeSummary(driver: {
   identityStatus: string;
+  authenticationAccess?: string;
   hasApprovedLicence: boolean;
   assignmentReadiness?: string;
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
 }) {
-  if (
-    driver.identityStatus === 'verified' &&
-    driver.hasApprovedLicence &&
-    driver.assignmentReadiness === 'ready' &&
-    driver.pendingDocumentCount === 0 &&
-    driver.rejectedDocumentCount === 0 &&
-    driver.expiredDocumentCount === 0
-  ) {
-    return 'Verification complete. Return here after your operator activates your profile.';
+  if (driver.authenticationAccess === 'ready') {
+    return 'Your sign-in account is ready. You can log in while activation and assignment checks continue separately.';
   }
   if (driver.identityStatus !== 'verified') {
     return 'Identity verification still needs attention.';
@@ -184,7 +178,10 @@ function resumeSummary(driver: {
   if (!driver.hasApprovedLicence) {
     return 'A valid approved licence is still missing.';
   }
-  return 'Open the readiness checklist to finish outstanding onboarding items.';
+  if (driver.assignmentReadiness !== 'ready') {
+    return 'Your account can still be set up before assignment readiness is complete. Open the readiness checklist for the remaining operational steps.';
+  }
+  return 'Open the readiness checklist to review access and operational readiness.';
 }
 
 const styles = StyleSheet.create({

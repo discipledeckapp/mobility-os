@@ -127,6 +127,6 @@ Use the exported builders there when notifications or external entry points need
 - Offline queue is action-based and does not yet provide a full local-first cache
 - No push notifications yet
 - No camera/selfie capture yet
-- Driver access requires an explicit organisation user-to-driver link
+- Driver mobile access uses a tenant user account linked explicitly to a driver record
 - Assignment cards can only show fields currently stored in `api-core`; pickup/drop-off is not modeled there yet
 - Crash reporting is backend-log based for now; Sentry-grade crash aggregation is still a follow-up
