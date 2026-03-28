@@ -8,21 +8,13 @@ import {
   TENANT_AUTH_COOKIE_NAME,
   TENANT_REFRESH_COOKIE_NAME,
   getSelfServiceContinuationPath,
+  getTenantAccessCookieOptions,
+  getTenantRefreshCookieOptions,
   parseTenantJwtPayload,
 } from '../../../lib/auth';
 
 export interface LoginActionState {
   error?: string;
-}
-
-function isNextRedirectError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'digest' in error &&
-    typeof (error as { digest?: unknown }).digest === 'string' &&
-    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
-  );
 }
 
 function getTrimmedValue(formData: FormData, key: string): string {
@@ -41,35 +33,32 @@ export async function loginAction(
     return { error: 'Email or phone number and password are required.' };
   }
 
+  let accessToken: string;
   try {
-    const { accessToken, refreshToken } = await loginTenantUser({
+    const { accessToken: nextAccessToken, refreshToken } = await loginTenantUser({
       identifier,
       password,
     });
+    accessToken = nextAccessToken;
     const cookieStore = await cookies();
-    cookieStore.set(TENANT_AUTH_COOKIE_NAME, accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
-    cookieStore.set(TENANT_REFRESH_COOKIE_NAME, refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
-
-    const continuationPath = getSelfServiceContinuationPath(parseTenantJwtPayload(accessToken));
-    redirect((continuationPath ?? '/') as Route);
+    cookieStore.set(
+      TENANT_AUTH_COOKIE_NAME,
+      accessToken,
+      getTenantAccessCookieOptions(accessToken),
+    );
+    cookieStore.set(
+      TENANT_REFRESH_COOKIE_NAME,
+      refreshToken,
+      getTenantRefreshCookieOptions(refreshToken),
+    );
   } catch (error) {
-    if (isNextRedirectError(error)) {
-      throw error;
-    }
     return {
       error: error instanceof Error ? error.message : 'Unable to log in at this time.',
     };
   }
+
+  const continuationPath = getSelfServiceContinuationPath(parseTenantJwtPayload(accessToken));
+  redirect((continuationPath ?? '/') as Route);
 }
 
 export async function logoutAction(): Promise<void> {

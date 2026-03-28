@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { VehiclesService } from '../vehicles/vehicles.service';
@@ -29,14 +30,12 @@ export class ReportsService {
     return this.vehicleRiskService.getInspectionComplianceRate(tenantId);
   }
 
-  private getRemittanceRisk(
-    input: {
-      assignmentStatus: string;
-      driverStatus?: string | null | undefined;
-      assignmentReadiness?: string | null | undefined;
-      vehicleStatus?: string | null | undefined;
-    },
-  ): { status: 'on_track' | 'at_risk'; reason: string | null } {
+  private getRemittanceRisk(input: {
+    assignmentStatus: string;
+    driverStatus?: string | null | undefined;
+    assignmentReadiness?: string | null | undefined;
+    vehicleStatus?: string | null | undefined;
+  }): { status: 'on_track' | 'at_risk'; reason: string | null } {
     if (['maintenance', 'inspection', 'inactive', 'retired'].includes(input.vehicleStatus ?? '')) {
       return {
         status: 'at_risk',
@@ -61,7 +60,14 @@ export class ReportsService {
       };
     }
 
-    if (!['pending_driver_confirmation', 'active'].includes(input.assignmentStatus)) {
+    if (input.assignmentStatus === 'pending_driver_confirmation') {
+      return {
+        status: 'at_risk',
+        reason: 'The driver must accept the assignment before remittance can begin.',
+      };
+    }
+
+    if (input.assignmentStatus !== 'active') {
       return {
         status: 'at_risk',
         reason: `Assignment status is '${input.assignmentStatus}'.`,
@@ -102,13 +108,18 @@ export class ReportsService {
       vehicleIds.length > 0
         ? { id: { in: scopedDriverIds.length > 0 ? scopedDriverIds : ['__none__'] } }
         : {};
-    const fleetScope =
-      fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {};
-    const vehicleScope =
-      vehicleIds.length > 0 ? { id: { in: vehicleIds } } : {};
-    const assignmentVehicleScope =
-      vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {};
-    const [wallets, walletEntries, remittances, driverStatusCounts, activeAssignments, driversPage, vehicles] = await Promise.all([
+    const fleetScope = fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {};
+    const vehicleScope = vehicleIds.length > 0 ? { id: { in: vehicleIds } } : {};
+    const assignmentVehicleScope = vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {};
+    const [
+      wallets,
+      walletEntries,
+      remittances,
+      driverStatusCounts,
+      activeAssignments,
+      driversPage,
+      vehicles,
+    ] = await Promise.all([
       this.prisma.operationalWallet.findMany({
         where: { tenantId },
         select: { id: true, currency: true },
@@ -225,6 +236,18 @@ export class ReportsService {
       vehicleIds.length > 0
         ? driversPage.data.filter((driver) => scopedDriverIds.includes(driver.id))
         : driversPage.data;
+    const activeVerified = drivers.filter(
+      (driver) => driver.status === 'active' && driver.identityStatus === 'verified',
+    ).length;
+    const activeUnverified = drivers.filter(
+      (driver) => driver.status === 'active' && driver.identityStatus !== 'verified',
+    ).length;
+    const onboardingPool = drivers.filter(
+      (driver) =>
+        driver.status !== 'active' ||
+        driver.identityStatus !== 'verified' ||
+        driver.activationReadiness !== 'ready',
+    ).length;
     const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
     const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
     let expectedTodayMinorUnits = 0;
@@ -234,7 +257,9 @@ export class ReportsService {
     const hirePurchaseAssignments = activeAssignments.filter(
       (assignment) => assignment.remittanceModel === 'hire_purchase',
     );
-    const hirePurchaseVehicleIds = hirePurchaseAssignments.map((assignment) => assignment.vehicleId);
+    const hirePurchaseVehicleIds = hirePurchaseAssignments.map(
+      (assignment) => assignment.vehicleId,
+    );
     const hirePurchaseAssignmentIds = hirePurchaseAssignments.map((assignment) => assignment.id);
     const [currentValuations, confirmedHirePurchaseRemittances] = await Promise.all([
       hirePurchaseVehicleIds.length
@@ -325,62 +350,62 @@ export class ReportsService {
 
     const accessibleVehicles = vehicles.map((vehicle) => vehicle.id);
     const accessibleVehicleSet = new Set(accessibleVehicles);
-    const [fleets, maintenanceEvents, incidents, maintenanceSchedules, teamMembers] = await Promise.all([
-      this.prisma.fleet.findMany({
-        where: {
-          tenantId,
-          ...(fleetIds.length > 0 ? { id: { in: fleetIds } } : {}),
-        },
-        select: { id: true, name: true },
-      }),
-      this.prisma.vehicleMaintenanceEvent.findMany({
-        where: {
-          tenantId,
-          ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
-        },
-        select: {
-          vehicleId: true,
-          costMinorUnits: true,
-          status: true,
-        },
-      }),
-      this.prisma.vehicleIncident.findMany({
-        where: {
-          tenantId,
-          ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
-        },
-        select: {
-          vehicleId: true,
-          estimatedCostMinorUnits: true,
-        },
-      }),
-      this.prisma.vehicleMaintenanceSchedule.findMany({
-        where: {
-          tenantId,
-          isActive: true,
-          ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
-        },
-        select: {
-          vehicleId: true,
-          nextDueAt: true,
-          nextDueOdometerKm: true,
-        },
-      }),
-      this.prisma.user.findMany({
-        where: {
-          tenantId,
-          isActive: true,
-          driverId: null,
-          role: 'FLEET_MANAGER',
-        },
-        select: {
-          id: true,
-          name: true,
-          settings: true,
-        },
-      }),
-    ]);
-    const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+    const [fleets, maintenanceEvents, incidents, maintenanceSchedules, teamMembers] =
+      await Promise.all([
+        this.prisma.fleet.findMany({
+          where: {
+            tenantId,
+            ...(fleetIds.length > 0 ? { id: { in: fleetIds } } : {}),
+          },
+          select: { id: true, name: true },
+        }),
+        this.prisma.vehicleMaintenanceEvent.findMany({
+          where: {
+            tenantId,
+            ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
+          },
+          select: {
+            vehicleId: true,
+            costMinorUnits: true,
+            status: true,
+          },
+        }),
+        this.prisma.vehicleIncident.findMany({
+          where: {
+            tenantId,
+            ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
+          },
+          select: {
+            vehicleId: true,
+            estimatedCostMinorUnits: true,
+          },
+        }),
+        this.prisma.vehicleMaintenanceSchedule.findMany({
+          where: {
+            tenantId,
+            isActive: true,
+            ...(accessibleVehicles.length > 0 ? { vehicleId: { in: accessibleVehicles } } : {}),
+          },
+          select: {
+            vehicleId: true,
+            nextDueAt: true,
+            nextDueOdometerKm: true,
+          },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            tenantId,
+            isActive: true,
+            driverId: null,
+            role: 'FLEET_MANAGER',
+          },
+          select: {
+            id: true,
+            name: true,
+            settings: true,
+          },
+        }),
+      ]);
     const fleetNames = new Map(fleets.map((fleet) => [fleet.id, fleet.name]));
     const todayIso = toIsoDate(new Date());
     const fleetPerformanceMap = new Map<
@@ -562,6 +587,9 @@ export class ReportsService {
       driverActivity: {
         active,
         inactive,
+        activeVerified,
+        activeUnverified,
+        onboardingPool,
       },
       remittanceProjection: {
         currency: walletCurrency,
@@ -582,9 +610,7 @@ export class ReportsService {
         ),
         completionRatio:
           ownershipTargetValueMinorUnits > 0
-            ? Number(
-                (ownershipRemittedValueMinorUnits / ownershipTargetValueMinorUnits).toFixed(4),
-              )
+            ? Number((ownershipRemittedValueMinorUnits / ownershipTargetValueMinorUnits).toFixed(4))
             : 0,
       },
       fleetPerformance,
@@ -592,55 +618,60 @@ export class ReportsService {
     };
   }
 
-  async getOperationalReadiness(tenantId: string, fleetIds: string[] = [], vehicleIds: string[] = []) {
+  async getOperationalReadiness(
+    tenantId: string,
+    fleetIds: string[] = [],
+    vehicleIds: string[] = [],
+  ) {
     const scopedDriverIds =
       vehicleIds.length > 0 ? await this.getDriverIdsFromVehicleScope(tenantId, vehicleIds) : [];
     const scopedDriverFilter =
       vehicleIds.length > 0
         ? { driverId: { in: scopedDriverIds.length > 0 ? scopedDriverIds : ['__none__'] } }
         : {};
-    const [driversPage, vehicles, latestAssignments, approvedLicences, openAssignments] = await Promise.all([
-      this.driversService.list(tenantId, {
-        limit: 200,
-        ...(fleetIds.length > 0 ? { fleetIds } : {}),
-      }),
-      this.prisma.vehicle.findMany({
-        where: {
-          tenantId,
-          ...(vehicleIds.length > 0 ? { id: { in: vehicleIds } } : {}),
-          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.assignment.findMany({
-        where: {
-          tenantId,
-          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
-          ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
-        },
-        orderBy: { startedAt: 'desc' },
-        select: { driverId: true, startedAt: true },
-      }),
-      this.prisma.driverDocument.findMany({
-        where: {
-          tenantId,
-          ...scopedDriverFilter,
-          documentType: 'drivers-license',
-          status: 'approved',
-        },
-        orderBy: [{ expiresAt: 'asc' }, { createdAt: 'desc' }],
-        select: { driverId: true, expiresAt: true },
-      }),
-      this.prisma.assignment.findMany({
-        where: {
-          tenantId,
-          ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
-          ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
-          status: { in: ['pending_driver_confirmation', 'active'] },
-        },
-        orderBy: { startedAt: 'desc' },
-      }),
-    ]);
+    const [driversPage, vehicles, latestAssignments, approvedLicences, openAssignments] =
+      await Promise.all([
+        this.driversService.list(tenantId, {
+          limit: 200,
+          ...(fleetIds.length > 0 ? { fleetIds } : {}),
+        }),
+        this.prisma.vehicle.findMany({
+          where: {
+            tenantId,
+            ...(vehicleIds.length > 0 ? { id: { in: vehicleIds } } : {}),
+            ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.assignment.findMany({
+          where: {
+            tenantId,
+            ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+            ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
+          },
+          orderBy: { startedAt: 'desc' },
+          select: { driverId: true, startedAt: true },
+        }),
+        this.prisma.driverDocument.findMany({
+          where: {
+            tenantId,
+            ...scopedDriverFilter,
+            documentType: 'drivers-license',
+            status: 'approved',
+          },
+          orderBy: [{ expiresAt: 'asc' }, { createdAt: 'desc' }],
+          select: { driverId: true, expiresAt: true },
+        }),
+        this.prisma.assignment.findMany({
+          where: {
+            tenantId,
+            ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
+            ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
+            status: { in: ['pending_driver_confirmation', 'active'] },
+          },
+          orderBy: { startedAt: 'desc' },
+        }),
+      ]);
     const drivers =
       vehicleIds.length > 0
         ? driversPage.data.filter((driver) => scopedDriverIds.includes(driver.id))
@@ -745,11 +776,11 @@ export class ReportsService {
           : null;
         const ownershipTargetMinorUnits =
           plannedAssignment?.remittanceModel === 'hire_purchase'
-            ? currentValuation?.amountMinorUnits ?? null
+            ? (currentValuation?.amountMinorUnits ?? null)
             : null;
         const ownershipRemittedMinorUnits =
           plannedAssignment?.remittanceModel === 'hire_purchase'
-            ? remittedByAssignmentId.get(plannedAssignment.id) ?? 0
+            ? (remittedByAssignmentId.get(plannedAssignment.id) ?? 0)
             : null;
         const ownershipOutstandingMinorUnits =
           ownershipTargetMinorUnits !== null && ownershipRemittedMinorUnits !== null
@@ -784,7 +815,11 @@ export class ReportsService {
     };
   }
 
-  async getLicenceExpiryReport(tenantId: string, fleetIds: string[] = [], vehicleIds: string[] = []) {
+  async getLicenceExpiryReport(
+    tenantId: string,
+    fleetIds: string[] = [],
+    vehicleIds: string[] = [],
+  ) {
     const scopedDriverIds =
       vehicleIds.length > 0 ? await this.getDriverIdsFromVehicleScope(tenantId, vehicleIds) : [];
     const scopedDriverIdFilter =
@@ -929,7 +964,10 @@ export class ReportsService {
     };
   }
 
-  private async getDriverIdsFromVehicleScope(tenantId: string, vehicleIds: string[]): Promise<string[]> {
+  private async getDriverIdsFromVehicleScope(
+    tenantId: string,
+    vehicleIds: string[],
+  ): Promise<string[]> {
     if (vehicleIds.length === 0) {
       return [];
     }

@@ -27,6 +27,10 @@ interface NormalizedIdentifier {
   countryCode?: string;
 }
 
+function clampPercentage(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 function isSuccessfulVerificationMessage(status?: string): boolean {
   if (!status) {
     return false;
@@ -182,6 +186,9 @@ export class MatchingService {
     const isVerifiedMatch =
       verification?.status === 'verified' &&
       isSuccessfulVerificationMessage(verification.verificationStatus);
+    const verificationMetadata = verification
+      ? this.buildVerificationMetadata(verification, liveness)
+      : undefined;
 
     if (verification?.enrichment || dto.providerVerification?.selfieImageUrl) {
       await this.personsService.applyIdentityEnrichment({
@@ -214,17 +221,13 @@ export class MatchingService {
               verificationStatus: verification.verificationStatus,
             }
           : {}),
-        ...(verification?.providerName
-          ? { verificationProvider: verification.providerName }
-          : {}),
+        ...(verification?.providerName ? { verificationProvider: verification.providerName } : {}),
         ...(dto.countryCode ? { verificationCountryCode: dto.countryCode } : {}),
         ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
         ...(dto.association?.localEntityType
           ? { localEntityType: dto.association.localEntityType }
           : {}),
-        ...(dto.association?.localEntityId
-          ? { localEntityId: dto.association.localEntityId }
-          : {}),
+        ...(dto.association?.localEntityId ? { localEntityId: dto.association.localEntityId } : {}),
         source: 'verified_enrollment',
         verificationConfidence: 0.95,
       });
@@ -261,8 +264,9 @@ export class MatchingService {
       personId,
       tenantId: dto.tenantId,
       roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
-      localEntityType: dto.association?.localEntityType ?? (dto.roleType ?? 'driver'),
-      localEntityId: dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
+      localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
+      localEntityId:
+        dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
       ...(dto.association?.businessEntityId
         ? { businessEntityId: dto.association.businessEntityId }
         : {}),
@@ -293,7 +297,7 @@ export class MatchingService {
         metadata: {
           tenantId: dto.tenantId,
           roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
-          localEntityType: dto.association?.localEntityType ?? (dto.roleType ?? 'driver'),
+          localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
           localEntityId:
             dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
           globalPersonCode,
@@ -345,11 +349,68 @@ export class MatchingService {
         ? { livenessConfidenceScore: liveness.confidenceScore }
         : {}),
       ...(liveness?.reason ? { livenessReason: liveness.reason } : {}),
-      ...(verification?.enrichment
-        ? { verifiedProfile: verification.enrichment }
-        : {}),
+      ...(verification?.enrichment ? { verifiedProfile: verification.enrichment } : {}),
+      ...(verificationMetadata ? { verificationMetadata } : {}),
       ...(crossRoleConflict ? { crossRoleConflict: true } : {}),
       ...intelligenceResult,
+    };
+  }
+
+  private buildVerificationMetadata(
+    verification: NonNullable<
+      Awaited<ReturnType<IdentityVerificationService['verifyForEnrollment']>>['verification']
+    >,
+    liveness?: {
+      attempted: boolean;
+      passed: boolean;
+      fallbackChain: string[];
+      providerName?: string;
+      confidenceScore?: number;
+      reason?: string;
+    },
+  ): {
+    validity?: 'valid' | 'invalid' | 'unknown';
+    issueDate?: string;
+    expiryDate?: string;
+    portraitAvailable?: boolean;
+    matchScore?: number;
+    riskScore?: number;
+  } {
+    const metadata = verification.documentMetadata;
+    const matchScore =
+      verification.status === 'verified'
+        ? clampPercentage((liveness?.confidenceScore ?? 0.95) * 100)
+        : verification.status === 'no_match'
+          ? 18
+          : verification.status === 'provider_error' ||
+              verification.status === 'provider_unavailable'
+            ? 40
+            : 30;
+    const riskScore =
+      liveness?.passed === false
+        ? 88
+        : verification.status === 'verified'
+          ? metadata?.validity === 'invalid'
+            ? 72
+            : metadata?.validity === 'unknown'
+              ? 34
+              : 14
+          : verification.status === 'no_match'
+            ? 82
+            : verification.status === 'provider_error' ||
+                verification.status === 'provider_unavailable'
+              ? 57
+              : 45;
+
+    return {
+      ...(metadata?.validity ? { validity: metadata.validity } : {}),
+      ...(metadata?.issueDate ? { issueDate: metadata.issueDate } : {}),
+      ...(metadata?.expiryDate ? { expiryDate: metadata.expiryDate } : {}),
+      ...(metadata?.portraitAvailable !== undefined
+        ? { portraitAvailable: metadata.portraitAvailable }
+        : {}),
+      matchScore,
+      riskScore,
     };
   }
 

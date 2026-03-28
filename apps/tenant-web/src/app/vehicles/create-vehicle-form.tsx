@@ -197,12 +197,11 @@ export function CreateVehicleForm({
   const selectedModel = modelOptions.find((model) => model.id === selectedModelId);
   const resolvedModelName = useManualModel
     ? manualModelName.trim()
-    : selectedModel?.name ?? decodedModelDisplay ?? '';
+    : (selectedModel?.name ?? decodedModelDisplay ?? '');
   const saveBlockingReasons = [
     !hasFleetOptions ? 'No active fleet is available.' : null,
     hasFleetOptions && !fleetId ? 'Select a fleet.' : null,
     !selectedMaker ? 'Select a maker.' : null,
-    !resolvedModelName ? 'Select a model or enter one manually.' : null,
     modelsLoading ? 'Vehicle models are still loading.' : null,
     isPending ? 'Vehicle save is already in progress.' : null,
   ].filter(Boolean) as string[];
@@ -471,7 +470,9 @@ export function CreateVehicleForm({
 
       if (!response.ok || !payload || !('id' in payload)) {
         throw new Error(
-          payload && !('id' in payload) && payload.message ? payload.message : 'Unable to decode VIN.',
+          payload && !('id' in payload) && payload.message
+            ? payload.message
+            : 'Unable to decode VIN.',
         );
       }
 
@@ -804,8 +805,8 @@ export function CreateVehicleForm({
                 : useManualModel
                   ? 'Manual model entry is enabled for this save.'
                   : hasModelOptions
-                  ? 'Search models for the selected maker.'
-                  : 'No models are available for the selected maker yet. Enter one manually or add it to the catalog.'}
+                    ? 'Search models for the selected maker. You can still save now and update the model later.'
+                    : 'No models are available for the selected maker yet. Enter one manually, add it to the catalog, or continue and update the model later.'}
             </HelperDisclosure>
             {useManualModel ? (
               <div className="space-y-2">
@@ -818,11 +819,7 @@ export function CreateVehicleForm({
                 />
               </div>
             ) : null}
-            <input
-              name="model"
-              type="hidden"
-              value={resolvedModelName}
-            />
+            <input name="model" type="hidden" value={resolvedModelName} />
             <Button
               disabled={!selectedMakerId}
               onClick={() => {
@@ -958,8 +955,8 @@ export function CreateVehicleForm({
             )}
             {!useCustomColor ? (
               <HelperDisclosure summary="Color help">
-                Search common vehicle colours, or switch to a one-off custom color if the list
-                does not contain it.
+                Search common vehicle colours, or switch to a one-off custom color if the list does
+                not contain it.
               </HelperDisclosure>
             ) : null}
             <div className="flex gap-2">
@@ -1015,7 +1012,7 @@ export function CreateVehicleForm({
               value={acquisitionCost}
             />
             {(() => {
-              const v = parseFloat(acquisitionCost.replace(/,/g, ''));
+              const v = Number.parseFloat(acquisitionCost.replace(/,/g, ''));
               return Number.isFinite(v) && v > 0 ? (
                 <Text tone="muted">
                   {new Intl.NumberFormat('en-NG', {
@@ -1040,7 +1037,9 @@ export function CreateVehicleForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currentEstimatedValue">Current estimated value{tenantCurrencyCode ? ` (${tenantCurrencyCode})` : ''}</Label>
+            <Label htmlFor="currentEstimatedValue">
+              Current estimated value{tenantCurrencyCode ? ` (${tenantCurrencyCode})` : ''}
+            </Label>
             <Input
               id="currentEstimatedValue"
               inputMode="decimal"
@@ -1050,7 +1049,7 @@ export function CreateVehicleForm({
               value={currentEstimatedValue}
             />
             {(() => {
-              const v = parseFloat(currentEstimatedValue.replace(/,/g, ''));
+              const v = Number.parseFloat(currentEstimatedValue.replace(/,/g, ''));
               return Number.isFinite(v) && v > 0 ? (
                 <Text tone="muted">
                   {new Intl.NumberFormat('en-NG', {

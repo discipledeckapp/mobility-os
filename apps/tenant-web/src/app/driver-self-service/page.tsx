@@ -1,17 +1,13 @@
 'use client';
 
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Heading,
-  Text,
-} from '@mobility-os/ui';
+import { getDocumentType } from '@mobility-os/domain-config';
+import { Button, Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
+  type DocumentVerificationRecord,
+  type DriverRecord,
+  type OnboardingStepRecord,
   createDriverSelfServiceAccount,
   getDriverOnboardingStep,
   getDriverSelfServiceContext,
@@ -21,9 +17,6 @@ import {
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
   verifyDriverDocumentId,
-  type DocumentVerificationRecord,
-  type DriverRecord,
-  type OnboardingStepRecord,
 } from '../../lib/api-core';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 
@@ -70,8 +63,8 @@ function OtpEntryForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Text tone="muted">
-        Enter the 6-character code from your onboarding email to continue,
-        or click the link in the email directly.
+        Enter the 6-character code from your onboarding email to continue, or click the link in the
+        email directly.
       </Text>
       <input
         type="text"
@@ -114,9 +107,7 @@ function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }
       onSuccess(result.token);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Sign in failed. Check your details and try again.',
+        err instanceof Error ? err.message : 'Sign in failed. Check your details and try again.',
       );
     } finally {
       setLoading(false);
@@ -580,6 +571,7 @@ function PaymentStep({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const paymentResumeStorageKey = `mobiris_driver_kyc_resume_${driver.id}`;
 
   // Do not re-prompt payment if the driver has already paid.
   const alreadyPaid =
@@ -593,11 +585,16 @@ function PaymentStep({
     try {
       // Capture consent before redirecting to payment gateway.
       await recordDriverSelfServiceVerificationConsent(token);
-      const checkout = await initiateDriverKycCheckout(
-        token,
-        'paystack',
-        `${window.location.origin}/driver-self-service?token=${encodeURIComponent(token)}`,
+      const fallbackReturnUrl = `${window.location.origin}/driver-self-service?token=${encodeURIComponent(token)}`;
+      window.sessionStorage.setItem(
+        paymentResumeStorageKey,
+        JSON.stringify({
+          token,
+          returnUrl: fallbackReturnUrl,
+          driverId: driver.id,
+        }),
       );
+      const checkout = await initiateDriverKycCheckout(token, 'paystack', fallbackReturnUrl);
       window.location.href = checkout.checkoutUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to start payment right now.');
@@ -654,11 +651,21 @@ function PaymentStep({
             <Text>Required amount: {amount}</Text>
             <Text tone="muted" className="text-xs">
               By paying you agree to the{' '}
-              <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
+              <a
+                className="font-semibold text-[var(--mobiris-primary)] underline"
+                href="/terms"
+                rel="noreferrer"
+                target="_blank"
+              >
                 Terms of Use
               </a>{' '}
               and{' '}
-              <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
+              <a
+                className="font-semibold text-[var(--mobiris-primary)] underline"
+                href="/privacy"
+                rel="noreferrer"
+                target="_blank"
+              >
                 Privacy Policy
               </a>
               .
@@ -693,6 +700,19 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   BVN: 'Bank Verification Number (BVN)',
   BANK_ID: 'Bank Verification Number (BVN)',
 };
+
+function getDocumentLabel(documentType: string): string {
+  const normalized = documentType.trim();
+  if (normalized.includes('-')) {
+    try {
+      return getDocumentType(normalized).name;
+    } catch {
+      return normalized;
+    }
+  }
+
+  return DOCUMENT_TYPE_LABELS[normalized.toUpperCase()] ?? normalized;
+}
 
 function DocumentVerificationStep({
   token,
@@ -729,9 +749,9 @@ function DocumentVerificationStep({
         documentType: selectedDocType,
         idNumber: idNumber.trim(),
         countryCode,
-        firstName: driver.firstName ?? undefined,
-        lastName: driver.lastName ?? undefined,
-        dateOfBirth: driver.dateOfBirth ?? undefined,
+        ...(driver.firstName ? { firstName: driver.firstName } : {}),
+        ...(driver.lastName ? { lastName: driver.lastName } : {}),
+        ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
       });
       setLastResult(result);
       if (result.status === 'verified') {
@@ -739,7 +759,9 @@ function DocumentVerificationStep({
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Verification could not be completed. Please try again.',
+        err instanceof Error
+          ? err.message
+          : 'Verification could not be completed. Please try again.',
       );
     } finally {
       setLoading(false);
@@ -753,16 +775,13 @@ function DocumentVerificationStep({
       </CardHeader>
       <CardContent className="space-y-4">
         <Text tone="muted">
-          Verify your identity documents using your document number. No upload is required —
-          we verify directly with the issuing authority.
+          Verify your identity documents using your document number. No upload is required — we
+          verify directly with the issuing authority.
         </Text>
 
         {verifiedTypes.size > 0 ? (
           <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
-            Already verified:{' '}
-            {[...verifiedTypes]
-              .map((t) => DOCUMENT_TYPE_LABELS[t.toUpperCase()] ?? t)
-              .join(', ')}
+            Already verified: {[...verifiedTypes].map((type) => getDocumentLabel(type)).join(', ')}
           </div>
         ) : null}
 
@@ -770,34 +789,42 @@ function DocumentVerificationStep({
           <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
             {lastResult.status === 'manual_review'
               ? 'Your document has been submitted for manual review. You may continue while the review is in progress.'
-              : lastResult.failureReason ??
-                'The document number could not be verified automatically. Check the number and try again, or contact your organisation.'}
+              : (lastResult.failureReason ??
+                'The document number could not be verified automatically. Check the number and try again, or contact your organisation.')}
           </div>
         ) : null}
 
         {pendingTypes.length > 0 ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                className="mb-1 block text-sm font-medium text-slate-700"
+                htmlFor="driver-document-type"
+              >
                 Document type
               </label>
               <select
+                id="driver-document-type"
                 value={selectedDocType}
                 onChange={(e) => setSelectedDocType(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 {pendingTypes.map((type) => (
                   <option key={type} value={type}>
-                    {DOCUMENT_TYPE_LABELS[type.toUpperCase()] ?? type}
+                    {getDocumentLabel(type)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                className="mb-1 block text-sm font-medium text-slate-700"
+                htmlFor="driver-document-number"
+              >
                 Document number
               </label>
               <input
+                id="driver-document-number"
                 type="text"
                 value={idNumber}
                 onChange={(e) => setIdNumber(e.target.value)}
@@ -867,7 +894,7 @@ function CompletionStep({ driver }: { driver: DriverRecord }) {
               ? 'Your verification has been submitted and is now under review.'
               : driver.identityStatus === 'failed'
                 ? 'We could not complete verification yet. Review the required steps and try again.'
-                : 'Your verification has been submitted successfully.'}
+                : 'Your verification is complete.'}
         </Text>
         {!driver.hasMobileAccess ? (
           <Text tone="muted">
@@ -930,8 +957,8 @@ function DriverVerificationFlow({ token }: { token: string }) {
             </CardHeader>
             <CardContent className="space-y-3">
               <Text tone="muted">
-                We could not load your onboarding details. Please try the link in your email
-                again, or sign in if you already have an account.
+                We could not load your onboarding details. Please try the link in your email again,
+                or sign in if you already have an account.
               </Text>
               <a
                 href="/driver-self-service"
@@ -950,7 +977,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const driverDisplayName =
     driver.firstName && driver.lastName
       ? `${driver.firstName} ${driver.lastName}`
-      : driver.email ?? 'Welcome';
+      : (driver.email ?? 'Welcome');
   const organisationName = driver.organisationName ?? 'your organisation';
 
   return (
@@ -1038,7 +1065,11 @@ function DriverVerificationFlow({ token }: { token: string }) {
         ) : null}
 
         {currentStep === 'manual_review' ? (
-          <ManualReviewStep identityStatus={onboardingStep.identityStatus} />
+          <ManualReviewStep
+            {...(onboardingStep.identityStatus
+              ? { identityStatus: onboardingStep.identityStatus }
+              : {})}
+          />
         ) : null}
 
         {currentStep === 'complete' ? <CompletionStep driver={driver} /> : null}

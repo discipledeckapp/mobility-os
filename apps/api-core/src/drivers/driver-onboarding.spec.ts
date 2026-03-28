@@ -15,11 +15,7 @@
  *  - Backend-driven onboarding step routing
  */
 
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 
 // ---------------------------------------------------------------------------
@@ -158,6 +154,14 @@ function makePrisma() {
       create: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
     },
+    operationalWallet: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'wallet_1' }),
+    },
+    operationalWalletEntry: {
+      groupBy: jest
+        .fn()
+        .mockResolvedValue([{ type: 'credit', _sum: { amountMinorUnits: 1_000_000 } }]),
+    },
     $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn().mockImplementation(async (ops: unknown[]) => Promise.all(ops)),
   };
@@ -173,11 +177,23 @@ function makeIntelligenceClient() {
   };
 }
 
-function buildService(prisma: ReturnType<typeof makePrisma>, intelligenceClient: ReturnType<typeof makeIntelligenceClient>) {
-  const jwtService = { signAsync: jest.fn(), verifyAsync: jest.fn() };
+function buildService(
+  prisma: ReturnType<typeof makePrisma>,
+  intelligenceClient: ReturnType<typeof makeIntelligenceClient>,
+) {
+  const jwtService = {
+    signAsync: jest.fn(),
+    verifyAsync: jest.fn().mockResolvedValue({
+      purpose: 'driver_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    }),
+  };
   const authEmailService = { sendDriverSelfServiceVerificationEmail: jest.fn() };
   const documentStorageService = {
-    uploadFile: jest.fn().mockResolvedValue({ storageKey: 'key', storageUrl: 'https://example.com' }),
+    uploadFile: jest
+      .fn()
+      .mockResolvedValue({ storageKey: 'key', storageUrl: 'https://example.com' }),
     readFile: jest.fn(),
     deleteFile: jest.fn(),
   };
@@ -234,7 +250,10 @@ describe('Driver onboarding — OTP exchange (invited first-time driver)', () =>
     };
     prisma.selfServiceOtp.findUnique.mockResolvedValue(otp);
     prisma.selfServiceOtp.update.mockResolvedValue({ ...otp, usedAt: new Date() });
-    const jwtService = { signAsync: jest.fn().mockResolvedValue('signed.token'), verifyAsync: jest.fn() };
+    const jwtService = {
+      signAsync: jest.fn().mockResolvedValue('signed.token'),
+      verifyAsync: jest.fn(),
+    };
     service = new DriversService(
       prisma as never,
       makeIntelligenceClient() as never,
@@ -244,7 +263,11 @@ describe('Driver onboarding — OTP exchange (invited first-time driver)', () =>
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -302,14 +325,15 @@ describe('Driver onboarding — returning driver password login', () => {
 
   it('issues a self-service token for a valid email+password combination', async () => {
     // Use a real password hash so verifyPassword passes.
-    const { hashPassword } = await import('./drivers.service').then(() =>
-      import('../auth/password-utils'),
+    const { hashPassword } = await import('./drivers.service').then(
+      () => import('../auth/password-utils'),
     );
     const hash = hashPassword('correct-horse-battery');
-    prisma.user.findFirst.mockResolvedValue(
-      makeLinkedUser({ passwordHash: hash }),
-    );
-    const jwtService = { signAsync: jest.fn().mockResolvedValue('driver.jwt'), verifyAsync: jest.fn() };
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser({ passwordHash: hash }));
+    const jwtService = {
+      signAsync: jest.fn().mockResolvedValue('driver.jwt'),
+      verifyAsync: jest.fn(),
+    };
     service = new DriversService(
       prisma as never,
       makeIntelligenceClient() as never,
@@ -319,7 +343,11 @@ describe('Driver onboarding — returning driver password login', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -345,7 +373,11 @@ describe('Driver onboarding — returning driver password login', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -369,7 +401,11 @@ describe('Driver onboarding — returning driver password login', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -392,6 +428,7 @@ describe('Driver onboarding — consent creation', () => {
     const jwtService = {
       signAsync: jest.fn(),
       verifyAsync: jest.fn().mockResolvedValue({
+        purpose: 'driver_self_service',
         tenantId: 'tenant_1',
         driverId: 'driver_1',
       }),
@@ -405,7 +442,11 @@ describe('Driver onboarding — consent creation', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
   });
@@ -472,6 +513,7 @@ describe('Driver onboarding — payment decision logic', () => {
     const jwtService = {
       signAsync: jest.fn(),
       verifyAsync: jest.fn().mockResolvedValue({
+        purpose: 'driver_self_service',
         tenantId: 'tenant_1',
         driverId: 'driver_1',
       }),
@@ -485,14 +527,23 @@ describe('Driver onboarding — payment decision logic', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
   }
 
   it('does not re-prompt payment when entitlement is already paid', async () => {
     setup({ operations: { driverPaysKyc: true } });
-    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        kycPaymentReference: 'ref_paid_1',
+        kycPaymentVerifiedAt: new Date(),
+      }),
+    );
     // Entitlement already in 'paid' status
     prisma.verificationEntitlement.findFirst.mockResolvedValue(
       makeEntitlement({ status: 'paid', paidAt: new Date() }),
@@ -552,6 +603,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     const jwtService = {
       signAsync: jest.fn(),
       verifyAsync: jest.fn().mockResolvedValue({
+        purpose: 'driver_self_service',
         tenantId: 'tenant_1',
         driverId: 'driver_1',
       }),
@@ -565,7 +617,11 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
   });
@@ -573,7 +629,10 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
   function setupDriver(entitlementStatus = 'paid') {
     prisma.driver.findUnique.mockResolvedValue(makeDriver());
     prisma.verificationEntitlement.findFirst.mockResolvedValue(
-      makeEntitlement({ status: entitlementStatus, paidAt: entitlementStatus === 'paid' ? new Date() : null }),
+      makeEntitlement({
+        status: entitlementStatus,
+        paidAt: entitlementStatus === 'paid' ? new Date() : null,
+      }),
     );
     prisma.verificationAttempt.findFirst.mockResolvedValue(null);
     prisma.verificationAttempt.count.mockResolvedValue(0);
@@ -585,7 +644,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       id: 'docver_1',
       tenantId: 'tenant_1',
       driverId: 'driver_1',
-      documentType: 'NATIONAL_ID',
+      documentType: 'national-id',
       idNumber: '12345678901',
       countryCode: 'NG',
       status: 'pending',
@@ -615,6 +674,11 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       decision: 'enrolled',
       isVerifiedMatch: true,
       providerName: 'youverify',
+      verificationMetadata: {
+        validity: 'valid',
+        matchScore: 95,
+        riskScore: 14,
+      },
       verifiedProfile: {
         fullName: 'Ada Okonkwo',
         dateOfBirth: '1990-01-15',
@@ -632,7 +696,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     expect(prisma.driverDocumentVerification.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          documentType: 'NATIONAL_ID',
+          documentType: 'national-id',
           idNumber: '12345678901',
           status: 'pending',
         }),
@@ -668,6 +732,58 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     expect(result.status).toBe('manual_review');
   });
 
+  it('normalizes driver licence verification to a slug and fails invalid licence records', async () => {
+    setupDriver('paid');
+    prisma.driverDocumentVerification.create.mockResolvedValue({
+      id: 'docver_licence_1',
+      documentType: 'drivers-license',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.driverDocumentVerification.update.mockResolvedValue({
+      id: 'docver_licence_1',
+      documentType: 'drivers-license',
+      status: 'failed',
+    });
+
+    intelligenceClient.verifyDocumentIdentifier.mockResolvedValue({
+      decision: 'matched',
+      isVerifiedMatch: true,
+      providerName: 'youverify',
+      verificationMetadata: {
+        validity: 'invalid',
+        issueDate: '2022-01-14',
+        expiryDate: '2024-01-14',
+        portraitAvailable: true,
+        matchScore: 91,
+        riskScore: 72,
+      },
+    });
+
+    const result = await service.verifyDocumentIdFromSelfService(VALID_TOKEN, {
+      documentType: 'drivers-license',
+      idNumber: 'DL-12345',
+      countryCode: 'NG',
+    });
+
+    expect(result.documentType).toBe('drivers-license');
+    expect(result.status).toBe('failed');
+    expect(result.providerValidity).toBe('invalid');
+    expect(prisma.driverDocumentVerification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          documentType: 'drivers-license',
+        }),
+      }),
+    );
+    expect(intelligenceClient.verifyDocumentIdentifier).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identifierType: 'DRIVERS_LICENSE',
+      }),
+    );
+  });
+
   it('routes to manual_review (not a crash) when provider is unavailable', async () => {
     setupDriver('paid');
     prisma.driverDocumentVerification.create.mockResolvedValue({
@@ -681,9 +797,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       status: 'manual_review',
     });
 
-    intelligenceClient.verifyDocumentIdentifier.mockRejectedValue(
-      new Error('Service unavailable'),
-    );
+    intelligenceClient.verifyDocumentIdentifier.mockRejectedValue(new Error('Service unavailable'));
 
     const result = await service.verifyDocumentIdFromSelfService(VALID_TOKEN, {
       documentType: 'NATIONAL_ID',
@@ -726,7 +840,11 @@ describe('Driver onboarding — onboarding step state machine', () => {
 
     const jwtService = {
       signAsync: jest.fn(),
-      verifyAsync: jest.fn().mockResolvedValue({ tenantId: 'tenant_1', driverId: 'driver_1' }),
+      verifyAsync: jest.fn().mockResolvedValue({
+        purpose: 'driver_self_service',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+      }),
     };
     service = new DriversService(
       prisma as never,
@@ -737,7 +855,11 @@ describe('Driver onboarding — onboarding step state machine', () => {
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
-      { evaluateDriverPolicies: jest.fn().mockResolvedValue([]), listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()), applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r) } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
   }
@@ -789,14 +911,26 @@ describe('Driver onboarding — onboarding step state machine', () => {
   });
 
   it('returns complete when all requirements are met and driver is verified', async () => {
-    setup({ operations: { driverPaysKyc: true, requireIdentityVerificationForActivation: true, requiredDriverDocumentSlugs: [] } });
+    setup({
+      operations: {
+        driverPaysKyc: true,
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
     prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'verified' }));
     prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
     prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
     prisma.verificationEntitlement.findFirst.mockResolvedValue(
       makeEntitlement({ status: 'paid', paidAt: new Date() }),
     );
-    prisma.verificationAttempt.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     prisma.verificationAttempt.count.mockResolvedValue(0);
     prisma.driverDocumentVerification.findMany.mockResolvedValue([]);
 

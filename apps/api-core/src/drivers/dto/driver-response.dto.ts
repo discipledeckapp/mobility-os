@@ -37,18 +37,22 @@ export class DriverResponseDto {
   email?: string | null;
 
   @ApiPropertyOptional({
-    description:
-      'Display name of the tenant or branded organisation running this onboarding flow.',
+    description: 'Display name of the tenant or branded organisation running this onboarding flow.',
   })
   organisationName?: string | null;
 
-  @ApiPropertyOptional({ description: 'Proxied URL to the driver portrait image, populated when a portrait has been captured.' })
+  @ApiPropertyOptional({
+    description:
+      'Proxied URL to the driver portrait image, populated when a portrait has been captured.',
+  })
   photoUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Stored object URL for the captured live-selfie image.' })
   selfieImageUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Stored object URL for the provider or government-record identity image.' })
+  @ApiPropertyOptional({
+    description: 'Stored object URL for the provider or government-record identity image.',
+  })
   providerImageUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
@@ -130,7 +134,8 @@ export class DriverResponseDto {
   duplicateIdentityFlag?: boolean | null;
 
   @ApiPropertyOptional({
-    description: 'True when the linked canonical identity indicates tenant records require reverification.',
+    description:
+      'True when the linked canonical identity indicates tenant records require reverification.',
   })
   reverificationRequired?: boolean | null;
 
@@ -215,14 +220,7 @@ export class DriverResponseDto {
     | 'cancelled';
 
   @ApiPropertyOptional()
-  verificationState?:
-    | 'not_started'
-    | 'in_progress'
-    | 'provider_called'
-    | 'success'
-    | 'failed'
-    | 'abandoned'
-    | 'blocked';
+  verificationState?: 'not_started' | 'in_progress' | 'provider_called' | 'success' | 'failed';
 
   @ApiPropertyOptional()
   verificationEntitlementCode?: string | null;

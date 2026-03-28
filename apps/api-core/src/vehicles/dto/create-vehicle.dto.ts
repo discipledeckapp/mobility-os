@@ -35,10 +35,9 @@ export class CreateVehicleDto {
   @Length(1, 60)
   make!: string;
 
-  @ApiProperty({ example: 'CB150R' })
+  @ApiPropertyOptional({ example: 'CB150R' })
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 60)
+  @Length(0, 60)
   model!: string;
 
   @ApiPropertyOptional({ example: 'EX-V6' })
@@ -74,7 +73,10 @@ export class CreateVehicleDto {
   @Length(1, 50)
   vin?: string;
 
-  @ApiPropertyOptional({ description: 'Latest known odometer reading in kilometres', example: 125430 })
+  @ApiPropertyOptional({
+    description: 'Latest known odometer reading in kilometres',
+    example: 125430,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

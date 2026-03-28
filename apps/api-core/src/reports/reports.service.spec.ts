@@ -14,7 +14,22 @@ describe('ReportsService', () => {
     vehicle: {
       findMany: jest.fn(),
     },
+    fleet: {
+      findMany: jest.fn(),
+    },
     assignment: {
+      findMany: jest.fn(),
+    },
+    vehicleMaintenanceEvent: {
+      findMany: jest.fn(),
+    },
+    vehicleIncident: {
+      findMany: jest.fn(),
+    },
+    vehicleMaintenanceSchedule: {
+      findMany: jest.fn(),
+    },
+    user: {
       findMany: jest.fn(),
     },
     driverDocument: {
@@ -90,6 +105,7 @@ describe('ReportsService', () => {
     prisma.driverDocument.findMany.mockResolvedValue([
       { driverId: 'driver_1', expiresAt: new Date('2026-04-30T00:00:00.000Z') },
     ]);
+    prisma.remittance.findMany.mockResolvedValue([]);
     vehiclesService.findOneDetailed.mockResolvedValue({
       id: 'vehicle_1',
       fleetId: 'fleet_1',
@@ -184,9 +200,32 @@ describe('ReportsService', () => {
   });
 
   it('builds overview metrics for wallet, remittance, and driver activity', async () => {
-    prisma.operationalWallet.findMany.mockResolvedValue([
-      { id: 'wallet_1', currency: 'NGN' },
-    ]);
+    driversService.list.mockResolvedValue({
+      data: [
+        {
+          id: 'driver_1',
+          status: 'active',
+          identityStatus: 'verified',
+          activationReadiness: 'ready',
+        },
+        {
+          id: 'driver_2',
+          status: 'active',
+          identityStatus: 'review_needed',
+          activationReadiness: 'partially_ready',
+        },
+        {
+          id: 'driver_3',
+          status: 'inactive',
+          identityStatus: 'unverified',
+          activationReadiness: 'not_ready',
+        },
+      ],
+      total: 3,
+      page: 1,
+      limit: 200,
+    });
+    prisma.operationalWallet.findMany.mockResolvedValue([{ id: 'wallet_1', currency: 'NGN' }]);
     prisma.operationalWalletEntry.findMany.mockResolvedValue([
       {
         walletId: 'wallet_1',
@@ -209,6 +248,13 @@ describe('ReportsService', () => {
         createdAt: new Date(),
       },
     ]);
+    prisma.fleet.findMany.mockResolvedValue([]);
+    prisma.vehicleMaintenanceEvent.findMany.mockResolvedValue([]);
+    prisma.vehicleIncident.findMany.mockResolvedValue([]);
+    prisma.vehicleMaintenanceSchedule.findMany.mockResolvedValue([]);
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.assignment.findMany.mockResolvedValue([]);
+    prisma.vehicle.findMany.mockResolvedValue([]);
     prisma.driver.groupBy.mockResolvedValue([
       { status: 'active', _count: { _all: 4 } },
       { status: 'inactive', _count: { _all: 2 } },
@@ -228,6 +274,9 @@ describe('ReportsService', () => {
     expect(result.driverActivity).toEqual({
       active: 4,
       inactive: 3,
+      activeVerified: 1,
+      activeUnverified: 1,
+      onboardingPool: 2,
     });
   });
 });

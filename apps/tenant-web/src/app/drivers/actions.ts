@@ -1,33 +1,33 @@
 'use server';
 
+import { getCountryConfig, isCountrySupported } from '@mobility-os/domain-config';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { getCountryConfig, isCountrySupported } from '@mobility-os/domain-config';
 import {
-  createOrUpdateDriverGuarantor,
-  sendGuarantorSelfServiceLink,
+  type CreateDriverInput,
+  type DriverIdentityResolutionResult,
+  type DriverLivenessSessionRecord,
+  type DriverSelfServiceDeliveryRecord,
   createDriver,
-  importDriversCsv,
   createDriverLivenessSession,
   createDriverSelfServiceLivenessSession,
   createGuarantorSelfServiceLivenessSession,
+  createOrUpdateDriverGuarantor,
   getTenantBillingSummary,
   getTenantMe,
+  importDriversCsv,
   linkDriverMobileAccessUser,
   removeDriverGuarantor,
-  reviewDriverDocument,
-  uploadDriverDocument,
-  uploadDriverSelfServiceDocument,
   resolveDriverIdentity,
   resolveDriverSelfServiceIdentity,
   resolveGuarantorSelfServiceIdentity,
+  reviewDriverDocument,
   sendDriverSelfServiceLink,
+  sendGuarantorSelfServiceLink,
   unlinkDriverMobileAccessUser,
   updateDriverStatus,
-  type CreateDriverInput,
-  type DriverIdentityResolutionResult,
-  type DriverSelfServiceDeliveryRecord,
-  type DriverLivenessSessionRecord,
+  uploadDriverDocument,
+  uploadDriverSelfServiceDocument,
 } from '../../lib/api-core';
 
 const MAX_DRIVER_DOCUMENT_FILE_BYTES = 10 * 1024 * 1024;
@@ -93,7 +93,11 @@ export interface DriverBulkImportActionState {
 
 function sanitizeSelfServiceErrorMessage(message: string): string {
   const normalized = message.toLowerCase();
-  if (normalized.includes('provider') || normalized.includes('fallback') || normalized.includes('internal_free_service')) {
+  if (
+    normalized.includes('provider') ||
+    normalized.includes('fallback') ||
+    normalized.includes('internal_free_service')
+  ) {
     return 'Live verification is unavailable right now. Please try again.';
   }
   if (
@@ -104,6 +108,37 @@ function sanitizeSelfServiceErrorMessage(message: string): string {
     return 'Identity verification is temporarily unavailable. Please try again.';
   }
   return message;
+}
+
+function getVerificationSubmissionFeedback(
+  result: DriverIdentityResolutionResult,
+): Pick<ResolveDriverVerificationActionState, 'error' | 'success'> {
+  if (result.decision === 'failed' || result.providerLookupStatus === 'no_match') {
+    return {
+      error:
+        'Identity verification failed. Confirm the identifier and live selfie, then try again.',
+    };
+  }
+
+  if (
+    result.decision === 'review_needed' ||
+    result.decision === 'review_required' ||
+    result.providerLookupStatus === 'manual_review'
+  ) {
+    return {
+      success: 'Identity verification was submitted and is now awaiting review.',
+    };
+  }
+
+  if (result.isVerifiedMatch === true || result.decision === 'verified') {
+    return {
+      success: 'Identity verification completed successfully.',
+    };
+  }
+
+  return {
+    success: 'Identity verification was submitted and is still being processed.',
+  };
 }
 
 function getTrimmedValue(formData: FormData, key: keyof CreateDriverInput): string {
@@ -142,10 +177,7 @@ export async function createDriverAction(
     driverId = driver.id;
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to create driver at this time.',
+      error: error instanceof Error ? error.message : 'Unable to create driver at this time.',
     };
   }
 
@@ -154,10 +186,7 @@ export async function createDriverAction(
   // Check wallet balance if org pays for verification
   let walletWarning = false;
   try {
-    const [settings, billing] = await Promise.all([
-      getTenantMe(),
-      getTenantBillingSummary(),
-    ]);
+    const [settings, billing] = await Promise.all([getTenantMe(), getTenantBillingSummary()]);
     const orgPaysForVerification =
       (settings.requireIdentityVerificationForActivation ?? true) &&
       !(settings.driverPaysKyc ?? false);
@@ -202,10 +231,7 @@ function getIdentifierValues(formData: FormData): Array<{
   return identifiers;
 }
 
-function isSupportedIdentifierTypeForCountry(
-  identifierType: string,
-  countryCode: string,
-): boolean {
+function isSupportedIdentifierTypeForCountry(identifierType: string, countryCode: string): boolean {
   if (!isCountrySupported(countryCode)) return true; // unknown country — let the server validate
   const supported = getCountryConfig(countryCode).supportedIdentifierTypes.map((t) => t.type);
   return supported.includes(identifierType);
@@ -358,14 +384,17 @@ export async function resolveDriverVerificationAction(
 
   if (enteredIdentifiers.length === 0) {
     return {
-      error: 'Enter at least one identity identifier for this country before submitting verification.',
+      error:
+        'Enter at least one identity identifier for this country before submitting verification.',
     };
   }
 
   for (const identifier of enteredIdentifiers) {
     if (!isSupportedIdentifierTypeForCountry(identifier.type, countryCode)) {
       const supported = isCountrySupported(countryCode)
-        ? getCountryConfig(countryCode).supportedIdentifierTypes.map((t) => t.label).join(', ')
+        ? getCountryConfig(countryCode)
+            .supportedIdentifierTypes.map((t) => t.label)
+            .join(', ')
         : identifier.type;
       return {
         error: `Identifier type '${identifier.type}' is not supported for country '${countryCode}'. Supported: ${supported}.`,
@@ -398,16 +427,15 @@ export async function resolveDriverVerificationAction(
     revalidatePath('/drivers');
     revalidatePath(`/drivers/${driverId}`);
     revalidatePath(`/drivers/${driverId}/review`);
+    const feedback = getVerificationSubmissionFeedback(result);
     return {
       result,
-      success: 'Identity verification submitted successfully.',
+      ...feedback,
     };
   } catch (error) {
     return {
       error: sanitizeSelfServiceErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to resolve identity at this time.',
+        error instanceof Error ? error.message : 'Unable to resolve identity at this time.',
       ),
     };
   }
@@ -440,7 +468,8 @@ export async function resolveDriverSelfServiceVerificationAction(
 
   if (enteredIdentifiers.length === 0) {
     return {
-      error: 'Enter at least one identity identifier for this country before submitting verification.',
+      error:
+        'Enter at least one identity identifier for this country before submitting verification.',
     };
   }
 
@@ -470,16 +499,14 @@ export async function resolveDriverSelfServiceVerificationAction(
         : {}),
     });
 
+    const feedback = getVerificationSubmissionFeedback(result);
     return {
       result,
-      success: 'Identity verification submitted successfully.',
+      ...feedback,
     };
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to resolve identity at this time.',
+      error: error instanceof Error ? error.message : 'Unable to resolve identity at this time.',
     };
   }
 }
@@ -560,9 +587,10 @@ export async function resolveGuarantorSelfServiceVerificationAction(
       },
     });
 
+    const feedback = getVerificationSubmissionFeedback(result);
     return {
       result,
-      success: 'Guarantor identity verification submitted successfully.',
+      ...feedback,
     };
   } catch (error) {
     return {
@@ -594,9 +622,7 @@ export async function sendGuarantorSelfServiceLinkAction(
   } catch (error) {
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to send the guarantor verification link.',
+        error instanceof Error ? error.message : 'Unable to send the guarantor verification link.',
     };
   }
 }
@@ -652,9 +678,7 @@ export async function updateDriverStatusAction(
   } catch (error) {
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to update driver status at this time.',
+        error instanceof Error ? error.message : 'Unable to update driver status at this time.',
     };
   }
 
@@ -690,10 +714,7 @@ export async function saveDriverGuarantorAction(
     });
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to save the guarantor at this time.',
+      error: error instanceof Error ? error.message : 'Unable to save the guarantor at this time.',
     };
   }
 
@@ -720,9 +741,7 @@ export async function removeDriverGuarantorAction(
   } catch (error) {
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to remove the guarantor at this time.',
+        error instanceof Error ? error.message : 'Unable to remove the guarantor at this time.',
     };
   }
 
@@ -749,9 +768,7 @@ export async function linkDriverMobileAccessAction(
   } catch (error) {
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to connect mobile access for this driver.',
+        error instanceof Error ? error.message : 'Unable to connect mobile access for this driver.',
     };
   }
 
@@ -825,10 +842,7 @@ export async function uploadDriverDocumentAction(
     });
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to upload the driver document.',
+      error: error instanceof Error ? error.message : 'Unable to upload the driver document.',
     };
   }
 
@@ -870,10 +884,7 @@ export async function uploadDriverSelfServiceDocumentAction(
     });
   } catch (error) {
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to upload the driver document.',
+      error: error instanceof Error ? error.message : 'Unable to upload the driver document.',
     };
   }
 
@@ -921,9 +932,7 @@ export async function reviewDriverDocumentAction(
   } catch (error) {
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : 'Unable to update the driver document review.',
+        error instanceof Error ? error.message : 'Unable to update the driver document review.',
     };
   }
 
@@ -932,8 +941,6 @@ export async function reviewDriverDocumentAction(
 
   return {
     success:
-      status === 'approved'
-        ? 'Document approved successfully.'
-        : 'Document rejected successfully.',
+      status === 'approved' ? 'Document approved successfully.' : 'Document rejected successfully.',
   };
 }

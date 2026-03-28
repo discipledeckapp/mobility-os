@@ -5,6 +5,7 @@ describe('PaymentsService', () => {
   const prisma = {
     cpPaymentAttempt: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -48,6 +49,7 @@ describe('PaymentsService', () => {
       tenantLifecycleService as never,
     );
     configService.get.mockReturnValue('https://tenant.example.com/payments/return');
+    prisma.cpPaymentAttempt.findFirst.mockResolvedValue(null);
   });
 
   it('initializes an invoice checkout with the requested provider', async () => {
@@ -244,5 +246,32 @@ describe('PaymentsService', () => {
     expect(first.status).toBe('applied');
     expect(second.status).toBe('already_applied');
     expect(second.driverId).toBe('driver_1');
+  });
+
+  it('reuses an unfinished identity verification checkout instead of creating a new charge', async () => {
+    prisma.cpPaymentAttempt.findFirst.mockResolvedValue({
+      reference: 'ref_existing_kyc_1',
+      checkoutUrl: 'https://paystack.test/existing-checkout',
+      accessCode: 'access_existing_1',
+    });
+
+    const result = await service.initializeDriverKycPayment({
+      provider: 'paystack',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      customerEmail: 'driver@example.com',
+      customerName: 'Driver One',
+      currency: 'NGN',
+    });
+
+    expect(result).toEqual({
+      provider: 'paystack',
+      reference: 'ref_existing_kyc_1',
+      checkoutUrl: 'https://paystack.test/existing-checkout',
+      accessCode: 'access_existing_1',
+      purpose: 'identity_verification',
+    });
+    expect(paymentProvidersService.initializePayment).not.toHaveBeenCalled();
+    expect(prisma.cpPaymentAttempt.create).not.toHaveBeenCalled();
   });
 });

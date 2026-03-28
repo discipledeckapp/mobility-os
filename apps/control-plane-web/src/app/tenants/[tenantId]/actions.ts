@@ -5,10 +5,10 @@ import {
   changeTenantSubscriptionPlan,
   createFeatureFlagOverride,
   createSubscription,
-  transitionTenantLifecycle,
   createTenantPlatformWalletEntry,
-  removeFeatureFlagOverride,
   listPlans,
+  removeFeatureFlagOverride,
+  transitionTenantLifecycle,
 } from '../../../lib/api-control-plane';
 
 export interface TenantDetailActionState {
@@ -58,13 +58,14 @@ export async function creditTenantWalletAction(
   _prevState: CreditWalletActionState,
   formData: FormData,
 ): Promise<CreditWalletActionState> {
-  const amountRaw = String(formData.get('amountMinorUnits') ?? '').trim();
+  const amountRaw = String(formData.get('amount') ?? '').trim();
   const currency = String(formData.get('currency') ?? 'NGN').trim();
   const description = String(formData.get('description') ?? '').trim();
 
-  const amountMinorUnits = Number.parseInt(amountRaw, 10);
-  if (!amountRaw || Number.isNaN(amountMinorUnits) || amountMinorUnits <= 0) {
-    return { error: 'Enter a valid credit amount in minor units (e.g. 100000 = ₦1,000).' };
+  const parsedAmount = Number(amountRaw.replace(/,/g, ''));
+  const amountMinorUnits = Math.round(parsedAmount * 100);
+  if (!amountRaw || !Number.isFinite(parsedAmount) || amountMinorUnits <= 0) {
+    return { error: 'Enter a valid credit amount (for example 1000.00).' };
   }
 
   try {

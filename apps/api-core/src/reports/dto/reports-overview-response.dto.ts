@@ -28,6 +28,15 @@ export class DriverActivityDto {
 
   @ApiProperty()
   inactive!: number;
+
+  @ApiProperty()
+  activeVerified!: number;
+
+  @ApiProperty()
+  activeUnverified!: number;
+
+  @ApiProperty()
+  onboardingPool!: number;
 }
 
 export class RemittanceProjectionSummaryDto {

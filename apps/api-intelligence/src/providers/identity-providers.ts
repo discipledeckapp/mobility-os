@@ -18,6 +18,12 @@ export interface IdentityVerificationResult {
   providerName: string;
   verificationStatus?: string;
   matchedIdentifierType?: string;
+  documentMetadata?: {
+    validity?: 'valid' | 'invalid' | 'unknown';
+    issueDate?: string;
+    expiryDate?: string;
+    portraitAvailable?: boolean;
+  };
   enrichment?: {
     fullName?: string;
     dateOfBirth?: string;
@@ -100,6 +106,27 @@ function normalizeYouVerifyResponse(
     providerName,
     verificationStatus,
     matchedIdentifierType: identifierType,
+    documentMetadata: {
+      validity:
+        typeof data.isValid === 'boolean'
+          ? data.isValid
+            ? 'valid'
+            : 'invalid'
+          : typeof data.valid === 'boolean'
+            ? data.valid
+              ? 'valid'
+              : 'invalid'
+            : 'unknown',
+      ...optionalStringProperty(
+        'issueDate',
+        typeof data.issueDate === 'string' ? data.issueDate : data.issuedDate,
+      ),
+      ...optionalStringProperty(
+        'expiryDate',
+        typeof data.expiryDate === 'string' ? data.expiryDate : data.expirationDate,
+      ),
+      portraitAvailable: typeof data.image === 'string' && data.image.trim().length > 0,
+    },
     enrichment: {
       ...optionalStringProperty(
         'fullName',
@@ -168,17 +195,17 @@ const LOCAL_NIGERIA_MOCK_IDENTITIES: Record<string, NigeriaMockIdentity> = {
 
 function getLocalNigeriaMockVerification(
   identifier: VerificationIdentifierInput,
-    providerVerification?: {
-      subjectConsent?: boolean;
-      validationData?: {
-        firstName?: string;
-        lastName?: string;
-        dateOfBirth?: string;
-      };
-      selfieImageBase64?: string;
-      selfieImageUrl?: string;
-    },
-  ): IdentityVerificationResult | null {
+  providerVerification?: {
+    subjectConsent?: boolean;
+    validationData?: {
+      firstName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+    };
+    selfieImageBase64?: string;
+    selfieImageUrl?: string;
+  },
+): IdentityVerificationResult | null {
   if ((identifier.countryCode ?? 'NG').toUpperCase() !== 'NG') {
     return null;
   }
@@ -226,6 +253,12 @@ function getLocalNigeriaMockVerification(
     providerName: 'youverify',
     verificationStatus: mockIdentity.verificationStatus,
     matchedIdentifierType: identifier.type,
+    documentMetadata: {
+      validity: 'valid',
+      portraitAvailable: true,
+      ...(identifier.type === 'DRIVERS_LICENSE' ? { issueDate: '2022-01-14' } : {}),
+      ...(identifier.type === 'DRIVERS_LICENSE' ? { expiryDate: '2028-01-14' } : {}),
+    },
     enrichment: {
       fullName: mockIdentity.fullName,
       dateOfBirth: mockIdentity.dateOfBirth,
@@ -452,9 +485,24 @@ function normalizeSmileIdentityResponse(
   return {
     status: verified ? 'verified' : 'no_match',
     providerName,
-    verificationStatus:
-      typeof payload.ResultText === 'string' ? payload.ResultText : 'unverified',
+    verificationStatus: typeof payload.ResultText === 'string' ? payload.ResultText : 'unverified',
     matchedIdentifierType: identifierType,
+    documentMetadata: {
+      validity:
+        typeof payload.IsValid === 'boolean' ? (payload.IsValid ? 'valid' : 'invalid') : 'unknown',
+      ...optionalStringProperty(
+        'issueDate',
+        typeof payload.IssueDate === 'string' ? payload.IssueDate : payload.IssuedDate,
+      ),
+      ...optionalStringProperty(
+        'expiryDate',
+        typeof payload.ExpiryDate === 'string' ? payload.ExpiryDate : payload.ExpirationDate,
+      ),
+      portraitAvailable:
+        typeof payload.Photo === 'string'
+          ? payload.Photo.trim().length > 0
+          : typeof payload.photoUrl === 'string' && payload.photoUrl.trim().length > 0,
+    },
     enrichment: {
       ...(fullName ? { fullName } : {}),
       ...(typeof payload.DOB === 'string' ? { dateOfBirth: payload.DOB } : {}),
@@ -509,7 +557,8 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
       return {
         status: 'provider_unavailable',
         providerName: this.name,
-        reason: 'Smile Identity credentials not fully configured (SMILE_IDENTITY_API_KEY, SMILE_IDENTITY_PARTNER_ID, SMILE_IDENTITY_BASE_URL required)',
+        reason:
+          'Smile Identity credentials not fully configured (SMILE_IDENTITY_API_KEY, SMILE_IDENTITY_PARTNER_ID, SMILE_IDENTITY_BASE_URL required)',
       };
     }
 
@@ -581,7 +630,8 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
       return {
         status: 'provider_error',
         providerName: this.name,
-        reason: error instanceof Error ? error.message : 'Smile Identity request failed unexpectedly',
+        reason:
+          error instanceof Error ? error.message : 'Smile Identity request failed unexpectedly',
       };
     }
   }
@@ -599,6 +649,19 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
       verificationStatus:
         typeof payload.verificationStatus === 'string' ? payload.verificationStatus : 'unverified',
       matchedIdentifierType: identifierType,
+      documentMetadata: {
+        validity:
+          typeof payload.validity === 'string' &&
+          ['valid', 'invalid', 'unknown'].includes(payload.validity.toLowerCase())
+            ? (payload.validity.toLowerCase() as 'valid' | 'invalid' | 'unknown')
+            : 'unknown',
+        ...optionalStringProperty('issueDate', payload.issueDate),
+        ...optionalStringProperty('expiryDate', payload.expiryDate),
+        portraitAvailable:
+          typeof payload.portraitAvailable === 'boolean'
+            ? payload.portraitAvailable
+            : typeof payload.photoUrl === 'string' && payload.photoUrl.length > 0,
+      },
       enrichment: {
         ...optionalStringProperty('fullName', payload.fullName),
         ...optionalStringProperty('dateOfBirth', payload.dateOfBirth),

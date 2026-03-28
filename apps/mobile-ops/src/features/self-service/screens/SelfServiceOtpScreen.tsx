@@ -73,7 +73,9 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
     } catch (error) {
       Alert.alert(
         'Sign in failed',
-        error instanceof Error ? error.message : 'Unable to sign in right now. Check your details and try again.',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in right now. Check your details and try again.',
       );
     } finally {
       setSubmittingPassword(false);
@@ -86,8 +88,8 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
         <Text style={styles.kicker}>Driver invite</Text>
         <Text style={styles.title}>Start with your invitation</Text>
         <Text style={styles.copy}>
-          Most drivers join Mobiris through an organisation invite. Enter the code from your message
-          or open the link directly.
+          Drivers and guarantors should begin with the invitation from their organisation. Sign in
+          only after your account has already been created.
         </Text>
       </View>
 
@@ -150,6 +152,10 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
         />
       </Card>
 
+      <Pressable onPress={() => navigation.navigate('GuarantorSelfServiceOtp')}>
+        <Text style={styles.secondaryText}>Joining as a guarantor? Open guarantor access.</Text>
+      </Pressable>
+
       <Pressable onPress={() => navigation.navigate('Login')}>
         <Text style={styles.backText}>Back to entry</Text>
       </Pressable>
@@ -192,6 +198,12 @@ const styles = StyleSheet.create({
   backText: {
     color: tokens.colors.primary,
     fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  secondaryText: {
+    color: tokens.colors.inkSoft,
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
   },

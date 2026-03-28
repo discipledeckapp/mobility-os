@@ -13,6 +13,7 @@ describe('MatchingService', () => {
     create: jest.fn(),
     setDuplicateFlag: jest.fn(),
     recordTenantPresence: jest.fn(),
+    ensureGlobalPersonCode: jest.fn(),
     queryForTenant: jest.fn(),
     applyIdentityEnrichment: jest.fn(),
   };
@@ -62,6 +63,12 @@ describe('MatchingService', () => {
       attempted: false,
       fallbackChain: [],
       reason: 'country code not provided',
+    });
+    personsService.recordTenantPresence.mockResolvedValue({
+      crossRoleConflict: false,
+    });
+    personsService.ensureGlobalPersonCode.mockResolvedValue({
+      globalPersonCode: 'GP-0001',
     });
   });
 
@@ -117,6 +124,7 @@ describe('MatchingService', () => {
     expect(result).toEqual({
       decision: ResolutionDecision.NewPerson,
       personId: 'person_new',
+      isVerifiedMatch: false,
       globalRiskScore: 0,
       riskBand: 'low',
       isWatchlisted: false,
@@ -130,7 +138,14 @@ describe('MatchingService', () => {
       type: 'EMAIL',
       value: 'driver@example.com',
     });
-    expect(personsService.recordTenantPresence).toHaveBeenCalledWith('person_new', 'tenant_1');
+    expect(personsService.recordTenantPresence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'person_new',
+        tenantId: 'tenant_1',
+        roleType: 'driver',
+        localEntityType: 'driver',
+      }),
+    );
     expect(linkageEventsService.record).toHaveBeenCalledWith(
       expect.objectContaining({
         personId: 'person_new',
@@ -167,6 +182,7 @@ describe('MatchingService', () => {
     expect(result).toEqual({
       decision: ResolutionDecision.AutoLinked,
       personId: 'person_existing',
+      isVerifiedMatch: false,
       globalRiskScore: 12,
       riskBand: 'low',
       isWatchlisted: true,
@@ -176,6 +192,14 @@ describe('MatchingService', () => {
     });
     expect(personsService.create).not.toHaveBeenCalled();
     expect(identifiersService.addIdentifier).not.toHaveBeenCalled();
+    expect(personsService.recordTenantPresence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'person_existing',
+        tenantId: 'tenant_1',
+        roleType: 'driver',
+        localEntityType: 'driver',
+      }),
+    );
     expect(linkageEventsService.record).toHaveBeenCalledWith(
       expect.objectContaining({
         personId: 'person_existing',
@@ -294,11 +318,14 @@ describe('MatchingService', () => {
 
     expect(personsService.applyIdentityEnrichment).toHaveBeenCalledWith({
       personId: 'person_new',
+      tenantId: 'tenant_1',
+      source: 'verified_enrollment',
       fullName: 'Ada Okafor',
       dateOfBirth: '1992-10-03',
       address: '12 Marina, Lagos',
       gender: 'female',
       photoUrl: 'https://example.com/photo.jpg',
+      providerImageUrl: 'https://example.com/photo.jpg',
       verificationStatus: 'verified',
       verificationProvider: 'youverify',
       verificationCountryCode: 'NG',

@@ -1,192 +1,123 @@
-<?php
-/**
- * Homepage: Interactive Leakage Calculator.
- *
- * @package mobiris-v2
- */
+<section class="mv2-section mv2-section--dark mv2-calc" id="mv2-calculator" aria-label="Leakage calculator">
+  <div class="mv2-container">
+    <div class="mv2-section-header mv2-section-header--center mv2-section-header--light">
+      <h2 data-lang-en="Calculate how much your fleet could be leaking"
+          data-lang-fr="Calculez ce que votre flotte pourrait perdre">
+        Calculate how much your fleet could be leaking
+      </h2>
+      <p data-lang-en="Adjust the inputs below to match your fleet. See what the numbers say."
+         data-lang-fr="Ajustez les valeurs ci-dessous pour correspondre à votre flotte. Voyez ce que les chiffres disent.">
+        Adjust the inputs below to match your fleet. See what the numbers say.
+      </p>
+    </div>
+    <div class="mv2-calc__card">
+      <div class="mv2-calc__inputs">
+        <div class="mv2-calc__field">
+          <label class="mv2-calc__label"
+                 data-lang-en="Vehicle type"
+                 data-lang-fr="Type de véhicule">Vehicle type</label>
+          <div class="mv2-calc__type-grid" role="group" aria-label="Vehicle type">
+            <?php
+            $types = [
+              ['val'=>'keke',   'label'=>'Keke',   'rate'=>'₦4,500/day'],
+              ['val'=>'danfo',  'label'=>'Danfo',  'rate'=>'₦11,250/day'],
+              ['val'=>'korope', 'label'=>'Korope', 'rate'=>'₦9,000/day'],
+              ['val'=>'matatu', 'label'=>'Matatu', 'rate'=>'₦10,000/day'],
+            ];
+            foreach ($types as $t) : ?>
+              <button class="mv2-calc__type-btn <?php echo $t['val'] === 'danfo' ? 'mv2-calc__type-btn--active' : ''; ?>"
+                      data-type="<?php echo esc_attr($t['val']); ?>"
+                      type="button">
+                <strong><?php echo esc_html($t['label']); ?></strong>
+                <small><?php echo esc_html($t['rate']); ?></small>
+              </button>
+            <?php endforeach; ?>
+          </div>
+        </div>
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+        <div class="mv2-calc__field">
+          <label class="mv2-calc__label" for="mv2-vehicles"
+                 data-lang-en="Number of vehicles"
+                 data-lang-fr="Nombre de véhicules">Number of vehicles</label>
+          <div class="mv2-calc__range-row">
+            <input type="range" id="mv2-vehicles" class="mv2-calc__range"
+                   min="1" max="100" value="10" step="1">
+            <output class="mv2-calc__range-val" id="mv2-vehicles-val">10</output>
+          </div>
+        </div>
 
-$starter_price = (int) mv2_option( 'price_starter', 15000 );
-$growth_price  = (int) mv2_option( 'price_growth', 35000 );
-?>
-<section class="mv2-section mv2-section--dark mv2-calculator-section" id="mv2-calculator" aria-label="<?php esc_attr_e( 'Leakage Calculator', 'mobiris-v2' ); ?>">
-	<div class="mv2-container">
+        <div class="mv2-calc__field">
+          <label class="mv2-calc__label" for="mv2-days"
+                 data-lang-en="Operating days per month"
+                 data-lang-fr="Jours d'exploitation par mois">Operating days per month</label>
+          <div class="mv2-calc__range-row">
+            <input type="range" id="mv2-days" class="mv2-calc__range"
+                   min="20" max="31" value="26" step="1">
+            <output class="mv2-calc__range-val" id="mv2-days-val">26</output>
+          </div>
+        </div>
 
-		<div class="mv2-section-header mv2-section-header--center mv2-section-header--light">
-			<div class="mv2-badge mv2-badge--amber">
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
-				<span data-lang-en="Leakage Calculator" data-lang-fr="Calculateur de pertes">Leakage Calculator</span>
-			</div>
-			<h2 class="mv2-section-title mv2-section-title--light">
-				<span data-lang-en="How much are you losing every month?"
-				      data-lang-fr="Combien perdez-vous chaque mois ?">How much are you losing every month?</span>
-			</h2>
-			<p class="mv2-section-subtitle mv2-section-subtitle--light">
-				<span data-lang-en="Enter your fleet details. See your leakage estimate and what Mobiris would recover for you."
-				      data-lang-fr="Entrez les détails de votre flotte. Voyez votre estimation de pertes et ce que Mobiris récupérerait pour vous.">Enter your fleet details. See your leakage estimate and what Mobiris would recover for you.</span>
-			</p>
-		</div>
+        <div class="mv2-calc__field">
+          <label class="mv2-calc__label" for="mv2-leakage"
+                 data-lang-en="Estimated leakage rate (%)"
+                 data-lang-fr="Taux de perte estimé (%)">Estimated leakage rate (%)</label>
+          <div class="mv2-calc__range-row">
+            <input type="range" id="mv2-leakage" class="mv2-calc__range"
+                   min="5" max="30" value="12" step="1">
+            <output class="mv2-calc__range-val" id="mv2-leakage-val">12%</output>
+          </div>
+        </div>
+      </div>
 
-		<div class="mv2-calculator" id="mv2-calc-widget" role="form" aria-label="<?php esc_attr_e( 'Leakage Calculator Form', 'mobiris-v2' ); ?>">
-
-			<!-- Calculator Inputs -->
-			<div class="mv2-calc-inputs">
-
-				<!-- Vehicle Count -->
-				<div class="mv2-calc-field">
-					<label for="calc-vehicles" class="mv2-calc-label">
-						<span data-lang-en="Number of vehicles" data-lang-fr="Nombre de véhicules">Number of vehicles</span>
-					</label>
-					<div class="mv2-calc-number-input">
-						<button class="mv2-calc-number-btn mv2-calc-number-btn--minus" data-target="calc-vehicles" aria-label="<?php esc_attr_e( 'Decrease vehicles', 'mobiris-v2' ); ?>">−</button>
-						<input type="number" id="calc-vehicles" class="mv2-calc-input mv2-calc-input--number" value="10" min="1" max="500" aria-label="<?php esc_attr_e( 'Vehicle count', 'mobiris-v2' ); ?>">
-						<button class="mv2-calc-number-btn mv2-calc-number-btn--plus" data-target="calc-vehicles" aria-label="<?php esc_attr_e( 'Increase vehicles', 'mobiris-v2' ); ?>">+</button>
-					</div>
-				</div>
-
-				<!-- Vehicle Type -->
-				<div class="mv2-calc-field">
-					<label class="mv2-calc-label">
-						<span data-lang-en="Vehicle type" data-lang-fr="Type de véhicule">Vehicle type</span>
-					</label>
-					<div class="mv2-calc-type-btns" role="radiogroup" aria-label="<?php esc_attr_e( 'Vehicle type selection', 'mobiris-v2' ); ?>">
-						<button class="mv2-calc-type-btn" data-type="keke" role="radio" aria-checked="false">
-							<span class="mv2-calc-type-btn__name" data-lang-en="Keke" data-lang-fr="Keke">Keke</span>
-							<span class="mv2-calc-type-btn__rate">₦3K–6K</span>
-						</button>
-						<button class="mv2-calc-type-btn is-active" data-type="danfo" role="radio" aria-checked="true">
-							<span class="mv2-calc-type-btn__name" data-lang-en="Danfo" data-lang-fr="Danfo">Danfo</span>
-							<span class="mv2-calc-type-btn__rate">₦7.5K–15K</span>
-						</button>
-						<button class="mv2-calc-type-btn" data-type="korope" role="radio" aria-checked="false">
-							<span class="mv2-calc-type-btn__name" data-lang-en="Korope" data-lang-fr="Korope">Korope</span>
-							<span class="mv2-calc-type-btn__rate">₦6K–12K</span>
-						</button>
-						<button class="mv2-calc-type-btn" data-type="bus" role="radio" aria-checked="false">
-							<span class="mv2-calc-type-btn__name" data-lang-en="Bus" data-lang-fr="Bus">Bus</span>
-							<span class="mv2-calc-type-btn__rate">₦12K–25K</span>
-						</button>
-					</div>
-				</div>
-
-				<!-- Custom Daily Rate -->
-				<div class="mv2-calc-field">
-					<label for="calc-daily-rate" class="mv2-calc-label">
-						<span data-lang-en="Daily remittance target (₦) — leave blank to use vehicle type average"
-						      data-lang-fr="Cible de remise quotidienne (₦) — laissez vide pour utiliser la moyenne du type de véhicule">Daily remittance target (₦) — leave blank to use vehicle type average</span>
-					</label>
-					<input type="number" id="calc-daily-rate" class="mv2-calc-input" placeholder="e.g. 10000" min="0" max="100000" aria-label="<?php esc_attr_e( 'Daily remittance target in Naira', 'mobiris-v2' ); ?>">
-					<div class="mv2-calc-presets">
-						<button class="mv2-calc-preset" data-value="3000">₦3,000</button>
-						<button class="mv2-calc-preset" data-value="6000">₦6,000</button>
-						<button class="mv2-calc-preset" data-value="10000">₦10,000</button>
-						<button class="mv2-calc-preset" data-value="12500">₦12,500</button>
-						<button class="mv2-calc-preset" data-value="15000">₦15,000</button>
-					</div>
-				</div>
-
-				<!-- Operating Days -->
-				<div class="mv2-calc-field">
-					<label for="calc-days" class="mv2-calc-label">
-						<span class="mv2-calc-label__text" data-lang-en="Operating days per month" data-lang-fr="Jours d'exploitation par mois">Operating days per month</span>
-						<span class="mv2-calc-label__value" id="calc-days-display">26 <span data-lang-en="days" data-lang-fr="jours">days</span></span>
-					</label>
-					<input type="range" id="calc-days" class="mv2-calc-slider" min="10" max="30" value="26" aria-label="<?php esc_attr_e( 'Operating days per month', 'mobiris-v2' ); ?>" aria-valuemin="10" aria-valuemax="30" aria-valuenow="26">
-					<div class="mv2-calc-slider-labels">
-						<span>10</span>
-						<span>20</span>
-						<span>26</span>
-						<span>30</span>
-					</div>
-				</div>
-
-				<!-- Leakage Percentage -->
-				<div class="mv2-calc-field">
-					<label for="calc-leakage" class="mv2-calc-label">
-						<span class="mv2-calc-label__text" data-lang-en="Estimated leakage %" data-lang-fr="% de pertes estimé">Estimated leakage %</span>
-						<span class="mv2-calc-label__value" id="calc-leakage-display">12%</span>
-					</label>
-					<input type="range" id="calc-leakage" class="mv2-calc-slider mv2-calc-slider--danger" min="5" max="25" value="12" aria-label="<?php esc_attr_e( 'Leakage percentage', 'mobiris-v2' ); ?>" aria-valuemin="5" aria-valuemax="25" aria-valuenow="12">
-					<div class="mv2-calc-slider-labels">
-						<span>5% <span data-lang-en="(low)" data-lang-fr="(faible)">(low)</span></span>
-						<span>12% <span data-lang-en="(typical)" data-lang-fr="(typique)">(typical)</span></span>
-						<span>25% <span data-lang-en="(high)" data-lang-fr="(élevé)">(high)</span></span>
-					</div>
-				</div>
-
-			</div><!-- .mv2-calc-inputs -->
-
-			<!-- Calculator Results -->
-			<div class="mv2-calc-results" aria-live="polite" aria-label="<?php esc_attr_e( 'Calculator results', 'mobiris-v2' ); ?>">
-
-				<div class="mv2-calc-results__header">
-					<span data-lang-en="Your monthly estimate" data-lang-fr="Votre estimation mensuelle">Your monthly estimate</span>
-				</div>
-
-				<div class="mv2-calc-results__grid">
-					<div class="mv2-calc-result-item">
-						<div class="mv2-calc-result-item__label">
-							<span data-lang-en="Monthly revenue" data-lang-fr="Revenus mensuels">Monthly revenue</span>
-						</div>
-						<div class="mv2-calc-result-item__value" id="result-revenue">₦2,925,000</div>
-					</div>
-
-					<div class="mv2-calc-result-item mv2-calc-result-item--danger">
-						<div class="mv2-calc-result-item__label">
-							<span data-lang-en="Estimated monthly leakage" data-lang-fr="Pertes mensuelles estimées">Estimated monthly leakage</span>
-						</div>
-						<div class="mv2-calc-result-item__value" id="result-leakage">₦351,000</div>
-						<div class="mv2-calc-result-item__sub">
-							<span data-lang-en="This is what's disappearing" data-lang-fr="C'est ce qui disparaît">This is what's disappearing</span>
-						</div>
-					</div>
-
-					<div class="mv2-calc-result-item mv2-calc-result-item--success">
-						<div class="mv2-calc-result-item__label">
-							<span data-lang-en="Recoverable with Mobiris (est. 80%)" data-lang-fr="Récupérable avec Mobiris (est. 80%)">Recoverable with Mobiris (est. 80%)</span>
-						</div>
-						<div class="mv2-calc-result-item__value" id="result-recoverable">₦280,800</div>
-					</div>
-
-					<div class="mv2-calc-result-item mv2-calc-result-item--muted">
-						<div class="mv2-calc-result-item__label">
-							<span data-lang-en="Mobiris monthly cost" data-lang-fr="Coût mensuel Mobiris">Mobiris monthly cost</span>
-						</div>
-						<div class="mv2-calc-result-item__value" id="result-plan-cost">₦35,000</div>
-						<div class="mv2-calc-result-item__sub" id="result-plan-name">Growth Plan</div>
-					</div>
-				</div>
-
-				<!-- Net Gain — Big Number -->
-				<div class="mv2-calc-net-gain">
-					<div class="mv2-calc-net-gain__label">
-						<span data-lang-en="Estimated monthly net gain" data-lang-fr="Gain net mensuel estimé">Estimated monthly net gain</span>
-					</div>
-					<div class="mv2-calc-net-gain__amount" id="result-net">₦245,800</div>
-					<div class="mv2-calc-net-gain__payback">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-						<span data-lang-en="Mobiris pays for itself in" data-lang-fr="Mobiris s'autofinance en">Mobiris pays for itself in</span>
-						<strong id="result-payback">4 days</strong>
-					</div>
-				</div>
-
-				<!-- CTA -->
-				<div class="mv2-calc-cta">
-					<a href="<?php echo esc_url( mv2_app_url() ); ?>" class="mv2-btn mv2-btn--primary mv2-btn--lg mv2-btn--full" target="_blank" rel="noopener noreferrer">
-						<span data-lang-en="Stop the leakage — start free today" data-lang-fr="Arrêtez les pertes — commencez gratuitement aujourd'hui">Stop the leakage — start free today</span>
-					</a>
-					<p class="mv2-calc-cta__disclaimer">
-						<span data-lang-en="Estimates based on typical Nigerian transport operator data. Individual results vary based on fleet size, management practices, and market conditions."
-						      data-lang-fr="Estimations basées sur les données typiques des opérateurs de transport nigérians. Les résultats individuels varient selon la taille de la flotte, les pratiques de gestion et les conditions du marché.">Estimates based on typical Nigerian transport operator data. Individual results vary based on fleet size, management practices, and market conditions.</span>
-					</p>
-				</div>
-
-			</div><!-- .mv2-calc-results -->
-
-		</div><!-- .mv2-calculator -->
-
-	</div>
+      <div class="mv2-calc__results" id="mv2-calc-results" aria-live="polite">
+        <div class="mv2-calc__result-row">
+          <span class="mv2-calc__result-label"
+                data-lang-en="Expected monthly revenue"
+                data-lang-fr="Revenu mensuel attendu">Expected monthly revenue</span>
+          <span class="mv2-calc__result-val" id="mv2-res-revenue">₦0</span>
+        </div>
+        <div class="mv2-calc__result-row mv2-calc__result-row--highlight">
+          <span class="mv2-calc__result-label"
+                data-lang-en="Estimated monthly leakage"
+                data-lang-fr="Perte mensuelle estimée">Estimated monthly leakage</span>
+          <span class="mv2-calc__result-val mv2-calc__result-val--red" id="mv2-res-leakage">₦0</span>
+        </div>
+        <div class="mv2-calc__result-row">
+          <span class="mv2-calc__result-label"
+                data-lang-en="Mobiris plan cost"
+                data-lang-fr="Coût du forfait Mobiris">Mobiris plan cost</span>
+          <span class="mv2-calc__result-val mv2-calc__result-val--muted" id="mv2-res-plan">₦0</span>
+        </div>
+        <div class="mv2-calc__result-row mv2-calc__result-row--total">
+          <span class="mv2-calc__result-label"
+                data-lang-en="Recoverable value (net of plan cost)"
+                data-lang-fr="Valeur récupérable (net du forfait)">Recoverable value (net of plan cost)</span>
+          <span class="mv2-calc__result-val mv2-calc__result-val--green" id="mv2-res-net">₦0</span>
+        </div>
+        <div class="mv2-calc__roi-bar-wrap">
+          <div class="mv2-calc__roi-label"
+               data-lang-en="Return on plan cost"
+               data-lang-fr="Retour sur le coût du forfait">Return on plan cost</div>
+          <div class="mv2-calc__roi-track">
+            <div class="mv2-calc__roi-fill" id="mv2-roi-fill" style="width:0%"></div>
+          </div>
+          <div class="mv2-calc__roi-pct" id="mv2-roi-pct">0×</div>
+        </div>
+        <div class="mv2-calc__cta">
+          <p class="mv2-calc__cta-text"
+             data-lang-en="This is an estimate based on industry leakage patterns. Actual results depend on your operations."
+             data-lang-fr="Il s'agit d'une estimation basée sur les tendances de perte du secteur. Les résultats réels dépendent de vos opérations.">
+            This is an estimate based on industry leakage patterns. Actual results depend on your operations.
+          </p>
+          <a href="<?php echo esc_url(mv2_wa_url('whatsapp_msg_calculator')); ?>"
+             class="mv2-btn mv2-btn--wa" target="_blank" rel="noopener noreferrer"
+             id="mv2-calc-wa-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <span data-lang-en="Send me these numbers on WhatsApp"
+                  data-lang-fr="Envoyez-moi ces chiffres sur WhatsApp">Send me these numbers on WhatsApp</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>

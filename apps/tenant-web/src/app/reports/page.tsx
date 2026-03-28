@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {
   Button,
   Card,
@@ -8,12 +7,9 @@ import {
   CardTitle,
   Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
-import {
-  getReportsOverview,
-  getTenantMe,
-  type ReportsOverviewRecord,
-} from '../../lib/api-core';
+import { type ReportsOverviewRecord, getReportsOverview, getTenantMe } from '../../lib/api-core';
 import { getFormattingLocale } from '../../lib/locale';
 
 function formatCurrency(amountMinorUnits: number, currency: string, locale: string) {
@@ -270,13 +266,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Driver activity</CardTitle>
-              <CardDescription>Active vs inactive driver population</CardDescription>
+              <CardDescription>
+                Active fleet, unverified drivers, and onboarding pool
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <DonutSummary
                 active={overview.driverActivity.active}
                 inactive={overview.driverActivity.inactive}
               />
+              <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                <Text>Active (verified): {overview.driverActivity.activeVerified}</Text>
+                <Text>Active (unverified): {overview.driverActivity.activeUnverified}</Text>
+                <Text>Onboarding pool: {overview.driverActivity.onboardingPool}</Text>
+              </div>
             </CardContent>
           </Card>
 
@@ -308,16 +311,27 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {overview.fleetPerformance.slice(0, 5).map((fleet) => (
-                <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4" key={fleet.fleetId}>
+                <div
+                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4"
+                  key={fleet.fleetId}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <Text className="font-semibold">{fleet.fleetName}</Text>
-                    <Text>{formatCurrency(fleet.profitMinorUnits, overview.wallet.currency, locale)}</Text>
+                    <Text>
+                      {formatCurrency(fleet.profitMinorUnits, overview.wallet.currency, locale)}
+                    </Text>
                   </div>
                   <Text className="text-sm text-slate-500">
                     {fleet.vehicleCount} vehicles • {fleet.activeAssignmentCount} active assignments
                   </Text>
                   <Text className="text-sm text-slate-500">
-                    Expenses {formatCurrency(fleet.trackedExpenseMinorUnits, overview.wallet.currency, locale)} • Overdue maintenance {fleet.overdueMaintenanceCount}
+                    Expenses{' '}
+                    {formatCurrency(
+                      fleet.trackedExpenseMinorUnits,
+                      overview.wallet.currency,
+                      locale,
+                    )}{' '}
+                    • Overdue maintenance {fleet.overdueMaintenanceCount}
                   </Text>
                 </div>
               ))}
@@ -331,16 +345,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {overview.managerPerformance.slice(0, 5).map((manager) => (
-                <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4" key={manager.userId}>
+                <div
+                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200 p-4"
+                  key={manager.userId}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <Text className="font-semibold">{manager.name}</Text>
-                    <Text>{formatCurrency(manager.profitMinorUnits, overview.wallet.currency, locale)}</Text>
+                    <Text>
+                      {formatCurrency(manager.profitMinorUnits, overview.wallet.currency, locale)}
+                    </Text>
                   </div>
                   <Text className="text-sm text-slate-500">
                     {manager.vehicleCount} vehicles across {manager.fleetCount} fleets
                   </Text>
                   <Text className="text-sm text-slate-500">
-                    At-risk assignments {manager.atRiskAssignmentCount} • Overdue maintenance {manager.overdueMaintenanceCount}
+                    At-risk assignments {manager.atRiskAssignmentCount} • Overdue maintenance{' '}
+                    {manager.overdueMaintenanceCount}
                   </Text>
                 </div>
               ))}

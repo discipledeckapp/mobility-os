@@ -3,16 +3,16 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
-  createVehicleIncident,
-  createVehicleInspection,
-  createVehicleMaintenanceEvent,
   type CreateVehicleInput,
   type UpdateVehicleInput,
   createVehicle,
+  createVehicleIncident,
+  createVehicleInspection,
+  createVehicleMaintenanceEvent,
   importVehiclesCsv,
-  upsertVehicleMaintenanceSchedule,
   updateVehicle,
   updateVehicleStatus,
+  upsertVehicleMaintenanceSchedule,
 } from '../../lib/api-core';
 
 export interface CreateVehicleActionState {
@@ -134,12 +134,11 @@ export async function createVehicleAction(
     !payload.fleetId ||
     !payload.vehicleType ||
     !payload.make ||
-    !payload.model ||
     !yearValue ||
     !Number.isInteger(year)
   ) {
     return {
-      error: 'Fleet, vehicle type, make, model, and year are required.',
+      error: 'Fleet, vehicle type, make, and year are required.',
     };
   }
 
@@ -525,7 +524,9 @@ export async function createVehicleIncidentAction(
   };
 
   const description = getTrimmedValue(formData, 'description');
-  const estimatedCostMinorUnits = parseAmountToMinorUnits(getTrimmedValue(formData, 'estimatedCost'));
+  const estimatedCostMinorUnits = parseAmountToMinorUnits(
+    getTrimmedValue(formData, 'estimatedCost'),
+  );
   const currency = getTrimmedValue(formData, 'currency');
   const driverId = getTrimmedValue(formData, 'driverId');
 

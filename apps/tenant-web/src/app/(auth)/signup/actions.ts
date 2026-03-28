@@ -3,7 +3,12 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { loginTenantUser, registerOrganisation, verifyOrgSignupOtp } from '../../../lib/api-core';
-import { TENANT_AUTH_COOKIE_NAME, TENANT_REFRESH_COOKIE_NAME } from '../../../lib/auth';
+import {
+  TENANT_AUTH_COOKIE_NAME,
+  TENANT_REFRESH_COOKIE_NAME,
+  getTenantAccessCookieOptions,
+  getTenantRefreshCookieOptions,
+} from '../../../lib/auth';
 
 export interface SignupState {
   error?: string;
@@ -83,18 +88,16 @@ export async function verifyOtpAction(
       password,
     });
     const cookieStore = await cookies();
-    cookieStore.set(TENANT_AUTH_COOKIE_NAME, accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
-    cookieStore.set(TENANT_REFRESH_COOKIE_NAME, refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
+    cookieStore.set(
+      TENANT_AUTH_COOKIE_NAME,
+      accessToken,
+      getTenantAccessCookieOptions(accessToken),
+    );
+    cookieStore.set(
+      TENANT_REFRESH_COOKIE_NAME,
+      refreshToken,
+      getTenantRefreshCookieOptions(refreshToken),
+    );
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Verification failed. Please try again.',

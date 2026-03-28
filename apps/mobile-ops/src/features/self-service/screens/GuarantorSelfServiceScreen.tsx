@@ -2,17 +2,21 @@
 
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import {
+  type DriverIdentityResolutionResult,
+  type DriverLivenessSessionRecord,
+  type GuarantorSelfServiceContextRecord,
   createGuarantorSelfServiceAccount,
   createGuarantorSelfServiceLivenessSession,
   exchangeGuarantorSelfServiceOtp,
@@ -20,9 +24,6 @@ import {
   issueAuthenticatedGuarantorSelfServiceContinuationToken,
   resolveGuarantorSelfServiceIdentity,
   updateGuarantorSelfServiceProfile,
-  type DriverIdentityResolutionResult,
-  type DriverLivenessSessionRecord,
-  type GuarantorSelfServiceContextRecord,
 } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -30,8 +31,8 @@ import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
-import { tokens } from '../../../theme/tokens';
 import type { ScreenProps } from '../../../navigation/types';
+import { tokens } from '../../../theme/tokens';
 
 export function GuarantorSelfServiceScreen({
   navigation,
@@ -60,7 +61,7 @@ export function GuarantorSelfServiceScreen({
   const [identityResult, setIdentityResult] = useState<DriverIdentityResolutionResult | null>(null);
   const [submittingIdentity, setSubmittingIdentity] = useState(false);
 
-  const loadContext = async (nextToken: string) => {
+  const loadContext = useCallback(async (nextToken: string) => {
     const nextContext = await getGuarantorSelfServiceContext(nextToken);
     await SecureStore.setItemAsync(STORAGE_KEYS.guarantorSelfServiceToken, nextToken);
     setToken(nextToken);
@@ -70,7 +71,7 @@ export function GuarantorSelfServiceScreen({
     setPhone(nextContext.guarantorPhone);
     setRelationship(nextContext.guarantorRelationship ?? '');
     setCountryCode(nextContext.guarantorCountryCode ?? '');
-  };
+  }, []);
 
   useEffect(() => {
     const restore = async () => {
@@ -100,7 +101,7 @@ export function GuarantorSelfServiceScreen({
     };
 
     restore().catch(() => setLoading(false));
-  }, [route.params?.token, session?.selfServiceSubjectType]);
+  }, [loadContext, route.params?.token, session?.selfServiceSubjectType]);
 
   const refresh = async () => {
     if (!token) return;
@@ -201,30 +202,42 @@ export function GuarantorSelfServiceScreen({
   };
 
   const captureSelfie = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Camera access', 'Allow camera access to complete live verification.');
-      return;
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Camera access', 'Allow camera access to complete live verification.');
+        return;
+      }
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      base64: true,
-      quality: 0.7,
-      cameraType: ImagePicker.CameraType.front,
-    });
+    const result =
+      Platform.OS === 'web'
+        ? await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            base64: true,
+            mediaTypes: ['images'],
+            quality: 0.7,
+          })
+        : await ImagePicker.launchCameraAsync({
+            allowsEditing: false,
+            base64: true,
+            quality: 0.7,
+            cameraType: ImagePicker.CameraType.front,
+          });
 
     if (result.canceled || !result.assets[0]) {
       return;
     }
 
     const asset = result.assets[0];
-    if (!asset.base64) {
+    const imageBase64 = await getImageAssetBase64(asset);
+    if (!imageBase64) {
       Alert.alert('Live verification', 'Unable to capture the selfie image. Please try again.');
       return;
     }
 
-    setSelfieBase64(asset.base64);
+    setSelfieBase64(imageBase64);
     setSelfiePreviewUri(asset.uri);
     if (token) {
       const sessionRecord = await createGuarantorSelfServiceLivenessSession(
@@ -245,7 +258,10 @@ export function GuarantorSelfServiceScreen({
     }
 
     if (!countryCode.trim()) {
-      Alert.alert('Verification', 'Enter the guarantor country code before submitting verification.');
+      Alert.alert(
+        'Verification',
+        'Enter the guarantor country code before submitting verification.',
+      );
       return;
     }
 
@@ -315,7 +331,11 @@ export function GuarantorSelfServiceScreen({
             placeholder="Enter your code"
             value={otpCode}
           />
-          <Button label="Continue with code" loading={submittingAccess} onPress={bootstrapFromOtp} />
+          <Button
+            label="Continue with code"
+            loading={submittingAccess}
+            onPress={bootstrapFromOtp}
+          />
         </Card>
         <Card style={styles.card}>
           <Input
@@ -337,16 +357,20 @@ export function GuarantorSelfServiceScreen({
     );
   }
 
-  const hasAccount = context.hasSelfServiceAccess || session?.selfServiceSubjectType === 'guarantor';
+  const hasAccount =
+    context.hasSelfServiceAccess || session?.selfServiceSubjectType === 'guarantor';
   const verificationComplete = Boolean(context.guarantorPersonId) || Boolean(identityResult);
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}>
+    <Screen
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}
+    >
       <Card style={styles.card}>
         <Text style={styles.kicker}>Guarantor onboarding</Text>
         <Text style={styles.title}>{context.guarantorName}</Text>
         <Text style={styles.copy}>
-          You are onboarding as guarantor for {context.driverName}. Complete account setup, confirm your details, and finish live identity verification.
+          You are onboarding as guarantor for {context.driverName}. Complete account setup, confirm
+          your details, and finish live identity verification.
         </Text>
       </Card>
 
@@ -361,7 +385,11 @@ export function GuarantorSelfServiceScreen({
             secureTextEntry
             value={confirmPassword}
           />
-          <Button label="Create guarantor account" loading={submittingAccess} onPress={submitAccount} />
+          <Button
+            label="Create guarantor account"
+            loading={submittingAccess}
+            onPress={submitAccount}
+          />
         </Card>
       ) : null}
 
@@ -379,21 +407,24 @@ export function GuarantorSelfServiceScreen({
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Live verification</Text>
           <Text style={styles.copy}>
-            Enter the guarantor country and identity number, then capture a live selfie to complete guarantor verification.
+            Enter the guarantor country and identity number, then capture a live selfie to complete
+            guarantor verification.
           </Text>
-          <Input
-            label="Identifier type"
-            onChangeText={setIdentifierType}
-            value={identifierType}
-          />
+          <Input label="Identifier type" onChangeText={setIdentifierType} value={identifierType} />
           <Input
             label="Identifier value"
             onChangeText={setIdentifierValue}
             placeholder="Optional"
             value={identifierValue}
           />
-          {selfiePreviewUri ? <Image source={{ uri: selfiePreviewUri }} style={styles.preview} /> : null}
-          <Button label="Capture live selfie" onPress={() => void captureSelfie()} variant="secondary" />
+          {selfiePreviewUri ? (
+            <Image source={{ uri: selfiePreviewUri }} style={styles.preview} />
+          ) : null}
+          <Button
+            label="Capture live selfie"
+            onPress={() => void captureSelfie()}
+            variant="secondary"
+          />
           <Button
             label="Submit verification"
             loading={submittingIdentity}
@@ -404,7 +435,8 @@ export function GuarantorSelfServiceScreen({
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Verification complete</Text>
           <Text style={styles.copy}>
-            Your guarantor verification has been submitted. The organisation can now continue driver activation and review your linkage.
+            Your guarantor verification has been submitted. The organisation can now continue driver
+            activation and review your linkage.
           </Text>
           <Button
             label="Back to sign in"
@@ -465,3 +497,32 @@ const styles = StyleSheet.create({
 });
 
 export default GuarantorSelfServiceScreen;
+
+function encodeBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return globalThis.btoa(binary);
+}
+
+async function getImageAssetBase64(asset: { base64?: string | null; uri?: string | null }) {
+  if (asset.base64?.trim()) {
+    return asset.base64;
+  }
+
+  if (!asset.uri) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(asset.uri);
+    const arrayBuffer = await response.arrayBuffer();
+    return encodeBase64(arrayBuffer);
+  } catch {
+    return null;
+  }
+}

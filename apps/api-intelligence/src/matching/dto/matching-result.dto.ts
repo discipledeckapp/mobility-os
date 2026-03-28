@@ -43,6 +43,19 @@ export class MatchingResultDto {
     selfieImageUrl?: string;
   };
 
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: false,
+  })
+  verificationMetadata?: {
+    validity?: 'valid' | 'invalid' | 'unknown';
+    issueDate?: string;
+    expiryDate?: string;
+    portraitAvailable?: boolean;
+    matchScore?: number;
+    riskScore?: number;
+  };
+
   @ApiPropertyOptional({ minimum: 0, maximum: 100 })
   globalRiskScore?: number;
 

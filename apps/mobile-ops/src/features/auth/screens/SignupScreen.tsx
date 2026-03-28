@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { registerOrganisation } from '../../../api';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
-import { registerOrganisation } from '../../../api';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
@@ -24,11 +24,24 @@ export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [stage, setStage] = useState<'identity' | 'security'>('identity');
   const suggestedSlug = useMemo(() => slugify(orgName), [orgName]);
+
+  const onContinue = () => {
+    if (!orgName.trim() || !adminEmail.trim()) {
+      Alert.alert(
+        'Create organisation',
+        'Enter your organisation name and work email to continue.',
+      );
+      return;
+    }
+
+    setStage('security');
+  };
 
   const onSubmit = async () => {
     if (!orgName.trim() || !adminEmail.trim() || !adminPassword) {
-      Alert.alert('Create organisation', 'Enter your organisation name, email, and password.');
+      Alert.alert('Create organisation', 'Choose a password to finish setting up your workspace.');
       return;
     }
 
@@ -86,19 +99,31 @@ export function SignupScreen({ navigation }: ScreenProps<'Signup'>) {
           placeholder="name@company.com"
           value={adminEmail}
         />
-        <Input
-          autoCapitalize="none"
-          label="Password"
-          helperText="Use 8 or more characters."
-          onChangeText={setAdminPassword}
-          secureTextEntry
-          value={adminPassword}
-        />
         <View style={styles.summaryStrip}>
           <Text style={styles.summaryLabel}>Workspace link</Text>
           <Text style={styles.summaryValue}>{suggestedSlug || 'created automatically'}</Text>
         </View>
-        <Button label="Create organisation" loading={submitting} onPress={onSubmit} />
+        {stage === 'identity' ? (
+          <>
+            <Text style={styles.stageHint}>
+              Start with email only. You will choose the account password in the next step.
+            </Text>
+            <Button label="Continue" onPress={onContinue} />
+          </>
+        ) : (
+          <>
+            <Input
+              autoCapitalize="none"
+              label="Password"
+              helperText="Use 8 or more characters."
+              onChangeText={setAdminPassword}
+              secureTextEntry
+              value={adminPassword}
+            />
+            <Button label="Create organisation" loading={submitting} onPress={onSubmit} />
+            <Button label="Back" variant="secondary" onPress={() => setStage('identity')} />
+          </>
+        )}
       </Card>
 
       <Pressable onPress={() => navigation.navigate('Login')}>
@@ -153,6 +178,11 @@ const styles = StyleSheet.create({
     color: tokens.colors.ink,
     fontSize: 15,
     fontWeight: '700',
+  },
+  stageHint: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
   backText: {
     color: tokens.colors.primary,

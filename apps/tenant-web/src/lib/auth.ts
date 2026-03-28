@@ -1,6 +1,14 @@
 export const TENANT_AUTH_COOKIE_NAME = 'mobility_os_tenant_jwt';
 export const TENANT_REFRESH_COOKIE_NAME = 'mobility_os_refresh';
 
+type TenantCookieOptions = {
+  httpOnly: boolean;
+  sameSite: 'lax';
+  secure: boolean;
+  path: '/';
+  maxAge?: number;
+};
+
 interface JwtPayload {
   exp?: number;
   tenantId?: string;
@@ -12,6 +20,16 @@ interface JwtPayload {
   linkedDriverId?: string;
   selfServiceSubjectType?: 'driver' | 'guarantor';
   selfServiceDriverId?: string;
+}
+
+function getMaxAgeFromToken(token: string | undefined): number | undefined {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp || Number.isNaN(payload.exp)) {
+    return undefined;
+  }
+
+  const maxAgeSeconds = payload.exp - Math.floor(Date.now() / 1000);
+  return maxAgeSeconds > 0 ? maxAgeSeconds : undefined;
 }
 
 function decodeBase64Url(value: string): string | null {
@@ -85,4 +103,26 @@ export function getSelfServiceContinuationPath(payload: JwtPayload | null): stri
   }
 
   return null;
+}
+
+export function getTenantAccessCookieOptions(accessToken: string): TenantCookieOptions {
+  const maxAge = getMaxAgeFromToken(accessToken);
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    ...(typeof maxAge === 'number' ? { maxAge } : {}),
+  };
+}
+
+export function getTenantRefreshCookieOptions(refreshToken: string): TenantCookieOptions {
+  const maxAge = getMaxAgeFromToken(refreshToken);
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    ...(typeof maxAge === 'number' ? { maxAge } : {}),
+  };
 }

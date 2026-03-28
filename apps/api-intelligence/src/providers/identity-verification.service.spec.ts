@@ -166,6 +166,12 @@ describe('IdentityVerificationService', () => {
 
     expect(result).toEqual({
       attempted: false,
+      liveness: {
+        attempted: true,
+        passed: false,
+        fallbackChain: ['amazon_rekognition:failed'],
+        reason: 'failed',
+      },
       fallbackChain: ['amazon_rekognition:failed'],
       reason: 'failed',
     });

@@ -1,11 +1,11 @@
 'use client';
 
 import {
+  type SupportedIdentifierType,
   getCountryConfig,
   getRequiredDocuments,
   getSupportedCountryCodes,
   isCountrySupported,
-  type SupportedIdentifierType,
 } from '@mobility-os/domain-config';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +15,7 @@ import {
   Alert,
   Image,
   Linking,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,6 +24,8 @@ import {
   View,
 } from 'react-native';
 import {
+  type DriverIdentityResolutionResult,
+  type DriverLivenessSessionRecord,
   createDriverSelfServiceLivenessSession,
   initiateDriverKycCheckout,
   recordDriverSelfServiceVerificationConsent,
@@ -31,18 +34,19 @@ import {
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
   uploadDriverSelfServiceDocument,
-  type DriverIdentityResolutionResult,
-  type DriverLivenessSessionRecord,
 } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
-import { FullScreenBlockingLoader, InlineProcessingCard } from '../../../components/processing-state';
+import {
+  FullScreenBlockingLoader,
+  InlineProcessingCard,
+} from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
-import { useSelfService } from '../../../contexts/self-service-context';
 import { useAuth } from '../../../contexts/auth-context';
+import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
@@ -81,6 +85,39 @@ function splitVerifiedName(fullName?: string) {
   };
 }
 
+async function captureSelfieAsset(): Promise<ImagePicker.ImagePickerAsset | null> {
+  if (Platform.OS === 'web') {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      base64: true,
+      mediaTypes: ['images'],
+      quality: 0.85,
+    });
+
+    if (result.canceled) {
+      return null;
+    }
+
+    return result.assets[0] ?? null;
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    base64: true,
+    cameraType: ImagePicker.CameraType.front,
+    mediaTypes: ['images'],
+    quality: 0.85,
+  });
+
+  if (result.canceled) {
+    return null;
+  }
+
+  return result.assets[0] ?? null;
+}
+
 const STEP_ORDER: WizardStep[] = ['overview', 'payment', 'identity', 'profile', 'documents'];
 
 function getStepIndex(step: WizardStep, includePayment: boolean): number {
@@ -100,14 +137,8 @@ export function SelfServiceVerificationScreen({
 }: ScreenProps<'SelfServiceVerification'>) {
   const { showToast } = useToast();
   const { logout } = useAuth();
-  const {
-    token,
-    driver,
-    documents,
-    isRefreshing,
-    refreshSelfService,
-    clearSelfService,
-  } = useSelfService();
+  const { token, driver, documents, isRefreshing, refreshSelfService, clearSelfService } =
+    useSelfService();
 
   const driverPaysKyc = driver?.driverPaysKyc ?? false;
   const hasUsableVerificationEntitlement =
@@ -177,56 +208,49 @@ export function SelfServiceVerificationScreen({
   const profileComplete = Boolean(firstName.trim() && lastName.trim() && dateOfBirth.trim());
   const organisationName = driver?.organisationName ?? 'your organisation';
 
-  const verificationLifecycle = useMemo<VerificationLifecycleState>(
-    () => {
-      if (!identityVerificationRequired) {
-        return 'completed';
-      }
+  const verificationLifecycle = useMemo<VerificationLifecycleState>(() => {
+    if (!identityVerificationRequired) {
+      return 'completed';
+    }
 
-      if (
-        identityResult?.isVerifiedMatch === true ||
-        identityResult?.decision === 'review_needed' ||
-        identityResult?.decision === 'review_required' ||
-        identityResult?.providerLookupStatus === 'skipped_by_organisation_policy' ||
-        driver?.identityStatus === 'verified' ||
-        driver?.identityStatus === 'review_needed'
-      ) {
-        return 'completed';
-      }
+    if (
+      identityResult?.isVerifiedMatch === true ||
+      identityResult?.decision === 'review_needed' ||
+      identityResult?.decision === 'review_required' ||
+      identityResult?.providerLookupStatus === 'skipped_by_organisation_policy' ||
+      driver?.identityStatus === 'verified' ||
+      driver?.identityStatus === 'review_needed'
+    ) {
+      return 'completed';
+    }
 
-      if (
-        identityResult?.decision === 'failed' ||
-        identityResult?.providerLookupStatus === 'no_match' ||
-        identityResult?.livenessPassed === false ||
-        driver?.identityStatus === 'failed'
-      ) {
-        return 'failed';
-      }
+    if (
+      identityResult?.decision === 'failed' ||
+      identityResult?.providerLookupStatus === 'no_match' ||
+      identityResult?.livenessPassed === false ||
+      driver?.identityStatus === 'failed'
+    ) {
+      return 'failed';
+    }
 
-      if (submittingIdentity || driver?.identityStatus === 'pending_verification') {
-        return 'in_progress';
-      }
+    if (submittingIdentity || driver?.identityStatus === 'pending_verification') {
+      return 'in_progress';
+    }
 
-      return 'not_started';
-    },
-    [
-      driver?.identityStatus,
-      identityResult?.decision,
-      identityResult?.isVerifiedMatch,
-      identityResult?.livenessPassed,
-      identityResult?.providerLookupStatus,
-      identityVerificationRequired,
-      submittingIdentity,
-    ],
-  );
+    return 'not_started';
+  }, [
+    driver?.identityStatus,
+    identityResult?.decision,
+    identityResult?.isVerifiedMatch,
+    identityResult?.livenessPassed,
+    identityResult?.providerLookupStatus,
+    identityVerificationRequired,
+    submittingIdentity,
+  ]);
 
   const identitySubmitted = useMemo(
     () => verificationLifecycle === 'completed',
-    [
-      driver?.identityLastDecision,
-      driver?.identityLastVerifiedAt,
-      verificationLifecycle,
-    ],
+    [verificationLifecycle],
   );
 
   // Determine initial step
@@ -361,7 +385,7 @@ export function SelfServiceVerificationScreen({
     setSelectedDocumentType((current) =>
       requiredDocuments.some((document) => document.slug === current)
         ? current
-        : requiredDocuments[0]?.slug ?? '',
+        : (requiredDocuments[0]?.slug ?? ''),
     );
   }, [requiredDocuments]);
 
@@ -390,7 +414,13 @@ export function SelfServiceVerificationScreen({
           : 'identity',
       );
     }
-  }, [currentStep, driverPaysKyc, needsVerificationPayment, profileComplete, verificationLifecycle]);
+  }, [
+    currentStep,
+    driverPaysKyc,
+    needsVerificationPayment,
+    profileComplete,
+    verificationLifecycle,
+  ]);
 
   const identifiersReady = useMemo(
     () =>
@@ -408,18 +438,8 @@ export function SelfServiceVerificationScreen({
   const canSubmitIdentity = useMemo(
     () =>
       verificationLifecycle !== 'completed' &&
-      Boolean(
-        token &&
-          identifiersReady &&
-          (!biometricVerificationRequired || selfieBase64),
-      ),
-    [
-      biometricVerificationRequired,
-      identifiersReady,
-      selfieBase64,
-      token,
-      verificationLifecycle,
-    ],
+      Boolean(token && identifiersReady && (!biometricVerificationRequired || selfieBase64)),
+    [biometricVerificationRequired, identifiersReady, selfieBase64, token, verificationLifecycle],
   );
 
   const documentChecklist = useMemo(
@@ -454,40 +474,35 @@ export function SelfServiceVerificationScreen({
   const onCaptureSelfie = async () => {
     if (!token) return;
 
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Camera access', 'Allow camera access to capture a verification selfie.');
-      return;
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Camera access', 'Allow camera access to capture a verification selfie.');
+        return;
+      }
     }
 
-    // Open the camera FIRST — the liveness session creation is a background
-    // concern and must never block the camera from launching.
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        base64: true,
-        cameraType: ImagePicker.CameraType.front,
-        mediaTypes: ['images'],
-        quality: 0.85,
-      });
-
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
-      if (!asset.base64) {
+      const asset = await captureSelfieAsset();
+      if (!asset) return;
+      const imageBase64 = await getImageAssetBase64(asset);
+      if (!imageBase64) {
         throw new Error('The selfie image could not be encoded for verification.');
       }
 
-      setSelfieBase64(asset.base64);
+      setSelfieBase64(imageBase64);
       setSelfiePreviewUri(asset.uri ?? null);
       showToast(
-        identifiersReady ? 'Selfie captured. You can submit now.' : 'Selfie captured.',
+        Platform.OS === 'web'
+          ? identifiersReady
+            ? 'Selfie selected. You can submit now.'
+            : 'Selfie selected.'
+          : identifiersReady
+            ? 'Selfie captured. You can submit now.'
+            : 'Selfie captured.',
         'success',
       );
 
-      // Create liveness session after capture — non-fatal if it fails; the
-      // identity submission will still proceed without a session reference.
       if (biometricVerificationRequired) {
         createDriverSelfServiceLivenessSession(token, { countryCode })
           .then(setLivenessSession)
@@ -622,7 +637,9 @@ export function SelfServiceVerificationScreen({
     } catch (error) {
       Alert.alert(
         'Payment',
-        error instanceof Error ? error.message : 'Unable to start the payment process. Please try again.',
+        error instanceof Error
+          ? error.message
+          : 'Unable to start the payment process. Please try again.',
       );
     } finally {
       setInitiatingPayment(false);
@@ -787,7 +804,10 @@ export function SelfServiceVerificationScreen({
           title="Verification session missing"
           variant="onboarding"
         />
-        <Button label="Enter verification code" onPress={() => navigation.replace('SelfServiceOtp')} />
+        <Button
+          label="Enter verification code"
+          onPress={() => navigation.replace('SelfServiceOtp')}
+        />
       </Screen>
     );
   }
@@ -828,9 +848,12 @@ export function SelfServiceVerificationScreen({
           <Text style={styles.kicker}>Driver verification</Text>
           <Text style={styles.title}>Before you continue</Text>
           <Text style={styles.copy}>
-            We will verify you for {organisationName}. This uses your ID number, a live selfie,
-            and the official match result from your identity check.
+            We will verify you for {organisationName}. This uses your ID number, a live selfie, and
+            the official match result from your identity check.
           </Text>
+          {driver.verificationBlockedReason ? (
+            <Text style={styles.hintText}>{driver.verificationBlockedReason}</Text>
+          ) : null}
 
           {identityVerificationRequired ? (
             <View style={styles.checklistBlock}>
@@ -866,13 +889,15 @@ export function SelfServiceVerificationScreen({
             <View style={styles.paymentNotice}>
               <Text style={styles.paymentNoticeTitle}>Verification fee required</Text>
               <Text style={styles.paymentNoticeBody}>
-                {organisationName} requires payment before verification starts. If the ID number
-                or face does not match, the verification will fail and the fee is not refundable.
+                {organisationName} requires payment before verification starts. If the ID number or
+                face does not match, the verification will fail and the fee is not refundable.
               </Text>
             </View>
           ) : (
             <View style={styles.orgCoversNotice}>
-              <Text style={styles.orgCoversText}>{organisationName} covers the verification cost.</Text>
+              <Text style={styles.orgCoversText}>
+                {organisationName} covers the verification cost.
+              </Text>
             </View>
           )}
 
@@ -903,11 +928,15 @@ export function SelfServiceVerificationScreen({
           </View>
 
           <View style={styles.badgeRow}>
-            <Badge label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`} tone={identityTone(driver.identityStatus)} />
+            <Badge
+              label={`Identity: ${formatIdentityLabel(driver.identityStatus)}`}
+              tone={identityTone(driver.identityStatus)}
+            />
             <Badge
               label={`Docs: ${uploadedRequiredDocumentCount}/${documentChecklist.length}`}
               tone={
-                documentChecklist.length > 0 && uploadedRequiredDocumentCount === documentChecklist.length
+                documentChecklist.length > 0 &&
+                uploadedRequiredDocumentCount === documentChecklist.length
                   ? 'success'
                   : 'warning'
               }
@@ -921,12 +950,20 @@ export function SelfServiceVerificationScreen({
             <Text style={styles.copy}>
               Your last inputs were restored. Selfie capture is not saved and must be done again.
             </Text>
-            <Button label="Clear saved draft" variant="secondary" onPress={() => void onClearDraft()} />
+            <Button
+              label="Clear saved draft"
+              variant="secondary"
+              onPress={() => void onClearDraft()}
+            />
           </Card>
         ) : null}
 
         <Card style={styles.section}>
-          <Button label="Save and exit" variant="secondary" onPress={() => void onExitOnboarding()} />
+          <Button
+            label="Save and exit"
+            variant="secondary"
+            onPress={() => void onExitOnboarding()}
+          />
           {identitySubmitted ? (
             <Button
               label={profileComplete ? 'Continue to documents' : 'Confirm your details'}
@@ -1008,12 +1045,20 @@ export function SelfServiceVerificationScreen({
           message={processingMessage}
           steps={
             submittingIdentity
-              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              ? [
+                  'Validating live selfie',
+                  'Checking identity records',
+                  'Saving verification result',
+                ]
               : uploadingDocument
                 ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
                 : initiatingPayment
                   ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
-              : ['Saving your details', 'Updating onboarding progress', 'Preparing the next step']
+                  : [
+                      'Saving your details',
+                      'Updating onboarding progress',
+                      'Preparing the next step',
+                    ]
           }
           title={processingTitle}
           variant={processingVariant}
@@ -1047,7 +1092,9 @@ export function SelfServiceVerificationScreen({
           {hasUsableVerificationEntitlement ? (
             <View style={styles.successRow}>
               <Badge label="Payment confirmed" tone="success" />
-              <Text style={styles.successText}>Your payment has been verified. You can now proceed to verification.</Text>
+              <Text style={styles.successText}>
+                Your payment has been verified. You can now proceed to verification.
+              </Text>
             </View>
           ) : null}
 
@@ -1066,10 +1113,7 @@ export function SelfServiceVerificationScreen({
               />
             </>
           ) : (
-            <Button
-              label="Continue to verification"
-              onPress={() => setCurrentStep('identity')}
-            />
+            <Button label="Continue to verification" onPress={() => setCurrentStep('identity')} />
           )}
         </Card>
 
@@ -1080,12 +1124,20 @@ export function SelfServiceVerificationScreen({
           message={processingMessage}
           steps={
             submittingIdentity
-              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              ? [
+                  'Validating live selfie',
+                  'Checking identity records',
+                  'Saving verification result',
+                ]
               : uploadingDocument
                 ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
                 : initiatingPayment
                   ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
-                  : ['Saving your details', 'Updating onboarding progress', 'Preparing the next step']
+                  : [
+                      'Saving your details',
+                      'Updating onboarding progress',
+                      'Preparing the next step',
+                    ]
           }
           title={processingTitle}
           variant={processingVariant}
@@ -1105,7 +1157,11 @@ export function SelfServiceVerificationScreen({
         <Card style={styles.section}>
           <Text style={styles.stepLabel}>Verification country</Text>
           <Text style={styles.sectionTitle}>Select your country</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
             {countryOptions.map((option: { code: string; label: string }) => (
               <Pressable
                 key={option.code}
@@ -1113,7 +1169,12 @@ export function SelfServiceVerificationScreen({
                 onPress={() => setCountryCode(option.code)}
               >
                 <View style={[styles.chip, countryCode === option.code ? styles.chipActive : null]}>
-                  <Text style={[styles.chipLabel, countryCode === option.code ? styles.chipLabelActive : null]}>
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      countryCode === option.code ? styles.chipLabelActive : null,
+                    ]}
+                  >
                     {option.label}
                   </Text>
                 </View>
@@ -1150,7 +1211,7 @@ export function SelfServiceVerificationScreen({
               value={
                 identitySubmitted
                   ? maskIdentifier(identifierValues[identifier.type] ?? '')
-                  : identifierValues[identifier.type] ?? ''
+                  : (identifierValues[identifier.type] ?? '')
               }
               helperText={
                 identitySubmitted
@@ -1171,7 +1232,9 @@ export function SelfServiceVerificationScreen({
         {/* Selfie capture */}
         <Card style={styles.section}>
           <Text style={styles.stepLabel}>Live capture</Text>
-          <Text style={styles.sectionTitle}>{biometricVerificationRequired ? 'Take a live selfie' : 'Take a profile photo'}</Text>
+          <Text style={styles.sectionTitle}>
+            {biometricVerificationRequired ? 'Take a live selfie' : 'Take a profile photo'}
+          </Text>
           <Text style={styles.copy}>
             {biometricVerificationRequired
               ? 'Center your face, move closer if needed, and hold still for a clear capture.'
@@ -1193,7 +1256,13 @@ export function SelfServiceVerificationScreen({
 
           {!identitySubmitted ? (
             <Button
-              label={selfiePreviewUri ? 'Retake selfie' : biometricVerificationRequired ? 'Open camera for selfie' : 'Take profile photo'}
+              label={
+                selfiePreviewUri
+                  ? 'Retake selfie'
+                  : biometricVerificationRequired
+                    ? 'Open camera for selfie'
+                    : 'Take profile photo'
+              }
               variant={selfiePreviewUri ? 'secondary' : 'primary'}
               onPress={() => void onCaptureSelfie()}
             />
@@ -1212,11 +1281,24 @@ export function SelfServiceVerificationScreen({
           </View>
 
           {identitySubmitted && identityResult ? (
-            <View style={[styles.resultCard, identityResult.decision === 'verified' ? styles.resultCardSuccess : styles.resultCardPending]}>
+            <View
+              style={[
+                styles.resultCard,
+                identityResult.decision === 'verified'
+                  ? styles.resultCardSuccess
+                  : styles.resultCardPending,
+              ]}
+            >
               <View style={styles.badgeRow}>
                 <Badge
                   label={formatDecisionLabel(identityResult.decision)}
-                  tone={identityResult.decision === 'verified' ? 'success' : identityResult.decision === 'failed' ? 'danger' : 'warning'}
+                  tone={
+                    identityResult.decision === 'verified'
+                      ? 'success'
+                      : identityResult.decision === 'failed'
+                        ? 'danger'
+                        : 'warning'
+                  }
                 />
                 {identityResult.livenessPassed != null ? (
                   <Badge
@@ -1229,17 +1311,23 @@ export function SelfServiceVerificationScreen({
               {identityResult.verifiedProfile ? (
                 <View style={styles.profileGrid}>
                   <Text style={styles.profileLabel}>Name on record</Text>
-                  <Text style={styles.profileValue}>{identityResult.verifiedProfile.fullName ?? '—'}</Text>
+                  <Text style={styles.profileValue}>
+                    {identityResult.verifiedProfile.fullName ?? '—'}
+                  </Text>
                   {identityResult.verifiedProfile.dateOfBirth ? (
                     <>
                       <Text style={styles.profileLabel}>Date of birth</Text>
-                      <Text style={styles.profileValue}>{identityResult.verifiedProfile.dateOfBirth}</Text>
+                      <Text style={styles.profileValue}>
+                        {identityResult.verifiedProfile.dateOfBirth}
+                      </Text>
                     </>
                   ) : null}
                   {identityResult.verifiedProfile.gender ? (
                     <>
                       <Text style={styles.profileLabel}>Gender</Text>
-                      <Text style={styles.profileValue}>{identityResult.verifiedProfile.gender}</Text>
+                      <Text style={styles.profileValue}>
+                        {identityResult.verifiedProfile.gender}
+                      </Text>
                     </>
                   ) : null}
                 </View>
@@ -1256,9 +1344,7 @@ export function SelfServiceVerificationScreen({
                 </Text>
               ) : null}
               {identityResult.matchedIdentifierType ? (
-                <Text style={styles.meta}>
-                  Matched via: {identityResult.matchedIdentifierType}
-                </Text>
+                <Text style={styles.meta}>Matched via: {identityResult.matchedIdentifierType}</Text>
               ) : null}
               {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
                 <Text style={styles.copy}>
@@ -1272,13 +1358,22 @@ export function SelfServiceVerificationScreen({
 
               <Button
                 label={identityResult.verifiedProfile ? 'Confirm details' : 'Continue to documents'}
-                onPress={() => setCurrentStep(identityResult.verifiedProfile ? 'profile' : 'documents')}
+                onPress={() =>
+                  setCurrentStep(identityResult.verifiedProfile ? 'profile' : 'documents')
+                }
               />
-              <Button label="Add guarantor next" variant="secondary" onPress={() => navigation.navigate('DriverGuarantor')} />
+              <Button
+                label="Add guarantor next"
+                variant="secondary"
+                onPress={() => navigation.navigate('DriverGuarantor')}
+              />
             </View>
           ) : identitySubmitted ? (
             <View style={styles.resultCard}>
-              <Badge label={formatIdentityLabel(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
+              <Badge
+                label={formatIdentityLabel(driver.identityStatus)}
+                tone={identityTone(driver.identityStatus)}
+              />
               <Text style={styles.copy}>
                 Identity already submitted. Check the readiness checklist for your current status.
               </Text>
@@ -1293,17 +1388,18 @@ export function SelfServiceVerificationScreen({
               </Text>
               {identityVerificationRequired ? (
                 <Button
-                  label={governmentLookupRequired ? 'Submit identity verification' : 'Save for organisation review'}
+                  label={
+                    governmentLookupRequired
+                      ? 'Submit identity verification'
+                      : 'Save for organisation review'
+                  }
                   disabled={!canSubmitIdentity}
                   loading={submittingIdentity}
                   loadingLabel="Submitting verification"
                   onPress={() => void onSubmitIdentity()}
                 />
               ) : (
-                <Button
-                  label="Continue to documents"
-                  onPress={() => setCurrentStep('documents')}
-                />
+                <Button label="Continue to documents" onPress={() => setCurrentStep('documents')} />
               )}
               {!canSubmitIdentity && !identitySubmitted ? (
                 <Text style={styles.hintText}>
@@ -1325,12 +1421,20 @@ export function SelfServiceVerificationScreen({
           message={processingMessage}
           steps={
             submittingIdentity
-              ? ['Validating live selfie', 'Checking identity records', 'Saving verification result']
+              ? [
+                  'Validating live selfie',
+                  'Checking identity records',
+                  'Saving verification result',
+                ]
               : uploadingDocument
                 ? ['Preparing file', 'Uploading securely', 'Refreshing document checklist']
                 : initiatingPayment
                   ? ['Preparing checkout', 'Linking payment to onboarding', 'Opening payment flow']
-                  : ['Saving your details', 'Updating onboarding progress', 'Preparing the next step']
+                  : [
+                      'Saving your details',
+                      'Updating onboarding progress',
+                      'Preparing the next step',
+                    ]
           }
           title={processingTitle}
           variant={processingVariant}
@@ -1349,14 +1453,29 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.kicker}>Documents</Text>
         <Text style={styles.title}>Upload documents</Text>
         <Text style={styles.copy}>
-          Upload the documents {organisationName} requires. Optional documents can be skipped. Files must be under 10 MB (PDF, JPG, PNG, or WEBP).
+          Upload the documents {organisationName} requires. Optional documents can be skipped. Files
+          must be under 10 MB (PDF, JPG, PNG, or WEBP).
         </Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
           {requiredDocuments.map((document: { slug: string; name: string }) => (
             <Pressable key={document.slug} onPress={() => setSelectedDocumentType(document.slug)}>
-              <View style={[styles.chip, selectedDocumentType === document.slug ? styles.chipActive : null]}>
-                <Text style={[styles.chipLabel, selectedDocumentType === document.slug ? styles.chipLabelActive : null]}>
+              <View
+                style={[
+                  styles.chip,
+                  selectedDocumentType === document.slug ? styles.chipActive : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    selectedDocumentType === document.slug ? styles.chipLabelActive : null,
+                  ]}
+                >
                   {document.name}
                 </Text>
               </View>
@@ -1385,7 +1504,11 @@ export function SelfServiceVerificationScreen({
             </View>
             <View style={styles.documentActionColumn}>
               <Badge
-                label={document.latestDocument ? formatDocumentStatus(document.latestDocument.status) : 'Missing'}
+                label={
+                  document.latestDocument
+                    ? formatDocumentStatus(document.latestDocument.status)
+                    : 'Missing'
+                }
                 tone={documentStatusTone(document.latestDocument?.status)}
               />
               {document.latestDocument?.previewUrl ? (
@@ -1399,7 +1522,12 @@ export function SelfServiceVerificationScreen({
                 <Button
                   label={removingDocumentId === document.latestDocument.id ? 'Removing…' : 'Remove'}
                   variant="secondary"
-                  onPress={() => void onRemoveDocument(document.latestDocument!.id)}
+                  onPress={() => {
+                    if (!document.latestDocument?.id) {
+                      return;
+                    }
+                    void onRemoveDocument(document.latestDocument.id);
+                  }}
                 />
               ) : null}
             </View>
@@ -1423,7 +1551,11 @@ export function SelfServiceVerificationScreen({
           />
         ) : null}
         <Button
-          label={documentChecklist.every((document) => document.uploaded) ? 'Finish onboarding' : 'Check readiness'}
+          label={
+            documentChecklist.every((document) => document.uploaded)
+              ? 'Finish onboarding'
+              : 'Check readiness'
+          }
           variant="secondary"
           onPress={() => navigation.navigate('SelfServiceReadiness')}
         />
@@ -1459,6 +1591,24 @@ function encodeBase64(buffer: ArrayBuffer) {
     binary += String.fromCharCode(...chunk);
   }
   return globalThis.btoa(binary);
+}
+
+async function getImageAssetBase64(asset: { base64?: string | null; uri?: string | null }) {
+  if (asset.base64?.trim()) {
+    return asset.base64;
+  }
+
+  if (!asset.uri) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(asset.uri);
+    const arrayBuffer = await response.arrayBuffer();
+    return encodeBase64(arrayBuffer);
+  } catch {
+    return null;
+  }
 }
 
 function formatIdentityLabel(status: string) {

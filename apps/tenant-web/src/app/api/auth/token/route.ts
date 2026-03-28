@@ -3,26 +3,28 @@ import { NextResponse } from 'next/server';
 import {
   TENANT_AUTH_COOKIE_NAME,
   TENANT_REFRESH_COOKIE_NAME,
+  getTenantAccessCookieOptions,
+  getTenantRefreshCookieOptions,
   isTenantJwtUsable,
 } from '../../../../lib/auth';
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
 
-function setSessionCookies(response: NextResponse, tokens: { accessToken: string; refreshToken: string }) {
-  const secure = process.env.NODE_ENV === 'production';
-  response.cookies.set(TENANT_AUTH_COOKIE_NAME, tokens.accessToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-    path: '/',
-  });
-  response.cookies.set(TENANT_REFRESH_COOKIE_NAME, tokens.refreshToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-    path: '/',
-  });
+function setSessionCookies(
+  response: NextResponse,
+  tokens: { accessToken: string; refreshToken: string },
+) {
+  response.cookies.set(
+    TENANT_AUTH_COOKIE_NAME,
+    tokens.accessToken,
+    getTenantAccessCookieOptions(tokens.accessToken),
+  );
+  response.cookies.set(
+    TENANT_REFRESH_COOKIE_NAME,
+    tokens.refreshToken,
+    getTenantRefreshCookieOptions(tokens.refreshToken),
+  );
 }
 
 export async function GET() {

@@ -7,6 +7,7 @@ import { BillingService } from '../billing/billing.service';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneRecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
@@ -153,6 +154,30 @@ export class PaymentsService {
   ): Promise<PaymentCheckoutResponseDto> {
     const currency = dto.currency.toUpperCase();
     const amountMinorUnits = this.KYC_AMOUNT_BY_CURRENCY[currency] ?? 500_000;
+    const reusableAttempt = await this.prisma.cpPaymentAttempt.findFirst({
+      where: {
+        provider: dto.provider,
+        purpose: 'identity_verification',
+        tenantId: dto.tenantId,
+        customerEmail: dto.customerEmail,
+        status: { in: ['checkout_initialized', 'provider_pending', 'webhook_received'] },
+        reference: {
+          startsWith: `mos_${dto.provider}_identity_verification_${dto.driverId}_`,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (reusableAttempt?.checkoutUrl) {
+      return {
+        provider: dto.provider,
+        reference: reusableAttempt.reference,
+        checkoutUrl: reusableAttempt.checkoutUrl,
+        ...(reusableAttempt.accessCode ? { accessCode: reusableAttempt.accessCode } : {}),
+        purpose: 'identity_verification',
+      };
+    }
+
     const reference = this.buildReference('identity_verification', dto.driverId, dto.provider);
     const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
     const initialized = await this.paymentProvidersService.initializePayment({
@@ -163,7 +188,7 @@ export class PaymentsService {
       redirectUrl,
       customerEmail: dto.customerEmail,
       ...(dto.customerName ? { customerName: dto.customerName } : {}),
-      description: `Mobiris identity verification fee`,
+      description: 'Mobiris identity verification fee',
       metadata: {
         purpose: 'identity_verification',
         tenantId: dto.tenantId,
@@ -291,7 +316,7 @@ export class PaymentsService {
           `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
           `Provider: ${dto.provider}`,
           `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
-          `Purpose: invoice settlement`,
+          'Purpose: invoice settlement',
         ],
         canonicalPayload: {
           reference: dto.reference,
@@ -334,7 +359,7 @@ export class PaymentsService {
           `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
           `Provider: ${dto.provider}`,
           `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
-          `Purpose: identity verification`,
+          'Purpose: identity verification',
         ],
         canonicalPayload: {
           reference: dto.reference,
@@ -402,7 +427,7 @@ export class PaymentsService {
         `Amount paid: ${verified.amountMinorUnits} ${verified.currency}`,
         `Provider: ${dto.provider}`,
         `Paid at: ${verified.paidAt ?? new Date().toISOString()}`,
-        `Purpose: platform wallet top-up`,
+        'Purpose: platform wallet top-up',
       ],
       canonicalPayload: {
         reference: dto.reference,

@@ -1,14 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -140,11 +133,19 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           <Text style={styles.wordmark}>M</Text>
         </View>
         <Text style={styles.productName}>Mobiris</Text>
-        <Text style={styles.title}>Run your transport business with control and confidence</Text>
+        <Text style={styles.title}>Choose how you want to enter Mobiris</Text>
         <Text style={styles.subtitle}>
-          Fast onboarding for operators, drivers, and guarantors.
+          Invitation-first onboarding for drivers and guarantors, with fast access for operators.
         </Text>
       </View>
+
+      <Card style={styles.entryRuleCard}>
+        <Text style={styles.entryRuleTitle}>Start with an invite if you have one</Text>
+        <Text style={styles.entryRuleCopy}>
+          Drivers and guarantors should use their organisation invite first. Login is for existing
+          accounts, and organisation setup starts with work email.
+        </Text>
+      </Card>
 
       {token && driver ? (
         <Card style={styles.resumeCard}>
@@ -230,9 +231,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
                 } catch (error) {
                   Alert.alert(
                     'Biometric login',
-                    error instanceof Error
-                      ? error.message
-                      : 'Unable to unlock this saved session.',
+                    error instanceof Error ? error.message : 'Unable to unlock this saved session.',
                   );
                 } finally {
                   setSubmitting(false);
@@ -340,6 +339,21 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.sm,
     backgroundColor: '#F8FBFF',
     borderColor: '#BFDBFE',
+  },
+  entryRuleCard: {
+    gap: tokens.spacing.sm,
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FED7AA',
+  },
+  entryRuleTitle: {
+    color: tokens.colors.ink,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  entryRuleCopy: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
   resumeHeader: {
     flexDirection: 'row',

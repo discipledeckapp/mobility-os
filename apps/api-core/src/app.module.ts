@@ -104,6 +104,10 @@ function createLoggerModule() {
   });
 }
 
+function createScheduleImports() {
+  return process.env.DISABLE_SCHEDULER === 'true' ? [] : [ScheduleModule.forRoot()];
+}
+
 /**
  * Root application module for the tenant operations plane (api-core).
  *
@@ -132,7 +136,7 @@ function createLoggerModule() {
         limit: 10,
       },
     ]),
-    ScheduleModule.forRoot(),
+    ...createScheduleImports(),
 
     // ── Infrastructure ────────────────────────────────────────────────────────
     DatabaseModule,
@@ -183,6 +187,7 @@ function createLoggerModule() {
     // CountryConfigModule,
   ],
   providers: [
+    Reflector,
     {
       provide: ThrottlerGuard,
       useFactory: (options: object, storage: object) =>

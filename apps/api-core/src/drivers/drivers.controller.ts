@@ -30,8 +30,8 @@ import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import {
   applyFleetScope,
-  assertLinkedDriverAccess,
   assertFleetAccess,
+  assertLinkedDriverAccess,
   getAssignedFleetIds,
   getLinkedDriverId,
 } from '../auth/tenant-access';
@@ -210,7 +210,7 @@ export class DriversController {
       'Lagos Core Fleet,Seyi,Adelaju,08012345678,seyi@example.com,1992-05-20,NG',
     ].join('\n');
     res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', 'attachment; filename=\"driver-import-template.csv\"');
+    res.setHeader('content-disposition', 'attachment; filename="driver-import-template.csv"');
     return new StreamableFile(Buffer.from(csv, 'utf-8'));
   }
 
@@ -226,7 +226,7 @@ export class DriversController {
       ...(getAssignedFleetIds(ctx).length ? { fleetIds: getAssignedFleetIds(ctx) } : {}),
     });
     res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', 'attachment; filename=\"drivers.csv\"');
+    res.setHeader('content-disposition', 'attachment; filename="drivers.csv"');
     return new StreamableFile(Buffer.from(csv, 'utf-8'));
   }
 
@@ -240,9 +240,7 @@ export class DriversController {
     @Body('autoSendSelfServiceLink') autoSendSelfServiceLink?: boolean,
   ) {
     return this.service.importDriversFromCsv(ctx.tenantId, csvContent, {
-      ...(typeof autoSendSelfServiceLink === 'boolean'
-        ? { autoSendSelfServiceLink }
-        : {}),
+      ...(typeof autoSendSelfServiceLink === 'boolean' ? { autoSendSelfServiceLink } : {}),
     });
   }
 
@@ -611,7 +609,9 @@ export class DriversController {
 
     return this.service.requestAdminAssignmentOverride(ctx.tenantId, ctx.userId, id, {
       reason,
-      ...(evidenceImageDataUrl?.trim() ? { evidenceImageDataUrl: evidenceImageDataUrl.trim() } : {}),
+      ...(evidenceImageDataUrl?.trim()
+        ? { evidenceImageDataUrl: evidenceImageDataUrl.trim() }
+        : {}),
     });
   }
 
@@ -642,8 +642,7 @@ export class DriversController {
       Partial<DriverGuarantorSummary> &
       Partial<DriverDocumentSummary> &
       Partial<DriverMobileAccessSummary> &
-      Partial<DriverReadinessSummary> &
-      { locked?: boolean },
+      Partial<DriverReadinessSummary> & { locked?: boolean },
   ): DriverResponseDto {
     return {
       id: driver.id,
@@ -680,8 +679,10 @@ export class DriversController {
       riskBand: driver.riskBand ?? null,
       isWatchlisted: driver.isWatchlisted ?? null,
       duplicateIdentityFlag: driver.duplicateIdentityFlag ?? null,
-      reverificationRequired: (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
-      reverificationReason: (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
+      reverificationRequired:
+        (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
+      reverificationReason:
+        (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
       hasGuarantor: driver.hasGuarantor ?? false,
       guarantorStatus: driver.guarantorStatus ?? null,
       guarantorDisconnectedAt: driver.guarantorDisconnectedAt ?? null,
@@ -689,9 +690,11 @@ export class DriversController {
       guarantorRiskBand: driver.guarantorRiskBand ?? null,
       guarantorIsWatchlisted: driver.guarantorIsWatchlisted ?? null,
       guarantorReverificationRequired:
-        (driver as { guarantorReverificationRequired?: boolean | null }).guarantorReverificationRequired ?? null,
+        (driver as { guarantorReverificationRequired?: boolean | null })
+          .guarantorReverificationRequired ?? null,
       guarantorReverificationReason:
-        (driver as { guarantorReverificationReason?: string | null }).guarantorReverificationReason ?? null,
+        (driver as { guarantorReverificationReason?: string | null })
+          .guarantorReverificationReason ?? null,
       guarantorIsAlsoDriver: driver.guarantorIsAlsoDriver ?? false,
       hasApprovedLicence: driver.hasApprovedLicence ?? false,
       hasMobileAccess: driver.hasMobileAccess ?? false,
@@ -829,8 +832,10 @@ export class DriverSelfServiceController {
       riskBand: driver.riskBand ?? null,
       isWatchlisted: driver.isWatchlisted ?? null,
       duplicateIdentityFlag: driver.duplicateIdentityFlag ?? null,
-      reverificationRequired: (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
-      reverificationReason: (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
+      reverificationRequired:
+        (driver as { reverificationRequired?: boolean | null }).reverificationRequired ?? null,
+      reverificationReason:
+        (driver as { reverificationReason?: string | null }).reverificationReason ?? null,
       hasGuarantor: guarantorSummary.hasGuarantor ?? false,
       guarantorStatus: guarantorSummary.guarantorStatus ?? null,
       guarantorDisconnectedAt: guarantorSummary.guarantorDisconnectedAt ?? null,
@@ -846,68 +851,70 @@ export class DriverSelfServiceController {
       enabledDriverIdentifierTypes:
         (driver as { enabledDriverIdentifierTypes?: string[] }).enabledDriverIdentifierTypes ?? [],
       requiredDriverIdentifierTypes:
-        (driver as { requiredDriverIdentifierTypes?: string[] }).requiredDriverIdentifierTypes ?? [],
+        (driver as { requiredDriverIdentifierTypes?: string[] }).requiredDriverIdentifierTypes ??
+        [],
       requiredDriverDocumentSlugs:
         (driver as { requiredDriverDocumentSlugs?: string[] }).requiredDriverDocumentSlugs ?? [],
       driverPaysKyc: (driver as { driverPaysKyc?: boolean }).driverPaysKyc ?? false,
-      kycPaymentVerified:
-        (driver as { kycPaymentVerified?: boolean }).kycPaymentVerified ?? false,
+      kycPaymentVerified: (driver as { kycPaymentVerified?: boolean }).kycPaymentVerified ?? false,
       verificationPaymentState:
-        (driver as {
-          verificationPaymentState?:
-            | 'not_required'
-            | 'required'
-            | 'pending'
-            | 'paid'
-            | 'reconciled';
-        }).verificationPaymentState ?? 'not_required',
+        (
+          driver as {
+            verificationPaymentState?:
+              | 'not_required'
+              | 'required'
+              | 'pending'
+              | 'paid'
+              | 'reconciled';
+          }
+        ).verificationPaymentState ?? 'not_required',
       verificationEntitlementState:
-        (driver as {
-          verificationEntitlementState?:
-            | 'none'
-            | 'paid'
-            | 'reserved'
-            | 'consumed'
-            | 'expired'
-            | 'refunded'
-            | 'cancelled';
-        }).verificationEntitlementState ?? 'none',
+        (
+          driver as {
+            verificationEntitlementState?:
+              | 'none'
+              | 'paid'
+              | 'reserved'
+              | 'consumed'
+              | 'expired'
+              | 'refunded'
+              | 'cancelled';
+          }
+        ).verificationEntitlementState ?? 'none',
       verificationState:
-        (driver as {
-          verificationState?:
-            | 'not_started'
-            | 'in_progress'
-            | 'provider_called'
-            | 'success'
-            | 'failed'
-            | 'abandoned'
-            | 'blocked';
-        }).verificationState ?? 'not_started',
+        (
+          driver as {
+            verificationState?:
+              | 'not_started'
+              | 'in_progress'
+              | 'provider_called'
+              | 'success'
+              | 'failed';
+          }
+        ).verificationState ?? 'not_started',
       verificationEntitlementCode:
         (driver as { verificationEntitlementCode?: string | null }).verificationEntitlementCode ??
         null,
       verificationPaymentReference:
         (driver as { verificationPaymentReference?: string | null }).verificationPaymentReference ??
         null,
-      verificationConsumedAt:
-        (() => {
-          const consumedAt = (
-            driver as {
-              verificationConsumedAt?: Date | string | null;
-            }
-          ).verificationConsumedAt;
-          if (!consumedAt) {
-            return null;
+      verificationConsumedAt: (() => {
+        const consumedAt = (
+          driver as {
+            verificationConsumedAt?: Date | string | null;
           }
-          return consumedAt instanceof Date
-            ? consumedAt.toISOString()
-            : new Date(consumedAt).toISOString();
-        })(),
+        ).verificationConsumedAt;
+        if (!consumedAt) {
+          return null;
+        }
+        return consumedAt instanceof Date
+          ? consumedAt.toISOString()
+          : new Date(consumedAt).toISOString();
+      })(),
       verificationAttemptCount:
         (driver as { verificationAttemptCount?: number }).verificationAttemptCount ?? 0,
       verificationBlockedReason:
-        (driver as { verificationBlockedReason?: string | null }).verificationBlockedReason ??
-        null,
+        (driver as { verificationBlockedReason?: string | null }).verificationBlockedReason ?? null,
       verificationPayer:
         (driver as { verificationPayer?: 'driver' | 'organisation' }).verificationPayer ??
         'organisation',
@@ -916,14 +923,16 @@ export class DriverSelfServiceController {
       verificationCurrency:
         (driver as { verificationCurrency?: string }).verificationCurrency ?? null,
       verificationPaymentStatus:
-        (driver as {
-          verificationPaymentStatus?:
-            | 'not_required'
-            | 'ready'
-            | 'driver_payment_required'
-            | 'wallet_missing'
-            | 'insufficient_balance';
-        }).verificationPaymentStatus ?? 'not_required',
+        (
+          driver as {
+            verificationPaymentStatus?:
+              | 'not_required'
+              | 'ready'
+              | 'driver_payment_required'
+              | 'wallet_missing'
+              | 'insufficient_balance';
+          }
+        ).verificationPaymentStatus ?? 'not_required',
       verificationPaymentMessage:
         (driver as { verificationPaymentMessage?: string | null }).verificationPaymentMessage ??
         null,
@@ -993,10 +1002,7 @@ export class DriverSelfServiceController {
 
   @Post('documents/:documentId/remove')
   @ApiCreatedResponse({ type: Object })
-  removeDocument(
-    @Body('token') token: string,
-    @Param('documentId') documentId: string,
-  ) {
+  removeDocument(@Body('token') token: string, @Param('documentId') documentId: string) {
     return this.service.removeDocumentFromSelfService(token, documentId);
   }
 

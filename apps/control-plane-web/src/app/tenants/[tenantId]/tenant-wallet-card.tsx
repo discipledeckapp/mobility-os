@@ -1,6 +1,5 @@
 'use client';
 
-import { useActionState } from 'react';
 import {
   ActionPendingButtonState,
   Card,
@@ -12,8 +11,9 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
+import { useActionState } from 'react';
 import type { PlatformWalletBalanceRecord } from '../../../lib/api-control-plane';
-import { creditTenantWalletAction, type CreditWalletActionState } from './actions';
+import { type CreditWalletActionState, creditTenantWalletAction } from './actions';
 
 export function TenantWalletCard({
   tenantId,
@@ -52,27 +52,24 @@ export function TenantWalletCard({
 
         <form action={formAction} className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="amountMinorUnits">Credit amount (minor units)</Label>
+            <Label htmlFor="amount">Credit amount</Label>
             <Input
-              id="amountMinorUnits"
-              min="1"
-              name="amountMinorUnits"
-              placeholder="e.g. 100000 = ₦1,000"
+              id="amount"
+              min="0.01"
+              name="amount"
+              placeholder="e.g. 1000.00"
               required
               type="number"
+              step="0.01"
             />
             <p className="text-xs text-slate-400">
-              Enter the amount in minor units. 100000 = ₦1,000.00
+              Enter the funding amount in major currency units. Example: 1000.00 credits NGN
+              1,000.00.
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="currency">Currency</Label>
-            <Input
-              defaultValue="NGN"
-              id="currency"
-              name="currency"
-              required
-            />
+            <Input defaultValue="NGN" id="currency" name="currency" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description (optional)</Label>

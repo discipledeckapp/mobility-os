@@ -77,6 +77,14 @@ interface MatchingResult {
     providerImageUrl?: string;
     selfieImageUrl?: string;
   };
+  verificationMetadata?: {
+    validity?: 'valid' | 'invalid' | 'unknown';
+    issueDate?: string;
+    expiryDate?: string;
+    portraitAvailable?: boolean;
+    matchScore?: number;
+    riskScore?: number;
+  };
   globalRiskScore?: number;
   riskBand?: string;
   isWatchlisted?: boolean;
@@ -122,7 +130,7 @@ export class IntelligenceClient {
   ): string {
     const message = Array.isArray(payload?.message)
       ? payload.message.join(', ')
-      : payload?.message ?? payload?.error ?? null;
+      : (payload?.message ?? payload?.error ?? null);
 
     if (status >= 500) {
       return 'Identity verification is temporarily unavailable. Please try again.';
@@ -209,9 +217,12 @@ export class IntelligenceClient {
   }
 
   async retireBiometricAssetUrls(urls: string[]): Promise<{ affectedPeople: number }> {
-    return this.post<{ affectedPeople: number }>('/api/v1/internal/persons/retire-biometric-assets', {
-      urls,
-    });
+    return this.post<{ affectedPeople: number }>(
+      '/api/v1/internal/persons/retire-biometric-assets',
+      {
+        urls,
+      },
+    );
   }
 
   private async get<T>(path: string): Promise<T> {

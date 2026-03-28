@@ -15,17 +15,19 @@ import {
   type VehicleMaintenanceSchedule,
   type VehicleValuation,
 } from '@prisma/client';
-import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv, parseCsv } from '../common/csv-utils';
+import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import type { CreateVehicleDto } from './dto/create-vehicle.dto';
 import type { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
 const VEHICLE_CODE_RETRY_LIMIT = 5;
+const DEFAULT_VEHICLE_MODEL_NAME = 'Model pending';
 
 type VehicleDetail = Vehicle & {
   fleetName: string;
@@ -90,6 +92,11 @@ export class VehiclesService {
     private readonly meteringClient: ControlPlaneMeteringClient,
   ) {}
 
+  private normalizeVehicleModel(model?: string | null): string {
+    const normalized = model?.trim();
+    return normalized && normalized.length > 0 ? normalized : DEFAULT_VEHICLE_MODEL_NAME;
+  }
+
   async list(
     tenantId: string,
     input: {
@@ -105,7 +112,11 @@ export class VehiclesService {
     const limit = input.limit ?? 50;
     const where = {
       tenantId,
-      ...(input.vehicleId ? { id: input.vehicleId } : input.vehicleIds?.length ? { id: { in: input.vehicleIds } } : {}),
+      ...(input.vehicleId
+        ? { id: input.vehicleId }
+        : input.vehicleIds?.length
+          ? { id: { in: input.vehicleIds } }
+          : {}),
       ...(input.fleetId
         ? { fleetId: input.fleetId }
         : input.fleetIds?.length
@@ -135,9 +146,7 @@ export class VehiclesService {
           select: { id: true },
         });
         const unlockedIds = new Set(unlockedRows.map((r) => r.id));
-        lockedVehicleIds = new Set(
-          data.filter((v) => !unlockedIds.has(v.id)).map((v) => v.id),
-        );
+        lockedVehicleIds = new Set(data.filter((v) => !unlockedIds.has(v.id)).map((v) => v.id));
       }
     }
 
@@ -197,65 +206,64 @@ export class VehiclesService {
       maintenanceEvents,
       incidents,
       confirmedRemittanceAggregate,
-    ] =
-      await Promise.all([
-        this.prisma.vehicleValuation.findMany({
-          where: { vehicleId: vehicle.id },
-          orderBy: [{ valuationDate: 'desc' }, { createdAt: 'desc' }],
-        }),
-        this.prisma.assignment.findFirst({
-          where: { tenantId, vehicleId: vehicle.id },
-          orderBy: { startedAt: 'desc' },
-          select: { id: true, status: true, startedAt: true },
-        }),
-        this.prisma.assignment.count({
-          where: { tenantId, vehicleId: vehicle.id },
-        }),
-        this.prisma.assignment.count({
-          where: {
-            tenantId,
-            vehicleId: vehicle.id,
-            status: { in: ['pending_driver_confirmation', 'active'] },
-          },
-        }),
-        vehicle.vin
-          ? this.prisma.vehicleVinDecode.findFirst({
-              where: {
-                normalizedVin: this.normalizeVin(vehicle.vin),
-              },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                decodedMake: true,
-                decodedModel: true,
-                decodedModelYear: true,
-                vehicleType: true,
-                bodyClass: true,
-                createdAt: true,
-              },
-            })
-          : Promise.resolve(null),
-        this.prisma.vehicleInspection.findMany({
-          where: { tenantId, vehicleId: vehicle.id },
-          orderBy: { inspectionDate: 'desc' },
-        }),
-        this.prisma.vehicleMaintenanceSchedule.findMany({
-          where: { tenantId, vehicleId: vehicle.id },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.vehicleMaintenanceEvent.findMany({
-          where: { tenantId, vehicleId: vehicle.id },
-          orderBy: [{ scheduledFor: 'desc' }, { createdAt: 'desc' }],
-        }),
-        this.prisma.vehicleIncident.findMany({
-          where: { tenantId, vehicleId: vehicle.id },
-          orderBy: { occurredAt: 'desc' },
-        }),
-        this.prisma.remittance.aggregate({
-          where: { tenantId, vehicleId: vehicle.id, status: 'confirmed' },
-          _sum: { amountMinorUnits: true },
-        }),
-      ]);
+    ] = await Promise.all([
+      this.prisma.vehicleValuation.findMany({
+        where: { vehicleId: vehicle.id },
+        orderBy: [{ valuationDate: 'desc' }, { createdAt: 'desc' }],
+      }),
+      this.prisma.assignment.findFirst({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: { startedAt: 'desc' },
+        select: { id: true, status: true, startedAt: true },
+      }),
+      this.prisma.assignment.count({
+        where: { tenantId, vehicleId: vehicle.id },
+      }),
+      this.prisma.assignment.count({
+        where: {
+          tenantId,
+          vehicleId: vehicle.id,
+          status: { in: ['pending_driver_confirmation', 'active'] },
+        },
+      }),
+      vehicle.vin
+        ? this.prisma.vehicleVinDecode.findFirst({
+            where: {
+              normalizedVin: this.normalizeVin(vehicle.vin),
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              decodedMake: true,
+              decodedModel: true,
+              decodedModelYear: true,
+              vehicleType: true,
+              bodyClass: true,
+              createdAt: true,
+            },
+          })
+        : Promise.resolve(null),
+      this.prisma.vehicleInspection.findMany({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: { inspectionDate: 'desc' },
+      }),
+      this.prisma.vehicleMaintenanceSchedule.findMany({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.vehicleMaintenanceEvent.findMany({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: [{ scheduledFor: 'desc' }, { createdAt: 'desc' }],
+      }),
+      this.prisma.vehicleIncident.findMany({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: { occurredAt: 'desc' },
+      }),
+      this.prisma.remittance.aggregate({
+        where: { tenantId, vehicleId: vehicle.id, status: 'confirmed' },
+        _sum: { amountMinorUnits: true },
+      }),
+    ]);
 
     const acquisition = valuations.find(
       (valuation) => valuation.valuationKind === 'acquisition' && valuation.isCurrent,
@@ -297,7 +305,11 @@ export class VehiclesService {
     );
     const nextDueSchedule = activeSchedules
       .filter((schedule) => schedule.nextDueAt)
-      .sort((left, right) => left.nextDueAt!.getTime() - right.nextDueAt!.getTime())[0];
+      .sort(
+        (left, right) =>
+          (left.nextDueAt?.getTime() ?? Number.POSITIVE_INFINITY) -
+          (right.nextDueAt?.getTime() ?? Number.POSITIVE_INFINITY),
+      )[0];
 
     const maintenanceSummary =
       dueSchedules.length > 0
@@ -661,7 +673,7 @@ export class VehiclesService {
               tenantVehicleCode: generatedTenantVehicleCode,
               vehicleType: dto.vehicleType,
               make: dto.make.trim(),
-              model: dto.model.trim(),
+              model: this.normalizeVehicleModel(dto.model),
               trim: this.normalizeOptionalText(dto.trim),
               year: dto.year,
               plate: normalizedPlate ?? null,
@@ -740,9 +752,7 @@ export class VehiclesService {
       where: { tenantId },
       select: { id: true, name: true },
     });
-    const fleetByName = new Map(
-      fleets.map((fleet) => [fleet.name.trim().toLowerCase(), fleet.id]),
-    );
+    const fleetByName = new Map(fleets.map((fleet) => [fleet.name.trim().toLowerCase(), fleet.id]));
 
     let createdCount = 0;
     const errors: string[] = [];
@@ -772,15 +782,10 @@ export class VehiclesService {
           ...(row.odometerKm ? { odometerKm: Number.parseInt(row.odometerKm, 10) } : {}),
           ...(row.acquisitionCostMinorUnits
             ? {
-                acquisitionCostMinorUnits: Number.parseInt(
-                  row.acquisitionCostMinorUnits,
-                  10,
-                ),
+                acquisitionCostMinorUnits: Number.parseInt(row.acquisitionCostMinorUnits, 10),
               }
             : {}),
-          ...(row.acquisitionDate?.trim()
-            ? { acquisitionDate: row.acquisitionDate.trim() }
-            : {}),
+          ...(row.acquisitionDate?.trim() ? { acquisitionDate: row.acquisitionDate.trim() } : {}),
           ...(row.currentEstimatedValueMinorUnits
             ? {
                 currentEstimatedValueMinorUnits: Number.parseInt(
@@ -789,9 +794,7 @@ export class VehiclesService {
                 ),
               }
             : {}),
-          ...(row.valuationSource?.trim()
-            ? { valuationSource: row.valuationSource.trim() }
-            : {}),
+          ...(row.valuationSource?.trim() ? { valuationSource: row.valuationSource.trim() } : {}),
         };
         await this.create(tenantId, payload);
         createdCount += 1;
@@ -809,10 +812,7 @@ export class VehiclesService {
     };
   }
 
-  async exportVehiclesCsv(
-    tenantId: string,
-    input: { fleetIds?: string[] } = {},
-  ): Promise<string> {
+  async exportVehiclesCsv(tenantId: string, input: { fleetIds?: string[] } = {}): Promise<string> {
     const vehicles = await this.prisma.vehicle.findMany({
       where: {
         tenantId,

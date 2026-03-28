@@ -260,12 +260,7 @@ export interface DriverRecord {
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   kycPaymentVerified?: boolean;
-  verificationPaymentState?:
-    | 'not_required'
-    | 'required'
-    | 'pending'
-    | 'paid'
-    | 'reconciled';
+  verificationPaymentState?: 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
   verificationEntitlementState?:
     | 'none'
     | 'paid'
@@ -274,14 +269,7 @@ export interface DriverRecord {
     | 'expired'
     | 'refunded'
     | 'cancelled';
-  verificationState?:
-    | 'not_started'
-    | 'in_progress'
-    | 'provider_called'
-    | 'success'
-    | 'failed'
-    | 'abandoned'
-    | 'blocked';
+  verificationState?: 'not_started' | 'in_progress' | 'provider_called' | 'success' | 'failed';
   verificationEntitlementCode?: string | null;
   verificationPaymentReference?: string | null;
   verificationConsumedAt?: string | null;
@@ -513,6 +501,9 @@ export interface ReportsOverviewRecord {
   driverActivity: {
     active: number;
     inactive: number;
+    activeVerified: number;
+    activeUnverified: number;
+    onboardingPool: number;
   };
   remittanceProjection: {
     currency: string;
@@ -1424,10 +1415,7 @@ export async function getFleet(fleetId: string, token?: string): Promise<FleetRe
   });
 }
 
-export async function createFleet(
-  input: CreateFleetInput,
-  token?: string,
-): Promise<FleetRecord> {
+export async function createFleet(input: CreateFleetInput, token?: string): Promise<FleetRecord> {
   return apiCoreFetch<FleetRecord>('/fleets', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -1793,14 +1781,11 @@ export async function setDriverAdminOverride(
   override: boolean,
   token?: string,
 ): Promise<{ adminAssignmentOverride: boolean }> {
-  return apiCoreFetch<{ adminAssignmentOverride: boolean }>(
-    `/drivers/${driverId}/admin-override`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ override }),
-      token: await getTenantApiToken(token),
-    },
-  );
+  return apiCoreFetch<{ adminAssignmentOverride: boolean }>(`/drivers/${driverId}/admin-override`, {
+    method: 'PATCH',
+    body: JSON.stringify({ override }),
+    token: await getTenantApiToken(token),
+  });
 }
 
 export async function requestDriverAdminOverride(
@@ -1814,9 +1799,7 @@ export async function requestDriverAdminOverride(
       method: 'POST',
       body: JSON.stringify({
         reason: input.reason,
-        ...(input.evidenceImageDataUrl
-          ? { evidenceImageDataUrl: input.evidenceImageDataUrl }
-          : {}),
+        ...(input.evidenceImageDataUrl ? { evidenceImageDataUrl: input.evidenceImageDataUrl } : {}),
       }),
       token: await getTenantApiToken(token),
     },
@@ -1894,9 +1877,7 @@ export async function importDriversCsv(
     method: 'POST',
     body: JSON.stringify({
       csvContent,
-      ...(typeof autoSendSelfServiceLink === 'boolean'
-        ? { autoSendSelfServiceLink }
-        : {}),
+      ...(typeof autoSendSelfServiceLink === 'boolean' ? { autoSendSelfServiceLink } : {}),
     }),
     cache: 'no-store',
     token: await getTenantApiToken(token),
@@ -1912,10 +1893,13 @@ export async function listDriverDocumentReviewQueue(
   if (input.q) params.set('q', input.q);
   if (typeof input.page === 'number') params.set('page', String(input.page));
   if (typeof input.limit === 'number') params.set('limit', String(input.limit));
-  return apiCoreFetch(`/drivers/documents/review-queue${params.toString() ? `?${params.toString()}` : ''}`, {
-    cache: 'no-store',
-    token: await getTenantApiToken(token),
-  });
+  return apiCoreFetch(
+    `/drivers/documents/review-queue${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function updateDriverStatus(
@@ -2123,10 +2107,13 @@ export async function getReportsOverview(
   const params = new URLSearchParams();
   if (input.dateFrom) params.set('dateFrom', input.dateFrom);
   if (input.dateTo) params.set('dateTo', input.dateTo);
-  return apiCoreFetch<ReportsOverviewRecord>(`/reports/overview${params.toString() ? `?${params.toString()}` : ''}`, {
-    cache: 'no-store',
-    token: await getTenantApiToken(token),
-  });
+  return apiCoreFetch<ReportsOverviewRecord>(
+    `/reports/overview${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function getLicenceExpiryReport(token?: string): Promise<LicenceExpiryReportRecord[]> {
@@ -2207,14 +2194,11 @@ export async function removeDriverSelfServiceDocument(
   selfServiceToken: string,
   documentId: string,
 ): Promise<{ message: string }> {
-  return apiCoreFetch<{ message: string }>(
-    `/driver-self-service/documents/${documentId}/remove`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ token: selfServiceToken }),
-      cache: 'no-store',
-    },
-  );
+  return apiCoreFetch<{ message: string }>(`/driver-self-service/documents/${documentId}/remove`, {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken }),
+    cache: 'no-store',
+  });
 }
 
 export async function createDriverSelfServiceAccount(
@@ -2273,9 +2257,7 @@ export async function updateDriverSelfServiceProfile(
   });
 }
 
-export async function exchangeDriverSelfServiceOtp(
-  otpCode: string,
-): Promise<{ token: string }> {
+export async function exchangeDriverSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
   return apiCoreFetch<{ token: string }>('/driver-self-service/exchange-otp', {
     method: 'POST',
     body: JSON.stringify({ otpCode }),
@@ -2310,6 +2292,7 @@ export type OnboardingStepRecord = {
   paymentMessage?: string | null;
   verificationPaymentStatus?: string;
   identityStatus?: string;
+  verificationState?: 'not_started' | 'in_progress' | 'provider_called' | 'success' | 'failed';
   hasConsentOnFile?: boolean;
   requiredDocumentTypes?: string[];
   verifiedDocumentTypes?: string[];
@@ -2332,10 +2315,15 @@ export type DocumentVerificationRecord = {
   countryCode: string;
   status: string;
   providerMatch: boolean | null;
+  providerValidity: 'valid' | 'invalid' | 'unknown' | null;
   providerFirstName: string | null;
   providerLastName: string | null;
   providerDateOfBirth: string | null;
+  providerIssueDate: string | null;
   providerExpiryDate: string | null;
+  portraitAvailable: boolean | null;
+  matchScore: number | null;
+  riskScore: number | null;
   failureReason: string | null;
   verifiedAt: string | null;
   createdAt: string;
@@ -2372,9 +2360,7 @@ export async function listDriverDocumentVerifications(
   );
 }
 
-export async function getGuarantorSelfServiceContext(
-  selfServiceToken: string,
-): Promise<{
+export async function getGuarantorSelfServiceContext(selfServiceToken: string): Promise<{
   guarantorName: string;
   guarantorPhone: string;
   guarantorEmail: string | null;
@@ -2399,9 +2385,7 @@ export async function getGuarantorSelfServiceContext(
   });
 }
 
-export async function exchangeGuarantorSelfServiceOtp(
-  otpCode: string,
-): Promise<{ token: string }> {
+export async function exchangeGuarantorSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
   return apiCoreFetch<{ token: string }>('/guarantor-self-service/exchange-otp', {
     method: 'POST',
     body: JSON.stringify({ otpCode }),
@@ -2622,10 +2606,13 @@ export async function listVehicleMaintenanceEvents(
   vehicleId: string,
   token?: string,
 ): Promise<VehicleMaintenanceEventRecord[]> {
-  return apiCoreFetch<VehicleMaintenanceEventRecord[]>(`/vehicles/${vehicleId}/maintenance-events`, {
-    cache: 'no-store',
-    token: await getTenantApiToken(token),
-  });
+  return apiCoreFetch<VehicleMaintenanceEventRecord[]>(
+    `/vehicles/${vehicleId}/maintenance-events`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function createVehicleMaintenanceEvent(
