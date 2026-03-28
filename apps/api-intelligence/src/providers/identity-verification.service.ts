@@ -167,11 +167,10 @@ export class IdentityVerificationService {
       (verificationConfig.providerCapabilities ?? []).map((provider) => [provider.name, provider]),
     );
 
-    const orderedProviders = (
-      routingOverride ? routingOverride.lookupProviders : verificationConfig.providers
-    )
-      .filter((provider) => provider.enabled)
-      .sort((left, right) => left.priority - right.priority);
+    const orderedProviders = this.orderLookupProviders(
+      routingOverride ? routingOverride.lookupProviders : verificationConfig.providers,
+      workingInput.providerVerification?.livenessCheck?.provider,
+    );
 
     const fallbackChain: string[] = [];
 
@@ -188,12 +187,10 @@ export class IdentityVerificationService {
         continue;
       }
 
+      const allowedIdentifierTypes = this.getAllowedIdentifierTypes(providerConfig);
       const scopedIdentifiers = workingInput.identifiers.filter(
         (identifier) =>
-          ('allowedLookupIdentifierTypes' in providerConfig
-            ? providerConfig.allowedLookupIdentifierTypes
-            : providerConfig.allowedIdentifierTypes
-          ).includes(identifier.type) &&
+          allowedIdentifierTypes.includes(identifier.type) &&
           capability.allowedLookupIdentifierTypes.includes(identifier.type),
       );
       if (scopedIdentifiers.length === 0 || !provider.canVerify(scopedIdentifiers)) {
@@ -340,6 +337,68 @@ export class IdentityVerificationService {
       reason.includes('returned a non-object response with status 404') ||
       reason.includes('returned status 404')
     );
+  }
+
+  private orderLookupProviders(
+    providers: Array<{
+      name: string;
+      enabled: boolean;
+      priority: number;
+      allowedIdentifierTypes?: string[];
+      allowedLookupIdentifierTypes?: string[];
+    }>,
+    livenessProviderName?: string,
+  ): Array<{
+    name: string;
+    enabled: boolean;
+    priority: number;
+    allowedIdentifierTypes?: string[];
+    allowedLookupIdentifierTypes?: string[];
+  }> {
+    const preferredProvider = livenessProviderName?.trim().toLowerCase();
+
+    return [...providers]
+      .filter((provider) => provider.enabled)
+      .sort((left, right) => {
+        const leftPreferred = preferredProvider && left.name === preferredProvider ? 0 : 1;
+        const rightPreferred = preferredProvider && right.name === preferredProvider ? 0 : 1;
+        if (leftPreferred !== rightPreferred) {
+          return leftPreferred - rightPreferred;
+        }
+
+        const leftPenalty = this.getProviderPriorityPenalty(left.name);
+        const rightPenalty = this.getProviderPriorityPenalty(right.name);
+        if (leftPenalty !== rightPenalty) {
+          return leftPenalty - rightPenalty;
+        }
+
+        return left.priority - right.priority;
+      });
+  }
+
+  private getProviderPriorityPenalty(providerName: string): number {
+    if (providerName !== 'smile_identity') {
+      return 0;
+    }
+
+    const mockResponse = this.configService.get<string>('SMILE_IDENTITY_MOCK_RESPONSE');
+    if (mockResponse) {
+      return 0;
+    }
+
+    const baseUrl = this.configService.get<string>('SMILE_IDENTITY_BASE_URL')?.trim() ?? '';
+    if (baseUrl.includes('kyc-mock-server.onrender.com')) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private getAllowedIdentifierTypes(provider: {
+    allowedIdentifierTypes?: string[];
+    allowedLookupIdentifierTypes?: string[];
+  }): string[] {
+    return provider.allowedLookupIdentifierTypes ?? provider.allowedIdentifierTypes ?? [];
   }
 
   private async recordVerificationChargeIfBillable(

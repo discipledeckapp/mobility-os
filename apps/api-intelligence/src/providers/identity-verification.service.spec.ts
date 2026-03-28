@@ -281,4 +281,63 @@ describe('IdentityVerificationService', () => {
       fallbackChain: ['smile_identity:provider_error', 'youverify:verified'],
     });
   });
+
+  it('prefers the provider that issued the successful liveness evidence', async () => {
+    controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry.mockResolvedValue({
+      countryCode: 'NG',
+      livenessProviders: [{ name: 'youverify', enabled: true, priority: 1 }],
+      lookupProviders: [
+        {
+          name: 'smile_identity',
+          enabled: true,
+          priority: 1,
+          allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        },
+        {
+          name: 'youverify',
+          enabled: true,
+          priority: 2,
+          allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        },
+      ],
+      fallbackOnProviderError: false,
+      fallbackOnProviderUnavailable: false,
+      fallbackOnNoMatch: false,
+    });
+    youVerifyNigeriaProvider.verify.mockResolvedValue({
+      status: 'verified',
+      providerName: 'youverify',
+      verificationStatus: 'verified',
+      enrichment: { fullName: 'Ada Okafor' },
+    });
+
+    const result = await service.verifyForEnrollment({
+      tenantId: 'tenant_1',
+      countryCode: 'NG',
+      identifiers: [{ type: 'NATIONAL_ID', value: '12345678901' }],
+      providerVerification: {
+        subjectConsent: true,
+        livenessCheck: {
+          provider: 'youverify',
+          sessionId: 'session-1',
+          passed: true,
+        },
+      },
+    });
+
+    expect(youVerifyNigeriaProvider.verify).toHaveBeenCalledTimes(1);
+    expect(smileIdentityNigeriaProvider.verify).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      attempted: true,
+      verification: expect.objectContaining({
+        status: 'verified',
+        providerName: 'youverify',
+      }),
+      liveness: expect.objectContaining({
+        passed: true,
+        providerName: 'youverify',
+      }),
+      fallbackChain: ['youverify:verified'],
+    });
+  });
 });

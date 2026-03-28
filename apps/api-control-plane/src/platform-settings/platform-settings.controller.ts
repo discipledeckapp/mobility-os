@@ -29,35 +29,13 @@ export class PlatformSettingsController {
       countries: [
         {
           countryCode: 'NG',
-          livenessProviders: [
-            {
-              name: 'amazon_rekognition',
-              enabled: true,
-              priority: 1,
-            },
-            {
-              name: 'youverify',
-              enabled: true,
-              priority: 2,
-            },
-            {
-              name: 'smile_identity',
-              enabled: true,
-              priority: 3,
-            },
-          ],
+          livenessProviders: [{ name: 'youverify', enabled: true, priority: 1 }],
           lookupProviders: [
             {
               name: 'youverify',
               enabled: true,
               priority: 1,
-              allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
-            },
-            {
-              name: 'smile_identity',
-              enabled: true,
-              priority: 2,
-              allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+              allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID', 'DRIVERS_LICENSE'],
             },
           ],
           fallbackOnProviderError: true,
@@ -79,18 +57,7 @@ export class PlatformSettingsController {
           meterEventType: 'identity_verification',
           defaultFeeMinorUnits: 15000,
           billOnStatuses: ['verified', 'no_match', 'provider_error'],
-          providers: [
-            {
-              name: 'youverify',
-              enabled: true,
-              feeMinorUnits: 15000,
-            },
-            {
-              name: 'smile_identity',
-              enabled: true,
-              feeMinorUnits: 15000,
-            },
-          ],
+          providers: [{ name: 'youverify', enabled: true, feeMinorUnits: 15000 }],
         },
       ],
     };
