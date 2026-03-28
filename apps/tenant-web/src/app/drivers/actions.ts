@@ -200,7 +200,9 @@ export async function createDriverAction(
     // Non-blocking — don't fail driver creation over a balance check
   }
 
-  redirect(`/drivers/${driverId}?tab=verification&created=1${walletWarning ? '&walletWarning=1' : ''}`);
+  redirect(
+    `/drivers/${driverId}?tab=verification&created=1${walletWarning ? '&walletWarning=1' : ''}`,
+  );
 }
 
 function getOptionalTrimmedValue(formData: FormData, key: string): string {
@@ -492,10 +494,11 @@ export async function resolveDriverSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
-        // Selfie was captured live from camera. Signals presence to the backend
-        // liveness evaluator. Providers without a browser SDK fall back to
-        // internal_free_service which uses this passed:true assertion.
-        passed: true,
+        // Only assert passed:true for internal_free_service — it has no queryable
+        // session result so the backend relies on this client assertion.
+        // For YouVerify the backend queries the actual session result via the
+        // liveness history API; sending passed:true here would bypass that check.
+        ...(!providerName || providerName === 'internal_free_service' ? { passed: true } : {}),
       },
     });
 
@@ -584,10 +587,11 @@ export async function resolveGuarantorSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
-        // The selfie was captured live from the camera. This signals presence to
-        // the backend liveness evaluator. Without a native SDK running in browser,
-        // the internal_free_service fallback uses this passed:true assertion.
-        passed: true,
+        // Only assert passed:true for internal_free_service — it has no queryable
+        // session result so the backend relies on this client assertion.
+        // For YouVerify the backend queries the actual session result via the
+        // liveness history API; sending passed:true here would bypass that check.
+        ...(!providerName || providerName === 'internal_free_service' ? { passed: true } : {}),
       },
     });
 

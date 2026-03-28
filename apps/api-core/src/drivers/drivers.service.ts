@@ -2495,6 +2495,11 @@ export class DriversService {
             livenessCheck: {
               ...(livenessCheck.provider ? { provider: livenessCheck.provider } : {}),
               ...(livenessCheck.sessionId ? { sessionId: livenessCheck.sessionId } : {}),
+              // passed:true is a client assertion that the selfie was captured live.
+              // The intelligence service passes this to internal_free_service when the
+              // configured provider (YouVerify, Azure Face) has no completed session
+              // result — e.g. when a browser SDK is not available for the provider.
+              ...(livenessCheck.passed !== undefined ? { passed: livenessCheck.passed } : {}),
             },
           }
         : {}),
@@ -3564,6 +3569,11 @@ export class DriversService {
               livenessCheck: {
                 ...(livenessCheck.provider ? { provider: livenessCheck.provider } : {}),
                 ...(livenessCheck.sessionId ? { sessionId: livenessCheck.sessionId } : {}),
+                // passed:true is a client assertion that the selfie was captured live.
+                // The intelligence service passes this to internal_free_service when the
+                // configured provider (YouVerify, Azure Face) has no completed session
+                // result — e.g. when a browser SDK is not available for the provider.
+                ...(livenessCheck.passed !== undefined ? { passed: livenessCheck.passed } : {}),
               },
             }
           : {}),

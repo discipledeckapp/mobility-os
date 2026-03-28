@@ -471,11 +471,14 @@ export class LivenessService {
 
   private async initializeYouVerifySession(
     input: LivenessSessionInitInput,
-  ): Promise<{ sessionId?: string; expiresAt?: string; reason?: string }> {
+  ): Promise<{ sessionId?: string; clientAuthToken?: string; expiresAt?: string; reason?: string }> {
     const mock = this.configService.get<string>('YOUVERIFY_LIVENESS_MOCK_RESPONSE');
     if (mock) {
+      // In mock mode supply a fake sessionToken so the youverify-liveness-web SDK
+      // can be initialised in sandboxEnvironment=true without real credentials.
       return {
         sessionId: 'youverify-mock-session',
+        clientAuthToken: 'youverify-mock-auth-token',
         expiresAt: new Date(Date.now() + 120_000).toISOString(),
         reason: 'initialized',
       };
@@ -487,36 +490,76 @@ export class LivenessService {
       return { reason: 'provider_unavailable' };
     }
 
+    const base = baseUrl.replace(/\/$/, '');
+
     try {
-      const response = await requestProviderJson({
+      // Step 1 — generate a liveness session ID.
+      const sessionResponse = await requestProviderJson({
         providerName: 'youverify',
         operation: 'liveness:init',
         method: 'POST',
-        url: `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/generate`,
+        url: `${base}/v2/api/identity/sdk/liveness/session/generate`,
         headers: { token: apiKey },
         body: {
           ttlSeconds: 120,
-          metadata: {
-            tenantId: input.tenantId,
-            countryCode: input.countryCode,
-          },
+          metadata: { tenantId: input.tenantId, countryCode: input.countryCode },
         },
       });
 
-      if (summarizeProviderFailure('youverify', 'liveness:init', response)) {
+      if (summarizeProviderFailure('youverify', 'liveness:init', sessionResponse)) {
         return { reason: 'provider_error' };
       }
 
-      const payload = response.payload as {
+      const sessionPayload = sessionResponse.payload as {
         data?: { sessionId?: string; expiresAt?: string };
       };
-      return payload.data?.sessionId
-        ? {
-            sessionId: payload.data.sessionId,
-            ...(payload.data.expiresAt ? { expiresAt: payload.data.expiresAt } : {}),
-            reason: 'initialized',
+
+      if (!sessionPayload.data?.sessionId) {
+        return { reason: 'provider_error' };
+      }
+
+      const { sessionId, expiresAt } = sessionPayload.data;
+
+      // Step 2 — generate the SDK auth token required by youverify-liveness-web.
+      // The token endpoint returns an authToken (called sessionToken by the SDK)
+      // plus optionally an updated sessionId. If YOUVERIFY_PUBLIC_MERCHANT_ID is
+      // not set we skip this step and return without a clientAuthToken — the frontend
+      // will fall back to the camera-only capture path in that case.
+      const publicMerchantId = this.configService.get<string>('YOUVERIFY_PUBLIC_MERCHANT_ID');
+      let clientAuthToken: string | undefined;
+
+      if (publicMerchantId) {
+        try {
+          const tokenResponse = await requestProviderJson({
+            providerName: 'youverify',
+            operation: 'liveness:token',
+            method: 'POST',
+            url: `${base}/v2/api/identity/sdk/liveness/token`,
+            headers: { token: apiKey },
+            body: {
+              publicMerchantID: publicMerchantId,
+              deviceCorrelationId: `mobiris-web-${input.tenantId}-${Date.now()}`,
+            },
+          });
+
+          if (!summarizeProviderFailure('youverify', 'liveness:token', tokenResponse)) {
+            const tokenPayload = tokenResponse.payload as {
+              data?: { authToken?: string };
+              authToken?: string;
+            };
+            clientAuthToken = tokenPayload.data?.authToken ?? tokenPayload.authToken;
           }
-        : { reason: 'provider_error' };
+        } catch {
+          // Non-fatal — the session is still valid. Frontend falls back to camera capture.
+        }
+      }
+
+      return {
+        sessionId,
+        ...(expiresAt ? { expiresAt } : {}),
+        ...(clientAuthToken ? { clientAuthToken } : {}),
+        reason: 'initialized',
+      };
     } catch {
       return { reason: 'provider_error' };
     }
@@ -671,7 +714,10 @@ export class LivenessService {
     }
 
     try {
-      const url = `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/${encodeURIComponent(evidence.sessionId)}`;
+      // Use the liveness history endpoint — the correct way to query SDK session results.
+      // The old /sdk/liveness/session/{id} path returns session metadata only; the actual
+      // liveness outcome (passed: boolean) is in the /v2/api/identity/liveness history.
+      const url = `${baseUrl.replace(/\/$/, '')}/v2/api/identity/liveness?sessionId=${encodeURIComponent(evidence.sessionId)}`;
       const response = await requestProviderJson({
         providerName: 'youverify',
         operation: 'liveness:result',
@@ -684,31 +730,31 @@ export class LivenessService {
         return { passed: false, reason: 'provider_error' };
       }
 
+      // Response shape: { data: Array<{ passed: boolean, sessionId: string, ... }> }
       const payload = response.payload as {
-        data?: {
-          livenessStatus?: string;
-          livenessDecision?: string;
-          confidence?: number;
-        };
+        data?: Array<{
+          passed?: boolean;
+          sessionId?: string;
+          faceImage?: string;
+          livenessClip?: string;
+        }>;
       };
 
-      const data = payload.data;
-      if (!data) {
+      const records = Array.isArray(payload.data) ? payload.data : [];
+      // Find the record matching this specific session, or use the first returned.
+      const record =
+        records.find((r) => r.sessionId === evidence.sessionId) ?? records[0];
+
+      if (!record) {
+        // No result yet — SDK has not submitted liveness data.
+        // Allow the fallback chain to continue (e.g. to internal_free_service).
         return { passed: false, reason: 'provider_error' };
       }
 
-      const passed =
-        data.livenessDecision === 'approved' || data.livenessStatus === 'alive';
-      const confidence =
-        typeof data.confidence === 'number' ? data.confidence : undefined;
+      // The YouVerify liveness history record uses a simple `passed` boolean.
+      const passed = record.passed === true;
 
-      return {
-        passed,
-        ...(confidence !== undefined
-          ? { confidenceScore: Math.round(confidence * 100) }
-          : {}),
-        reason: passed ? 'passed' : 'failed',
-      };
+      return { passed, reason: passed ? 'passed' : 'failed' };
     } catch {
       return { passed: false, reason: 'provider_error' };
     }

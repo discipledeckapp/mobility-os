@@ -123,7 +123,9 @@ export function DriverIdentityVerification({
   orgDriverPaysKyc?: boolean;
   enabledIdentifierTypes?: string[];
   requiredIdentifierTypes?: string[];
-  onVerificationSubmitted?: (result: NonNullable<ResolveDriverVerificationActionState['result']>) => void;
+  onVerificationSubmitted?: (
+    result: NonNullable<ResolveDriverVerificationActionState['result']>,
+  ) => void;
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
   const router = useRouter();
@@ -202,6 +204,9 @@ export function DriverIdentityVerification({
   const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [captureProgress, setCaptureProgress] = useState(0); // 0 = idle, 1–3 = capturing frame N
+  // YouVerify web SDK state
+  const [yvSdkError, setYvSdkError] = useState<string | null>(null);
+  const [isLaunchingYv, setIsLaunchingYv] = useState(false);
   // Controlled consent state — persists across submission and cannot be silently reset.
   const [subjectConsent, setSubjectConsent] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -225,7 +230,7 @@ export function DriverIdentityVerification({
       if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
       stopStream();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -240,6 +245,54 @@ export function DriverIdentityVerification({
   useEffect(() => {
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
+
+  // Log final verification result for audit / debugging.
+  useEffect(() => {
+    const r = resolveState.result;
+    if (!r) return;
+    console.info('[DriverVerification] verification result received', {
+      decision: r.decision,
+      isVerifiedMatch: r.isVerifiedMatch,
+      providerName: r.providerName,
+      providerLookupStatus: r.providerLookupStatus,
+      livenessPassed: r.livenessPassed,
+      livenessProviderName: r.livenessProviderName,
+      livenessReason: r.livenessReason,
+    });
+  }, [resolveState.result]);
+
+  // Instrumentation — log which liveness provider path is active.
+  // Confirms whether YouVerify, Azure Face, Smile Identity, or internal_free_service
+  // was selected by the backend when the session was initialised.
+  useEffect(() => {
+    if (!session) return;
+    console.info('[DriverVerification] liveness session initialised', {
+      providerName: session.providerName,
+      sessionId: session.sessionId,
+      expiresAt: session.expiresAt ?? null,
+      hasClientAuthToken: Boolean(session.clientAuthToken),
+      fallbackChain: session.fallbackChain,
+    });
+    if (session.providerName === 'internal_free_service') {
+      console.warn(
+        '[DriverVerification] using internal_free_service — no third-party liveness SDK ran. ' +
+          'The selfie captured by the camera is sent to the NIN verification provider for face matching.',
+      );
+    }
+    if (session.providerName === 'youverify') {
+      if (session.clientAuthToken) {
+        console.info(
+          '[DriverVerification] YouVerify SDK path active — clientAuthToken present. ' +
+            'The youverify-liveness-web SDK will run on "Launch face verification".',
+        );
+      } else {
+        console.warn(
+          '[DriverVerification] YouVerify session created but clientAuthToken is missing. ' +
+            'Falling back to camera capture; selfie will be sent to YouVerify for NIN photo matching.',
+        );
+      }
+    }
+  }, [session]);
 
   // Attach stream after the container finishes expanding (fixes black screen on
   // mobile Safari/Chrome where play() into a zero-height element renders black).
@@ -265,11 +318,50 @@ export function DriverIdentityVerification({
     }
   }
 
+  async function launchYouVerifySDK(): Promise<void> {
+    if (!session?.sessionId || !session?.clientAuthToken) return;
+    setYvSdkError(null);
+    setIsLaunchingYv(true);
+    try {
+      const { default: WebSDK } = await import('youverify-liveness-web');
+      const sdk = new WebSDK({
+        sessionId: session.sessionId,
+        sessionToken: session.clientAuthToken,
+        sandboxEnvironment: process.env.NODE_ENV !== 'production',
+        presentation: 'modal',
+        onSuccess(data) {
+          const raw = data.faceImage ?? '';
+          const isDataUrl = raw.startsWith('data:');
+          const base64 = isDataUrl ? (raw.split(',')[1] ?? '') : raw;
+          const preview = isDataUrl ? raw : `data:image/jpeg;base64,${raw}`;
+          setSelfieImageBase64(base64);
+          setSelfiePreviewUrl(preview);
+          setIsLaunchingYv(false);
+        },
+        onFailure(data) {
+          setYvSdkError(data.error?.message ?? 'Face verification failed. Please try again.');
+          setIsLaunchingYv(false);
+        },
+        onClose() {
+          setIsLaunchingYv(false);
+        },
+      });
+      await sdk.start();
+    } catch (err) {
+      setYvSdkError(
+        err instanceof Error ? err.message : 'Unable to load face verification. Please try again.',
+      );
+      setIsLaunchingYv(false);
+    }
+  }
+
   async function startCamera(): Promise<void> {
     setCameraError(null);
     setCameraGuidance('Position your face in the frame');
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Camera access is not available in this browser. Please use a modern browser over HTTPS.');
+      setCameraError(
+        'Camera access is not available in this browser. Please use a modern browser over HTTPS.',
+      );
       return;
     }
     try {
@@ -285,14 +377,19 @@ export function DriverIdentityVerification({
       setCameraReady(true);
     } catch (error) {
       if (error instanceof Error && error.name === 'NotAllowedError') {
-        setCameraError('Camera permission denied. Please allow camera access in your browser settings and try again.');
+        setCameraError(
+          'Camera permission denied. Please allow camera access in your browser settings and try again.',
+        );
       } else {
         setCameraError(error instanceof Error ? error.message : 'Unable to access the camera.');
       }
     }
   }
 
-  function captureFrameWithVariance(video: HTMLVideoElement): { dataUrl: string; variance: number } {
+  function captureFrameWithVariance(video: HTMLVideoElement): {
+    dataUrl: string;
+    variance: number;
+  } {
     const w = video.videoWidth || 640;
     const h = video.videoHeight || 480;
     const canvas = document.createElement('canvas');
@@ -327,7 +424,10 @@ export function DriverIdentityVerification({
 
   async function captureAutoFrames(): Promise<void> {
     const video = videoRef.current;
-    if (!video) { setCameraError('Camera preview is not ready. Please open the camera again.'); return; }
+    if (!video) {
+      setCameraError('Camera preview is not ready. Please open the camera again.');
+      return;
+    }
 
     const frames: { dataUrl: string; variance: number }[] = [];
     for (let i = 0; i < 3; i++) {
@@ -339,7 +439,10 @@ export function DriverIdentityVerification({
 
     // Pick the sharpest frame (highest pixel-luminance variance).
     const best = frames.reduce((a, b) => (a.variance >= b.variance ? a : b));
-    if (!best.dataUrl) { setCameraError('Unable to capture the selfie image.'); return; }
+    if (!best.dataUrl) {
+      setCameraError('Unable to capture the selfie image.');
+      return;
+    }
 
     const [, base64 = ''] = best.dataUrl.split(',');
     if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
@@ -358,6 +461,7 @@ export function DriverIdentityVerification({
     setCameraReady(false);
     setVideoPlaying(false);
     setCaptureProgress(0);
+    setYvSdkError(null);
   }
 
   function updateIdentifierValue(type: string, value: string): void {
@@ -382,7 +486,11 @@ export function DriverIdentityVerification({
               Open review
             </Link>
           ) : null}
-          <span title={canSendSelfServiceLink ? undefined : 'Add email address to send a self-service link.'}>
+          <span
+            title={
+              canSendSelfServiceLink ? undefined : 'Add email address to send a self-service link.'
+            }
+          >
             <form action={sendLinkAction} className="flex flex-wrap items-center gap-2">
               <input name="driverId" type="hidden" value={driver.id} />
               <input name="driverPaysKycOverride" type="hidden" value={String(sendLinkPaysKyc)} />
@@ -399,7 +507,9 @@ export function DriverIdentityVerification({
                   </span>
                   <span className="block text-slate-500">{verificationFeeCopy}</span>
                   {orgDriverPaysKyc !== sendLinkPaysKyc ? (
-                    <span className="block text-amber-600">This overrides the organisation default for this driver.</span>
+                    <span className="block text-amber-600">
+                      This overrides the organisation default for this driver.
+                    </span>
                   ) : null}
                 </span>
               </label>
@@ -416,7 +526,8 @@ export function DriverIdentityVerification({
 
       {driver.identityReviewCaseId && !isOpen ? (
         <Text tone="muted">
-          Review case {driver.identityReviewCaseId} is holding this driver until a manual decision is recorded.
+          Review case {driver.identityReviewCaseId} is holding this driver until a manual decision
+          is recorded.
         </Text>
       ) : null}
       {mode === 'operator' && sendState.error ? <Text tone="danger">{sendState.error}</Text> : null}
@@ -425,12 +536,16 @@ export function DriverIdentityVerification({
           <Text tone="success">{sendState.success}</Text>
           {sendState.delivery ? (
             <>
-              <Text tone="muted">Share the link directly with the driver using the buttons below.</Text>
+              <Text tone="muted">
+                Share the link directly with the driver using the buttons below.
+              </Text>
               <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(sendState.delivery?.verificationUrl ?? '');
+                      await navigator.clipboard.writeText(
+                        sendState.delivery?.verificationUrl ?? '',
+                      );
                     } catch {
                       // Ignore clipboard failures; the link remains visible.
                     }
@@ -465,7 +580,9 @@ export function DriverIdentityVerification({
         </div>
       ) : null}
       {mode === 'operator' && !driver.email ? (
-        <Text tone="muted">Add an email address to this driver record to send a self-verification link.</Text>
+        <Text tone="muted">
+          Add an email address to this driver record to send a self-verification link.
+        </Text>
       ) : null}
 
       {isOpen ? (
@@ -477,21 +594,22 @@ export function DriverIdentityVerification({
             <CardDescription>
               {mode === 'self_service'
                 ? 'Capture a live selfie, then enter your identification number to complete verification.'
-                : 'Capture a live selfie, then enter the driver\'s identification numbers.'}
+                : "Capture a live selfie, then enter the driver's identification numbers."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-
             {/* ── Step 1: Liveness capture ── */}
             <div className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] text-xs font-bold text-white">1</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mobiris-primary)] text-xs font-bold text-white">
+                  1
+                </div>
                 <Text tone="strong">Face liveness capture</Text>
               </div>
               <Text tone="muted">
                 {mode === 'self_service'
-                  ? 'Use this device\'s camera to capture a live selfie. Make sure your face is well-lit and centred.'
-                  : 'Start a liveness session, then capture a selfie using this device\'s camera.'}
+                  ? "Use this device's camera to capture a live selfie. Make sure your face is well-lit and centred."
+                  : "Start a liveness session, then capture a selfie using this device's camera."}
               </Text>
 
               {/* Start session form */}
@@ -516,93 +634,150 @@ export function DriverIdentityVerification({
                 </form>
               ) : null}
 
-              {/* Session active — camera area */}
+              {/* Session active — YouVerify SDK path or camera fallback */}
               {session && !livenessDone ? (
-                <div className="space-y-3">
-                  {/* Guidance text */}
-                  <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-700">
-                    {cameraError ? '⚠ ' : '📷 '}{cameraError ?? cameraGuidance}
-                  </div>
-
-                  {/* Video — always in DOM once session starts; hidden until stream ready.
-                      Container uses max-h transition; stream is attached AFTER it expands
-                      so the browser can render frames into an element with positive dimensions.
-                      The face oval uses box-shadow to create a focused capture region. */}
-                  <div className={`relative overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? `${mode === 'self_service' || mode === 'guarantor_self_service' ? 'max-h-[32rem] min-h-[22rem]' : 'max-h-[28rem] min-h-[20rem]'}` : 'max-h-0 border-0'}`}>
-                    <video
-                      autoPlay
-                      className="h-full w-full object-cover"
-                      muted
-                      playsInline
-                      ref={videoRef}
-                      onPlaying={() => {
-                        setVideoPlaying(true);
-                        setCameraGuidance('Align your face with the oval, then capture');
-                      }}
-                    />
-                    {/* Face oval guide — only rendered when video is actively playing */}
-                    {cameraReady && videoPlaying ? (
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <div className="h-56 w-44 rounded-full border-[3px] border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]" />
+                session.providerName === 'youverify' && session.clientAuthToken ? (
+                  /* YouVerify browser SDK — launches the native liveness modal */
+                  <div className="space-y-3">
+                    <Text tone="muted">
+                      Click below to open the face verification window. Follow the on-screen prompts
+                      to complete your liveness check.
+                    </Text>
+                    <Button
+                      disabled={isLaunchingYv}
+                      onClick={() => void launchYouVerifySDK()}
+                      type="button"
+                    >
+                      {isLaunchingYv ? (
+                        <span className="flex items-center gap-2">
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                          Opening…
+                        </span>
+                      ) : (
+                        'Launch face verification'
+                      )}
+                    </Button>
+                    {yvSdkError ? (
+                      <div className="space-y-2">
+                        <Text tone="danger">{yvSdkError}</Text>
+                        <Button
+                          onClick={() => setYvSdkError(null)}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          Try again
+                        </Button>
                       </div>
                     ) : null}
                   </div>
+                ) : (
+                  /* Camera capture path — internal_free_service or provider without clientAuthToken */
+                  <div className="space-y-3">
+                    {/* Guidance text */}
+                    <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-700">
+                      {cameraError ? '⚠ ' : '📷 '}
+                      {cameraError ?? cameraGuidance}
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    {!cameraReady ? (
-                      <Button onClick={() => void startCamera()} type="button">
-                        Open camera
-                      </Button>
-                    ) : !videoPlaying ? (
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
-                        Starting camera…
-                      </div>
-                    ) : captureProgress > 0 ? (
-                      <div className="flex items-center gap-3">
-                        <div className="flex gap-1.5">
-                          {[1, 2, 3].map((n) => (
-                            <span
-                              key={n}
-                              className={`h-2 w-8 rounded-full transition-colors ${n <= captureProgress ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-200'}`}
-                            />
-                          ))}
+                    {/* Video — always in DOM once session starts; hidden until stream ready.
+                        Container uses max-h transition; stream is attached AFTER it expands
+                        so the browser can render frames into an element with positive dimensions.
+                        The face oval uses box-shadow to create a focused capture region. */}
+                    <div
+                      className={`relative overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? `${mode === 'self_service' || mode === 'guarantor_self_service' ? 'max-h-[32rem] min-h-[22rem]' : 'max-h-[28rem] min-h-[20rem]'}` : 'max-h-0 border-0'}`}
+                    >
+                      <video
+                        autoPlay
+                        className="h-full w-full object-cover"
+                        muted
+                        playsInline
+                        ref={videoRef}
+                        onPlaying={() => {
+                          setVideoPlaying(true);
+                          setCameraGuidance('Align your face with the oval, then capture');
+                        }}
+                      />
+                      {/* Face oval guide — only rendered when video is actively playing */}
+                      {cameraReady && videoPlaying ? (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          <div className="h-56 w-44 rounded-full border-[3px] border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]" />
                         </div>
-                        <span className="text-sm text-slate-600">Capturing {captureProgress}/3…</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Button onClick={() => void captureAutoFrames()} type="button">
-                          Capture selfie
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      {!cameraReady ? (
+                        <Button onClick={() => void startCamera()} type="button">
+                          Open camera
                         </Button>
-                        <Button onClick={resetSelfieCapture} type="button" variant="ghost">
-                          Cancel
-                        </Button>
-                      </>
-                    )}
+                      ) : !videoPlaying ? (
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
+                          Starting camera…
+                        </div>
+                      ) : captureProgress > 0 ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex gap-1.5">
+                            {[1, 2, 3].map((n) => (
+                              <span
+                                key={n}
+                                className={`h-2 w-8 rounded-full transition-colors ${n <= captureProgress ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-200'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-slate-600">
+                            Capturing {captureProgress}/3…
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <Button onClick={() => void captureAutoFrames()} type="button">
+                            Capture selfie
+                          </Button>
+                          <Button onClick={resetSelfieCapture} type="button" variant="ghost">
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )
               ) : null}
 
-              {/* Selfie preview */}
+              {/* Selfie / liveness preview */}
               {selfiePreviewUrl && livenessDone ? (
                 <div className="space-y-2 rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-emerald-50/50 p-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-emerald-600 font-medium text-sm">✓ Selfie captured</span>
+                    <span className="text-emerald-600 font-medium text-sm">
+                      {session?.providerName === 'youverify'
+                        ? '✓ Liveness verified'
+                        : '✓ Selfie captured'}
+                    </span>
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img alt="Captured selfie preview" className="max-h-40 rounded-[var(--mobiris-radius-card)] object-cover" src={selfiePreviewUrl} />
+                  <img
+                    alt="Captured selfie preview"
+                    className="max-h-40 rounded-[var(--mobiris-radius-card)] object-cover"
+                    src={selfiePreviewUrl}
+                  />
                   <Button onClick={resetSelfieCapture} type="button" variant="ghost" size="sm">
-                    Retake selfie
+                    {session?.providerName === 'youverify' ? 'Redo verification' : 'Retake selfie'}
                   </Button>
                 </div>
               ) : null}
             </div>
 
             {/* ── Step 2: Identification numbers (shown AFTER selfie captured) ── */}
-            <div className={`space-y-4 rounded-[var(--mobiris-radius-card)] border p-4 transition-opacity ${livenessDone ? 'border-[var(--mobiris-border)] bg-white opacity-100' : 'border-slate-100 bg-slate-50/50 opacity-40 pointer-events-none'}`}>
+            <div
+              className={`space-y-4 rounded-[var(--mobiris-radius-card)] border p-4 transition-opacity ${livenessDone ? 'border-[var(--mobiris-border)] bg-white opacity-100' : 'border-slate-100 bg-slate-50/50 opacity-40 pointer-events-none'}`}
+            >
               <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>2</div>
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}
+                >
+                  2
+                </div>
                 <Text tone="strong">Identification numbers</Text>
               </div>
 
@@ -625,18 +800,26 @@ export function DriverIdentityVerification({
 
                   {identifierTypes.map((idType) => {
                     const value = identifierValues[idType.type] ?? '';
-                    const error = identifierTouched[idType.type] ? identifierErrors[idType.type] : null;
+                    const error = identifierTouched[idType.type]
+                      ? identifierErrors[idType.type]
+                      : null;
                     const hint = [
                       idType.exactLength ? `${idType.exactLength} digits` : null,
                       idType.numericOnly ? 'numbers only' : null,
                       idType.required ? 'required' : 'optional',
-                    ].filter(Boolean).join(' · ');
+                    ]
+                      .filter(Boolean)
+                      .join(' · ');
 
                     return (
                       <div className="space-y-1.5" key={idType.type}>
                         <Label htmlFor={`${idType.type}-${driver.id}`}>
                           {idType.label}
-                          {idType.required ? <span className="ml-1 text-rose-500">*</span> : <span className="ml-1 text-slate-400">(optional)</span>}
+                          {idType.required ? (
+                            <span className="ml-1 text-rose-500">*</span>
+                          ) : (
+                            <span className="ml-1 text-slate-400">(optional)</span>
+                          )}
                         </Label>
                         <Input
                           autoComplete="off"
@@ -645,7 +828,9 @@ export function DriverIdentityVerification({
                           maxLength={idType.exactLength}
                           onBlur={() => markIdentifierTouched(idType.type)}
                           onChange={(e) => {
-                            const raw = idType.numericOnly ? e.target.value.replace(/\D/g, '') : e.target.value;
+                            const raw = idType.numericOnly
+                              ? e.target.value.replace(/\D/g, '')
+                              : e.target.value;
                             updateIdentifierValue(idType.type, raw);
                           }}
                           placeholder={`Enter ${hint}`}
@@ -678,7 +863,9 @@ export function DriverIdentityVerification({
 
                   {idPhaseComplete ? (
                     <div className="md:col-span-2">
-                      <Text tone="success">Identification numbers look good — proceed to submit below.</Text>
+                      <Text tone="success">
+                        Identification numbers look good — proceed to submit below.
+                      </Text>
                     </div>
                   ) : null}
                 </div>
@@ -686,9 +873,16 @@ export function DriverIdentityVerification({
             </div>
 
             {/* ── Step 3: Consent + Submit ── */}
-            <form action={resolveFormAction} className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4">
+            <form
+              action={resolveFormAction}
+              className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-white p-4"
+            >
               <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone && idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}>3</div>
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${livenessDone && idPhaseComplete ? 'bg-[var(--mobiris-primary)]' : 'bg-slate-300'}`}
+                >
+                  3
+                </div>
                 <Text tone="strong">Consent and submit</Text>
               </div>
 
@@ -726,14 +920,16 @@ export function DriverIdentityVerification({
                           ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
                           : 'Verification submitted. Loading next step…'}
                   </Text>
-                  {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
+                  {mode === 'self_service' || mode === 'guarantor_self_service' ? (
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
                       <span>Please wait…</span>
                     </div>
                   ) : null}
                   {mode === 'operator' && identityStatus === 'review_needed' ? (
-                    <Text tone="muted">Your operations team will review the case and take action.</Text>
+                    <Text tone="muted">
+                      Your operations team will review the case and take action.
+                    </Text>
                   ) : null}
                 </div>
               ) : (
@@ -764,14 +960,24 @@ export function DriverIdentityVerification({
                     </span>
                   </label>
 
-                  {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
+                  {mode === 'self_service' || mode === 'guarantor_self_service' ? (
                     <Text tone="muted">
                       By submitting you agree to the{' '}
-                      <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
+                      <a
+                        className="font-semibold text-[var(--mobiris-primary)] underline"
+                        href="/terms"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
                         Terms of Use
                       </a>{' '}
                       and{' '}
-                      <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
+                      <a
+                        className="font-semibold text-[var(--mobiris-primary)] underline"
+                        href="/privacy"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
                         Privacy Policy
                       </a>
                       .
@@ -779,7 +985,13 @@ export function DriverIdentityVerification({
                   ) : null}
 
                   <Button
-                    disabled={!livenessDone || !idPhaseComplete || isResolving || !session || !subjectConsent}
+                    disabled={
+                      !livenessDone ||
+                      !idPhaseComplete ||
+                      isResolving ||
+                      !session ||
+                      !subjectConsent
+                    }
                     type="submit"
                   >
                     {isResolving ? (
@@ -787,7 +999,9 @@ export function DriverIdentityVerification({
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                         Submitting…
                       </span>
-                    ) : 'Submit verification'}
+                    ) : (
+                      'Submit verification'
+                    )}
                   </Button>
 
                   {resolveState.error ? (
@@ -800,7 +1014,6 @@ export function DriverIdentityVerification({
                 </>
               )}
             </form>
-
           </CardContent>
         </Card>
       ) : null}

@@ -335,6 +335,8 @@ export interface DriverLivenessSessionRecord {
   providerName: string;
   sessionId: string;
   expiresAt?: string;
+  /** Provider-issued client auth token. Required by Azure Face and Smile Identity browser SDKs. */
+  clientAuthToken?: string;
   fallbackChain: string[];
 }
 

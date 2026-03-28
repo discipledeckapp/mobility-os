@@ -47,6 +47,9 @@ const schema = z.object({
 
   YOUVERIFY_API_KEY: z.string().optional(),
   YOUVERIFY_BASE_URL: z.string().url().optional(),
+  // Public merchant ID — required by the youverify-liveness-web browser SDK token endpoint.
+  // Obtain from the YouVerify dashboard under Developer Settings.
+  YOUVERIFY_PUBLIC_MERCHANT_ID: z.string().optional(),
   YOUVERIFY_MOCK_RESPONSE: z.string().optional(),
   YOUVERIFY_LIVENESS_MOCK_RESPONSE: z.string().optional(),
 

@@ -15,7 +15,8 @@
     "@mobility-os/ui": "workspace:*",
     "next": "^15.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "youverify-liveness-web": "^1.0.10"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

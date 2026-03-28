@@ -55,6 +55,8 @@ interface LivenessSessionResult {
   providerName: string;
   sessionId: string;
   expiresAt?: string;
+  /** Provider-issued client auth token (azure_face authToken, smile_identity web token, etc.) */
+  clientAuthToken?: string;
   fallbackChain: string[];
 }
 

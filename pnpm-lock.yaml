@@ -523,6 +523,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      youverify-liveness-web:
+        specifier: ^1.0.10
+        version: 1.0.10
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -6404,6 +6407,9 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  youverify-liveness-web@1.0.10:
+    resolution: {integrity: sha512-R7zJkzrLAM6H047qrm8Mi0xnFYv+PUyrD3z1MM/L3Qd1po0LOrLn3I4YUaEYOXsZzskDi6gy7gl0zRMkm5Jx2A==}
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -13406,5 +13412,7 @@ snapshots:
   yn@3.1.1: {}
 
   yocto-queue@0.1.0: {}
+
+  youverify-liveness-web@1.0.10: {}
 
   zod@3.25.76: {}
