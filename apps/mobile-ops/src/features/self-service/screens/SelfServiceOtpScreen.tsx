@@ -5,6 +5,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
+import { FullScreenBlockingLoader } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { useSelfService } from '../../../contexts/self-service-context';
 import type { ScreenProps } from '../../../navigation/types';
@@ -19,6 +20,17 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
   const [submittingOtp, setSubmittingOtp] = useState(false);
   const [submittingToken, setSubmittingToken] = useState(false);
   const [submittingPassword, setSubmittingPassword] = useState(false);
+  const isProcessing = submittingOtp || submittingToken || submittingPassword;
+  const processingTitle = submittingOtp
+    ? 'Checking your invitation code'
+    : submittingToken
+      ? 'Opening your invite'
+      : 'Signing you in';
+  const processingMessage = submittingOtp
+    ? 'Verifying the code and restoring your saved onboarding progress.'
+    : submittingToken
+      ? 'Validating your secure invite link and restoring your onboarding progress.'
+      : 'Checking your sign-in details and taking you back to your onboarding flow.';
 
   const onSubmitOtp = async () => {
     if (!otpCode.trim()) {
@@ -159,6 +171,14 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
       <Pressable onPress={() => navigation.navigate('Login')}>
         <Text style={styles.backText}>Back to entry</Text>
       </Pressable>
+      <FullScreenBlockingLoader
+        visible={isProcessing}
+        activeStep={1}
+        message={processingMessage}
+        steps={['Checking secure access', 'Restoring onboarding context', 'Opening your next step']}
+        title={processingTitle}
+        variant="onboarding"
+      />
     </Screen>
   );
 }

@@ -28,6 +28,7 @@ import {
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
+import { FullScreenBlockingLoader } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
@@ -60,6 +61,23 @@ export function GuarantorSelfServiceScreen({
   const [livenessSession, setLivenessSession] = useState<DriverLivenessSessionRecord | null>(null);
   const [identityResult, setIdentityResult] = useState<DriverIdentityResolutionResult | null>(null);
   const [submittingIdentity, setSubmittingIdentity] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [capturingSelfie, setCapturingSelfie] = useState(false);
+  const isProcessing = submittingAccess || submittingIdentity || savingProfile || capturingSelfie;
+  const processingTitle = submittingIdentity
+    ? 'Submitting guarantor verification'
+    : capturingSelfie
+      ? 'Preparing live selfie capture'
+      : savingProfile
+        ? 'Saving guarantor details'
+        : 'Opening guarantor onboarding';
+  const processingMessage = submittingIdentity
+    ? 'Checking the live selfie, matching identity details, and saving the verification result.'
+    : capturingSelfie
+      ? 'Preparing camera access and securing the live verification session.'
+      : savingProfile
+        ? 'Updating the guarantor profile and syncing the latest onboarding details.'
+        : 'Checking secure access and restoring the guarantor onboarding flow.';
 
   const loadContext = useCallback(async (nextToken: string) => {
     const nextContext = await getGuarantorSelfServiceContext(nextToken);
@@ -184,6 +202,7 @@ export function GuarantorSelfServiceScreen({
     }
 
     try {
+      setSavingProfile(true);
       await updateGuarantorSelfServiceProfile(token, {
         name: name.trim(),
         phone: phone.trim(),
@@ -198,53 +217,60 @@ export function GuarantorSelfServiceScreen({
         'Save failed',
         error instanceof Error ? error.message : 'Unable to save guarantor details.',
       );
+    } finally {
+      setSavingProfile(false);
     }
   };
 
   const captureSelfie = async () => {
-    if (Platform.OS !== 'web') {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert('Camera access', 'Allow camera access to complete live verification.');
+    setCapturingSelfie(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Camera access', 'Allow camera access to complete live verification.');
+          return;
+        }
+      }
+
+      const result =
+        Platform.OS === 'web'
+          ? await ImagePicker.launchImageLibraryAsync({
+              allowsEditing: true,
+              aspect: [1, 1],
+              base64: true,
+              mediaTypes: ['images'],
+              quality: 0.7,
+            })
+          : await ImagePicker.launchCameraAsync({
+              allowsEditing: false,
+              base64: true,
+              quality: 0.7,
+              cameraType: ImagePicker.CameraType.front,
+            });
+
+      if (result.canceled || !result.assets[0]) {
         return;
       }
-    }
 
-    const result =
-      Platform.OS === 'web'
-        ? await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            base64: true,
-            mediaTypes: ['images'],
-            quality: 0.7,
-          })
-        : await ImagePicker.launchCameraAsync({
-            allowsEditing: false,
-            base64: true,
-            quality: 0.7,
-            cameraType: ImagePicker.CameraType.front,
-          });
+      const asset = result.assets[0];
+      const imageBase64 = await getImageAssetBase64(asset);
+      if (!imageBase64) {
+        Alert.alert('Live verification', 'Unable to capture the selfie image. Please try again.');
+        return;
+      }
 
-    if (result.canceled || !result.assets[0]) {
-      return;
-    }
-
-    const asset = result.assets[0];
-    const imageBase64 = await getImageAssetBase64(asset);
-    if (!imageBase64) {
-      Alert.alert('Live verification', 'Unable to capture the selfie image. Please try again.');
-      return;
-    }
-
-    setSelfieBase64(imageBase64);
-    setSelfiePreviewUri(asset.uri);
-    if (token) {
-      const sessionRecord = await createGuarantorSelfServiceLivenessSession(
-        token,
-        countryCode.trim() || undefined,
-      );
-      setLivenessSession(sessionRecord);
+      setSelfieBase64(imageBase64);
+      setSelfiePreviewUri(asset.uri);
+      if (token) {
+        const sessionRecord = await createGuarantorSelfServiceLivenessSession(
+          token,
+          countryCode.trim() || undefined,
+        );
+        setLivenessSession(sessionRecord);
+      }
+    } finally {
+      setCapturingSelfie(false);
     }
   };
 
@@ -445,6 +471,34 @@ export function GuarantorSelfServiceScreen({
           />
         </Card>
       )}
+      <FullScreenBlockingLoader
+        visible={isProcessing}
+        activeStep={1}
+        message={processingMessage}
+        steps={
+          submittingIdentity
+            ? [
+                'Preparing the live selfie result',
+                'Checking guarantor identity records',
+                'Saving the verification outcome',
+              ]
+            : capturingSelfie
+              ? [
+                  'Preparing camera access',
+                  'Creating a secure selfie session',
+                  'Opening the next verification step',
+                ]
+              : savingProfile
+                ? ['Saving guarantor details', 'Syncing onboarding context', 'Refreshing the page']
+                : [
+                    'Checking secure access',
+                    'Restoring onboarding context',
+                    'Opening your next step',
+                  ]
+        }
+        title={processingTitle}
+        variant={submittingIdentity ? 'verification' : 'onboarding'}
+      />
     </Screen>
   );
 }

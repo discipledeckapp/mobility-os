@@ -21,7 +21,7 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DriverRecord } from '../../lib/api-core';
 import {
   getDriverIdentityLabel,
@@ -42,6 +42,11 @@ import {
   startDriverVerificationAction,
   startGuarantorSelfServiceVerificationAction,
 } from './actions';
+
+type YouVerifySdkModule = typeof import('youverify-liveness-web');
+type YouVerifyLivenessData = Parameters<
+  NonNullable<ConstructorParameters<YouVerifySdkModule['default']>[0]['onSuccess']>
+>[0];
 
 const initialStartState: StartDriverVerificationActionState = {};
 const initialResolveState: ResolveDriverVerificationActionState = {};
@@ -215,10 +220,14 @@ export function DriverIdentityVerification({
   // YouVerify web SDK state
   const [yvSdkError, setYvSdkError] = useState<string | null>(null);
   const [isLaunchingYv, setIsLaunchingYv] = useState(false);
+  const [autoLaunchYv, setAutoLaunchYv] = useState(false);
+  const [livenessLoadingProgress, setLivenessLoadingProgress] = useState(0);
   // Controlled consent state — persists across submission and cannot be silently reset.
   const [subjectConsent, setSubjectConsent] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const launchedSessionRef = useRef<string | null>(null);
+  const youVerifySdkPromiseRef = useRef<Promise<YouVerifySdkModule> | null>(null);
 
   const identityStatus = getDriverIdentityStatus(driver, resolveState.result);
   const session = startState.session;
@@ -232,6 +241,15 @@ export function DriverIdentityVerification({
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64);
+  const isPreparingYouVerify =
+    !livenessDone &&
+    (isStarting ||
+      autoLaunchYv ||
+      isLaunchingYv ||
+      (session?.providerName === 'youverify' &&
+        Boolean(session.clientAuthToken) &&
+        launchedSessionRef.current !== session.sessionId));
+  const showLivenessLoadingModal = session?.providerName === 'youverify' && isPreparingYouVerify;
 
   useEffect(() => {
     return () => {
@@ -248,6 +266,31 @@ export function DriverIdentityVerification({
   }, []);
 
   useEffect(() => {
+    if (!showLivenessLoadingModal) {
+      setLivenessLoadingProgress(0);
+      return;
+    }
+
+    setLivenessLoadingProgress((current) => (current > 0 ? current : 8));
+    const interval = setInterval(() => {
+      setLivenessLoadingProgress((current) => {
+        if (current >= 92) {
+          return current;
+        }
+        if (current < 35) {
+          return current + 9;
+        }
+        if (current < 70) {
+          return current + 6;
+        }
+        return current + 3;
+      });
+    }, 220);
+
+    return () => clearInterval(interval);
+  }, [showLivenessLoadingModal]);
+
+  useEffect(() => {
     if (mode === 'operator' && resolveState.result) {
       router.refresh();
     }
@@ -260,18 +303,36 @@ export function DriverIdentityVerification({
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    youVerifySdkPromiseRef.current ??= import('youverify-liveness-web');
+  }, []);
+
+  useEffect(() => {
+    if (startState.error) {
+      setAutoLaunchYv(false);
+      launchedSessionRef.current = null;
+    }
+  }, [startState.error]);
+
   const youVerifySandboxEnvironment = (() => {
     const raw = process.env.NEXT_PUBLIC_YOUVERIFY_SANDBOX?.trim().toLowerCase();
     return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
   })();
-  const youVerifyTasks = [
-    {
-      id: 'blink' as const,
-      difficulty: 'easy' as const,
-      maxBlinks: 1,
-      timeout: 15_000,
-    },
-  ];
+  const youVerifyTasks = useMemo(
+    () => [
+      {
+        id: 'blink' as const,
+        difficulty: 'easy' as const,
+        maxBlinks: 1,
+        timeout: 15_000,
+      },
+    ],
+    [],
+  );
 
   // Attach stream after the container finishes expanding (fixes black screen on
   // mobile Safari/Chrome where play() into a zero-height element renders black).
@@ -297,32 +358,38 @@ export function DriverIdentityVerification({
     }
   }
 
-  async function launchYouVerifySDK(): Promise<void> {
+  const launchYouVerifySDK = useCallback(async (): Promise<void> => {
     if (!session?.sessionId || !session?.clientAuthToken) return;
     setYvSdkError(null);
     setIsLaunchingYv(true);
+    launchedSessionRef.current = session.sessionId;
     try {
-      const { default: WebSDK } = await import('youverify-liveness-web');
+      const { default: WebSDK } = await (youVerifySdkPromiseRef.current ??
+        import('youverify-liveness-web'));
       const sdk = new WebSDK({
         sessionId: session.sessionId,
         sessionToken: session.clientAuthToken,
         sandboxEnvironment: youVerifySandboxEnvironment,
         tasks: youVerifyTasks,
         presentation: 'modal',
-        onSuccess(data) {
+        onSuccess(data: YouVerifyLivenessData) {
           const raw = data.faceImage ?? '';
           const isDataUrl = raw.startsWith('data:');
           const base64 = isDataUrl ? (raw.split(',')[1] ?? '') : raw;
           const preview = isDataUrl ? raw : `data:image/jpeg;base64,${raw}`;
           setSelfieImageBase64(base64);
           setSelfiePreviewUrl(preview);
+          setAutoLaunchYv(false);
+          setLivenessLoadingProgress(100);
           setIsLaunchingYv(false);
         },
-        onFailure(data) {
+        onFailure(data: YouVerifyLivenessData) {
           setYvSdkError(data.error?.message ?? 'Face verification failed. Please try again.');
+          setAutoLaunchYv(false);
           setIsLaunchingYv(false);
         },
         onClose() {
+          setAutoLaunchYv(false);
           setIsLaunchingYv(false);
         },
       });
@@ -331,9 +398,25 @@ export function DriverIdentityVerification({
       setYvSdkError(
         err instanceof Error ? err.message : 'Unable to load face verification. Please try again.',
       );
+      setAutoLaunchYv(false);
       setIsLaunchingYv(false);
     }
-  }
+  }, [session, youVerifySandboxEnvironment, youVerifyTasks]);
+
+  useEffect(() => {
+    if (
+      !autoLaunchYv ||
+      !session?.sessionId ||
+      !session?.clientAuthToken ||
+      session.providerName !== 'youverify' ||
+      launchedSessionRef.current === session.sessionId ||
+      livenessDone
+    ) {
+      return;
+    }
+
+    void launchYouVerifySDK();
+  }, [autoLaunchYv, livenessDone, launchYouVerifySDK, session]);
 
   async function startCamera(): Promise<void> {
     setCameraError(null);
@@ -442,6 +525,8 @@ export function DriverIdentityVerification({
     setVideoPlaying(false);
     setCaptureProgress(0);
     setYvSdkError(null);
+    setAutoLaunchYv(false);
+    launchedSessionRef.current = null;
   }
 
   function updateIdentifierValue(type: string, value: string): void {
@@ -454,6 +539,34 @@ export function DriverIdentityVerification({
 
   return (
     <div className="space-y-4">
+      {showLivenessLoadingModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[var(--mobiris-radius-card)] border border-white/10 bg-white p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.75)]">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Text tone="strong">Preparing face verification</Text>
+                <Text tone="muted">
+                  {isStarting
+                    ? 'Creating your secure verification session...'
+                    : 'Opening the camera check window...'}
+                </Text>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-[var(--mobiris-primary)] transition-[width] duration-200 ease-out"
+                    style={{ width: `${livenessLoadingProgress}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm text-slate-500">
+                  <span>Please keep this tab open</span>
+                  <span>{livenessLoadingProgress}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* Operator action bar */}
       {mode === 'operator' ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -626,8 +739,15 @@ export function DriverIdentityVerification({
                     <input name="driverId" type="hidden" value={driver.id} />
                   )}
                   <input name="countryCode" type="hidden" value={countryCode} />
-                  <Button disabled={isStarting} type="submit">
-                    {isStarting ? 'Starting...' : 'Start face verification'}
+                  <Button
+                    disabled={isStarting}
+                    onClick={() => {
+                      setYvSdkError(null);
+                      setAutoLaunchYv(true);
+                    }}
+                    type="submit"
+                  >
+                    {isStarting ? 'Preparing face verification...' : 'Start face verification'}
                   </Button>
                   {startState.error ? (
                     <Text tone="danger">
@@ -646,33 +766,24 @@ export function DriverIdentityVerification({
                     /* YouVerify browser SDK — launches the native liveness modal */
                     <div className="space-y-3">
                       <Text tone="muted">
-                        Click below to open the face verification window. Follow the on-screen
-                        prompts to complete your liveness check.
+                        Your face verification window opens automatically after the secure session
+                        is prepared.
                       </Text>
-                      <Button
-                        disabled={isLaunchingYv}
-                        onClick={() => void launchYouVerifySDK()}
-                        type="button"
-                      >
-                        {isLaunchingYv ? (
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                            Opening…
-                          </span>
-                        ) : (
-                          'Launch face verification'
-                        )}
-                      </Button>
                       {yvSdkError ? (
                         <div className="space-y-2">
                           <Text tone="danger">{yvSdkError}</Text>
                           <Button
-                            onClick={() => setYvSdkError(null)}
+                            onClick={() => {
+                              setYvSdkError(null);
+                              setAutoLaunchYv(true);
+                              launchedSessionRef.current = null;
+                              void launchYouVerifySDK();
+                            }}
                             size="sm"
                             type="button"
-                            variant="ghost"
+                            variant="secondary"
                           >
-                            Try again
+                            Retry face verification
                           </Button>
                         </div>
                       ) : null}
