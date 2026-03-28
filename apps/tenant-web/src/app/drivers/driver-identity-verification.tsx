@@ -265,7 +265,12 @@ export function DriverIdentityVerification({
     return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
   })();
   const youVerifyTasks = [
-    { id: 'motions' as const, difficulty: 'easy' as const, maxNods: 2, maxBlinks: 2 },
+    {
+      id: 'blink' as const,
+      difficulty: 'easy' as const,
+      maxBlinks: 1,
+      timeout: 15_000,
+    },
   ];
 
   // Attach stream after the container finishes expanding (fixes black screen on
