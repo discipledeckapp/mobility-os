@@ -212,6 +212,7 @@ export class IdentityVerificationService {
       );
 
       const result = await provider.verify(scopedIdentifiers, workingInput.providerVerification);
+      const recoverableProviderFailure = this.isRecoverableProviderFailure(result);
 
       this.logger.log(
         JSON.stringify({
@@ -219,6 +220,7 @@ export class IdentityVerificationService {
           tenantId: workingInput.tenantId,
           provider: provider.name,
           status: result.status,
+          recoverableProviderFailure,
           verificationStatus: result.verificationStatus ?? null,
           matchedIdentifierType: result.matchedIdentifierType ?? null,
           portraitAvailable: result.documentMetadata?.portraitAvailable ?? false,
@@ -227,7 +229,9 @@ export class IdentityVerificationService {
       );
 
       fallbackChain.push(`${provider.name}:${result.status}`);
-      await this.recordVerificationChargeIfBillable(workingInput, provider.name, result.status);
+      if (!recoverableProviderFailure) {
+        await this.recordVerificationChargeIfBillable(workingInput, provider.name, result.status);
+      }
 
       if (result.status === 'verified' || result.status === 'no_match') {
         return {
@@ -281,8 +285,9 @@ export class IdentityVerificationService {
         };
       }
 
-      const allowFallback =
-        result.status === 'provider_error'
+      const allowFallback = recoverableProviderFailure
+        ? true
+        : result.status === 'provider_error'
           ? (routingOverride?.fallbackOnProviderError ?? true)
           : (routingOverride?.fallbackOnProviderUnavailable ?? true);
       if (!allowFallback) {
@@ -316,6 +321,25 @@ export class IdentityVerificationService {
       fallbackChain,
       reason: 'all configured providers were unavailable or errored',
     };
+  }
+
+  private isRecoverableProviderFailure(result: IdentityVerificationResult): boolean {
+    if (result.status !== 'provider_error' && result.status !== 'provider_unavailable') {
+      return false;
+    }
+
+    const reason = result.reason?.toLowerCase() ?? '';
+    if (!reason) {
+      return false;
+    }
+
+    return (
+      reason.includes('endpoint was not found') ||
+      reason.includes('cannot post') ||
+      reason.includes('returned invalid json') ||
+      reason.includes('returned a non-object response with status 404') ||
+      reason.includes('returned status 404')
+    );
   }
 
   private async recordVerificationChargeIfBillable(

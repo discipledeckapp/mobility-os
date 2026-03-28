@@ -214,4 +214,71 @@ describe('IdentityVerificationService', () => {
       }),
     );
   });
+
+  it('falls through recoverable provider routing failures without billing them', async () => {
+    controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry.mockResolvedValue({
+      countryCode: 'NG',
+      livenessProviders: [{ name: 'youverify', enabled: true, priority: 1 }],
+      lookupProviders: [
+        {
+          name: 'smile_identity',
+          enabled: true,
+          priority: 1,
+          allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        },
+        {
+          name: 'youverify',
+          enabled: true,
+          priority: 2,
+          allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        },
+      ],
+      fallbackOnProviderError: false,
+      fallbackOnProviderUnavailable: false,
+      fallbackOnNoMatch: false,
+    });
+    controlPlaneSettingsClient.getVerificationBillingPolicyForCountry.mockResolvedValue({
+      countryCode: 'NG',
+      enabled: true,
+      meterEventType: 'identity_verification',
+      defaultFeeMinorUnits: 15000,
+      billOnStatuses: ['verified', 'no_match', 'provider_error'],
+      providers: [
+        { name: 'smile_identity', enabled: true, feeMinorUnits: 15000 },
+        { name: 'youverify', enabled: true, feeMinorUnits: 15000 },
+      ],
+    });
+    smileIdentityNigeriaProvider.verify.mockResolvedValue({
+      status: 'provider_error',
+      providerName: 'smile_identity',
+      reason: 'smile_identity endpoint was not found for lookup:NIN_NO_PHOTO (404)',
+    });
+    youVerifyNigeriaProvider.verify.mockResolvedValue({
+      status: 'verified',
+      providerName: 'youverify',
+      verificationStatus: 'verified',
+      enrichment: { fullName: 'Ada Okafor' },
+    });
+
+    const result = await service.verifyForEnrollment({
+      tenantId: 'tenant_1',
+      countryCode: 'NG',
+      livenessPassed: true,
+      identifiers: [{ type: 'NATIONAL_ID', value: '12345678901' }],
+      providerVerification: { subjectConsent: true },
+    });
+
+    expect(smileIdentityNigeriaProvider.verify).toHaveBeenCalledTimes(1);
+    expect(youVerifyNigeriaProvider.verify).toHaveBeenCalledTimes(1);
+    expect(controlPlaneMeteringClient.recordUsageEvent).toHaveBeenCalledTimes(1);
+    expect(controlPlaneBillingClient.recordVerificationCharge).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      attempted: true,
+      verification: expect.objectContaining({
+        status: 'verified',
+        providerName: 'youverify',
+      }),
+      fallbackChain: ['smile_identity:provider_error', 'youverify:verified'],
+    });
+  });
 });
