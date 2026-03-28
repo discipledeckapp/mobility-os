@@ -14,6 +14,7 @@ import {
   updateVehicleStatus,
   upsertVehicleMaintenanceSchedule,
 } from '../../lib/api-core';
+import { normalizeVehicleValuationInput } from './valuation-input';
 
 export interface CreateVehicleActionState {
   error?: string;
@@ -46,16 +47,17 @@ function getTrimmedValue(formData: FormData, key: string): string {
 }
 
 function parseAmountToMinorUnits(value: string): number | undefined {
-  if (!value) {
+  const normalized = value.trim().replace(/,/g, '');
+  if (!normalized) {
     return undefined;
   }
 
-  const normalized = Number(value);
-  if (!Number.isFinite(normalized) || normalized < 0) {
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) {
     return undefined;
   }
 
-  return Math.round(normalized * 100);
+  return Math.round(amount * 100);
 }
 
 function parseOptionalInteger(value: string): number | undefined {
@@ -121,14 +123,12 @@ export async function createVehicleAction(
   const trim = getTrimmedValue(formData, 'trim');
   const plate = getTrimmedValue(formData, 'plate').toUpperCase();
   const vin = getTrimmedValue(formData, 'vin').toUpperCase();
-  const acquisitionDate = getTrimmedValue(formData, 'acquisitionDate');
   const valuationSource = getTrimmedValue(formData, 'valuationSource');
-  const acquisitionCostMinorUnits = parseAmountToMinorUnits(
-    getTrimmedValue(formData, 'acquisitionCost'),
-  );
-  const currentEstimatedValueMinorUnits = parseAmountToMinorUnits(
-    getTrimmedValue(formData, 'currentEstimatedValue'),
-  );
+  const valuationInput = normalizeVehicleValuationInput({
+    acquisitionCost: getTrimmedValue(formData, 'acquisitionCost'),
+    acquisitionDate: getTrimmedValue(formData, 'acquisitionDate'),
+    currentEstimatedValue: getTrimmedValue(formData, 'currentEstimatedValue'),
+  });
 
   if (
     !payload.fleetId ||
@@ -142,12 +142,9 @@ export async function createVehicleAction(
     };
   }
 
-  if (
-    (acquisitionDate && acquisitionCostMinorUnits === undefined) ||
-    (!acquisitionDate && acquisitionCostMinorUnits !== undefined)
-  ) {
+  if (valuationInput.validationErrors.length > 0) {
     return {
-      error: 'Acquisition cost and acquisition date must be entered together.',
+      error: valuationInput.validationErrors[0] ?? 'Vehicle valuation details are invalid.',
     };
   }
 
@@ -166,12 +163,15 @@ export async function createVehicleAction(
   if (plate) {
     payload.plate = plate;
   }
-  if (acquisitionDate && acquisitionCostMinorUnits !== undefined) {
-    payload.acquisitionDate = acquisitionDate;
-    payload.acquisitionCostMinorUnits = acquisitionCostMinorUnits;
+  if (
+    valuationInput.acquisitionDate.value &&
+    valuationInput.acquisitionCost.minorUnits !== undefined
+  ) {
+    payload.acquisitionDate = valuationInput.acquisitionDate.value;
+    payload.acquisitionCostMinorUnits = valuationInput.acquisitionCost.minorUnits;
   }
-  if (currentEstimatedValueMinorUnits !== undefined) {
-    payload.currentEstimatedValueMinorUnits = currentEstimatedValueMinorUnits;
+  if (valuationInput.currentEstimatedValue.minorUnits !== undefined) {
+    payload.currentEstimatedValueMinorUnits = valuationInput.currentEstimatedValue.minorUnits;
   }
   if (valuationSource) {
     payload.valuationSource = valuationSource;
@@ -234,22 +234,17 @@ export async function updateVehicleAction(
   };
 
   const color = getTrimmedValue(formData, 'color');
-  const acquisitionDate = getTrimmedValue(formData, 'acquisitionDate');
   const valuationSource = getTrimmedValue(formData, 'valuationSource');
   const odometerKm = parseOptionalInteger(getTrimmedValue(formData, 'odometerKm'));
-  const acquisitionCostMinorUnits = parseAmountToMinorUnits(
-    getTrimmedValue(formData, 'acquisitionCost'),
-  );
-  const currentEstimatedValueMinorUnits = parseAmountToMinorUnits(
-    getTrimmedValue(formData, 'currentEstimatedValue'),
-  );
+  const valuationInput = normalizeVehicleValuationInput({
+    acquisitionCost: getTrimmedValue(formData, 'acquisitionCost'),
+    acquisitionDate: getTrimmedValue(formData, 'acquisitionDate'),
+    currentEstimatedValue: getTrimmedValue(formData, 'currentEstimatedValue'),
+  });
 
-  if (
-    (acquisitionDate && acquisitionCostMinorUnits === undefined) ||
-    (!acquisitionDate && acquisitionCostMinorUnits !== undefined)
-  ) {
+  if (valuationInput.validationErrors.length > 0) {
     return {
-      error: 'Acquisition cost and acquisition date must be entered together.',
+      error: valuationInput.validationErrors[0] ?? 'Vehicle valuation details are invalid.',
     };
   }
 
@@ -259,12 +254,15 @@ export async function updateVehicleAction(
   if (odometerKm !== undefined) {
     payload.odometerKm = odometerKm;
   }
-  if (acquisitionDate && acquisitionCostMinorUnits !== undefined) {
-    payload.acquisitionDate = acquisitionDate;
-    payload.acquisitionCostMinorUnits = acquisitionCostMinorUnits;
+  if (
+    valuationInput.acquisitionDate.value &&
+    valuationInput.acquisitionCost.minorUnits !== undefined
+  ) {
+    payload.acquisitionDate = valuationInput.acquisitionDate.value;
+    payload.acquisitionCostMinorUnits = valuationInput.acquisitionCost.minorUnits;
   }
-  if (currentEstimatedValueMinorUnits !== undefined) {
-    payload.currentEstimatedValueMinorUnits = currentEstimatedValueMinorUnits;
+  if (valuationInput.currentEstimatedValue.minorUnits !== undefined) {
+    payload.currentEstimatedValueMinorUnits = valuationInput.currentEstimatedValue.minorUnits;
   }
   if (valuationSource) {
     payload.valuationSource = valuationSource;

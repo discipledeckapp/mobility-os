@@ -21,6 +21,7 @@ import type {
   VehicleVinDecodeRecord,
 } from '../../lib/api-core';
 import { type CreateVehicleActionState, createVehicleAction } from './actions';
+import { normalizeVehicleValuationInput } from './valuation-input';
 
 const initialState: CreateVehicleActionState = {};
 
@@ -198,14 +199,21 @@ export function CreateVehicleForm({
   const resolvedModelName = useManualModel
     ? manualModelName.trim()
     : (selectedModel?.name ?? decodedModelDisplay ?? '');
+  const valuationInput = normalizeVehicleValuationInput({
+    acquisitionCost,
+    acquisitionDate,
+    currentEstimatedValue,
+  });
   const saveBlockingReasons = [
     !hasFleetOptions ? 'No active fleet is available.' : null,
     hasFleetOptions && !fleetId ? 'Select a fleet.' : null,
     !selectedMaker ? 'Select a maker.' : null,
     modelsLoading ? 'Vehicle models are still loading.' : null,
     isPending ? 'Vehicle save is already in progress.' : null,
+    ...valuationInput.validationErrors,
   ].filter(Boolean) as string[];
   const isSaveDisabled = saveBlockingReasons.length > 0;
+  const canShowReadyToSave = !isSaveDisabled && !state.error;
 
   useEffect(() => {
     setMakerOptions(makers);
@@ -1087,11 +1095,11 @@ export function CreateVehicleForm({
           <Text className="mt-4" tone="muted">
             Save vehicle is unavailable: {saveBlockingReasons.join(' ')}
           </Text>
-        ) : (
+        ) : canShowReadyToSave ? (
           <Text className="mt-4" tone="success">
             Vehicle record is ready to save.
           </Text>
-        )}
+        ) : null}
 
         {catalogActionError ? (
           <Text className="mt-4" tone="danger">

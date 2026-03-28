@@ -4,7 +4,7 @@ import {
   type IdentityVerificationProviderCapability,
   getCountryConfig,
 } from '@mobility-os/domain-config';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -50,6 +50,29 @@ export interface LivenessSessionInitResult {
   /** Provider-issued client auth token (Azure Face authToken, etc.) */
   clientAuthToken?: string;
   fallbackChain: string[];
+}
+
+type LivenessReadinessStatus =
+  | 'ready'
+  | 'misconfigured'
+  | 'temporarily_unavailable'
+  | 'unsupported_country';
+
+type ProviderReadiness = {
+  providerName: string;
+  ready: boolean;
+  reason: 'ready' | 'missing_credentials' | 'unsupported' | 'temporarily_unavailable';
+  missingConfigKeys?: string[];
+};
+
+export interface LivenessReadinessResult {
+  countryCode: string;
+  ready: boolean;
+  status: LivenessReadinessStatus;
+  activeProvider?: string;
+  configuredProviders: string[];
+  checkedAt: string;
+  message: string;
 }
 
 function sha256Hex(value: string): string {
@@ -145,6 +168,48 @@ export class LivenessService {
     private readonly controlPlaneSettingsClient: ControlPlaneSettingsClient,
   ) {}
 
+  async getReadiness(countryCode: string): Promise<LivenessReadinessResult> {
+    const providers = await this.getConfiguredProviders(countryCode);
+    const checkedAt = new Date().toISOString();
+
+    if (providers.length === 0) {
+      return {
+        countryCode,
+        ready: false,
+        status: 'unsupported_country',
+        configuredProviders: [],
+        checkedAt,
+        message: 'Live verification is not configured for this country yet.',
+      };
+    }
+
+    const readinessChecks = providers.map((provider) =>
+      this.getProviderReadiness(provider.name, countryCode),
+    );
+    const activeProvider = readinessChecks.find((provider) => provider.ready);
+
+    if (activeProvider) {
+      return {
+        countryCode,
+        ready: true,
+        status: 'ready',
+        activeProvider: activeProvider.providerName,
+        configuredProviders: providers.map((provider) => provider.name),
+        checkedAt,
+        message: 'Live verification is ready.',
+      };
+    }
+
+    return {
+      countryCode,
+      ready: false,
+      status: 'misconfigured',
+      configuredProviders: providers.map((provider) => provider.name),
+      checkedAt,
+      message: 'Live verification is not ready right now. Please contact support.',
+    };
+  }
+
   async evaluate(input: LivenessCheckInput): Promise<LivenessCheckResult> {
     this.logger.log(
       JSON.stringify({
@@ -158,9 +223,7 @@ export class LivenessService {
     );
 
     if (input.livenessPassed === true) {
-      this.logger.log(
-        JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'passed' }),
-      );
+      this.logger.log(JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'passed' }));
       return {
         attempted: true,
         passed: true,
@@ -169,9 +232,7 @@ export class LivenessService {
     }
 
     if (input.livenessPassed === false) {
-      this.logger.log(
-        JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'failed' }),
-      );
+      this.logger.log(JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'failed' }));
       return {
         attempted: true,
         passed: false,
@@ -270,19 +331,7 @@ export class LivenessService {
   }
 
   async initializeSession(input: LivenessSessionInitInput): Promise<LivenessSessionInitResult> {
-    const routingOverride =
-      (await this.controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry(
-        input.countryCode,
-      )) ?? DEFAULT_LIVENESS_ROUTING;
-    const providerCapabilities = new Map<string, IdentityVerificationProviderCapability>(
-      (getCountryConfig(input.countryCode).identityVerification?.providerCapabilities ?? []).map(
-        (provider) => [provider.name, provider],
-      ),
-    );
-    const providers = [...routingOverride.livenessProviders]
-      .filter((provider) => provider.enabled)
-      .filter((provider) => providerCapabilities.get(provider.name)?.supportsLiveness)
-      .sort((left, right) => left.priority - right.priority);
+    const providers = await this.getConfiguredProviders(input.countryCode);
 
     const fallbackChain: string[] = [];
 
@@ -305,7 +354,127 @@ export class LivenessService {
       }
     }
 
-    throw new Error(`Unable to initialize liveness session for country '${input.countryCode}'`);
+    const readiness = await this.getReadiness(input.countryCode);
+    throw new ServiceUnavailableException(
+      readiness.ready
+        ? 'Live verification is temporarily unavailable right now. Please try again in a moment.'
+        : readiness.message,
+    );
+  }
+
+  private async getConfiguredProviders(countryCode: string) {
+    const routingOverride =
+      (await this.controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry(
+        countryCode,
+      )) ?? DEFAULT_LIVENESS_ROUTING;
+    const providerCapabilities = new Map<string, IdentityVerificationProviderCapability>(
+      (getCountryConfig(countryCode).identityVerification?.providerCapabilities ?? []).map(
+        (provider) => [provider.name, provider],
+      ),
+    );
+
+    return [...routingOverride.livenessProviders]
+      .filter((provider) => provider.enabled)
+      .filter((provider) => providerCapabilities.get(provider.name)?.supportsLiveness)
+      .sort((left, right) => left.priority - right.priority);
+  }
+
+  private getProviderReadiness(providerName: string, countryCode: string): ProviderReadiness {
+    let readiness: ProviderReadiness;
+
+    switch (providerName) {
+      case 'azure_face':
+        readiness = this.checkRequiredConfig(
+          providerName,
+          ['AZURE_FACE_ENDPOINT', 'AZURE_FACE_API_KEY'],
+          { mockEnvKey: 'AZURE_FACE_LIVENESS_MOCK_RESPONSE' },
+        );
+        break;
+      case 'amazon_rekognition':
+        readiness = this.checkRequiredConfig(
+          providerName,
+          ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+          { mockEnvKey: 'AWS_REKOGNITION_MOCK_LIVENESS_RESPONSE' },
+        );
+        break;
+      case 'youverify':
+        readiness = this.checkRequiredConfig(
+          providerName,
+          ['YOUVERIFY_API_KEY', 'YOUVERIFY_BASE_URL', 'YOUVERIFY_PUBLIC_MERCHANT_ID'],
+          { mockEnvKey: 'YOUVERIFY_LIVENESS_MOCK_RESPONSE' },
+        );
+        break;
+      case 'smile_identity':
+        readiness = this.checkRequiredConfig(
+          providerName,
+          ['SMILE_IDENTITY_API_KEY', 'SMILE_IDENTITY_PARTNER_ID', 'SMILE_IDENTITY_BASE_URL'],
+          { mockEnvKey: 'SMILE_IDENTITY_LIVENESS_MOCK_RESPONSE' },
+        );
+        break;
+      case 'internal_free_service':
+        readiness = {
+          providerName,
+          ready: true,
+          reason: 'ready',
+        };
+        break;
+      default:
+        readiness = {
+          providerName,
+          ready: false,
+          reason: 'unsupported',
+        };
+        break;
+    }
+
+    if (!readiness.ready) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'liveness_provider_not_ready',
+          countryCode,
+          providerName,
+          reason: readiness.reason,
+          missingConfigKeys: readiness.missingConfigKeys ?? [],
+        }),
+      );
+    }
+
+    return readiness;
+  }
+
+  private checkRequiredConfig(
+    providerName: string,
+    keys: string[],
+    options?: { mockEnvKey?: string },
+  ): ProviderReadiness {
+    const mockValue = options?.mockEnvKey ? this.configService.get<string>(options.mockEnvKey) : '';
+    if (mockValue) {
+      return {
+        providerName,
+        ready: true,
+        reason: 'ready',
+      };
+    }
+
+    const missingConfigKeys = keys.filter((key) => {
+      const value = this.configService.get<string>(key);
+      return !value || isPlaceholderCredential(value);
+    });
+
+    if (missingConfigKeys.length > 0) {
+      return {
+        providerName,
+        ready: false,
+        reason: 'missing_credentials',
+        missingConfigKeys,
+      };
+    }
+
+    return {
+      providerName,
+      ready: true,
+      reason: 'ready',
+    };
   }
 
   private async evaluateProvider(
@@ -528,9 +697,7 @@ export class LivenessService {
     }
   }
 
-  private async initializeYouVerifySession(
-    input: LivenessSessionInitInput,
-  ): Promise<{
+  private async initializeYouVerifySession(input: LivenessSessionInitInput): Promise<{
     sessionId?: string;
     clientAuthToken?: string;
     expiresAt?: string;

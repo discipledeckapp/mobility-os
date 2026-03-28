@@ -60,6 +60,16 @@ interface LivenessSessionResult {
   fallbackChain: string[];
 }
 
+interface LivenessReadinessResult {
+  countryCode: string;
+  ready: boolean;
+  status: 'ready' | 'misconfigured' | 'temporarily_unavailable' | 'unsupported_country';
+  activeProvider?: string;
+  configuredProviders: string[];
+  checkedAt: string;
+  message: string;
+}
+
 interface MatchingResult {
   decision: string;
   personId?: string;
@@ -147,6 +157,13 @@ export class IntelligenceClient {
 
   async initializeLivenessSession(input: InitLivenessSessionInput): Promise<LivenessSessionResult> {
     return this.post<LivenessSessionResult>('/api/v1/internal/matching/liveness-sessions', input);
+  }
+
+  async getLivenessReadiness(input: { countryCode: string }): Promise<LivenessReadinessResult> {
+    return this.post<LivenessReadinessResult>(
+      '/api/v1/internal/matching/liveness-readiness',
+      input,
+    );
   }
 
   async resolveEnrollment(input: ResolveEnrollmentInput): Promise<MatchingResult> {

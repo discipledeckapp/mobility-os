@@ -987,6 +987,15 @@ export class DriverSelfServiceController {
     return this.service.initializeIdentityLivenessSessionFromSelfService(token, countryCode);
   }
 
+  @Post('liveness-readiness')
+  @ApiCreatedResponse({ type: Object })
+  getIdentityLivenessReadiness(
+    @Body('token') token: string,
+    @Body('countryCode') countryCode?: string,
+  ) {
+    return this.service.getIdentityLivenessReadinessFromSelfService(token, countryCode);
+  }
+
   @Post('identity-resolution')
   @ApiCreatedResponse({ type: Object })
   resolveIdentity(

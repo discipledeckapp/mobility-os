@@ -134,6 +134,16 @@ type VerificationFlowState =
   | 'success'
   | 'failed';
 
+type DriverLivenessReadiness = {
+  countryCode: string;
+  ready: boolean;
+  status: 'ready' | 'misconfigured' | 'temporarily_unavailable' | 'unsupported_country';
+  activeProvider?: string;
+  configuredProviders: string[];
+  checkedAt: string;
+  message: string;
+};
+
 type VerificationEntitlementRecord = {
   id: string;
   entitlementCode: string;
@@ -1585,7 +1595,9 @@ export class DriversService {
       requireGovernmentVerificationLookup: settings.operations.requireGovernmentVerificationLookup,
       requiresGuarantor: settings.operations.requireGuarantor !== false,
       guarantorBlocking: settings.operations.guarantorBlocking,
-      ...(selfServiceLocalRiskFlags.length > 0 ? { localRiskFlags: selfServiceLocalRiskFlags } : {}),
+      ...(selfServiceLocalRiskFlags.length > 0
+        ? { localRiskFlags: selfServiceLocalRiskFlags }
+        : {}),
       enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
@@ -1793,9 +1805,7 @@ export class DriversService {
       });
       const needsGuarantorVerification = settings.operations.requireGuarantorVerification === true;
       if (guarantor) {
-        guarantorVerified = needsGuarantorVerification
-          ? guarantor.status === 'verified'
-          : true;
+        guarantorVerified = needsGuarantorVerification ? guarantor.status === 'verified' : true;
       } else {
         guarantorVerified = false;
       }
@@ -3469,6 +3479,25 @@ export class DriversService {
     return session;
   }
 
+  async getIdentityLivenessReadinessFromSelfService(
+    token: string,
+    countryCode?: string,
+  ): Promise<DriverLivenessReadiness> {
+    const payload = await this.verifySelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const resolvedCountryCode = countryCode ?? driver.nationality;
+
+    if (!resolvedCountryCode) {
+      throw new BadRequestException(
+        'countryCode is required when the driver nationality is not set',
+      );
+    }
+
+    return this.intelligenceClient.getLivenessReadiness({
+      countryCode: resolvedCountryCode,
+    });
+  }
+
   async resolveIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
@@ -3621,7 +3650,8 @@ export class DriversService {
             pendingAt: new Date().toISOString(),
             retryData: {
               identifiers: sanitizedIdentifiers,
-              selfieImageUrl: result.verifiedProfile?.selfieImageUrl ?? driver.selfieImageUrl ?? null,
+              selfieImageUrl:
+                result.verifiedProfile?.selfieImageUrl ?? driver.selfieImageUrl ?? null,
               countryCode: rest.countryCode ?? null,
             },
           }
@@ -4493,8 +4523,19 @@ export class DriversService {
       });
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
+        const message = error.message.toLowerCase();
+        if (message.includes('not configured for this country')) {
+          throw new ServiceUnavailableException(
+            'Live verification is not available for this country yet.',
+          );
+        }
+        if (message.includes('not ready right now')) {
+          throw new ServiceUnavailableException(
+            'Live verification is not ready right now. Please contact support.',
+          );
+        }
         throw new ServiceUnavailableException(
-          'Live verification is unavailable right now. Please try again in a moment.',
+          'Live verification is temporarily unavailable right now. Please try again in a moment.',
         );
       }
 
@@ -6020,9 +6061,17 @@ export class DriversService {
       ORDER BY va."tenantId", va."subjectId", va."updatedAt" DESC
     `);
 
-    const results: Array<{ tenantId: string; driverId: string; attempt: VerificationAttemptRecord }> = [];
+    const results: Array<{
+      tenantId: string;
+      driverId: string;
+      attempt: VerificationAttemptRecord;
+    }> = [];
     for (const row of rows) {
-      const attempt = await this.getLatestVerificationAttempt(row.tenantId, 'driver', row.subjectId);
+      const attempt = await this.getLatestVerificationAttempt(
+        row.tenantId,
+        'driver',
+        row.subjectId,
+      );
       if (attempt?.status === 'in_progress') {
         const meta = attempt.metadata as Record<string, unknown> | null;
         if (meta?.pendingReason === 'provider_unavailable') {

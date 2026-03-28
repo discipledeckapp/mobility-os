@@ -61,6 +61,7 @@ describe('LivenessService', () => {
       providerName: 'youverify',
       sessionId: 'youverify-mock-session',
       expiresAt: expect.any(String),
+      clientAuthToken: 'youverify-mock-auth-token',
       fallbackChain: ['amazon_rekognition:provider_unavailable', 'youverify:initialized'],
     });
   });
@@ -96,19 +97,12 @@ describe('LivenessService', () => {
       }
     });
 
-    const result = await service.initializeSession({
-      countryCode: 'NG',
-      tenantId: 'tenant_1',
-    });
-
-    expect(result).toEqual({
-      providerName: 'internal_free_service',
-      sessionId: expect.stringMatching(/^internal-free-tenant_1-/),
-      fallbackChain: [
-        'amazon_rekognition:provider_unavailable',
-        'internal_free_service:initialized',
-      ],
-    });
+    await expect(
+      service.initializeSession({
+        countryCode: 'NG',
+        tenantId: 'tenant_1',
+      }),
+    ).rejects.toThrow('Live verification is not ready right now. Please contact support.');
   });
 
   it('fails cleanly when all configured liveness providers are unavailable', async () => {
@@ -138,6 +132,6 @@ describe('LivenessService', () => {
         countryCode: 'NG',
         tenantId: 'tenant_1',
       }),
-    ).rejects.toThrow("Unable to initialize liveness session for country 'NG'");
+    ).rejects.toThrow('Live verification is not ready right now. Please contact support.');
   });
 });

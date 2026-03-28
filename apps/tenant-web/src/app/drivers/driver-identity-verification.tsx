@@ -1,8 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type SupportedIdentifierType,
+  getCountryConfig,
+  getSupportedCountryCodes,
+  isCountrySupported,
+} from '@mobility-os/domain-config';
 import {
   Badge,
   Button,
@@ -16,12 +19,9 @@ import {
   SearchableSelect,
   Text,
 } from '@mobility-os/ui';
-import {
-  getCountryConfig,
-  getSupportedCountryCodes,
-  isCountrySupported,
-  type SupportedIdentifierType,
-} from '@mobility-os/domain-config';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import type { DriverRecord } from '../../lib/api-core';
 import {
   getDriverIdentityLabel,
@@ -29,18 +29,18 @@ import {
   getDriverIdentityTone,
 } from '../../lib/driver-identity';
 import {
-  sendDriverSelfServiceLinkAction,
-  startDriverSelfServiceVerificationAction,
-  startGuarantorSelfServiceVerificationAction,
-  resolveDriverVerificationAction,
-  resolveDriverSelfServiceVerificationAction,
-  resolveGuarantorSelfServiceVerificationAction,
-  retryDriverVerificationAction,
-  startDriverVerificationAction,
   type ResolveDriverVerificationActionState,
   type RetryDriverVerificationActionState,
   type SendDriverSelfServiceLinkActionState,
   type StartDriverVerificationActionState,
+  resolveDriverSelfServiceVerificationAction,
+  resolveDriverVerificationAction,
+  resolveGuarantorSelfServiceVerificationAction,
+  retryDriverVerificationAction,
+  sendDriverSelfServiceLinkAction,
+  startDriverSelfServiceVerificationAction,
+  startDriverVerificationAction,
+  startGuarantorSelfServiceVerificationAction,
 } from './actions';
 
 const initialStartState: StartDriverVerificationActionState = {};
@@ -158,6 +158,7 @@ export function DriverIdentityVerification({
   const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({});
   const [identifierTouched, setIdentifierTouched] = useState<Record<string, boolean>>({});
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset identifier state when the selected country changes.
   useEffect(() => {
     setIdentifierValues({});
     setIdentifierTouched({});
@@ -234,10 +235,16 @@ export function DriverIdentityVerification({
 
   useEffect(() => {
     return () => {
-      if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
+      if (selfiePreviewUrl) {
+        URL.revokeObjectURL(selfiePreviewUrl);
+      }
+    };
+  }, [selfiePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
       stopStream();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -252,48 +259,6 @@ export function DriverIdentityVerification({
   useEffect(() => {
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
-
-  // Log final verification result for audit / debugging.
-  useEffect(() => {
-    const r = resolveState.result;
-    if (!r) return;
-    console.info('[DriverVerification] verification result received', {
-      decision: r.decision,
-      isVerifiedMatch: r.isVerifiedMatch,
-      providerName: r.providerName,
-      providerLookupStatus: r.providerLookupStatus,
-      livenessPassed: r.livenessPassed,
-      livenessProviderName: r.livenessProviderName,
-      livenessReason: r.livenessReason,
-    });
-  }, [resolveState.result]);
-
-  // Instrumentation — log which liveness provider path is active.
-  // Confirms whether YouVerify, Azure Face, Smile Identity, or internal_free_service
-  // was selected by the backend when the session was initialised.
-  useEffect(() => {
-    if (!session) return;
-    console.info('[DriverVerification] liveness session initialised', {
-      providerName: session.providerName,
-      sessionId: session.sessionId,
-      expiresAt: session.expiresAt ?? null,
-      hasClientAuthToken: Boolean(session.clientAuthToken),
-      fallbackChain: session.fallbackChain,
-    });
-    if (session.providerName === 'youverify') {
-      if (session.clientAuthToken) {
-        console.info(
-          '[DriverVerification] YouVerify SDK path active — clientAuthToken present. ' +
-            'The youverify-liveness-web SDK will run on "Launch face verification".',
-        );
-      } else {
-        console.error(
-          '[DriverVerification] YouVerify session initialised but clientAuthToken is absent. ' +
-            'This is a configuration error — YOUVERIFY_PUBLIC_MERCHANT_ID may be missing.',
-        );
-      }
-    }
-  }, [session]);
 
   // Attach stream after the container finishes expanding (fixes black screen on
   // mobile Safari/Chrome where play() into a zero-height element renders black).
@@ -546,8 +511,7 @@ export function DriverIdentityVerification({
       ) : null}
       {mode === 'operator' && retryState.notEligible ? (
         <Text tone="muted">
-          Retry not available:{' '}
-          {retryState.reason ?? 'driver is not in a provider-pending state.'}
+          Retry not available: {retryState.reason ?? 'driver is not in a provider-pending state.'}
         </Text>
       ) : null}
 

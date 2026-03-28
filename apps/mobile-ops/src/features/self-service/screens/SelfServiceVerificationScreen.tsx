@@ -7,10 +7,10 @@ import {
   getSupportedCountryCodes,
   isCountrySupported,
 } from '@mobility-os/domain-config';
+import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -24,10 +24,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { startYouVerifyLiveness } from '../../../../modules/youverify-liveness';
 import {
   type DriverIdentityResolutionResult,
+  type DriverLivenessReadinessRecord,
   type DriverLivenessSessionRecord,
   createDriverSelfServiceLivenessSession,
+  getDriverSelfServiceLivenessReadiness,
   initiateDriverKycCheckout,
   recordDriverSelfServiceVerificationConsent,
   removeDriverSelfServiceDocument,
@@ -49,7 +52,6 @@ import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
-import { startYouVerifyLiveness } from '../../../../modules/youverify-liveness';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
@@ -158,6 +160,9 @@ export function SelfServiceVerificationScreen({
   const [selfieBase64, setSelfieBase64] = useState('');
   const [selfiePreviewUri, setSelfiePreviewUri] = useState<string | null>(null);
   const [livenessSession, setLivenessSession] = useState<DriverLivenessSessionRecord | null>(null);
+  const [livenessReadiness, setLivenessReadiness] = useState<DriverLivenessReadinessRecord | null>(
+    null,
+  );
   const [livenessRunning, setLivenessRunning] = useState(false);
   const [nativeLivenessPassed, setNativeLivenessPassed] = useState<boolean | null>(null);
   const [nativeLivenessFaceB64, setNativeLivenessFaceB64] = useState<string | undefined>(undefined);
@@ -185,6 +190,8 @@ export function SelfServiceVerificationScreen({
     savingProfile ||
     recordingConsent ||
     livenessRunning;
+  const livenessReady =
+    !biometricVerificationRequired || livenessReadiness == null || livenessReadiness.ready;
   const processingVariant = submittingIdentity
     ? 'verification'
     : uploadingDocument
@@ -448,8 +455,7 @@ export function SelfServiceVerificationScreen({
   const biometricReady = !biometricVerificationRequired || nativeLivenessPassed === true;
   const canSubmitIdentity = useMemo(
     () =>
-      verificationLifecycle !== 'completed' &&
-      Boolean(token && identifiersReady && biometricReady),
+      verificationLifecycle !== 'completed' && Boolean(token && identifiersReady && biometricReady),
     [biometricReady, identifiersReady, token, verificationLifecycle],
   );
 
@@ -531,6 +537,10 @@ export function SelfServiceVerificationScreen({
 
   const onStartNativeLiveness = async () => {
     if (!token || livenessRunning) return;
+    if (livenessReadiness && !livenessReadiness.ready) {
+      Alert.alert('Face verification', livenessReadiness.message);
+      return;
+    }
     setLivenessRunning(true);
     try {
       const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
@@ -762,6 +772,41 @@ export function SelfServiceVerificationScreen({
       refreshSelfService().catch(() => undefined);
     }, [token, needsVerificationPayment, refreshSelfService]),
   );
+
+  useEffect(() => {
+    if (!token || !biometricVerificationRequired) {
+      setLivenessReadiness(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    getDriverSelfServiceLivenessReadiness(token, { countryCode })
+      .then((readiness) => {
+        if (!cancelled) {
+          setLivenessReadiness(readiness);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLivenessReadiness({
+            countryCode,
+            ready: false,
+            status: 'temporarily_unavailable',
+            configuredProviders: [],
+            checkedAt: new Date().toISOString(),
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Live verification is temporarily unavailable right now.',
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [biometricVerificationRequired, countryCode, token]);
 
   const onConfirmPayment = async () => {
     if (!token) return;
@@ -1346,6 +1391,11 @@ export function SelfServiceVerificationScreen({
                 Your face will be verified live using YouVerify's liveness detection. The camera
                 launches in a secure fullscreen view. Hold still and follow the on-screen prompt.
               </Text>
+              {livenessReadiness && !livenessReadiness.ready ? (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningText}>{livenessReadiness.message}</Text>
+                </View>
+              ) : null}
               {nativeLivenessPassed === true ? (
                 <View style={styles.successRow}>
                   <Badge label="Face verification passed" tone="success" />
@@ -1365,6 +1415,7 @@ export function SelfServiceVerificationScreen({
                         : 'Start face verification'
                   }
                   variant={nativeLivenessPassed === true ? 'secondary' : 'primary'}
+                  disabled={!livenessReady}
                   loading={livenessRunning}
                   loadingLabel="Starting verification…"
                   onPress={() => void onStartNativeLiveness()}
@@ -1373,9 +1424,7 @@ export function SelfServiceVerificationScreen({
             </>
           ) : (
             <>
-              <Text style={styles.copy}>
-                Take a clear face photo for your operator record.
-              </Text>
+              <Text style={styles.copy}>Take a clear face photo for your operator record.</Text>
               {selfiePreviewUri ? (
                 <View style={styles.selfiePreviewContainer}>
                   <Image
@@ -1414,8 +1463,7 @@ export function SelfServiceVerificationScreen({
             <View
               style={[
                 styles.resultCard,
-                identityResult.decision === 'failed' ||
-                identityResult.livenessPassed === false
+                identityResult.decision === 'failed' || identityResult.livenessPassed === false
                   ? styles.resultCardFailed
                   : identityResult.decision === 'verified'
                     ? styles.resultCardSuccess
@@ -1442,8 +1490,7 @@ export function SelfServiceVerificationScreen({
               </View>
 
               {/* Failure explanations */}
-              {identityResult.decision === 'failed' ||
-              identityResult.livenessPassed === false ? (
+              {identityResult.decision === 'failed' || identityResult.livenessPassed === false ? (
                 <View style={styles.failureBlock}>
                   <Text style={styles.failureTitle}>What went wrong</Text>
                   {identityResult.livenessPassed === false ? (
@@ -1515,11 +1562,8 @@ export function SelfServiceVerificationScreen({
                   Liveness confidence: {Math.round(identityResult.livenessConfidenceScore * 100)}%
                 </Text>
               ) : null}
-              {identityResult.matchedIdentifierType &&
-              identityResult.decision !== 'failed' ? (
-                <Text style={styles.meta}>
-                  Matched via: {identityResult.matchedIdentifierType}
-                </Text>
+              {identityResult.matchedIdentifierType && identityResult.decision !== 'failed' ? (
+                <Text style={styles.meta}>Matched via: {identityResult.matchedIdentifierType}</Text>
               ) : null}
               {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
                 <Text style={styles.copy}>
@@ -1764,7 +1808,7 @@ export function SelfServiceVerificationScreen({
         {driver.requiresGuarantor && !driver.hasGuarantor ? (
           <Button
             label="Add your guarantor"
-            variant={driver.guarantorBlocking ? 'primary' : 'ghost'}
+            variant={driver.guarantorBlocking ? 'primary' : 'secondary'}
             onPress={() => navigation.navigate('DriverGuarantor')}
           />
         ) : null}
@@ -1905,6 +1949,18 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
   },
   successText: { color: '#15803d', fontSize: 13, fontWeight: '600' },
+  warningCard: {
+    borderWidth: 1,
+    borderColor: '#fdba74',
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#fff7ed',
+    padding: tokens.spacing.sm,
+  },
+  warningText: {
+    color: '#9a3412',
+    fontSize: 13,
+    lineHeight: 18,
+  },
   chipRow: { gap: tokens.spacing.xs },
   chip: {
     borderWidth: 1,

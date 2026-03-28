@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, Linking, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { initiateDriverKycCheckout } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -11,12 +12,18 @@ import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
-import { initiateDriverKycCheckout } from '../../../api';
 
 export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServiceReadiness'>) {
   const { showToast } = useToast();
-  const { token, driver, documents, isLoading, isRefreshing, refreshSelfService, clearSelfService } =
-    useSelfService();
+  const {
+    token,
+    driver,
+    documents,
+    isLoading,
+    isRefreshing,
+    refreshSelfService,
+    clearSelfService,
+  } = useSelfService();
 
   const onPayKyc = async () => {
     if (!token) return;
@@ -105,7 +112,8 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         <Text style={styles.kicker}>Driver readiness</Text>
         <Text style={styles.title}>Access and operations checklist</Text>
         <Text style={styles.copy}>
-          Track your sign-in access separately from activation, assignment eligibility, and remittance readiness.
+          Track your sign-in access separately from activation, assignment eligibility, and
+          remittance readiness.
         </Text>
         <View style={styles.badgeRow}>
           <Badge
@@ -214,10 +222,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             {driver.verificationPaymentMessage ??
               'Your organisation requires you to pay the verification fee before your identity check can proceed.'}
           </Text>
-          <Button
-            label="Pay verification fee"
-            onPress={() => void onPayKyc()}
-          />
+          <Button label="Pay verification fee" onPress={() => void onPayKyc()} />
           <Text style={styles.kycNote}>
             You will be redirected to a secure payment page. Return here after payment completes.
           </Text>
@@ -228,9 +233,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             <Text style={styles.label}>Verification payment</Text>
             <Badge
               label={
-                driver.verificationEntitlementState === 'reserved'
-                  ? 'Payment received'
-                  : 'Paid'
+                driver.verificationEntitlementState === 'reserved' ? 'Payment received' : 'Paid'
               }
               tone="success"
             />
@@ -252,7 +255,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           </Text>
           <Button
             label="Add your guarantor"
-            variant={driver.guarantorBlocking ? 'primary' : 'ghost'}
+            variant={driver.guarantorBlocking ? 'primary' : 'secondary'}
             onPress={() => navigation.navigate('DriverGuarantor')}
           />
         </Card>
@@ -329,7 +332,11 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             onPress={() => navigation.navigate('Login')}
           />
         ) : null}
-        <Button label="Use another verification code" variant="secondary" onPress={() => void onReset()} />
+        <Button
+          label="Use another verification code"
+          variant="secondary"
+          onPress={() => void onReset()}
+        />
       </Card>
     </Screen>
   );
@@ -373,7 +380,9 @@ function formatMobileAccessLabel(status?: string | null) {
   return 'Not created';
 }
 
-function mobileAccessStatusTone(status?: string | null): 'neutral' | 'success' | 'warning' | 'danger' {
+function mobileAccessStatusTone(
+  status?: string | null,
+): 'neutral' | 'success' | 'warning' | 'danger' {
   if (status === 'linked') return 'success';
   if (status === 'revoked') return 'danger';
   if (status === 'inactive') return 'warning';
@@ -484,7 +493,7 @@ const styles = StyleSheet.create({
   },
   kycPaymentCard: {
     borderWidth: 1,
-    borderColor: tokens.colors.primary + '40',
+    borderColor: `${tokens.colors.primary}40`,
     backgroundColor: '#eff6ff',
   },
   kycNote: {

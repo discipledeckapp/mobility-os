@@ -1173,8 +1173,23 @@ export class VehiclesService {
 
     if (hasAcquisitionAmount !== hasAcquisitionDate) {
       throw new BadRequestException(
-        'Acquisition cost and acquisition date must be provided together.',
+        'Acquisition cost and acquisition date must be entered together.',
       );
+    }
+
+    if (input.acquisitionDate !== undefined) {
+      this.assertIsoDateInput(input.acquisitionDate, 'Acquisition date');
+    }
+  }
+
+  private assertIsoDateInput(value: string, label: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      throw new BadRequestException(`${label} must use YYYY-MM-DD format.`);
+    }
+
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+      throw new BadRequestException(`${label} must be a real calendar date.`);
     }
   }
 

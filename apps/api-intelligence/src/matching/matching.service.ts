@@ -17,6 +17,8 @@ import { LivenessService } from '../providers/liveness.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ReviewCasesService } from '../review-cases/review-cases.service';
 import type { InitLivenessSessionDto } from './dto/init-liveness-session.dto';
+import type { LivenessReadinessResponseDto } from './dto/liveness-readiness-response.dto';
+import type { LivenessReadinessDto } from './dto/liveness-readiness.dto';
 import type { LivenessSessionResponseDto } from './dto/liveness-session-response.dto';
 import type { MatchingResultDto } from './dto/matching-result.dto';
 import type { EnrollmentIdentifierDto, ResolveEnrollmentDto } from './dto/resolve-enrollment.dto';
@@ -65,6 +67,10 @@ export class MatchingService {
       tenantId: dto.tenantId,
       countryCode: dto.countryCode,
     });
+  }
+
+  getLivenessReadiness(dto: LivenessReadinessDto): Promise<LivenessReadinessResponseDto> {
+    return this.livenessService.getReadiness(dto.countryCode);
   }
 
   async resolveEnrollment(dto: ResolveEnrollmentDto): Promise<MatchingResultDto> {

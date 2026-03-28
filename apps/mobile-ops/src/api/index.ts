@@ -12,6 +12,16 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+export interface DriverLivenessReadinessRecord {
+  countryCode: string;
+  ready: boolean;
+  status: 'ready' | 'misconfigured' | 'temporarily_unavailable' | 'unsupported_country';
+  activeProvider?: string;
+  configuredProviders: string[];
+  checkedAt: string;
+  message: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -300,12 +310,7 @@ export interface DriverRecord {
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   kycPaymentVerified?: boolean;
-  verificationPaymentState?:
-    | 'not_required'
-    | 'required'
-    | 'pending'
-    | 'paid'
-    | 'reconciled';
+  verificationPaymentState?: 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
   verificationEntitlementState?:
     | 'none'
     | 'paid'
@@ -1349,12 +1354,11 @@ export function listDriverSelfServiceDocuments(
   ).then((documents) =>
     documents.map((document) => ({
       ...document,
-      previewUrl:
-        document.previewUrl && document.previewUrl.startsWith('http')
-          ? document.previewUrl
-          : document.previewUrl
-            ? `${mobileEnv.apiUrl}${document.previewUrl}`
-            : document.previewUrl,
+      previewUrl: document.previewUrl?.startsWith('http')
+        ? document.previewUrl
+        : document.previewUrl
+          ? `${mobileEnv.apiUrl}${document.previewUrl}`
+          : document.previewUrl,
     })),
   );
 }
@@ -1365,6 +1369,20 @@ export function createDriverSelfServiceLivenessSession(
 ): Promise<DriverLivenessSessionRecord> {
   return apiFetch<DriverLivenessSessionRecord>(
     '/driver-self-service/liveness-sessions',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken, ...input }),
+    },
+    false,
+  );
+}
+
+export function getDriverSelfServiceLivenessReadiness(
+  selfServiceToken: string,
+  input: { countryCode?: string } = {},
+): Promise<DriverLivenessReadinessRecord> {
+  return apiFetch<DriverLivenessReadinessRecord>(
+    '/driver-self-service/liveness-readiness',
     {
       method: 'POST',
       body: JSON.stringify({ token: selfServiceToken, ...input }),
@@ -1449,13 +1467,10 @@ export function createDriverMobileAccount(
 }
 
 export function issueAuthenticatedDriverSelfServiceContinuationToken(): Promise<{ token: string }> {
-  return apiFetch<{ token: string }>(
-    '/driver-self-service/authenticated-token',
-    {
-      method: 'POST',
-      body: JSON.stringify({}),
-    },
-  );
+  return apiFetch<{ token: string }>('/driver-self-service/authenticated-token', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 export function exchangeGuarantorSelfServiceOtp(
@@ -1498,7 +1513,9 @@ export function createGuarantorSelfServiceAccount(
   );
 }
 
-export function issueAuthenticatedGuarantorSelfServiceContinuationToken(): Promise<{ token: string }> {
+export function issueAuthenticatedGuarantorSelfServiceContinuationToken(): Promise<{
+  token: string;
+}> {
   return apiFetch<{ token: string }>(
     '/guarantor-self-service/authenticated-token',
     {
@@ -1639,14 +1656,28 @@ export function initiateDriverKycCheckout(
   checkoutUrl?: string;
   amountMinorUnits: number;
   currency: string;
-  entitlementState?: 'none' | 'paid' | 'reserved' | 'consumed' | 'expired' | 'refunded' | 'cancelled';
+  entitlementState?:
+    | 'none'
+    | 'paid'
+    | 'reserved'
+    | 'consumed'
+    | 'expired'
+    | 'refunded'
+    | 'cancelled';
 }> {
   return apiFetch<{
     status: 'checkout_required' | 'already_paid';
     checkoutUrl?: string;
     amountMinorUnits: number;
     currency: string;
-    entitlementState?: 'none' | 'paid' | 'reserved' | 'consumed' | 'expired' | 'refunded' | 'cancelled';
+    entitlementState?:
+      | 'none'
+      | 'paid'
+      | 'reserved'
+      | 'consumed'
+      | 'expired'
+      | 'refunded'
+      | 'cancelled';
   }>(
     '/driver-self-service/kyc-checkout',
     {
@@ -1665,13 +1696,15 @@ export function listAssignments(): Promise<AssignmentRecord[]> {
   return apiFetch<AssignmentRecord[]>(API_PATHS.mobileAssignments);
 }
 
-export function listOperatorAssignments(input: {
-  page?: number;
-  limit?: number;
-  driverId?: string;
-  vehicleId?: string;
-  fleetId?: string;
-} = {}): Promise<PaginatedResponse<OperatorAssignmentRecord>> {
+export function listOperatorAssignments(
+  input: {
+    page?: number;
+    limit?: number;
+    driverId?: string;
+    vehicleId?: string;
+    fleetId?: string;
+  } = {},
+): Promise<PaginatedResponse<OperatorAssignmentRecord>> {
   return apiFetch<PaginatedResponse<OperatorAssignmentRecord>>(
     buildQuery(API_PATHS.assignments, input),
   );
@@ -1710,10 +1743,7 @@ export function acceptAssignmentTerms(
   });
 }
 
-export function declineAssignment(
-  assignmentId: string,
-  notes?: string,
-): Promise<AssignmentRecord> {
+export function declineAssignment(assignmentId: string, notes?: string): Promise<AssignmentRecord> {
   return apiFetch<AssignmentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/decline`, {
     method: 'POST',
     body: JSON.stringify(notes ? { notes } : {}),
@@ -1741,14 +1771,16 @@ export function getDriverProfile(): Promise<DriverRecord> {
   return apiFetch<DriverRecord>(API_PATHS.mobileProfile);
 }
 
-export function listDrivers(input: {
-  page?: number;
-  limit?: number;
-  q?: string;
-  status?: string;
-  identityStatus?: string;
-  fleetId?: string;
-} = {}): Promise<PaginatedResponse<DriverRecord>> {
+export function listDrivers(
+  input: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    status?: string;
+    identityStatus?: string;
+    fleetId?: string;
+  } = {},
+): Promise<PaginatedResponse<DriverRecord>> {
   return apiFetch<PaginatedResponse<DriverRecord>>(buildQuery(API_PATHS.drivers, input));
 }
 
@@ -1778,13 +1810,15 @@ export function listRemittanceHistory(): Promise<RemittanceRecord[]> {
   return apiFetch<RemittanceRecord[]>(API_PATHS.mobileRemittanceHistory);
 }
 
-export function listOperatorRemittance(input: {
-  page?: number;
-  limit?: number;
-  assignmentId?: string;
-  driverId?: string;
-  status?: string;
-} = {}): Promise<PaginatedResponse<RemittanceRecord>> {
+export function listOperatorRemittance(
+  input: {
+    page?: number;
+    limit?: number;
+    assignmentId?: string;
+    driverId?: string;
+    status?: string;
+  } = {},
+): Promise<PaginatedResponse<RemittanceRecord>> {
   return apiFetch<PaginatedResponse<RemittanceRecord>>(buildQuery(API_PATHS.remittance, input));
 }
 
@@ -1816,11 +1850,13 @@ export function waiveRemittance(remittanceId: string, notes: string): Promise<Re
   });
 }
 
-export function listVehicles(input: {
-  page?: number;
-  limit?: number;
-  fleetId?: string;
-} = {}): Promise<PaginatedResponse<VehicleRecord>> {
+export function listVehicles(
+  input: {
+    page?: number;
+    limit?: number;
+    fleetId?: string;
+  } = {},
+): Promise<PaginatedResponse<VehicleRecord>> {
   return apiFetch<PaginatedResponse<VehicleRecord>>(buildQuery(API_PATHS.vehicles, input));
 }
 
@@ -1876,7 +1912,9 @@ export function getBusinessEntity(businessEntityId: string): Promise<BusinessEnt
   );
 }
 
-export function createBusinessEntity(input: CreateBusinessEntityInput): Promise<BusinessEntityRecord> {
+export function createBusinessEntity(
+  input: CreateBusinessEntityInput,
+): Promise<BusinessEntityRecord> {
   return apiFetch<BusinessEntityRecord>(API_PATHS.businessEntities, {
     method: 'POST',
     body: JSON.stringify(input),
@@ -1939,7 +1977,10 @@ export function createVehicle(input: CreateVehicleInput): Promise<VehicleRecord>
   });
 }
 
-export function updateVehicle(vehicleId: string, input: UpdateVehicleInput): Promise<VehicleRecord> {
+export function updateVehicle(
+  vehicleId: string,
+  input: UpdateVehicleInput,
+): Promise<VehicleRecord> {
   return apiFetch<VehicleRecord>(`${API_PATHS.vehicles}/${vehicleId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
@@ -2050,10 +2091,13 @@ export function reportAssignmentIncident(
     currency?: string;
   },
 ): Promise<VehicleIncidentRecord> {
-  return apiFetch<VehicleIncidentRecord>(`${API_PATHS.mobileAssignments}/${assignmentId}/incidents`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return apiFetch<VehicleIncidentRecord>(
+    `${API_PATHS.mobileAssignments}/${assignmentId}/incidents`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function updateDriverStatus(driverId: string, status: string): Promise<DriverRecord> {
@@ -2117,10 +2161,13 @@ export function initializeWalletTopUp(input: {
   provider: 'paystack' | 'flutterwave';
   amountMinorUnits: number;
 }): Promise<TenantPaymentCheckoutRecord> {
-  return apiFetch<TenantPaymentCheckoutRecord>(`${API_PATHS.tenantBilling}/wallet-top-ups/checkout`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return apiFetch<TenantPaymentCheckoutRecord>(
+    `${API_PATHS.tenantBilling}/wallet-top-ups/checkout`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function initializeInvoicePayment(input: {
@@ -2136,10 +2183,13 @@ export function initializeInvoicePayment(input: {
 export function verifyAndApplyTenantPayment(
   input: VerifyAndApplyTenantPaymentInput,
 ): Promise<TenantPaymentApplicationRecord> {
-  return apiFetch<TenantPaymentApplicationRecord>(`${API_PATHS.tenantBilling}/payments/verify-and-apply`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return apiFetch<TenantPaymentApplicationRecord>(
+    `${API_PATHS.tenantBilling}/payments/verify-and-apply`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export async function getStoredRefreshToken() {
