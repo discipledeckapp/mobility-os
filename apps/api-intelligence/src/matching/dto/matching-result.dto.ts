@@ -34,14 +34,37 @@ export class MatchingResultDto {
     additionalProperties: false,
   })
   verifiedProfile?: {
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
     fullName?: string;
     dateOfBirth?: string;
+    nationality?: string;
     address?: string;
+    fullAddress?: string;
+    addressLine?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    mobileNumber?: string;
+    emailAddress?: string;
+    birthState?: string;
+    birthLga?: string;
+    nextOfKinState?: string;
+    religion?: string;
+    ninIdNumber?: string;
     gender?: string;
     photoUrl?: string;
+    signatureUrl?: string;
     providerImageUrl?: string;
     selfieImageUrl?: string;
   };
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+  })
+  providerAudit?: Record<string, unknown>;
 
   @ApiPropertyOptional({
     type: Object,

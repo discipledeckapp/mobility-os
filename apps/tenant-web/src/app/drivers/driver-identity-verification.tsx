@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DriverRecord } from '../../lib/api-core';
+import type { DriverIdentityResolutionResult } from '../../lib/api-core';
 import {
   getDriverIdentityLabel,
   getDriverIdentityStatus,
@@ -64,6 +65,18 @@ function sanitizeSelfServiceError(message?: string | null): string | null {
     return 'Live verification is unavailable on this device right now. Please try again.';
   }
   return message;
+}
+
+function getDisplayIdentityName(
+  result?: DriverIdentityResolutionResult['verifiedProfile'],
+): string | null {
+  if (!result) return null;
+  if (result.fullName?.trim()) return result.fullName.trim();
+  const joined = [result.firstName, result.middleName, result.lastName]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .join(' ')
+    .trim();
+  return joined.length > 0 ? joined : null;
 }
 
 // ── Identifier helpers ────────────────────────────────────────────────────────
@@ -1034,16 +1047,49 @@ export function DriverIdentityVerification({
                 <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={identityTone}>{identityLabel}</Badge>
+                    {result.verificationMetadata?.matchScore !== undefined ? (
+                      <Badge tone={identityStatus === 'verified' ? 'success' : 'warning'}>
+                        Match score {result.verificationMetadata.matchScore}%
+                      </Badge>
+                    ) : null}
                   </div>
                   <Text>
-                    {identityStatus === 'verified'
-                      ? 'Verification successful. Loading next step…'
-                      : identityStatus === 'review_needed'
-                        ? 'Your verification has been submitted and is under manual review. You will be notified of the outcome.'
-                        : identityStatus === 'failed'
-                          ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
-                          : 'Verification submitted. Loading next step…'}
+                    {result.providerPending
+                      ? 'Your verification request was submitted successfully, but the provider result is still being recovered. Please wait for the saved result to refresh.'
+                      : identityStatus === 'verified'
+                        ? 'Verification successful. Loading next step…'
+                        : identityStatus === 'review_needed'
+                          ? 'Your verification has been submitted and is under manual review. You will be notified of the outcome.'
+                          : identityStatus === 'failed'
+                            ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
+                            : 'Verification submitted. Loading next step…'}
                   </Text>
+                  {getDisplayIdentityName(result.verifiedProfile) ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Text tone="muted">Returned identity</Text>
+                        <Text>{getDisplayIdentityName(result.verifiedProfile)}</Text>
+                      </div>
+                      {result.verifiedProfile?.ninIdNumber ? (
+                        <div className="space-y-1">
+                          <Text tone="muted">NIN</Text>
+                          <Text>{result.verifiedProfile.ninIdNumber}</Text>
+                        </div>
+                      ) : null}
+                      {result.verifiedProfile?.dateOfBirth ? (
+                        <div className="space-y-1">
+                          <Text tone="muted">Date of birth</Text>
+                          <Text>{result.verifiedProfile.dateOfBirth}</Text>
+                        </div>
+                      ) : null}
+                      {result.verifiedProfile?.gender ? (
+                        <div className="space-y-1">
+                          <Text tone="muted">Gender</Text>
+                          <Text>{result.verifiedProfile.gender}</Text>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {mode === 'self_service' || mode === 'guarantor_self_service' ? (
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />

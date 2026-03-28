@@ -81,11 +81,28 @@ interface MatchingResult {
   matchedIdentifierType?: string;
   isVerifiedMatch?: boolean;
   verifiedProfile?: {
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
     fullName?: string;
     dateOfBirth?: string;
+    nationality?: string;
     address?: string;
+    fullAddress?: string;
+    addressLine?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    mobileNumber?: string;
+    emailAddress?: string;
+    birthState?: string;
+    birthLga?: string;
+    nextOfKinState?: string;
+    religion?: string;
+    ninIdNumber?: string;
     gender?: string;
     photoUrl?: string;
+    signatureUrl?: string;
     providerImageUrl?: string;
     selfieImageUrl?: string;
   };
@@ -109,6 +126,7 @@ interface MatchingResult {
   livenessReason?: string;
   /** True when the enrolled subject holds both driver and guarantor roles at the same tenant. */
   crossRoleConflict?: boolean;
+  providerAudit?: Record<string, unknown>;
 }
 
 interface PersonRolePresence {

@@ -22,7 +22,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Driver } from '@prisma/client';
+import type { Driver, Prisma } from '@prisma/client';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -76,6 +76,10 @@ type DriverWithIdentityState = Driver & {
   identityLivenessProvider?: string | null;
   identityLivenessConfidence?: number | null;
   identityLivenessReason?: string | null;
+  identitySignatureImageUrl?: string | null;
+  identityProfile?: Prisma.JsonValue | null;
+  identityVerificationMetadata?: Prisma.JsonValue | null;
+  identityProviderRawData?: Prisma.JsonValue | null;
 };
 
 type DriverIntelligenceSummary = {
@@ -383,6 +387,7 @@ export class DriversController {
       photoUrl: hasPortrait ? `/api/drivers/${id}/portrait` : null,
       selfieImageUrl: driver.selfieImageUrl ?? null,
       providerImageUrl: driver.providerImageUrl ?? null,
+      identitySignatureImageUrl: driver.identitySignatureImageUrl ?? null,
     };
   }
 
@@ -674,6 +679,15 @@ export class DriversController {
       organisationName: (driver as { organisationName?: string | null }).organisationName ?? null,
       selfieImageUrl: driver.selfieImageUrl ?? null,
       providerImageUrl: driver.providerImageUrl ?? null,
+      identitySignatureImageUrl: driver.identitySignatureImageUrl ?? null,
+      identityProfile:
+        (driver as { identityProfile?: Record<string, unknown> | null }).identityProfile ?? null,
+      identityVerificationMetadata:
+        (driver as { identityVerificationMetadata?: Record<string, unknown> | null })
+          .identityVerificationMetadata ?? null,
+      identityProviderRawData:
+        (driver as { identityProviderRawData?: Record<string, unknown> | null })
+          .identityProviderRawData ?? null,
       dateOfBirth: driver.dateOfBirth,
       gender: driver.gender ?? null,
       nationality: driver.nationality,
@@ -827,6 +841,15 @@ export class DriverSelfServiceController {
       photoUrl: driver.selfieImageUrl ? `/api/drivers/${driver.id}/portrait` : null,
       selfieImageUrl: driver.selfieImageUrl ?? null,
       providerImageUrl: driver.providerImageUrl ?? null,
+      identitySignatureImageUrl: driver.identitySignatureImageUrl ?? null,
+      identityProfile:
+        (driver as { identityProfile?: Record<string, unknown> | null }).identityProfile ?? null,
+      identityVerificationMetadata:
+        (driver as { identityVerificationMetadata?: Record<string, unknown> | null })
+          .identityVerificationMetadata ?? null,
+      identityProviderRawData:
+        (driver as { identityProviderRawData?: Record<string, unknown> | null })
+          .identityProviderRawData ?? null,
       dateOfBirth: driver.dateOfBirth,
       gender: driver.gender ?? null,
       nationality: driver.nationality,

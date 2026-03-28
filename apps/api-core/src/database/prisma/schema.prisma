@@ -238,6 +238,10 @@ model Driver {
   nationality String?
   selfieImageUrl   String?
   providerImageUrl String?
+  identitySignatureImageUrl String?
+  identityProfile Json?
+  identityVerificationMetadata Json?
+  identityProviderRawData Json?
 
   // Cross-schema reference to intel_persons.id in api-intelligence.
   // Null until identity resolution has produced a canonical person record.

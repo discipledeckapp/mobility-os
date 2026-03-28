@@ -63,6 +63,10 @@ type DriverWithIdentityState = Driver & {
   identityLivenessProvider?: string | null;
   identityLivenessConfidence?: number | null;
   identityLivenessReason?: string | null;
+  identitySignatureImageUrl?: string | null;
+  identityProfile?: Prisma.JsonValue | null;
+  identityVerificationMetadata?: Prisma.JsonValue | null;
+  identityProviderRawData?: Prisma.JsonValue | null;
 };
 
 type DriverIntelligenceSummary = {
@@ -200,14 +204,41 @@ type DriverIdentityResolutionResult = {
   matchedIdentifierType?: string;
   isVerifiedMatch?: boolean;
   verifiedProfile?: {
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
     fullName?: string;
     dateOfBirth?: string;
+    nationality?: string;
     address?: string;
+    fullAddress?: string;
+    addressLine?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    mobileNumber?: string;
+    emailAddress?: string;
+    birthState?: string;
+    birthLga?: string;
+    nextOfKinState?: string;
+    religion?: string;
+    ninIdNumber?: string;
     gender?: string;
     photoUrl?: string;
+    signatureUrl?: string;
     providerImageUrl?: string;
     selfieImageUrl?: string;
   };
+  verificationMetadata?: {
+    validity?: 'valid' | 'invalid' | 'unknown';
+    issueDate?: string;
+    expiryDate?: string;
+    portraitAvailable?: boolean;
+    matchScore?: number;
+    riskScore?: number;
+  };
+  providerAudit?: Record<string, unknown>;
+  providerPending?: boolean;
   globalRiskScore?: number;
   riskBand?: string;
   isWatchlisted?: boolean;
@@ -4557,14 +4588,41 @@ export class DriversService {
     matchedIdentifierType?: string;
     isVerifiedMatch?: boolean;
     verifiedProfile?: {
+      firstName?: string;
+      middleName?: string;
+      lastName?: string;
       fullName?: string;
       dateOfBirth?: string;
+      nationality?: string;
       address?: string;
+      fullAddress?: string;
+      addressLine?: string;
+      town?: string;
+      localGovernmentArea?: string;
+      state?: string;
+      mobileNumber?: string;
+      emailAddress?: string;
+      birthState?: string;
+      birthLga?: string;
+      nextOfKinState?: string;
+      religion?: string;
+      ninIdNumber?: string;
       gender?: string;
       photoUrl?: string;
+      signatureUrl?: string;
       providerImageUrl?: string;
       selfieImageUrl?: string;
+      signatureImageUrl?: string;
     };
+    verificationMetadata?: {
+      validity?: 'valid' | 'invalid' | 'unknown';
+      issueDate?: string;
+      expiryDate?: string;
+      portraitAvailable?: boolean;
+      matchScore?: number;
+      riskScore?: number;
+    };
+    providerAudit?: Record<string, unknown>;
     globalRiskScore?: number;
     riskBand?: string;
     isWatchlisted?: boolean;
@@ -4647,6 +4705,26 @@ export class DriversService {
       result.verifiedProfile?.providerImageUrl ?? result.verifiedProfile?.photoUrl,
       `driver-provider-${driver.id}-${Date.now()}`,
     );
+    const persistedSignatureImageUrl = await this.persistIdentityReferenceImage(
+      result.verifiedProfile?.signatureUrl,
+      `driver-signature-${driver.id}-${Date.now()}`,
+    );
+    const identityProfileSnapshot = this.buildDriverIdentityProfileSnapshot(result, {
+      selfieImageUrl: persistedSelfieImageUrl,
+      providerImageUrl: persistedProviderImageUrl,
+      signatureImageUrl: persistedSignatureImageUrl,
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'driver_verification_assets_persisted',
+        tenantId,
+        driverId: driver.id,
+        hasSelfieImage: Boolean(persistedSelfieImageUrl),
+        hasProviderPortrait: Boolean(persistedProviderImageUrl),
+        hasSignatureImage: Boolean(persistedSignatureImageUrl),
+      }),
+    );
 
     // Canonical enrichment (verified name, DOB, etc.) is stored on intel_persons
     // by the intelligence plane — see person-graph.md Principle 4. Only operational
@@ -4658,6 +4736,16 @@ export class DriversService {
         ...(result.personId ? { personId: result.personId } : {}),
         ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+        ...(persistedSignatureImageUrl
+          ? { identitySignatureImageUrl: persistedSignatureImageUrl }
+          : {}),
+        ...(identityProfileSnapshot ? { identityProfile: identityProfileSnapshot } : {}),
+        ...(result.verificationMetadata
+          ? { identityVerificationMetadata: result.verificationMetadata as Prisma.InputJsonValue }
+          : {}),
+        ...(result.providerAudit
+          ? { identityProviderRawData: result.providerAudit as Prisma.InputJsonValue }
+          : {}),
         identityStatus: nextIdentityStatus,
         identityReviewCaseId: result.reviewCaseId ?? null,
         identityReviewStatus: result.reviewCaseId ? 'open' : null,
@@ -4674,6 +4762,18 @@ export class DriversService {
 
     this.logger.log(
       JSON.stringify({
+        event: 'driver_profile_updated_from_verification',
+        tenantId,
+        driverId: driver.id,
+        updatedOperationalProfile: Object.keys(verifiedProfileUpdate).length > 0,
+        savedIdentitySnapshot: Boolean(identityProfileSnapshot),
+        savedVerificationMetadata: Boolean(result.verificationMetadata),
+        savedProviderAudit: Boolean(result.providerAudit),
+      }),
+    );
+
+    this.logger.log(
+      JSON.stringify({
         event: 'driver_verification_transition',
         tenantId,
         driverId: driver.id,
@@ -4681,6 +4781,8 @@ export class DriversService {
         decision: result.decision,
         providerLookupStatus: result.providerLookupStatus ?? null,
         providerVerificationStatus: result.providerVerificationStatus ?? null,
+        hasIdentityProfileSnapshot: Boolean(identityProfileSnapshot),
+        hasProviderAudit: Boolean(result.providerAudit),
         livenessPassed: result.livenessPassed ?? null,
         livenessProviderName: result.livenessProviderName ?? null,
       }),
@@ -4694,6 +4796,9 @@ export class DriversService {
               ...(result.verifiedProfile ?? {}),
               ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
               ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
+              ...(persistedSignatureImageUrl
+                ? { signatureImageUrl: persistedSignatureImageUrl }
+                : {}),
             },
           }
         : {}),
@@ -4728,6 +4833,7 @@ export class DriversService {
     firstName?: string;
     lastName?: string;
     dateOfBirth?: string;
+    nationality?: string;
     gender?: string;
   } {
     if (result.isVerifiedMatch !== true || !result.verifiedProfile) {
@@ -4738,21 +4844,34 @@ export class DriversService {
       firstName?: string;
       lastName?: string;
       dateOfBirth?: string;
+      nationality?: string;
       gender?: string;
     } = {};
-    const fullName = result.verifiedProfile.fullName?.trim();
-    if (fullName) {
-      const parts = fullName.split(/\s+/).filter(Boolean);
-      if (parts.length === 1) {
-        const firstName = parts[0];
-        if (firstName) {
-          updates.firstName = firstName;
-        }
-      } else if (parts.length > 1) {
-        updates.firstName = parts.slice(0, -1).join(' ');
-        const lastName = parts.at(-1);
-        if (lastName) {
-          updates.lastName = lastName;
+    const firstName = result.verifiedProfile.firstName?.trim();
+    const middleName = result.verifiedProfile.middleName?.trim();
+    const lastName = result.verifiedProfile.lastName?.trim();
+    if (firstName || middleName || lastName) {
+      if (firstName || middleName) {
+        updates.firstName = [firstName, middleName].filter(Boolean).join(' ');
+      }
+      if (lastName) {
+        updates.lastName = lastName;
+      }
+    } else {
+      const fullName = result.verifiedProfile.fullName?.trim();
+      if (fullName) {
+        const parts = fullName.split(/\s+/).filter(Boolean);
+        if (parts.length === 1) {
+          const fallbackFirstName = parts[0];
+          if (fallbackFirstName) {
+            updates.firstName = fallbackFirstName;
+          }
+        } else if (parts.length > 1) {
+          updates.firstName = parts.slice(0, -1).join(' ');
+          const fallbackLastName = parts.at(-1);
+          if (fallbackLastName) {
+            updates.lastName = fallbackLastName;
+          }
         }
       }
     }
@@ -4761,11 +4880,81 @@ export class DriversService {
       updates.dateOfBirth = result.verifiedProfile.dateOfBirth.trim();
     }
 
+    if (result.verifiedProfile.nationality?.trim()) {
+      updates.nationality = result.verifiedProfile.nationality.trim().toUpperCase();
+    }
+
     if (result.verifiedProfile.gender?.trim()) {
-      updates.gender = result.verifiedProfile.gender.trim();
+      const normalizedGender = this.normalizeGenderValue(result.verifiedProfile.gender);
+      if (normalizedGender) {
+        updates.gender = normalizedGender;
+      }
     }
 
     return updates;
+  }
+
+  private normalizeGenderValue(input?: string | null): string | undefined {
+    const normalized = input?.trim();
+    if (!normalized) {
+      return undefined;
+    }
+    const compact = normalized.toLowerCase();
+    if (compact === 'm' || compact === 'male') return 'male';
+    if (compact === 'f' || compact === 'female') return 'female';
+    return normalized;
+  }
+
+  private buildDriverIdentityProfileSnapshot(
+    result: DriverIdentityResolutionResult,
+    persistedImages: {
+      selfieImageUrl?: string | null;
+      providerImageUrl?: string | null;
+      signatureImageUrl?: string | null;
+    },
+  ): Prisma.InputJsonValue | undefined {
+    const profile = result.verifiedProfile;
+    if (!profile && !persistedImages.selfieImageUrl && !persistedImages.providerImageUrl) {
+      return undefined;
+    }
+
+    const snapshot: Record<string, unknown> = {
+      ...(profile?.firstName?.trim() ? { firstName: profile.firstName.trim() } : {}),
+      ...(profile?.middleName?.trim() ? { middleName: profile.middleName.trim() } : {}),
+      ...(profile?.lastName?.trim() ? { lastName: profile.lastName.trim() } : {}),
+      ...(profile?.fullName?.trim() ? { fullName: profile.fullName.trim() } : {}),
+      ...(profile?.dateOfBirth?.trim() ? { dateOfBirth: profile.dateOfBirth.trim() } : {}),
+      ...(profile?.nationality?.trim()
+        ? { nationality: profile.nationality.trim().toUpperCase() }
+        : {}),
+      ...(profile?.gender?.trim()
+        ? { gender: this.normalizeGenderValue(profile.gender) ?? profile.gender.trim() }
+        : {}),
+      ...(profile?.address?.trim() ? { address: profile.address.trim() } : {}),
+      ...(profile?.fullAddress?.trim() ? { fullAddress: profile.fullAddress.trim() } : {}),
+      ...(profile?.addressLine?.trim() ? { addressLine: profile.addressLine.trim() } : {}),
+      ...(profile?.town?.trim() ? { town: profile.town.trim() } : {}),
+      ...(profile?.localGovernmentArea?.trim()
+        ? { localGovernmentArea: profile.localGovernmentArea.trim() }
+        : {}),
+      ...(profile?.state?.trim() ? { state: profile.state.trim() } : {}),
+      ...(profile?.mobileNumber?.trim() ? { mobileNumber: profile.mobileNumber.trim() } : {}),
+      ...(profile?.emailAddress?.trim() ? { emailAddress: profile.emailAddress.trim() } : {}),
+      ...(profile?.birthState?.trim() ? { birthState: profile.birthState.trim() } : {}),
+      ...(profile?.birthLga?.trim() ? { birthLga: profile.birthLga.trim() } : {}),
+      ...(profile?.nextOfKinState?.trim() ? { nextOfKinState: profile.nextOfKinState.trim() } : {}),
+      ...(profile?.religion?.trim() ? { religion: profile.religion.trim() } : {}),
+      ...(profile?.ninIdNumber?.trim() ? { ninIdNumber: profile.ninIdNumber.trim() } : {}),
+      ...(persistedImages.selfieImageUrl ? { selfieImageUrl: persistedImages.selfieImageUrl } : {}),
+      ...(persistedImages.providerImageUrl
+        ? { providerImageUrl: persistedImages.providerImageUrl }
+        : {}),
+      ...(persistedImages.signatureImageUrl
+        ? { signatureImageUrl: persistedImages.signatureImageUrl }
+        : {}),
+    };
+
+    return Object.keys(snapshot).length > 0 ? (snapshot as Prisma.InputJsonValue) : undefined;
   }
 
   private buildVerifiedGuarantorProfileUpdate(result: DriverIdentityResolutionResult): {

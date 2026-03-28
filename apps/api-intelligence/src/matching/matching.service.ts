@@ -390,6 +390,7 @@ export class MatchingService {
         : {}),
       ...(liveness?.reason ? { livenessReason: liveness.reason } : {}),
       ...(verification?.enrichment ? { verifiedProfile: verification.enrichment } : {}),
+      ...(verification?.auditData ? { providerAudit: verification.auditData } : {}),
       ...(verificationMetadata ? { verificationMetadata } : {}),
       ...(crossRoleConflict ? { crossRoleConflict: true } : {}),
       ...intelligenceResult,

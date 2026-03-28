@@ -25,12 +25,30 @@ export interface IdentityVerificationResult {
     portraitAvailable?: boolean;
   };
   enrichment?: {
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
     fullName?: string;
     dateOfBirth?: string;
+    nationality?: string;
     address?: string;
+    fullAddress?: string;
+    addressLine?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    mobileNumber?: string;
+    emailAddress?: string;
+    birthState?: string;
+    birthLga?: string;
+    nextOfKinState?: string;
+    religion?: string;
+    ninIdNumber?: string;
     gender?: string;
     photoUrl?: string;
+    signatureUrl?: string;
   };
+  auditData?: Record<string, unknown>;
   reason?: string;
 }
 
@@ -100,6 +118,90 @@ function normalizeYouVerifyResponse(
       : typeof data.status === 'string'
         ? data.status
         : 'unverified';
+  const firstName = typeof data.firstName === 'string' ? data.firstName.trim() : '';
+  const middleName = typeof data.middleName === 'string' ? data.middleName.trim() : '';
+  const lastName = typeof data.lastName === 'string' ? data.lastName.trim() : '';
+  const addressLine =
+    typeof data.addressLine === 'string'
+      ? data.addressLine
+      : typeof data.address_line === 'string'
+        ? data.address_line
+        : typeof data.residenceAddress === 'string'
+          ? data.residenceAddress
+          : undefined;
+  const town =
+    typeof data.town === 'string'
+      ? data.town
+      : typeof data.city === 'string'
+        ? data.city
+        : undefined;
+  const localGovernmentArea =
+    typeof data.lga === 'string'
+      ? data.lga
+      : typeof data.localGovernmentArea === 'string'
+        ? data.localGovernmentArea
+        : typeof data.local_government_area === 'string'
+          ? data.local_government_area
+          : undefined;
+  const state =
+    typeof data.state === 'string'
+      ? data.state
+      : typeof data.residenceState === 'string'
+        ? data.residenceState
+        : undefined;
+  const fullAddress =
+    typeof data.fullAddress === 'string'
+      ? data.fullAddress
+      : typeof data.address === 'string'
+        ? data.address
+        : joinNameParts([addressLine, town, localGovernmentArea, state]);
+  const photoUrl =
+    typeof data.image === 'string'
+      ? data.image
+      : typeof data.photo === 'string'
+        ? data.photo
+        : typeof data.photoUrl === 'string'
+          ? data.photoUrl
+          : undefined;
+  const signatureUrl =
+    typeof data.signature === 'string'
+      ? data.signature
+      : typeof data.signatureUrl === 'string'
+        ? data.signatureUrl
+        : undefined;
+  const enrichment: NonNullable<IdentityVerificationResult['enrichment']> = {};
+
+  if (firstName.length > 0) enrichment.firstName = firstName;
+  if (middleName.length > 0) enrichment.middleName = middleName;
+  if (lastName.length > 0) enrichment.lastName = lastName;
+  const fullName = joinNameParts([firstName, middleName, lastName]);
+  if (fullName) enrichment.fullName = fullName;
+  if (typeof data.dateOfBirth === 'string') enrichment.dateOfBirth = data.dateOfBirth;
+  if (typeof data.nationality === 'string') enrichment.nationality = data.nationality;
+  if (fullAddress) {
+    enrichment.address = fullAddress;
+    enrichment.fullAddress = fullAddress;
+  }
+  if (addressLine) enrichment.addressLine = addressLine;
+  if (town) enrichment.town = town;
+  if (localGovernmentArea) enrichment.localGovernmentArea = localGovernmentArea;
+  if (state) enrichment.state = state;
+  if (typeof data.mobile === 'string') enrichment.mobileNumber = data.mobile;
+  if (typeof data.mobileNumber === 'string') enrichment.mobileNumber = data.mobileNumber;
+  if (typeof data.email === 'string') enrichment.emailAddress = data.email;
+  if (typeof data.emailAddress === 'string') enrichment.emailAddress = data.emailAddress;
+  if (typeof data.birthState === 'string') enrichment.birthState = data.birthState;
+  if (typeof data.birthLGA === 'string') enrichment.birthLga = data.birthLGA;
+  if (typeof data.birthLga === 'string') enrichment.birthLga = data.birthLga;
+  if (typeof data.nokState === 'string') enrichment.nextOfKinState = data.nokState;
+  if (typeof data.nextOfKinState === 'string') enrichment.nextOfKinState = data.nextOfKinState;
+  if (typeof data.religion === 'string') enrichment.religion = data.religion;
+  if (typeof data.nin === 'string') enrichment.ninIdNumber = data.nin;
+  if (typeof data.ninIdNumber === 'string') enrichment.ninIdNumber = data.ninIdNumber;
+  if (typeof data.idNumber === 'string') enrichment.ninIdNumber = data.idNumber;
+  if (typeof data.gender === 'string') enrichment.gender = data.gender;
+  if (photoUrl) enrichment.photoUrl = photoUrl;
+  if (signatureUrl) enrichment.signatureUrl = signatureUrl;
 
   return {
     status: status === 'found' ? 'verified' : 'no_match',
@@ -127,15 +229,11 @@ function normalizeYouVerifyResponse(
       ),
       portraitAvailable: typeof data.image === 'string' && data.image.trim().length > 0,
     },
-    enrichment: {
-      ...optionalStringProperty(
-        'fullName',
-        joinNameParts([data.firstName, data.middleName, data.lastName]),
-      ),
-      ...optionalStringProperty('dateOfBirth', data.dateOfBirth),
-      ...optionalStringProperty('address', data.address),
-      ...optionalStringProperty('gender', data.gender),
-      ...optionalStringProperty('photoUrl', data.image),
+    ...(Object.keys(enrichment).length > 0 ? { enrichment } : {}),
+    auditData: {
+      identifierType,
+      verificationStatus,
+      data,
     },
     ...(typeof data.reason === 'string' ? { reason: data.reason } : {}),
   };

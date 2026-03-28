@@ -114,6 +114,13 @@ function sanitizeSelfServiceErrorMessage(message: string): string {
 function getVerificationSubmissionFeedback(
   result: DriverIdentityResolutionResult,
 ): Pick<ResolveDriverVerificationActionState, 'error' | 'success'> {
+  if (result.providerPending) {
+    return {
+      success:
+        'Identity verification was submitted successfully. The provider result is still being recovered.',
+    };
+  }
+
   if (result.decision === 'failed' || result.providerLookupStatus === 'no_match') {
     return {
       error:
@@ -954,7 +961,6 @@ export async function reviewDriverDocumentAction(
   };
 }
 
-
 export interface RetryDriverVerificationActionState {
   error?: string;
   success?: string;
@@ -976,7 +982,9 @@ export async function retryDriverVerificationAction(
       };
     }
     revalidatePath(`/drivers/${driverId}`);
-    return { success: 'Verification retry has been queued. Refresh in a few moments to see the result.' };
+    return {
+      success: 'Verification retry has been queued. Refresh in a few moments to see the result.',
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to queue the verification retry.',

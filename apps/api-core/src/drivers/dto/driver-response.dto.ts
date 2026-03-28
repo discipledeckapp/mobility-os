@@ -55,6 +55,32 @@ export class DriverResponseDto {
   })
   providerImageUrl?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Stored object URL for the provider-returned signature image, when available.',
+  })
+  identitySignatureImageUrl?: string | null;
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+    description: 'Structured provider-returned identity fields persisted for operator review.',
+  })
+  identityProfile?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+    description: 'Normalized verification metadata such as validity, match score, and risk score.',
+  })
+  identityVerificationMetadata?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+    description: 'Sanitized provider audit payload retained for operational troubleshooting.',
+  })
+  identityProviderRawData?: Record<string, unknown> | null;
+
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
   dateOfBirth?: string | null;
 

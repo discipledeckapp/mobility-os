@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   type DocumentVerificationRecord,
+  type DriverIdentityResolutionResult,
   type DriverRecord,
   type OnboardingStepRecord,
   createDriverSelfServiceAccount,
@@ -1209,6 +1210,10 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStepRecord | null>(null);
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
+  const [refreshingAfterVerification, setRefreshingAfterVerification] = useState(false);
+  const [postSubmitRefreshError, setPostSubmitRefreshError] = useState<string | null>(null);
+  const [lastVerificationResult, setLastVerificationResult] =
+    useState<DriverIdentityResolutionResult | null>(null);
   // Incremented after each verification attempt. Used as a React key on
   // DriverIdentityVerification to force a full remount (resetting all useActionState
   // and camera state) whether the step changes or not.
@@ -1269,6 +1274,17 @@ function DriverVerificationFlow({ token }: { token: string }) {
   if (state === 'expired') return <ExpiredLinkCard />;
 
   if (state === 'error' || !driver || !onboardingStep) {
+    async function handleRetryLoad() {
+      setState('loading');
+      try {
+        await refreshContext();
+        setState('ready');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message.toLowerCase() : '';
+        setState(msg.includes('expired') || msg.includes('invalid') ? 'expired' : 'error');
+      }
+    }
+
     return (
       <main className="min-h-screen bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4fb_100%)] px-4 py-10">
         <div className="mx-auto max-w-3xl">
@@ -1281,12 +1297,13 @@ function DriverVerificationFlow({ token }: { token: string }) {
                 We could not load your onboarding details. Please try the link in your email again,
                 or sign in if you already have an account.
               </Text>
-              <a
-                href="/driver-self-service"
+              <button
                 className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                onClick={() => void handleRetryLoad()}
+                type="button"
               >
                 Try again
-              </a>
+              </button>
             </CardContent>
           </Card>
         </div>
@@ -1335,6 +1352,49 @@ function DriverVerificationFlow({ token }: { token: string }) {
           </div>
         </section>
 
+        {postSubmitRefreshError ? (
+          <Card className="border-amber-200 bg-amber-50/70">
+            <CardContent className="pt-5 pb-4 space-y-3">
+              <Text className="font-semibold text-[var(--mobiris-ink)]">
+                Verification result saved
+              </Text>
+              <Text tone="muted">
+                Your verification response was received, but we could not refresh the next step yet.
+                Refreshing here only reloads the saved result. It does not start a new paid
+                verification attempt.
+              </Text>
+              {lastVerificationResult?.verifiedProfile?.fullName ? (
+                <Text tone="muted">
+                  Latest returned identity: {lastVerificationResult.verifiedProfile.fullName}
+                </Text>
+              ) : null}
+              <Text tone="muted">{postSubmitRefreshError}</Text>
+              <Button
+                disabled={refreshingAfterVerification}
+                onClick={() => {
+                  setRefreshingAfterVerification(true);
+                  setPostSubmitRefreshError(null);
+                  void refreshContext()
+                    .then(() => {
+                      setVerificationKey((current) => current + 1);
+                    })
+                    .catch((error: unknown) => {
+                      setPostSubmitRefreshError(
+                        error instanceof Error
+                          ? error.message
+                          : 'Unable to refresh onboarding status right now.',
+                      );
+                    })
+                    .finally(() => setRefreshingAfterVerification(false));
+                }}
+                type="button"
+              >
+                {refreshingAfterVerification ? 'Refreshing status…' : 'Refresh saved result'}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <StepProgress currentStep={currentStep} />
 
         {currentStep === 'account' ? (
@@ -1364,11 +1424,22 @@ function DriverVerificationFlow({ token }: { token: string }) {
             driver={driver}
             key={verificationKey}
             mode="self_service"
-            onVerificationSubmitted={() => {
-              // Increment key so the next attempt (if step stays identity_verification)
-              // starts with a completely fresh component and camera state.
-              setVerificationKey((k) => k + 1);
-              void refreshContext();
+            onVerificationSubmitted={(result) => {
+              setLastVerificationResult(result);
+              setRefreshingAfterVerification(true);
+              setPostSubmitRefreshError(null);
+              void refreshContext()
+                .then(() => {
+                  setVerificationKey((k) => k + 1);
+                })
+                .catch((error: unknown) => {
+                  setPostSubmitRefreshError(
+                    error instanceof Error
+                      ? error.message
+                      : 'Unable to refresh onboarding status right now.',
+                  );
+                })
+                .finally(() => setRefreshingAfterVerification(false));
             }}
             selfServiceToken={token}
             {...(driver.enabledDriverIdentifierTypes

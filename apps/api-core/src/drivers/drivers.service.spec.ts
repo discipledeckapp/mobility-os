@@ -22,6 +22,11 @@ describe('DriversService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    driverDocumentVerification: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     driverGuarantor: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -93,11 +98,14 @@ describe('DriversService', () => {
         },
       },
     });
-    prisma.$transaction.mockImplementation(async (operations: unknown[]) => Promise.all(operations));
+    prisma.$transaction.mockImplementation(async (operations: unknown[]) =>
+      Promise.all(operations),
+    );
     documentStorageService.uploadFile.mockResolvedValue({
       storageKey: 'doc-key',
       storageUrl: 'https://storage.example.com/driver-documents/doc-key',
     });
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([]);
     intelligenceClient.queryPersonRisk.mockResolvedValue({
       riskBand: 'low',
       isWatchlisted: false,
@@ -197,6 +205,17 @@ describe('DriversService', () => {
   });
 
   it('blocks activation when the driver has no guarantor', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requiredDriverDocumentSlugs: ['drivers-license'],
+          requireGuarantor: true,
+          guarantorBlocking: true,
+          requireGuarantorVerification: true,
+        },
+      },
+    });
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
       tenantId: 'tenant_1',
@@ -204,6 +223,15 @@ describe('DriversService', () => {
       identityStatus: 'verified',
     });
     prisma.driverGuarantor.findMany.mockResolvedValue([]);
+    prisma.driverDocument.findMany.mockResolvedValue([
+      {
+        id: 'document_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        documentType: 'drivers-license',
+        status: 'approved',
+      },
+    ]);
 
     await expect(service.updateStatus('tenant_1', 'driver_1', 'active')).rejects.toThrow(
       'A guarantor with verified linkage is required.',
@@ -582,7 +610,7 @@ describe('DriversService', () => {
     );
 
     await expect(service.initializeIdentityLivenessSession('tenant_1', 'driver_1')).rejects.toThrow(
-      'Live verification is unavailable right now. Try again, or continue with manual verification only if your process allows it.',
+      'Live verification is temporarily unavailable right now. Please try again in a moment.',
     );
   });
 
@@ -644,6 +672,136 @@ describe('DriversService', () => {
       }),
     );
     expect(result.personId).toBe('person_1');
+  });
+
+  it('persists the rich verified profile, metadata, and images returned by identity resolution', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Emeka',
+      lastName: 'Okonkwo',
+      phone: '+2348012345678',
+      email: 'emeka@example.com',
+      dateOfBirth: '1990-06-15',
+      nationality: 'NG',
+      status: 'pending_verification',
+    });
+    documentStorageService.uploadFile
+      .mockResolvedValueOnce({
+        storageKey: 'selfie-key',
+        storageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+      })
+      .mockResolvedValueOnce({
+        storageKey: 'portrait-key',
+        storageUrl: 'https://storage.example.com/driver-documents/nin-portrait.jpg',
+      })
+      .mockResolvedValueOnce({
+        storageKey: 'signature-key',
+        storageUrl: 'https://storage.example.com/driver-documents/signature.jpg',
+      });
+    intelligenceClient.resolveEnrollment.mockResolvedValue({
+      decision: 'verified_match',
+      personId: 'person_1',
+      providerName: 'youverify',
+      providerLookupStatus: 'success',
+      providerVerificationStatus: 'verified',
+      isVerifiedMatch: true,
+      verificationConfidence: 0.99,
+      livenessPassed: true,
+      livenessProviderName: 'youverify',
+      livenessConfidenceScore: 0.97,
+      verifiedProfile: {
+        firstName: 'Emeka',
+        middleName: 'Chinedu',
+        lastName: 'Okonkwo',
+        fullName: 'Emeka Chinedu Okonkwo',
+        dateOfBirth: '1990-06-15',
+        nationality: 'Nigerian',
+        gender: 'm',
+        fullAddress: '12 Marina Road, Lagos',
+        addressLine: '12 Marina Road',
+        town: 'Lagos Island',
+        localGovernmentArea: 'Eti-Osa',
+        state: 'Lagos',
+        mobileNumber: '+2348012345678',
+        emailAddress: 'emeka@example.com',
+        birthState: 'Anambra',
+        birthLga: 'Nnewi North',
+        nextOfKinState: 'Imo',
+        religion: 'Christianity',
+        ninIdNumber: '11111111111',
+        providerImageUrl: 'data:image/png;base64,aGVsbG8=',
+        signatureUrl: 'data:image/png;base64,c2lnbmF0dXJl',
+      },
+      verificationMetadata: {
+        validity: 'valid',
+        matchScore: 98,
+        riskScore: 4,
+        portraitAvailable: true,
+      },
+      providerAudit: {
+        provider: 'youverify',
+        lookupStatus: 'success',
+      },
+    });
+
+    const result = await service.resolveIdentity('tenant_1', 'driver_1', {
+      subjectConsent: true,
+      selfieImageBase64: 'c2VsZmll',
+      livenessCheck: {
+        provider: 'youverify',
+        sessionId: 'session_1',
+        passed: true,
+      },
+      identifiers: [{ type: 'NATIONAL_ID', value: '11111111111', countryCode: 'NG' }],
+    });
+
+    expect(documentStorageService.uploadFile).toHaveBeenCalledTimes(3);
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_1' },
+        data: expect.objectContaining({
+          personId: 'person_1',
+          firstName: 'Emeka Chinedu',
+          lastName: 'Okonkwo',
+          nationality: 'NIGERIAN',
+          gender: 'male',
+          selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+          providerImageUrl: 'https://storage.example.com/driver-documents/nin-portrait.jpg',
+          identitySignatureImageUrl: 'https://storage.example.com/driver-documents/signature.jpg',
+          identityStatus: 'verified',
+          identityVerificationMetadata: expect.objectContaining({
+            validity: 'valid',
+            matchScore: 98,
+            riskScore: 4,
+          }),
+          identityProviderRawData: expect.objectContaining({
+            provider: 'youverify',
+            lookupStatus: 'success',
+          }),
+          identityProfile: expect.objectContaining({
+            fullName: 'Emeka Chinedu Okonkwo',
+            ninIdNumber: '11111111111',
+            fullAddress: '12 Marina Road, Lagos',
+            localGovernmentArea: 'Eti-Osa',
+            birthState: 'Anambra',
+            nextOfKinState: 'Imo',
+            nationality: 'NIGERIAN',
+            selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+            providerImageUrl: 'https://storage.example.com/driver-documents/nin-portrait.jpg',
+            signatureImageUrl: 'https://storage.example.com/driver-documents/signature.jpg',
+          }),
+        }),
+      }),
+    );
+    expect(result.verifiedProfile).toEqual(
+      expect.objectContaining({
+        fullName: 'Emeka Chinedu Okonkwo',
+        selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+        providerImageUrl: 'https://storage.example.com/driver-documents/nin-portrait.jpg',
+        signatureImageUrl: 'https://storage.example.com/driver-documents/signature.jpg',
+      }),
+    );
   });
 
   it('rejects creating a driver with a duplicate phone in the same tenant', async () => {
@@ -739,7 +897,9 @@ describe('DriversService', () => {
       },
     ]);
     prisma.driver.count.mockResolvedValue(1);
-    prisma.driverGuarantor.findMany.mockRejectedValue(new Error('relation "driver_guarantors" does not exist'));
+    prisma.driverGuarantor.findMany.mockRejectedValue(
+      new Error('relation "driver_guarantors" does not exist'),
+    );
 
     const result = await service.list('tenant_1', { limit: 25 });
 
@@ -772,7 +932,9 @@ describe('DriversService', () => {
       },
     ]);
     prisma.driver.count.mockResolvedValue(1);
-    prisma.user.findMany.mockRejectedValue(new Error('column "mobileAccessRevoked" does not exist'));
+    prisma.user.findMany.mockRejectedValue(
+      new Error('column "mobileAccessRevoked" does not exist'),
+    );
 
     const result = await service.list('tenant_1', { limit: 25 });
 
