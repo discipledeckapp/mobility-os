@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
 import {
@@ -272,6 +272,7 @@ function getLocalNigeriaMockVerification(
 @Injectable()
 export class YouVerifyProvider implements IdentityProviderAdapter {
   readonly name = 'youverify';
+  private readonly logger = new Logger(YouVerifyProvider.name);
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -347,17 +348,46 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
 
     try {
       const endpointPath = `/v2/api/identity/${countrySlug}/${identifierSlug}`;
+      const requestBody = this.buildRequestBody(identifier, providerVerification);
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'youverify_nin_request',
+          endpoint: endpointPath,
+          identifierType: identifier.type,
+          hasSelfie: 'selfie' in requestBody,
+          hasValidation: 'validation' in requestBody,
+          premiumNIN: Boolean((requestBody as Record<string, unknown>).premiumNIN),
+        }),
+      );
+
       const response = await requestProviderJson({
         providerName: this.name,
         operation: `lookup:${identifierSlug}`,
         method: 'POST',
         url: `${baseUrl.replace(/\/$/, '')}${endpointPath}`,
         headers: { token: apiKey },
-        body: this.buildRequestBody(identifier, providerVerification),
+        body: requestBody,
       });
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'youverify_nin_response',
+          statusCode: response.statusCode,
+          identifierType: identifier.type,
+        }),
+      );
 
       const httpFailure = summarizeProviderFailure(this.name, `lookup:${identifierSlug}`, response);
       if (httpFailure) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'youverify_nin_http_failure',
+            identifierType: identifier.type,
+            reason: httpFailure,
+            statusCode: response.statusCode,
+          }),
+        );
         return {
           status: 'provider_error',
           providerName: this.name,
@@ -373,7 +403,20 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
         };
       }
 
-      return normalizeYouVerifyResponse(this.name, identifier.type, response.payload);
+      const normalized = normalizeYouVerifyResponse(this.name, identifier.type, response.payload);
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'youverify_nin_normalized',
+          identifierType: identifier.type,
+          status: normalized.status,
+          verificationStatus: normalized.verificationStatus ?? null,
+          hasFullName: Boolean(normalized.enrichment?.fullName),
+          portraitAvailable: normalized.documentMetadata?.portraitAvailable ?? false,
+        }),
+      );
+
+      return normalized;
     } catch (error) {
       return {
         status: 'provider_error',

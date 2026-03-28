@@ -204,13 +204,34 @@ export default async function DriverDetailsPage({
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-emerald-900">Driver created — invitation sent</p>
-                <p className="text-sm text-emerald-800">
-                  A self-service link was sent automatically to the driver&apos;s email. The current policy requires{' '}
-                  <strong>{tenant?.driverPaysKyc ? 'the driver to pay ₦5,000' : 'the organisation wallet to cover the cost'}</strong>{' '}
-                  for identity verification. Request the driver to self-verify below, or{' '}
-                  <a className="font-semibold underline hover:no-underline" href="/settings?section=drivers">adjust in Settings → Drivers</a>.
-                </p>
+                {(() => {
+                  // driverPaysKyc defaults to true — driver pays is the platform default.
+                  const driverPays = tenant?.driverPaysKyc ?? true;
+                  const requiresVerification = tenant?.requireIdentityVerificationForActivation ?? true;
+                  const linkSent = Boolean(driver.email);
+                  const heading = linkSent ? 'Driver created — invitation sent' : 'Driver created';
+                  const linkCopy = linkSent
+                    ? 'A self-service verification link was sent to the driver\'s email address.'
+                    : 'No email address is on record — send a verification link manually from this page.';
+                  const paymentCopy = !requiresVerification
+                    ? 'Identity verification is not required for activation under the current policy.'
+                    : driverPays
+                      ? 'The driver pays the verification fee during self-service onboarding.'
+                      : 'Your organisation wallet covers the verification fee for this driver.';
+                  return (
+                    <>
+                      <p className="text-sm font-semibold text-emerald-900">{heading}</p>
+                      <p className="text-sm text-emerald-800">
+                        {linkCopy}{' '}
+                        <strong>{paymentCopy}</strong>{' '}
+                        <a className="font-semibold underline hover:no-underline" href="/settings?section=drivers">
+                          Adjust in Settings → Drivers
+                        </a>
+                        {requiresVerification ? ' or request the driver to self-verify below.' : '.'}
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </CardContent>
@@ -248,11 +269,11 @@ export default async function DriverDetailsPage({
             <div className="flex items-start gap-4">
               {/* Avatar */}
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--mobiris-primary)]/10 ring-2 ring-white shadow-sm">
-                {driver.providerImageUrl ?? driver.photoUrl ? (
+                {driver.providerImageUrl ?? driver.selfieImageUrl ?? driver.photoUrl ? (
                   <img
                     alt={driverDisplayName}
                     className="h-14 w-14 rounded-full object-cover"
-                    src={driver.providerImageUrl ?? driver.photoUrl ?? ''}
+                    src={driver.providerImageUrl ?? driver.selfieImageUrl ?? driver.photoUrl ?? ''}
                   />
                 ) : (
                   <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">

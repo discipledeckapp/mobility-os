@@ -82,6 +82,7 @@ export class TenantsService {
           : {}),
         ...(dto.driverPaysKyc !== undefined ? { driverPaysKyc: dto.driverPaysKyc } : {}),
         ...(dto.requireGuarantor !== undefined ? { requireGuarantor: dto.requireGuarantor } : {}),
+        ...(dto.guarantorBlocking !== undefined ? { guarantorBlocking: dto.guarantorBlocking } : {}),
         ...(dto.requireGuarantorVerification !== undefined
           ? { requireGuarantorVerification: dto.requireGuarantorVerification }
           : {}),

@@ -49,6 +49,7 @@ import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
+import { startYouVerifyLiveness } from '../../../../modules/youverify-liveness';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
@@ -157,6 +158,9 @@ export function SelfServiceVerificationScreen({
   const [selfieBase64, setSelfieBase64] = useState('');
   const [selfiePreviewUri, setSelfiePreviewUri] = useState<string | null>(null);
   const [livenessSession, setLivenessSession] = useState<DriverLivenessSessionRecord | null>(null);
+  const [livenessRunning, setLivenessRunning] = useState(false);
+  const [nativeLivenessPassed, setNativeLivenessPassed] = useState<boolean | null>(null);
+  const [nativeLivenessFaceB64, setNativeLivenessFaceB64] = useState<string | undefined>(undefined);
   const [identityResult, setIdentityResult] = useState<DriverIdentityResolutionResult | null>(null);
   const [submittingIdentity, setSubmittingIdentity] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
@@ -179,7 +183,8 @@ export function SelfServiceVerificationScreen({
     uploadingDocument ||
     initiatingPayment ||
     savingProfile ||
-    recordingConsent;
+    recordingConsent ||
+    livenessRunning;
   const processingVariant = submittingIdentity
     ? 'verification'
     : uploadingDocument
@@ -189,15 +194,17 @@ export function SelfServiceVerificationScreen({
         : 'onboarding';
   const processingTitle = submittingIdentity
     ? 'Verifying your identity'
-    : uploadingDocument
-      ? 'Uploading document'
-      : initiatingPayment
-        ? 'Starting payment'
-        : recordingConsent
-          ? 'Recording consent'
-          : 'Saving onboarding details';
+    : livenessRunning
+      ? 'Starting face verification'
+      : uploadingDocument
+        ? 'Uploading document'
+        : initiatingPayment
+          ? 'Starting payment'
+          : recordingConsent
+            ? 'Recording consent'
+            : 'Saving onboarding details';
   const processingMessage = submittingIdentity
-    ? 'Checking your live selfie, government records, and profile match.'
+    ? 'Checking your liveness result, government records, and profile match.'
     : uploadingDocument
       ? 'Preparing your document, uploading it securely, and attaching it to your onboarding record.'
       : initiatingPayment
@@ -314,6 +321,8 @@ export function SelfServiceVerificationScreen({
     setSelfieBase64('');
     setSelfiePreviewUri(null);
     setLivenessSession(null);
+    setNativeLivenessPassed(null);
+    setNativeLivenessFaceB64(undefined);
     setIdentityResult(null);
   }, [countryCode, draftHydrated]);
 
@@ -436,11 +445,12 @@ export function SelfServiceVerificationScreen({
     [identifierTypes, identifierValues],
   );
 
+  const biometricReady = !biometricVerificationRequired || nativeLivenessPassed === true;
   const canSubmitIdentity = useMemo(
     () =>
       verificationLifecycle !== 'completed' &&
-      Boolean(token && identifiersReady && (!biometricVerificationRequired || selfieBase64)),
-    [biometricVerificationRequired, identifiersReady, selfieBase64, token, verificationLifecycle],
+      Boolean(token && identifiersReady && biometricReady),
+    [biometricReady, identifiersReady, token, verificationLifecycle],
   );
 
   const documentChecklist = useMemo(
@@ -519,6 +529,52 @@ export function SelfServiceVerificationScreen({
     }
   };
 
+  const onStartNativeLiveness = async () => {
+    if (!token || livenessRunning) return;
+    setLivenessRunning(true);
+    try {
+      const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
+      setLivenessSession(session);
+
+      const { clientAuthToken } = session;
+      if (!clientAuthToken) {
+        Alert.alert(
+          'Face verification',
+          'The server did not return a liveness token. The YouVerify provider may be unavailable.',
+        );
+        return;
+      }
+
+      const result = await startYouVerifyLiveness({
+        sessionId: session.sessionId,
+        sessionToken: clientAuthToken,
+        // __DEV__ is true in Expo dev/preview builds, false in production builds.
+        sandbox: __DEV__,
+      });
+
+      if (result.passed) {
+        setNativeLivenessPassed(true);
+        setNativeLivenessFaceB64(result.faceImageB64);
+        showToast('Face verification passed. Submit now.', 'success');
+      } else {
+        setNativeLivenessPassed(false);
+        const msg = result.errorMessage ?? 'Face verification did not pass.';
+        if (result.errorCode === 'USER_CANCELLED') {
+          showToast('Face verification cancelled.', 'info');
+        } else {
+          Alert.alert('Face verification', `${msg} You can try again.`);
+        }
+      }
+    } catch (error) {
+      Alert.alert(
+        'Face verification',
+        error instanceof Error ? error.message : 'Unable to start face verification.',
+      );
+    } finally {
+      setLivenessRunning(false);
+    }
+  };
+
   const onSubmitIdentity = async () => {
     if (!token) return;
     if (submittingIdentity) return;
@@ -527,7 +583,7 @@ export function SelfServiceVerificationScreen({
       Alert.alert(
         'Driver verification',
         biometricVerificationRequired
-          ? 'Complete required identifiers and capture a live selfie before submitting.'
+          ? 'Complete required identifiers and face verification before submitting.'
           : 'Complete required identifiers before submitting.',
       );
       return;
@@ -554,14 +610,22 @@ export function SelfServiceVerificationScreen({
             countryCode,
           }))
           .filter((identifier) => identifier.value.length > 0),
-        ...(selfieBase64 ? { selfieImageBase64: selfieBase64 } : {}),
+        // selfieImageBase64: prefer the face crop returned by native liveness SDK,
+        // fall back to a manually captured selfie if biometric check is not required.
+        ...(nativeLivenessFaceB64
+          ? { selfieImageBase64: nativeLivenessFaceB64 }
+          : selfieBase64
+            ? { selfieImageBase64: selfieBase64 }
+            : {}),
         subjectConsent: true,
-        livenessCheck: livenessSession
-          ? {
-              provider: livenessSession.providerName,
-              sessionId: livenessSession.sessionId,
-            }
-          : undefined,
+        livenessCheck:
+          livenessSession && nativeLivenessPassed != null
+            ? {
+                provider: livenessSession.providerName,
+                sessionId: livenessSession.sessionId,
+                passed: nativeLivenessPassed,
+              }
+            : undefined,
       });
 
       setIdentityResult(result);
@@ -594,6 +658,11 @@ export function SelfServiceVerificationScreen({
         setCurrentStep(result.verifiedProfile ? 'profile' : 'documents');
       } else if (verificationFailed) {
         showToast('Verification failed. Check your details and try again.', 'error');
+      } else if (result.providerPending) {
+        showToast(
+          'Our identity provider is temporarily unavailable. You can try again in a moment — no additional payment is required.',
+          'info',
+        );
       } else {
         showToast('Verification is still in progress. Refresh to check the latest status.', 'info');
       }
@@ -614,6 +683,8 @@ export function SelfServiceVerificationScreen({
     setSelfieBase64('');
     setSelfiePreviewUri(null);
     setLivenessSession(null);
+    setNativeLivenessPassed(null);
+    setNativeLivenessFaceB64(undefined);
     setIdentityResult(null);
     setDraftRestored(false);
     showToast('Saved verification draft cleared.', 'success');
@@ -1263,53 +1334,69 @@ export function SelfServiceVerificationScreen({
           ) : null}
         </Card>
 
-        {/* Selfie capture */}
+        {/* Face liveness / profile photo */}
         <Card style={styles.section}>
           <Text style={styles.stepLabel}>Live capture</Text>
           <Text style={styles.sectionTitle}>
-            {biometricVerificationRequired ? 'Take a live selfie' : 'Take a profile photo'}
-          </Text>
-          <Text style={styles.copy}>
-            {biometricVerificationRequired
-              ? 'Center your face, move closer if needed, and hold still for a clear capture.'
-              : 'Take a clear face photo for your operator record.'}
+            {biometricVerificationRequired ? 'Face verification' : 'Take a profile photo'}
           </Text>
           {biometricVerificationRequired ? (
-            <View style={styles.livenessBrowserNotice}>
-              <Text style={styles.livenessBrowserNoticeText}>
-                Face liveness verification requires the YouVerify browser SDK and cannot run inside
-                this app. Open the verification link sent to you via SMS or email in a browser to
-                complete this step. Your selfie here is for your operator record only.
+            <>
+              <Text style={styles.copy}>
+                Your face will be verified live using YouVerify's liveness detection. The camera
+                launches in a secure fullscreen view. Hold still and follow the on-screen prompt.
               </Text>
-            </View>
-          ) : null}
-
-          {selfiePreviewUri ? (
-            <View style={styles.selfiePreviewContainer}>
-              <Image
-                source={{ uri: selfiePreviewUri }}
-                style={styles.selfiePreview}
-                resizeMode="cover"
-              />
-              <Text style={styles.selfieCaption}>
-                {identitySubmitted ? 'Selfie submitted' : 'Selfie captured — ready to submit'}
+              {nativeLivenessPassed === true ? (
+                <View style={styles.successRow}>
+                  <Badge label="Face verification passed" tone="success" />
+                </View>
+              ) : nativeLivenessPassed === false ? (
+                <View style={styles.successRow}>
+                  <Badge label="Face verification failed — try again" tone="danger" />
+                </View>
+              ) : null}
+              {!identitySubmitted ? (
+                <Button
+                  label={
+                    livenessRunning
+                      ? 'Starting verification…'
+                      : nativeLivenessPassed === true
+                        ? 'Redo face verification'
+                        : 'Start face verification'
+                  }
+                  variant={nativeLivenessPassed === true ? 'secondary' : 'primary'}
+                  loading={livenessRunning}
+                  loadingLabel="Starting verification…"
+                  onPress={() => void onStartNativeLiveness()}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <Text style={styles.copy}>
+                Take a clear face photo for your operator record.
               </Text>
-            </View>
-          ) : null}
-
-          {!identitySubmitted ? (
-            <Button
-              label={
-                selfiePreviewUri
-                  ? 'Retake selfie'
-                  : biometricVerificationRequired
-                    ? 'Open camera for selfie'
-                    : 'Take profile photo'
-              }
-              variant={selfiePreviewUri ? 'secondary' : 'primary'}
-              onPress={() => void onCaptureSelfie()}
-            />
-          ) : null}
+              {selfiePreviewUri ? (
+                <View style={styles.selfiePreviewContainer}>
+                  <Image
+                    source={{ uri: selfiePreviewUri }}
+                    style={styles.selfiePreview}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.selfieCaption}>
+                    {identitySubmitted ? 'Photo submitted' : 'Photo captured — ready to submit'}
+                  </Text>
+                </View>
+              ) : null}
+              {!identitySubmitted ? (
+                <Button
+                  label={selfiePreviewUri ? 'Retake photo' : 'Take profile photo'}
+                  variant={selfiePreviewUri ? 'secondary' : 'primary'}
+                  onPress={() => void onCaptureSelfie()}
+                />
+              ) : null}
+            </>
+          )}
         </Card>
 
         {/* Submit */}
@@ -1327,9 +1414,12 @@ export function SelfServiceVerificationScreen({
             <View
               style={[
                 styles.resultCard,
-                identityResult.decision === 'verified'
-                  ? styles.resultCardSuccess
-                  : styles.resultCardPending,
+                identityResult.decision === 'failed' ||
+                identityResult.livenessPassed === false
+                  ? styles.resultCardFailed
+                  : identityResult.decision === 'verified'
+                    ? styles.resultCardSuccess
+                    : styles.resultCardPending,
               ]}
             >
               <View style={styles.badgeRow}>
@@ -1351,7 +1441,45 @@ export function SelfServiceVerificationScreen({
                 ) : null}
               </View>
 
-              {identityResult.verifiedProfile ? (
+              {/* Failure explanations */}
+              {identityResult.decision === 'failed' ||
+              identityResult.livenessPassed === false ? (
+                <View style={styles.failureBlock}>
+                  <Text style={styles.failureTitle}>What went wrong</Text>
+                  {identityResult.livenessPassed === false ? (
+                    <Text style={styles.copy}>
+                      Your face could not be confirmed as live. Make sure you are in a well-lit
+                      area, hold still, and follow the on-screen instructions during face
+                      verification.
+                    </Text>
+                  ) : identityResult.providerLookupStatus === 'no_match' ? (
+                    <Text style={styles.copy}>
+                      Your ID number could not be matched against government records. Check that the
+                      number is correct and try again.
+                    </Text>
+                  ) : (
+                    <Text style={styles.copy}>
+                      Verification did not complete successfully. Check your ID number, ensure your
+                      face is clear during the liveness check, and try again.
+                    </Text>
+                  )}
+                  <Text style={styles.hintText}>
+                    If the problem persists, contact {organisationName} for help.
+                  </Text>
+                  <Button
+                    label="Try again"
+                    onPress={() => {
+                      setIdentityResult(null);
+                      setNativeLivenessPassed(null);
+                      setNativeLivenessFaceB64(undefined);
+                      setLivenessSession(null);
+                    }}
+                  />
+                </View>
+              ) : null}
+
+              {/* Success: verified profile */}
+              {identityResult.verifiedProfile && identityResult.decision !== 'failed' ? (
                 <View style={styles.profileGrid}>
                   <Text style={styles.profileLabel}>Name on record</Text>
                   <Text style={styles.profileValue}>
@@ -1376,7 +1504,8 @@ export function SelfServiceVerificationScreen({
                 </View>
               ) : null}
 
-              {identityResult.verificationConfidence != null ? (
+              {identityResult.verificationConfidence != null &&
+              identityResult.decision !== 'failed' ? (
                 <Text style={styles.meta}>
                   Match confidence: {Math.round(identityResult.verificationConfidence * 100)}%
                 </Text>
@@ -1386,8 +1515,11 @@ export function SelfServiceVerificationScreen({
                   Liveness confidence: {Math.round(identityResult.livenessConfidenceScore * 100)}%
                 </Text>
               ) : null}
-              {identityResult.matchedIdentifierType ? (
-                <Text style={styles.meta}>Matched via: {identityResult.matchedIdentifierType}</Text>
+              {identityResult.matchedIdentifierType &&
+              identityResult.decision !== 'failed' ? (
+                <Text style={styles.meta}>
+                  Matched via: {identityResult.matchedIdentifierType}
+                </Text>
               ) : null}
               {identityResult.providerLookupStatus === 'skipped_by_organisation_policy' ? (
                 <Text style={styles.copy}>
@@ -1399,17 +1531,49 @@ export function SelfServiceVerificationScreen({
                 </Text>
               ) : null}
 
-              <Button
-                label={identityResult.verifiedProfile ? 'Confirm details' : 'Continue to documents'}
-                onPress={() =>
-                  setCurrentStep(identityResult.verifiedProfile ? 'profile' : 'documents')
-                }
-              />
-              <Button
-                label="Add guarantor next"
-                variant="secondary"
-                onPress={() => navigation.navigate('DriverGuarantor')}
-              />
+              {/* Provider-pending: encourage immediate retry */}
+              {identityResult.providerPending ? (
+                <View style={styles.failureBlock}>
+                  <Text style={styles.failureTitle}>Provider temporarily unavailable</Text>
+                  <Text style={styles.copy}>
+                    Our identity verification provider could not be reached right now. Your details
+                    have been saved. You can try again in a moment — no additional payment is
+                    required.
+                  </Text>
+                  <Button
+                    label="Try again"
+                    onPress={() => {
+                      setIdentityResult(null);
+                      setNativeLivenessPassed(null);
+                      setNativeLivenessFaceB64(undefined);
+                      setLivenessSession(null);
+                    }}
+                  />
+                </View>
+              ) : null}
+
+              {/* Continue buttons — only when not failed and not provider-pending */}
+              {identityResult.decision !== 'failed' &&
+              identityResult.livenessPassed !== false &&
+              !identityResult.providerPending ? (
+                <>
+                  <Button
+                    label={
+                      identityResult.verifiedProfile ? 'Confirm details' : 'Continue to documents'
+                    }
+                    onPress={() =>
+                      setCurrentStep(identityResult.verifiedProfile ? 'profile' : 'documents')
+                    }
+                  />
+                  {driver.requiresGuarantor && !driver.hasGuarantor ? (
+                    <Button
+                      label="Add your guarantor"
+                      variant={driver.guarantorBlocking ? 'primary' : 'secondary'}
+                      onPress={() => navigation.navigate('DriverGuarantor')}
+                    />
+                  ) : null}
+                </>
+              ) : null}
             </View>
           ) : identitySubmitted ? (
             <View style={styles.resultCard}>
@@ -1426,7 +1590,9 @@ export function SelfServiceVerificationScreen({
             <>
               <Text style={styles.copy}>
                 {identityVerificationRequired
-                  ? 'Submit once your ID numbers and selfie are ready.'
+                  ? biometricVerificationRequired
+                    ? 'Submit once your ID numbers and face verification are complete.'
+                    : 'Submit once your ID numbers are ready.'
                   : 'Your organisation does not require identity verification. Upload documents and continue.'}
               </Text>
               {identityVerificationRequired ? (
@@ -1448,8 +1614,8 @@ export function SelfServiceVerificationScreen({
                 <Text style={styles.hintText}>
                   {!identifiersReady
                     ? 'Enter all required ID numbers first.'
-                    : biometricVerificationRequired && !selfieBase64
-                      ? 'Capture your selfie using the camera above.'
+                    : biometricVerificationRequired && nativeLivenessPassed !== true
+                      ? 'Complete face verification above before submitting.'
                       : ''}
                 </Text>
               ) : null}
@@ -1583,14 +1749,23 @@ export function SelfServiceVerificationScreen({
         <Text style={styles.copy}>
           {!driver.hasMobileAccess
             ? 'Set up your sign-in email and password so you can resume onboarding and log in once approved.'
-            : documentChecklist.every((document) => document.uploaded)
-              ? 'Your onboarding is complete for now. Check readiness to see any remaining operator review steps.'
-              : 'Upload any remaining required documents, or skip optional ones and finish onboarding.'}
+            : driver.requiresGuarantor && !driver.hasGuarantor && driver.guarantorBlocking
+              ? 'Add a guarantor — your organisation requires one before your onboarding is complete.'
+              : documentChecklist.every((document) => document.uploaded)
+                ? 'Your onboarding is complete for now. Check readiness to see any remaining operator review steps.'
+                : 'Upload any remaining required documents, or skip optional ones and finish onboarding.'}
         </Text>
         {!driver.hasMobileAccess ? (
           <Button
             label="Continue to account setup"
             onPress={() => navigation.navigate('DriverAccountSetup')}
+          />
+        ) : null}
+        {driver.requiresGuarantor && !driver.hasGuarantor ? (
+          <Button
+            label="Add your guarantor"
+            variant={driver.guarantorBlocking ? 'primary' : 'ghost'}
+            onPress={() => navigation.navigate('DriverGuarantor')}
           />
         ) : null}
         <Button
@@ -1786,6 +1961,18 @@ const styles = StyleSheet.create({
   resultCardPending: {
     borderColor: '#fde68a',
     backgroundColor: '#fffbeb',
+  },
+  resultCardFailed: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fff1f2',
+  },
+  failureBlock: {
+    gap: tokens.spacing.sm,
+  },
+  failureTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: tokens.colors.ink,
   },
   profileGrid: { gap: 4 },
   profileLabel: { color: tokens.colors.inkSoft, fontSize: 12, fontWeight: '600' },

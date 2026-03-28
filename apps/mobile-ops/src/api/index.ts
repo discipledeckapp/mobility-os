@@ -270,6 +270,9 @@ export interface DriverRecord {
   hasMobileAccess?: boolean;
   mobileAccessStatus?: string | null;
   hasGuarantor?: boolean;
+  requiresGuarantor?: boolean;
+  guarantorBlocking?: boolean;
+  localRiskFlags?: string[];
   guarantorStatus?: string | null;
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
@@ -379,6 +382,8 @@ export interface DriverLivenessSessionRecord {
   providerName: string;
   sessionId: string;
   expiresAt?: string;
+  /** Azure Face JWT — passed directly to the native liveness SDK. */
+  clientAuthToken?: string;
   fallbackChain: string[];
 }
 
@@ -415,6 +420,11 @@ export interface DriverIdentityResolutionResult {
   livenessProviderName?: string;
   livenessConfidenceScore?: number;
   livenessReason?: string;
+  /**
+   * True when all configured identity providers were temporarily unavailable.
+   * The verification is not failed — retry is allowed without a new payment.
+   */
+  providerPending?: boolean;
   /** Verified profile data returned from the identity provider (e.g. Smile Identity NIN/BVN record). */
   verifiedProfile?: {
     fullName?: string;

@@ -114,6 +114,8 @@ type DriverReadinessSummary = {
   remittanceReadinessReasons: string[];
   enforcementStatus?: 'clear' | 'flagged' | 'restricted';
   enforcementActions?: EnforcementSummary[];
+  /** Non-blocking risk signals that don't prevent readiness but should be surfaced. */
+  localRiskFlags?: string[];
 };
 
 type VerificationPaymentState = 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
@@ -1528,6 +1530,9 @@ export class DriversService {
         requireIdentityVerificationForActivation?: boolean;
         requireBiometricVerification?: boolean;
         requireGovernmentVerificationLookup?: boolean;
+        requiresGuarantor?: boolean;
+        guarantorBlocking?: boolean;
+        localRiskFlags?: string[];
         enabledDriverIdentifierTypes?: string[];
         requiredDriverIdentifierTypes?: string[];
         requiredDriverDocumentSlugs?: string[];
@@ -1563,12 +1568,24 @@ export class DriversService {
       driver,
     );
 
+    const selfServiceLocalRiskFlags: string[] = [];
+    if (
+      settings.operations.requireGuarantor &&
+      !settings.operations.guarantorBlocking &&
+      !driver.hasGuarantor
+    ) {
+      selfServiceLocalRiskFlags.push('missing_guarantor');
+    }
+
     return {
       ...driver,
       requireIdentityVerificationForActivation:
         settings.operations.requireIdentityVerificationForActivation,
       requireBiometricVerification: settings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup: settings.operations.requireGovernmentVerificationLookup,
+      requiresGuarantor: settings.operations.requireGuarantor !== false,
+      guarantorBlocking: settings.operations.guarantorBlocking,
+      ...(selfServiceLocalRiskFlags.length > 0 ? { localRiskFlags: selfServiceLocalRiskFlags } : {}),
       enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
@@ -1615,6 +1632,7 @@ export class DriversService {
     requiredDocumentTypes?: string[];
     verifiedDocumentTypes?: string[];
     requiresGuarantor?: boolean;
+    guarantorBlocking?: boolean;
     guarantorVerified?: boolean;
   }> {
     const payload = await this.verifySelfServiceToken(token);
@@ -1766,6 +1784,7 @@ export class DriversService {
 
     // All steps done — include guarantor status for completion screen
     const requiresGuarantor = settings.operations.requireGuarantor !== false;
+    const guarantorBlocking = settings.operations.guarantorBlocking === true;
     let guarantorVerified = !requiresGuarantor;
     if (requiresGuarantor) {
       const guarantor = await this.prisma.driverGuarantor.findFirst({
@@ -1788,6 +1807,7 @@ export class DriversService {
       identityStatus: driver.identityStatus,
       verificationState,
       requiresGuarantor,
+      guarantorBlocking,
       guarantorVerified,
     };
   }
@@ -3484,15 +3504,25 @@ export class DriversService {
       payload.driverId,
       requestFingerprint,
     );
+    // For provider_unavailable pending attempts allow a shorter retry window (60 s) so
+    // drivers can immediately resubmit once the provider recovers.  For all other
+    // in-flight statuses keep the 5-minute dedup window to prevent double-submissions.
+    const isPreviousProviderPending =
+      duplicateAttempt?.status === 'in_progress' &&
+      (duplicateAttempt?.metadata as Record<string, unknown> | null)?.pendingReason ===
+        'provider_unavailable';
+    const duplicateWindowMs = isPreviousProviderPending ? 60 * 1000 : 5 * 60 * 1000;
     if (
       duplicateAttempt &&
       ['initiated', 'liveness_started', 'in_progress', 'provider_called', 'success'].includes(
         duplicateAttempt.status,
       ) &&
-      duplicateAttempt.updatedAt.getTime() >= Date.now() - 5 * 60 * 1000
+      duplicateAttempt.updatedAt.getTime() >= Date.now() - duplicateWindowMs
     ) {
       throw new ConflictException(
-        'This verification submission is already being processed. Refresh your status before trying again.',
+        isPreviousProviderPending
+          ? 'The identity provider is temporarily unavailable. Please wait a moment and try again.'
+          : 'This verification submission is already being processed. Refresh your status before trying again.',
       );
     }
 
@@ -3575,6 +3605,28 @@ export class DriversService {
           : {}),
       });
       const attemptStatus = this.determineVerificationAttemptStatus(result);
+
+      // Detect provider-pending: intelligence succeeded but every configured provider was
+      // unreachable.  This is distinct from 'failed' — the driver is not at fault and the
+      // entitlement must not be consumed.  We store the identifiers in metadata so that the
+      // background retry scheduler can reattempt without requiring the driver to re-enter them.
+      const isProviderPending =
+        attemptStatus === 'in_progress' &&
+        !result.isVerifiedMatch &&
+        !result.providerLookupStatus &&
+        result.decision !== 'review_required';
+      const attemptMetadataUpdate = isProviderPending
+        ? {
+            pendingReason: 'provider_unavailable',
+            pendingAt: new Date().toISOString(),
+            retryData: {
+              identifiers: sanitizedIdentifiers,
+              selfieImageUrl: result.verifiedProfile?.selfieImageUrl ?? driver.selfieImageUrl ?? null,
+              countryCode: rest.countryCode ?? null,
+            },
+          }
+        : undefined;
+
       await this.updateVerificationAttempt(attempt.id, {
         status: attemptStatus,
         providerCallCountIncrement: 1,
@@ -3587,11 +3639,23 @@ export class DriversService {
             : null,
         entitlementId: entitlement?.id ?? null,
       });
+      if (attemptMetadataUpdate) {
+        const metadataJson = JSON.stringify(attemptMetadataUpdate);
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE "verification_attempts"
+          SET "metadata" = ${metadataJson}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${attempt.id}
+        `);
+      }
 
+      // Only consume the entitlement on terminal outcomes (success or failed).
+      // Provider-pending attempts leave the entitlement in 'reserved' so retries
+      // can proceed without a new payment.
       if (
         verificationPolicy.driverPaysKyc &&
         entitlement &&
-        ['paid', 'reserved'].includes(entitlementState)
+        ['paid', 'reserved'].includes(entitlementState) &&
+        !isProviderPending
       ) {
         await this.updateVerificationEntitlement(entitlement.id, {
           status: 'consumed',
@@ -3609,10 +3673,11 @@ export class DriversService {
           attemptStatus,
           providerLookupStatus: result.providerLookupStatus ?? null,
           decision: result.decision,
+          isProviderPending,
         }),
       );
 
-      return result;
+      return { ...result, ...(isProviderPending ? { providerPending: true } : {}) };
     } catch (error) {
       await this.updateVerificationAttempt(attempt.id, {
         status: 'failed',
@@ -4968,6 +5033,7 @@ export class DriversService {
       requireIdentityVerificationForActivation: boolean;
       requiredDriverDocumentSlugs: string[];
       requireGuarantor: boolean;
+      guarantorBlocking?: boolean;
       requireGuarantorVerification?: boolean;
       allowAdminAssignmentOverride: boolean;
     },
@@ -4984,18 +5050,26 @@ export class DriversService {
 
     // --- Activation readiness (standard, unaffected by admin override) ---
     const activationReasons: string[] = [];
+    const localRiskFlags: string[] = [];
 
     if (settings.requireIdentityVerificationForActivation && driver.identityStatus !== 'verified') {
       activationReasons.push('Identity verification must be completed.');
     }
 
-    if (
-      settings.requireGuarantor &&
-      (!driver.guarantorStatus ||
+    if (settings.requireGuarantor) {
+      const guarantorMissing =
+        !driver.guarantorStatus ||
         driver.guarantorStatus === 'disconnected' ||
-        (settings.requireGuarantorVerification && !driver.guarantorPersonId))
-    ) {
-      activationReasons.push('A guarantor with verified linkage is required.');
+        (settings.requireGuarantorVerification && !driver.guarantorPersonId);
+
+      if (guarantorMissing) {
+        if (settings.guarantorBlocking) {
+          activationReasons.push('A guarantor with verified linkage is required.');
+        } else {
+          // Non-blocking: driver proceeds to ready but carries a risk flag.
+          localRiskFlags.push('missing_guarantor');
+        }
+      }
     }
 
     if (!driver.hasApprovedLicence) {
@@ -5058,6 +5132,7 @@ export class DriversService {
         assignmentReadinessReasons: ['Admin has approved this driver for assignment.'],
         remittanceReadiness,
         remittanceReadinessReasons,
+        ...(localRiskFlags.length > 0 ? { localRiskFlags } : {}),
       };
     }
 
@@ -5086,6 +5161,7 @@ export class DriversService {
         assignmentReadinessReasons: blockedAssignmentReasons,
         remittanceReadiness,
         remittanceReadinessReasons,
+        ...(localRiskFlags.length > 0 ? { localRiskFlags } : {}),
       };
     }
 
@@ -5117,6 +5193,7 @@ export class DriversService {
       assignmentReadinessReasons: assignmentReasons,
       remittanceReadiness,
       remittanceReadinessReasons,
+      ...(localRiskFlags.length > 0 ? { localRiskFlags } : {}),
     };
   }
 
@@ -5750,5 +5827,209 @@ export class DriversService {
     } catch {
       throw new UnauthorizedException('The self-service verification link is invalid or expired.');
     }
+  }
+
+  /**
+   * Admin-triggered retry for a driver whose identity verification is pending
+   * because all providers were unavailable at submission time.
+   * Re-uses the identifiers stored in the attempt metadata — no re-entry required.
+   */
+  async adminRetryIdentityVerification(
+    tenantId: string,
+    driverId: string,
+  ): Promise<{ queued: boolean; reason?: string }> {
+    const driver = await this.findOne(tenantId, driverId);
+
+    if (driver.identityStatus !== 'pending_verification') {
+      return {
+        queued: false,
+        reason: `driver identity status is '${driver.identityStatus}', not 'pending_verification'`,
+      };
+    }
+
+    const latestAttempt = await this.getLatestVerificationAttempt(tenantId, 'driver', driverId);
+    if (!latestAttempt) {
+      return { queued: false, reason: 'no verification attempt found' };
+    }
+
+    const meta = latestAttempt.metadata as Record<string, unknown> | null;
+    if (meta?.pendingReason !== 'provider_unavailable') {
+      return {
+        queued: false,
+        reason: 'latest attempt is not in a provider_unavailable pending state',
+      };
+    }
+
+    const retryData = meta.retryData as {
+      identifiers: Array<{ type: string; value: string; countryCode?: string }>;
+      selfieImageUrl: string | null;
+      countryCode: string | null;
+    } | null;
+
+    if (!retryData?.identifiers?.length) {
+      return { queued: false, reason: 'no retry data available on attempt' };
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'admin_verification_retry_queued',
+        tenantId,
+        driverId,
+        attemptId: latestAttempt.id,
+      }),
+    );
+
+    // Run the retry in the background — admin gets an immediate response.
+    void this.executeProviderRetry(tenantId, driverId, latestAttempt, retryData).catch((err) => {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'admin_verification_retry_failed',
+          tenantId,
+          driverId,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    });
+
+    return { queued: true };
+  }
+
+  /**
+   * Background-safe retry: calls the intelligence service with stored identifiers.
+   * Used by both admin-triggered retries and the scheduled retry job.
+   */
+  async executeProviderRetry(
+    tenantId: string,
+    driverId: string,
+    attempt: VerificationAttemptRecord,
+    retryData: {
+      identifiers: Array<{ type: string; value: string; countryCode?: string }>;
+      selfieImageUrl: string | null;
+      countryCode: string | null;
+    },
+  ): Promise<void> {
+    const driver = await this.findOne(tenantId, driverId);
+
+    // Clear the pending metadata before retrying to prevent duplicate retries.
+    await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE "verification_attempts"
+      SET "metadata" = "metadata" - 'pendingReason' - 'retryData', "updatedAt" = NOW()
+      WHERE "id" = ${attempt.id}
+    `);
+
+    try {
+      const resolvedCountry = retryData.countryCode ?? driver.nationality;
+      const result = await this.resolveIdentity(tenantId, driverId, {
+        ...(resolvedCountry ? { countryCode: resolvedCountry } : {}),
+        identifiers: retryData.identifiers,
+        subjectConsent: true,
+      });
+
+      const retryAttemptStatus = this.determineVerificationAttemptStatus(result);
+      const isStillProviderPending =
+        retryAttemptStatus === 'in_progress' &&
+        !result.isVerifiedMatch &&
+        !result.providerLookupStatus &&
+        result.decision !== 'review_required';
+
+      await this.updateVerificationAttempt(attempt.id, {
+        status: retryAttemptStatus,
+        providerCallCountIncrement: 1,
+        billableStageReached: true,
+        providerCostIncurred: true,
+        completedAt:
+          retryAttemptStatus === 'success' || retryAttemptStatus === 'failed' ? new Date() : null,
+        failureReason:
+          retryAttemptStatus === 'failed'
+            ? (result.providerLookupStatus ?? result.providerVerificationStatus ?? result.decision)
+            : null,
+      });
+
+      if (isStillProviderPending) {
+        // Re-stamp pending metadata so future retries can still pick it up.
+        const retryMeta = JSON.stringify({
+          pendingReason: 'provider_unavailable',
+          pendingAt: new Date().toISOString(),
+          retryData,
+        });
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE "verification_attempts"
+          SET "metadata" = ${retryMeta}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${attempt.id}
+        `);
+      }
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'provider_retry_completed',
+          tenantId,
+          driverId,
+          attemptId: attempt.id,
+          retryAttemptStatus,
+          isStillProviderPending,
+          isVerifiedMatch: result.isVerifiedMatch ?? false,
+        }),
+      );
+    } catch (error) {
+      // On retry error, restore pending metadata so the next retry window picks it up.
+      const retryMeta = JSON.stringify({
+        pendingReason: 'provider_unavailable',
+        pendingAt: new Date().toISOString(),
+        retryData,
+      });
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE "verification_attempts"
+        SET "metadata" = ${retryMeta}::jsonb, "updatedAt" = NOW()
+        WHERE "id" = ${attempt.id}
+      `);
+
+      this.logger.warn(
+        JSON.stringify({
+          event: 'provider_retry_error',
+          tenantId,
+          driverId,
+          attemptId: attempt.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
+  /**
+   * Find all drivers with pending_verification identity status where the latest attempt
+   * has pendingReason='provider_unavailable' and is less than 24 hours old.
+   * Used by the background retry scheduler.
+   */
+  async findDriversPendingProviderRetry(): Promise<
+    Array<{ tenantId: string; driverId: string; attempt: VerificationAttemptRecord }>
+  > {
+    const cutoffMs = 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(Date.now() - cutoffMs);
+    const rows = await this.prisma.$queryRaw<
+      Array<{ tenantId: string; subjectId: string; id: string }>
+    >(Prisma.sql`
+      SELECT DISTINCT ON (va."tenantId", va."subjectId")
+        va."tenantId",
+        va."subjectId",
+        va."id"
+      FROM "verification_attempts" va
+      WHERE va."subjectType" = 'driver'
+        AND va."status" = 'in_progress'
+        AND va."metadata" ->> 'pendingReason' = 'provider_unavailable'
+        AND va."updatedAt" >= ${cutoffDate}
+      ORDER BY va."tenantId", va."subjectId", va."updatedAt" DESC
+    `);
+
+    const results: Array<{ tenantId: string; driverId: string; attempt: VerificationAttemptRecord }> = [];
+    for (const row of rows) {
+      const attempt = await this.getLatestVerificationAttempt(row.tenantId, 'driver', row.subjectId);
+      if (attempt?.status === 'in_progress') {
+        const meta = attempt.metadata as Record<string, unknown> | null;
+        if (meta?.pendingReason === 'provider_unavailable') {
+          results.push({ tenantId: row.tenantId, driverId: row.subjectId, attempt });
+        }
+      }
+    }
+    return results;
   }
 }

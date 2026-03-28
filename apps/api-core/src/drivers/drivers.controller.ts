@@ -567,6 +567,22 @@ export class DriversController {
     return this.service.resolveIdentity(ctx.tenantId, id, dto);
   }
 
+  @Post(':id/identity-resolution/retry')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: Object })
+  @ApiOperation({
+    summary: 'Retry identity verification for a driver in provider_unavailable pending state',
+    description:
+      'Re-uses the identifiers captured at the original submission. Only valid when the driver identity status is pending_verification and the latest attempt has pendingReason=provider_unavailable.',
+  })
+  retryIdentityVerification(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+  ): Promise<{ queued: boolean; reason?: string }> {
+    return this.service.adminRetryIdentityVerification(ctx.tenantId, id);
+  }
+
   @Patch(':id/admin-override')
   @RequirePermissions(Permission.DriversWrite)
   @UseGuards(PermissionsGuard)

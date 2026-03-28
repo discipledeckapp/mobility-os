@@ -26,8 +26,18 @@ export interface OrganisationOperationsSettings {
   requiredVehicleDocumentSlugs: string[];
   /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
   driverPaysKyc: boolean;
-  /** When false, guarantors are not required for driver onboarding. Defaults true. */
+  /**
+   * When true, guarantors are required as part of driver onboarding. Defaults false.
+   * Enabling this after drivers are already verified does not break existing drivers —
+   * they receive a non-blocking task to add their guarantor instead.
+   */
   requireGuarantor: boolean;
+  /**
+   * When true AND requireGuarantor is true, a missing or unverified guarantor blocks
+   * the driver from reaching 'ready' status. Defaults false (non-blocking: driver is
+   * ready but carries a missing_guarantor risk flag until the guarantor is added).
+   */
+  guarantorBlocking: boolean;
   /** When true, guarantors must also pass identity verification. Defaults false. */
   requireGuarantorVerification: boolean;
   /**
@@ -270,7 +280,9 @@ export function readOrganisationSettings(
       driverPaysKyc:
         typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : true,
       requireGuarantor:
-        typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : true,
+        typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : false,
+      guarantorBlocking:
+        typeof operations.guarantorBlocking === 'boolean' ? operations.guarantorBlocking : false,
       requireGuarantorVerification:
         typeof operations.requireGuarantorVerification === 'boolean'
           ? operations.requireGuarantorVerification
@@ -301,6 +313,7 @@ export function writeOrganisationSettings(
     requiredVehicleDocumentSlugs: string[];
     driverPaysKyc: boolean;
     requireGuarantor: boolean;
+    guarantorBlocking: boolean;
     requireGuarantorVerification: boolean;
     allowAdminAssignmentOverride: boolean;
   }>,
@@ -344,6 +357,7 @@ export function writeOrganisationSettings(
       input.requiredVehicleDocumentSlugs ?? settings.operations.requiredVehicleDocumentSlugs,
     driverPaysKyc: input.driverPaysKyc ?? settings.operations.driverPaysKyc,
     requireGuarantor: input.requireGuarantor ?? settings.operations.requireGuarantor,
+    guarantorBlocking: input.guarantorBlocking ?? settings.operations.guarantorBlocking,
     requireGuarantorVerification:
       input.requireGuarantorVerification ?? settings.operations.requireGuarantorVerification,
     allowAdminAssignmentOverride:

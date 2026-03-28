@@ -242,26 +242,28 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         </Card>
       ) : null}
 
-      {!driver.hasGuarantor ? (
+      {driver.requiresGuarantor && !driver.hasGuarantor ? (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Guarantor</Text>
           <Text style={styles.copy}>
-            Your organisation requires a guarantor. Add contact details for someone who can vouch
-            for you — they may be contacted for verification.
+            {driver.guarantorBlocking
+              ? 'Your organisation requires a guarantor before you can be assigned. Add contact details for someone who can vouch for you.'
+              : 'Your organisation encourages adding a guarantor. You can proceed, but adding one reduces your risk rating.'}
           </Text>
           <Button
             label="Add your guarantor"
+            variant={driver.guarantorBlocking ? 'primary' : 'ghost'}
             onPress={() => navigation.navigate('DriverGuarantor')}
           />
         </Card>
-      ) : (
+      ) : driver.requiresGuarantor && driver.hasGuarantor ? (
         <Card style={styles.section}>
           <View style={styles.row}>
             <Text style={styles.label}>Guarantor</Text>
             <Badge label="Submitted" tone="success" />
           </View>
         </Card>
-      )}
+      ) : null}
 
       {driver.mobileAccessStatus === 'missing' ? (
         <Card style={styles.section}>

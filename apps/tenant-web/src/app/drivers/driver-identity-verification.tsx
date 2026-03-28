@@ -35,8 +35,10 @@ import {
   resolveDriverVerificationAction,
   resolveDriverSelfServiceVerificationAction,
   resolveGuarantorSelfServiceVerificationAction,
+  retryDriverVerificationAction,
   startDriverVerificationAction,
   type ResolveDriverVerificationActionState,
+  type RetryDriverVerificationActionState,
   type SendDriverSelfServiceLinkActionState,
   type StartDriverVerificationActionState,
 } from './actions';
@@ -44,6 +46,7 @@ import {
 const initialStartState: StartDriverVerificationActionState = {};
 const initialResolveState: ResolveDriverVerificationActionState = {};
 const initialSendState: SendDriverSelfServiceLinkActionState = {};
+const initialRetryState: RetryDriverVerificationActionState = {};
 
 function sanitizeSelfServiceError(message?: string | null): string | null {
   if (!message) return null;
@@ -195,6 +198,10 @@ export function DriverIdentityVerification({
         ? resolveDriverSelfServiceVerificationAction
         : resolveDriverVerificationAction,
     initialResolveState,
+  );
+  const [retryState, retryFormAction, isRetrying] = useActionState(
+    retryDriverVerificationAction.bind(null, driver.id),
+    initialRetryState,
   );
 
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
@@ -515,7 +522,33 @@ export function DriverIdentityVerification({
           <Button onClick={() => router.refresh()} size="sm" variant="ghost">
             Refresh verification status
           </Button>
+          {driver.identityStatus === 'pending_verification' ? (
+            <form action={retryFormAction}>
+              <Button
+                disabled={isRetrying}
+                size="sm"
+                title="Re-attempt provider lookup using the identifiers submitted by the driver. No additional charge."
+                type="submit"
+                variant="ghost"
+              >
+                {isRetrying ? 'Queuing retry...' : 'Retry provider lookup'}
+              </Button>
+            </form>
+          ) : null}
         </div>
+      ) : null}
+
+      {mode === 'operator' && retryState.success ? (
+        <Text tone="success">{retryState.success}</Text>
+      ) : null}
+      {mode === 'operator' && retryState.error ? (
+        <Text tone="danger">{retryState.error}</Text>
+      ) : null}
+      {mode === 'operator' && retryState.notEligible ? (
+        <Text tone="muted">
+          Retry not available:{' '}
+          {retryState.reason ?? 'driver is not in a provider-pending state.'}
+        </Text>
       ) : null}
 
       {driver.identityReviewCaseId && !isOpen ? (

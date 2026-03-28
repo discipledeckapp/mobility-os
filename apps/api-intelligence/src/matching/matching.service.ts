@@ -1,5 +1,5 @@
 import { IdentifierType, ResolutionDecision } from '@mobility-os/intelligence-domain';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { BiometricsService } from '../biometrics/biometrics.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -47,6 +47,8 @@ function isSuccessfulVerificationMessage(status?: string): boolean {
 
 @Injectable()
 export class MatchingService {
+  private readonly logger = new Logger(MatchingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly personsService: PersonsService,
@@ -66,6 +68,20 @@ export class MatchingService {
   }
 
   async resolveEnrollment(dto: ResolveEnrollmentDto): Promise<MatchingResultDto> {
+    this.logger.log(
+      JSON.stringify({
+        event: 'enrollment_resolve_start',
+        tenantId: dto.tenantId,
+        countryCode: dto.countryCode ?? null,
+        identifierCount: dto.identifiers?.length ?? 0,
+        identifierTypes: (dto.identifiers ?? []).map((i) => i.type),
+        hasBiometric: Boolean(dto.biometric),
+        hasSelfie: Boolean(dto.providerVerification?.selfieImageBase64),
+        hasLivenessEvidence: Boolean(dto.providerVerification?.livenessCheck?.sessionId),
+        livenessProvider: dto.providerVerification?.livenessCheck?.provider ?? null,
+      }),
+    );
+
     if ((!dto.identifiers || dto.identifiers.length === 0) && !dto.biometric) {
       throw new BadRequestException(
         'Enrollment requires at least one identifier or one biometric payload',
@@ -330,6 +346,24 @@ export class MatchingService {
       },
     });
     const intelligenceResult = await this.personsService.queryForTenant(personId);
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'enrollment_resolve_complete',
+        tenantId: dto.tenantId,
+        personId: personId ?? null,
+        decision,
+        isVerifiedMatch,
+        providerLookupStatus: verification?.status ?? null,
+        providerName: verification?.providerName ?? null,
+        hasEnrichedProfile: Boolean(verification?.enrichment?.fullName),
+        portraitAvailable: verification?.documentMetadata?.portraitAvailable ?? false,
+        livenessPassed: liveness?.passed ?? null,
+        livenessProvider: liveness?.providerName ?? null,
+        livenessReason: liveness?.reason ?? null,
+        crossRoleConflict: crossRoleConflict ?? false,
+      }),
+    );
 
     return {
       decision,

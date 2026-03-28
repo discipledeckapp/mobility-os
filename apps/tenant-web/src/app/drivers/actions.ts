@@ -21,6 +21,7 @@ import {
   resolveDriverIdentity,
   resolveDriverSelfServiceIdentity,
   resolveGuarantorSelfServiceIdentity,
+  retryDriverIdentityVerification,
   reviewDriverDocument,
   sendDriverSelfServiceLink,
   sendGuarantorSelfServiceLink,
@@ -951,4 +952,34 @@ export async function reviewDriverDocumentAction(
     success:
       status === 'approved' ? 'Document approved successfully.' : 'Document rejected successfully.',
   };
+}
+
+
+export interface RetryDriverVerificationActionState {
+  error?: string;
+  success?: string;
+  notEligible?: boolean;
+  reason?: string;
+}
+
+export async function retryDriverVerificationAction(
+  driverId: string,
+  _prevState: RetryDriverVerificationActionState,
+  _formData: FormData,
+): Promise<RetryDriverVerificationActionState> {
+  try {
+    const result = await retryDriverIdentityVerification(driverId);
+    if (!result.queued) {
+      return {
+        notEligible: true,
+        reason: result.reason ?? 'Driver is not in a retryable pending state.',
+      };
+    }
+    revalidatePath(`/drivers/${driverId}`);
+    return { success: 'Verification retry has been queued. Refresh in a few moments to see the result.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to queue the verification retry.',
+    };
+  }
 }

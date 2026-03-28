@@ -103,6 +103,14 @@ export class UpdateTenantSettingsDto {
   @IsBoolean()
   requireGuarantor?: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      'When true AND requireGuarantor is true, a missing guarantor blocks the driver from reaching ready status. When false (default), the driver is ready but carries a missing_guarantor risk flag.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  guarantorBlocking?: boolean;
+
   @ApiPropertyOptional({ description: 'When true, guarantors must also pass identity verification.' })
   @IsOptional()
   @IsBoolean()

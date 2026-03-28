@@ -272,7 +272,7 @@ export function SettingsPanel({
     tenant.requireIdentityVerificationForActivation ?? true,
   );
   const [requiresGuarantor, setRequiresGuarantor] = useState(
-    tenant.requireGuarantor ?? true,
+    tenant.requireGuarantor ?? false,
   );
   const selectedDriverDocumentSlugs = useMemo(
     () => new Set(tenant.requiredDriverDocumentSlugs ?? []),
@@ -623,6 +623,20 @@ export function SettingsPanel({
                     <div
                       className={`space-y-3 border-l-2 border-slate-200 pl-6 ${requiresGuarantor ? '' : 'opacity-50'}`}
                     >
+                      <label className="flex items-center gap-3 text-sm">
+                        <input
+                          defaultChecked={tenant.guarantorBlocking ?? false}
+                          disabled={!requiresGuarantor}
+                          name="guarantorBlocking"
+                          type="checkbox"
+                        />
+                        <span className="text-slate-700">
+                          Block driver readiness until guarantor is added
+                          <span className="ml-1 text-slate-500 font-normal">
+                            (off = driver is ready, missing guarantor shown as a risk flag)
+                          </span>
+                        </span>
+                      </label>
                       <label className="flex items-center gap-3 text-sm">
                         <input
                           defaultChecked={tenant.requireGuarantorVerification ?? false}

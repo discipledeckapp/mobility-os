@@ -58,6 +58,21 @@ export class TenantResponseDto {
   @ApiPropertyOptional({ type: [String] })
   requiredVehicleDocumentSlugs?: string[];
 
+  @ApiPropertyOptional()
+  driverPaysKyc?: boolean;
+
+  @ApiPropertyOptional()
+  requireGuarantor?: boolean;
+
+  @ApiPropertyOptional()
+  guarantorBlocking?: boolean;
+
+  @ApiPropertyOptional()
+  requireGuarantorVerification?: boolean;
+
+  @ApiPropertyOptional()
+  allowAdminAssignmentOverride?: boolean;
+
   @ApiProperty()
   createdAt!: Date;
 

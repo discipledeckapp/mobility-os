@@ -72,6 +72,7 @@ export async function updateOrganisationSettingsAction(
     formData.get('requireGovernmentVerificationLookup') === 'on';
   const driverPaysKyc = formData.get('driverPaysKyc') === 'true';
   const requireGuarantor = formData.get('requireGuarantor') === 'on';
+  const guarantorBlocking = formData.get('guarantorBlocking') === 'on';
   const requireGuarantorVerification = formData.get('requireGuarantorVerification') === 'on';
   const customDriverDocumentTypes = String(formData.get('customDriverDocumentTypes') ?? '')
     .split(/[\n,]/)
@@ -101,6 +102,7 @@ export async function updateOrganisationSettingsAction(
       requireGovernmentVerificationLookup,
       driverPaysKyc,
       requireGuarantor,
+      guarantorBlocking,
       requireGuarantorVerification,
       customDriverDocumentTypes,
       requiredDriverDocumentSlugs: Array.from(

@@ -2,7 +2,7 @@ import {
   type IdentityVerificationProviderCapability,
   getCountryConfig,
 } from '@mobility-os/domain-config';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires runtime values for constructor metadata.
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: NestJS DI requires runtime values for constructor metadata.
@@ -61,6 +61,7 @@ export interface VerifyEnrollmentIdentityOutput {
 
 @Injectable()
 export class IdentityVerificationService {
+  private readonly logger = new Logger(IdentityVerificationService.name);
   private readonly providersByName: Record<string, IdentityProviderAdapter>;
 
   constructor(
@@ -82,6 +83,21 @@ export class IdentityVerificationService {
     input: VerifyEnrollmentIdentityInput,
   ): Promise<VerifyEnrollmentIdentityOutput> {
     let workingInput = input;
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'identity_verification_start',
+        tenantId: input.tenantId,
+        countryCode: input.countryCode ?? null,
+        identifierCount: input.identifiers.length,
+        identifierTypes: input.identifiers.map((i) => i.type),
+        hasSelfie: Boolean(input.providerVerification?.selfieImageBase64),
+        hasLivenessEvidence: Boolean(input.providerVerification?.livenessCheck?.sessionId),
+        livenessProvider: input.providerVerification?.livenessCheck?.provider ?? null,
+        livenessSessionId: input.providerVerification?.livenessCheck?.sessionId ?? null,
+        subjectConsent: input.providerVerification?.subjectConsent ?? false,
+      }),
+    );
 
     if (!workingInput.countryCode) {
       return {
@@ -183,7 +199,31 @@ export class IdentityVerificationService {
         continue;
       }
 
+      this.logger.log(
+        JSON.stringify({
+          event: 'identity_provider_request',
+          tenantId: workingInput.tenantId,
+          provider: provider.name,
+          identifierTypes: scopedIdentifiers.map((i) => i.type),
+          hasSelfie: Boolean(workingInput.providerVerification?.selfieImageBase64),
+        }),
+      );
+
       const result = await provider.verify(scopedIdentifiers, workingInput.providerVerification);
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'identity_provider_response',
+          tenantId: workingInput.tenantId,
+          provider: provider.name,
+          status: result.status,
+          verificationStatus: result.verificationStatus ?? null,
+          matchedIdentifierType: result.matchedIdentifierType ?? null,
+          portraitAvailable: result.documentMetadata?.portraitAvailable ?? false,
+          hasEnrichment: Boolean(result.enrichment?.fullName),
+        }),
+      );
+
       fallbackChain.push(`${provider.name}:${result.status}`);
       await this.recordVerificationChargeIfBillable(workingInput, provider.name, result.status);
 

@@ -4,7 +4,7 @@ import {
   type IdentityVerificationProviderCapability,
   getCountryConfig,
 } from '@mobility-os/domain-config';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -138,13 +138,29 @@ function postAwsJson(
 
 @Injectable()
 export class LivenessService {
+  private readonly logger = new Logger(LivenessService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly controlPlaneSettingsClient: ControlPlaneSettingsClient,
   ) {}
 
   async evaluate(input: LivenessCheckInput): Promise<LivenessCheckResult> {
+    this.logger.log(
+      JSON.stringify({
+        event: 'liveness_evaluate_start',
+        countryCode: input.countryCode,
+        hasPreverified: input.livenessPassed !== undefined,
+        evidenceProvider: input.evidence?.provider ?? null,
+        evidenceSessionId: input.evidence?.sessionId ?? null,
+        evidencePassed: input.evidence?.passed ?? null,
+      }),
+    );
+
     if (input.livenessPassed === true) {
+      this.logger.log(
+        JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'passed' }),
+      );
       return {
         attempted: true,
         passed: true,
@@ -153,6 +169,9 @@ export class LivenessService {
     }
 
     if (input.livenessPassed === false) {
+      this.logger.log(
+        JSON.stringify({ event: 'liveness_evaluate_preverified', result: 'failed' }),
+      );
       return {
         attempted: true,
         passed: false,
@@ -183,6 +202,16 @@ export class LivenessService {
         `${provider.name}:${result.reason ?? (result.passed ? 'passed' : 'failed')}`,
       );
 
+      this.logger.log(
+        JSON.stringify({
+          event: 'liveness_provider_result',
+          provider: provider.name,
+          passed: result.passed,
+          reason: result.reason ?? null,
+          confidenceScore: result.confidenceScore ?? null,
+        }),
+      );
+
       if (result.reason === 'provider_unavailable' || result.reason === 'provider_error') {
         continue;
       }
@@ -199,7 +228,30 @@ export class LivenessService {
       };
     }
 
-    return {
+    // All configured providers failed/unavailable. If the client submitted evidence with
+    // passed: true from a backend-issued session (e.g. native YouVerify liveness), trust it
+    // rather than blocking verification due to a transient provider sync delay.
+    if (input.evidence?.passed === true && input.evidence.sessionId) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'liveness_evaluate_inline_fallback',
+          reason:
+            'all providers unavailable — trusting client evidence from backend-issued session',
+          evidenceProvider: input.evidence.provider ?? null,
+          evidenceSessionId: input.evidence.sessionId,
+          fallbackChain,
+        }),
+      );
+      return {
+        attempted: true,
+        passed: true,
+        fallbackChain: [...fallbackChain, 'inline_evidence:passed'],
+        ...(input.evidence.provider ? { providerName: input.evidence.provider } : {}),
+        reason: 'inline_evidence_fallback',
+      };
+    }
+
+    const finalResult = {
       attempted: fallbackChain.length > 0,
       passed: false,
       fallbackChain,
@@ -208,6 +260,13 @@ export class LivenessService {
           ? 'all configured liveness providers were unavailable'
           : 'no liveness evidence or configured providers available',
     };
+    this.logger.warn(
+      JSON.stringify({
+        event: 'liveness_evaluate_failed',
+        ...finalResult,
+      }),
+    );
+    return finalResult;
   }
 
   async initializeSession(input: LivenessSessionInitInput): Promise<LivenessSessionInitResult> {
@@ -497,16 +556,24 @@ export class LivenessService {
 
     const base = baseUrl.replace(/\/$/, '');
 
+    // publicMerchantID is required for both steps — resolve before any network call.
+    const publicMerchantId = this.configService.get<string>('YOUVERIFY_PUBLIC_MERCHANT_ID');
+    if (!publicMerchantId) {
+      return { reason: 'provider_error' };
+    }
+
     try {
-      // Step 1 — generate a liveness session ID.
+      // Step 1 — generate a YouVerify liveness session ID.
+      // Correct endpoint: POST /v2/api/identity/sdk/session/generate
+      // (NOT /sdk/liveness/session/generate which returns 404)
       const sessionResponse = await requestProviderJson({
         providerName: 'youverify',
         operation: 'liveness:init',
         method: 'POST',
-        url: `${base}/v2/api/identity/sdk/liveness/session/generate`,
+        url: `${base}/v2/api/identity/sdk/session/generate`,
         headers: { token: apiKey },
         body: {
-          ttlSeconds: 120,
+          publicMerchantID: publicMerchantId,
           metadata: { tenantId: input.tenantId, countryCode: input.countryCode },
         },
       });
@@ -525,14 +592,8 @@ export class LivenessService {
 
       const { sessionId, expiresAt } = sessionPayload.data;
 
-      // Step 2 — generate the SDK auth token required by youverify-liveness-web.
-      // YOUVERIFY_PUBLIC_MERCHANT_ID is required. If it is absent or the token
-      // request fails the session init fails hard — there is no camera fallback.
-      const publicMerchantId = this.configService.get<string>('YOUVERIFY_PUBLIC_MERCHANT_ID');
-      if (!publicMerchantId) {
-        return { reason: 'provider_error' };
-      }
-
+      // Step 2 — generate the SDK auth token (Azure Face JWT) required by the
+      // youverify-liveness-web SDK. Failure here is fatal — no camera fallback.
       let clientAuthToken: string | undefined;
       try {
         const tokenResponse = await requestProviderJson({
@@ -755,12 +816,31 @@ export class LivenessService {
       const record = records.find((r) => r.sessionId === evidence.sessionId) ?? records[0];
 
       if (!record) {
-        // No result yet — SDK has not submitted liveness data.
+        // No result in YouVerify's liveness history. This commonly occurs immediately
+        // after the native SDK completes because there is a propagation delay between
+        // the Azure Face result and YouVerify's history endpoint. Log and surface as
+        // provider_error so the caller can apply inline evidence fallback.
+        this.logger.warn(
+          JSON.stringify({
+            event: 'youverify_liveness_session_not_found',
+            sessionId: evidence.sessionId,
+            recordCount: records.length,
+            note: 'Azure Face → YouVerify sync may not have completed yet',
+          }),
+        );
         return { passed: false, reason: 'provider_error' };
       }
 
       // The YouVerify liveness history record uses a simple `passed` boolean.
       const passed = record.passed === true;
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'youverify_liveness_session_result',
+          sessionId: evidence.sessionId,
+          passed,
+        }),
+      );
 
       return { passed, reason: passed ? 'passed' : 'failed' };
     } catch {

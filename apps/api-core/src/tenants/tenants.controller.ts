@@ -54,6 +54,11 @@ export class TenantsController {
       customDriverDocumentTypes: settings.operations.customDriverDocumentTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
+      driverPaysKyc: settings.operations.driverPaysKyc,
+      requireGuarantor: settings.operations.requireGuarantor,
+      guarantorBlocking: settings.operations.guarantorBlocking,
+      requireGuarantorVerification: settings.operations.requireGuarantorVerification,
+      allowAdminAssignmentOverride: settings.operations.allowAdminAssignmentOverride,
     };
   }
 
@@ -89,6 +94,11 @@ export class TenantsController {
       customDriverDocumentTypes: settings.operations.customDriverDocumentTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
+      driverPaysKyc: settings.operations.driverPaysKyc,
+      requireGuarantor: settings.operations.requireGuarantor,
+      guarantorBlocking: settings.operations.guarantorBlocking,
+      requireGuarantorVerification: settings.operations.requireGuarantorVerification,
+      allowAdminAssignmentOverride: settings.operations.allowAdminAssignmentOverride,
     };
   }
 }

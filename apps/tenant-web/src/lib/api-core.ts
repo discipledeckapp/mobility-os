@@ -115,6 +115,7 @@ export interface TenantRecord {
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   requireGuarantor?: boolean;
+  guarantorBlocking?: boolean;
   requireGuarantorVerification?: boolean;
   allowAdminAssignmentOverride?: boolean;
   createdAt: string;
@@ -146,6 +147,7 @@ export interface UpdateTenantSettingsInput {
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   requireGuarantor?: boolean;
+  guarantorBlocking?: boolean;
   requireGuarantorVerification?: boolean;
   allowAdminAssignmentOverride?: boolean;
 }
@@ -2069,6 +2071,21 @@ export async function resolveDriverIdentity(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function retryDriverIdentityVerification(
+  driverId: string,
+  token?: string,
+): Promise<{ queued: boolean; reason?: string }> {
+  return apiCoreFetch<{ queued: boolean; reason?: string }>(
+    `/drivers/${driverId}/identity-resolution/retry`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function listVehicles(
