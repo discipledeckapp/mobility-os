@@ -4,7 +4,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { IntelPerson, Prisma } from '../generated/prisma';
-import type { LinkageEventsService } from '../linkage-events/linkage-events.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
+import { LinkageEventsService } from '../linkage-events/linkage-events.service';
 import type { CreatePersonDto } from './dto/create-person.dto';
 import type { IntelligenceQueryResultDto } from './dto/person-response.dto';
 

@@ -15,9 +15,11 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
+import type { Route } from 'next';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
 import {
+  getOperationalOversight,
   getPlatformApiToken,
   listFeatureFlags,
   listInvoices,
@@ -53,6 +55,7 @@ export default async function HomePage() {
     listFeatureFlags(token),
     listPlatformWalletLedger({ page: 1, limit: 8 }, token),
   ]);
+  const operationsOverview = await getOperationalOversight(token).catch(() => null);
 
   const tenantStatusCounts = tenants.reduce<Record<string, number>>((acc, tenant) => {
     acc[tenant.status] = (acc[tenant.status] ?? 0) + 1;
@@ -94,8 +97,11 @@ export default async function HomePage() {
               <CardDescription>Subscription posture</CardDescription>
               <CardTitle>{subscriptions.length}</CardTitle>
               <Text tone="muted">
-                {subscriptionStatusCounts.trialing ?? 0} trialing · {subscriptionStatusCounts.active ?? 0} active ·{' '}
-                {(subscriptionStatusCounts.suspended ?? 0) + (subscriptionStatusCounts.past_due ?? 0)} at risk
+                {subscriptionStatusCounts.trialing ?? 0} trialing ·{' '}
+                {subscriptionStatusCounts.active ?? 0} active ·{' '}
+                {(subscriptionStatusCounts.suspended ?? 0) +
+                  (subscriptionStatusCounts.past_due ?? 0)}{' '}
+                at risk
               </Text>
             </CardHeader>
             <CardContent>
@@ -110,7 +116,10 @@ export default async function HomePage() {
               <CardTitle>{invoicesNeedingAction.length}</CardTitle>
               <Text tone="muted">
                 {formatMoney(
-                  invoicesNeedingAction.reduce((sum, invoice) => sum + invoice.amountDueMinorUnits, 0),
+                  invoicesNeedingAction.reduce(
+                    (sum, invoice) => sum + invoice.amountDueMinorUnits,
+                    0,
+                  ),
                   invoicesNeedingAction[0]?.currency ?? 'NGN',
                 )}{' '}
                 outstanding
@@ -127,7 +136,8 @@ export default async function HomePage() {
               <CardDescription>Wallets needing attention</CardDescription>
               <CardTitle>{walletsNeedingAttention.length}</CardTitle>
               <Text tone="muted">
-                {wallets.length - walletsNeedingAttention.length} funded · {walletsNeedingAttention.length} need review
+                {wallets.length - walletsNeedingAttention.length} funded ·{' '}
+                {walletsNeedingAttention.length} need review
               </Text>
             </CardHeader>
             <CardContent>
@@ -138,23 +148,82 @@ export default async function HomePage() {
           </Card>
         </div>
 
+        {operationsOverview ? (
+          <div className="grid gap-4 xl:grid-cols-4">
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Activation blockers</CardDescription>
+                <CardTitle>{operationsOverview.totals.driversAwaitingActivation}</CardTitle>
+                <Text tone="muted">
+                  Drivers waiting on verification, documents, guarantor, or activation readiness.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Licence review queue</CardDescription>
+                <CardTitle>{operationsOverview.totals.pendingLicenceReviews}</CardTitle>
+                <Text tone="muted">
+                  {operationsOverview.totals.providerRetryRequired} provider retry cases still need
+                  support visibility.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>At-risk operations</CardDescription>
+                <CardTitle>{operationsOverview.totals.atRiskAssignments}</CardTitle>
+                <Text tone="muted">
+                  {operationsOverview.totals.vehiclesAtRisk} vehicles at risk across tenants.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Expiry pressure</CardDescription>
+                <CardTitle>
+                  {operationsOverview.totals.expiredLicences +
+                    operationsOverview.totals.expiringLicencesSoon}
+                </CardTitle>
+                <Text tone="muted">
+                  {operationsOverview.totals.expiredLicences} expired ·{' '}
+                  {operationsOverview.totals.expiringLicencesSoon} due soon
+                </Text>
+              </CardHeader>
+              <CardContent>
+                <Link href={'/operations' as Route}>
+                  <Button variant="secondary">Open operations queue</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <Card className="border-slate-200/80">
             <CardHeader>
               <CardTitle>Tenants by lifecycle status</CardTitle>
               <CardDescription>
-                Real platform posture across prospect, trialing, active, suspended, and terminated organisations.
+                Real platform posture across prospect, trialing, active, suspended, and terminated
+                organisations.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-3">
-              {['prospect', 'trialing', 'active', 'suspended', 'terminated', 'archived'].map((status) => (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4" key={status}>
-                  <div className="flex items-center justify-between gap-3">
-                    <Badge tone={statusTone(status)}>{status}</Badge>
-                    <p className="text-xl font-semibold text-slate-900">{tenantStatusCounts[status] ?? 0}</p>
+              {['prospect', 'trialing', 'active', 'suspended', 'terminated', 'archived'].map(
+                (status) => (
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                    key={status}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <Badge tone={statusTone(status)}>{status}</Badge>
+                      <p className="text-xl font-semibold text-slate-900">
+                        {tenantStatusCounts[status] ?? 0}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </CardContent>
           </Card>
 
@@ -162,7 +231,8 @@ export default async function HomePage() {
             <CardHeader>
               <CardTitle>Feature rollout summary</CardTitle>
               <CardDescription>
-                Track how much of the platform is running on global defaults versus scoped overrides.
+                Track how much of the platform is running on global defaults versus scoped
+                overrides.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -185,7 +255,9 @@ export default async function HomePage() {
           <Card className="border-slate-200/80">
             <CardHeader>
               <CardTitle>Invoices needing action</CardTitle>
-              <CardDescription>Use billing operations for open or recoverability-risk invoices.</CardDescription>
+              <CardDescription>
+                Use billing operations for open or recoverability-risk invoices.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <TableViewport>
@@ -202,14 +274,19 @@ export default async function HomePage() {
                     {invoicesNeedingAction.slice(0, 6).map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell>
-                          <Link className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]" href={`/tenants/${invoice.tenantId}`}>
+                          <Link
+                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                            href={`/tenants/${invoice.tenantId}`}
+                          >
                             {invoice.tenantId}
                           </Link>
                         </TableCell>
                         <TableCell>
                           <Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge>
                         </TableCell>
-                        <TableCell>{formatMoney(invoice.amountDueMinorUnits, invoice.currency)}</TableCell>
+                        <TableCell>
+                          {formatMoney(invoice.amountDueMinorUnits, invoice.currency)}
+                        </TableCell>
                         <TableCell className="text-sm text-slate-600">
                           {new Date(invoice.periodStart).toLocaleDateString()} to{' '}
                           {new Date(invoice.periodEnd).toLocaleDateString()}
@@ -228,18 +305,24 @@ export default async function HomePage() {
           <Card className="border-slate-200/80">
             <CardHeader>
               <CardTitle>Recent platform actions</CardTitle>
-              <CardDescription>Most recent platform wallet ledger activity across organisations.</CardDescription>
+              <CardDescription>
+                Most recent platform wallet ledger activity across organisations.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {ledger.data.map((entry) => (
                 <div className="rounded-2xl border border-slate-200 px-4 py-3" key={entry.id}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <Link className="text-sm font-semibold text-slate-900 hover:text-[var(--mobiris-primary)]" href={`/tenants/${entry.tenantId}`}>
+                      <Link
+                        className="text-sm font-semibold text-slate-900 hover:text-[var(--mobiris-primary)]"
+                        href={`/tenants/${entry.tenantId}`}
+                      >
                         {entry.tenantId}
                       </Link>
                       <Text tone="muted">
-                        {entry.referenceType ?? 'manual_adjustment'} · {new Date(entry.createdAt).toLocaleString()}
+                        {entry.referenceType ?? 'manual_adjustment'} ·{' '}
+                        {new Date(entry.createdAt).toLocaleString()}
                       </Text>
                     </div>
                     <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>
@@ -256,11 +339,24 @@ export default async function HomePage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
+          <Link href={'/operations' as Route}>
+            <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
+              <CardHeader>
+                <CardTitle>Operational oversight</CardTitle>
+                <CardDescription>
+                  Monitor activation blockers, verification pressure, licence expiry, and fleet risk
+                  across tenants.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
           <Link href="/tenants">
             <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
               <CardHeader>
                 <CardTitle>Organisation registry</CardTitle>
-                <CardDescription>Open an organisation detail page and act on lifecycle, plan, and wallet posture.</CardDescription>
+                <CardDescription>
+                  Open an organisation detail page and act on lifecycle, plan, and wallet posture.
+                </CardDescription>
               </CardHeader>
             </Card>
           </Link>
@@ -268,7 +364,9 @@ export default async function HomePage() {
             <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
               <CardHeader>
                 <CardTitle>Feature rollout controls</CardTitle>
-                <CardDescription>Override rollout by tenant, country, or plan without leaving the control plane.</CardDescription>
+                <CardDescription>
+                  Override rollout by tenant, country, or plan without leaving the control plane.
+                </CardDescription>
               </CardHeader>
             </Card>
           </Link>
@@ -276,7 +374,9 @@ export default async function HomePage() {
             <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
               <CardHeader>
                 <CardTitle>Staff access</CardTitle>
-                <CardDescription>Invite platform staff properly and keep operator access governed.</CardDescription>
+                <CardDescription>
+                  Invite platform staff properly and keep operator access governed.
+                </CardDescription>
               </CardHeader>
             </Card>
           </Link>

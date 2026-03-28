@@ -385,6 +385,86 @@ export interface TenantDetailRecord {
   } | null;
 }
 
+export interface OperationalDriverIssueRecord {
+  driverId: string;
+  fullName: string;
+  fleetId: string;
+  activationReadiness: string;
+  activationReadinessReasons: string[];
+  assignmentReadiness: string;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
+  riskBand?: string | null;
+}
+
+export interface OperationalVehicleIssueRecord {
+  vehicleId: string;
+  primaryLabel: string;
+  fleetId: string;
+  status: string;
+  maintenanceSummary: string;
+  remittanceRiskStatus?: string | null;
+  remittanceRiskReason?: string | null;
+}
+
+export interface OperationalLicenceExpiryRecord {
+  driverId: string;
+  fullName: string;
+  fleetId: string;
+  expiresAt: string;
+  daysUntilExpiry: number;
+}
+
+export interface OperationsTenantSummaryRecord {
+  tenantId: string;
+  slug: string;
+  tenantName: string;
+  country: string;
+  tenantStatus: string;
+  generatedAt: string;
+  attentionScore: number;
+  driverActivity: {
+    active: number;
+    inactive: number;
+    activeVerified: number;
+    activeUnverified: number;
+    onboardingPool: number;
+  };
+  verificationHealth: {
+    driversAwaitingActivation: number;
+    pendingLicenceReviewCount: number;
+    providerRetryRequiredCount: number;
+    expiringLicencesSoonCount: number;
+    expiredLicencesCount: number;
+  };
+  riskSummary: {
+    atRiskAssignmentCount: number;
+    vehiclesAtRiskCount: number;
+    criticalMaintenanceCount: number;
+    inspectionComplianceRate: number;
+  };
+  topDriverIssues: OperationalDriverIssueRecord[];
+  topVehicleIssues: OperationalVehicleIssueRecord[];
+  topLicenceExpiries: OperationalLicenceExpiryRecord[];
+}
+
+export interface OperationsOverviewRecord {
+  generatedAt: string;
+  totals: {
+    tenantCount: number;
+    tenantsNeedingAttention: number;
+    driversAwaitingActivation: number;
+    pendingLicenceReviews: number;
+    providerRetryRequired: number;
+    expiringLicencesSoon: number;
+    expiredLicences: number;
+    atRiskAssignments: number;
+    vehiclesAtRisk: number;
+    criticalMaintenanceCount: number;
+  };
+  tenants: OperationsTenantSummaryRecord[];
+}
+
 export async function getPlatformApiToken(explicitToken?: string): Promise<string> {
   if (explicitToken) {
     return explicitToken;
@@ -451,9 +531,7 @@ export async function loginPlatformUser(
   });
 }
 
-export async function requestPlatformPasswordReset(
-  email: string,
-): Promise<{ message: string }> {
+export async function requestPlatformPasswordReset(email: string): Promise<{ message: string }> {
   return apiControlPlaneFetch<{ message: string }>('/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
@@ -489,6 +567,24 @@ export async function getTenantDetail(
   return apiControlPlaneFetch<TenantDetailRecord>(`/tenants/${tenantId}`, {
     token: await getPlatformApiToken(token),
   });
+}
+
+export async function getOperationalOversight(token?: string): Promise<OperationsOverviewRecord> {
+  return apiControlPlaneFetch<OperationsOverviewRecord>('/operations/oversight', {
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function getTenantOperationalSummary(
+  tenantId: string,
+  token?: string,
+): Promise<OperationsTenantSummaryRecord> {
+  return apiControlPlaneFetch<OperationsTenantSummaryRecord>(
+    `/operations/oversight/tenants/${tenantId}`,
+    {
+      token: await getPlatformApiToken(token),
+    },
+  );
 }
 
 export async function listSubscriptions(token?: string): Promise<SubscriptionListItem[]> {
@@ -770,13 +866,9 @@ export async function createStaffInvitation(
   });
 }
 
-export async function resolveStaffInvitation(
-  token: string,
-): Promise<StaffInvitationPreviewRecord> {
+export async function resolveStaffInvitation(token: string): Promise<StaffInvitationPreviewRecord> {
   const query = new URLSearchParams({ token }).toString();
-  return apiControlPlaneFetch<StaffInvitationPreviewRecord>(
-    `/staff/invitations/resolve?${query}`,
-  );
+  return apiControlPlaneFetch<StaffInvitationPreviewRecord>(`/staff/invitations/resolve?${query}`);
 }
 
 export async function completeStaffInvitation(input: {
@@ -913,14 +1005,11 @@ export async function createTenantPlatformWalletEntry(
   description?: string;
   createdAt: string;
 }> {
-  return apiControlPlaneFetch(
-    `/platform-wallets/tenant/${tenantId}/entries`,
-    {
-      method: 'POST',
-      body: JSON.stringify(input),
-      token: await getPlatformApiToken(token),
-    },
-  );
+  return apiControlPlaneFetch(`/platform-wallets/tenant/${tenantId}/entries`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token: await getPlatformApiToken(token),
+  });
 }
 
 // ── Platform settings ─────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
 import { ControlPlaneShell } from '../../../features/shared/control-plane-shell';
 import {
   getTenantDetail,
+  getTenantOperationalSummary,
   getTenantPlatformWalletBalance,
   listFeatureFlags,
   listPlans,
@@ -27,8 +28,8 @@ import type {
 } from '../../../lib/api-control-plane';
 import { TenantFeatureRolloutCard } from './tenant-feature-rollout-card';
 import { TenantPlanCard } from './tenant-plan-card';
-import { TransitionTenantCard } from './transition-tenant-card';
 import { TenantWalletCard } from './tenant-wallet-card';
+import { TransitionTenantCard } from './transition-tenant-card';
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active' || status === 'paid') return 'success';
@@ -90,16 +91,24 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
   }).format(amountMinorUnits / 100);
 }
 
+function attentionTone(score: number): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (score >= 16) return 'danger';
+  if (score >= 6) return 'warning';
+  if (score > 0) return 'neutral';
+  return 'success';
+}
+
 export default async function TenantDetailPage({
   params,
 }: {
   params: Promise<{ tenantId: string }>;
 }) {
   const { tenantId } = await params;
-  const [tenant, plans, flags] = await Promise.all([
+  const [tenant, plans, flags, operationalSummary] = await Promise.all([
     getTenantDetail(tenantId),
     listPlans().catch(() => []),
     listFeatureFlags().catch(() => []),
+    getTenantOperationalSummary(tenantId).catch(() => null),
   ]);
 
   let walletBalance: PlatformWalletBalanceRecord | null = null;
@@ -175,6 +184,64 @@ export default async function TenantDetailPage({
           </Card>
         </div>
 
+        {operationalSummary ? (
+          <div className="grid gap-4 xl:grid-cols-5">
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Operational attention</Text>
+                <CardTitle>{operationalSummary.attentionScore}</CardTitle>
+                <Badge tone={attentionTone(operationalSummary.attentionScore)}>
+                  {operationalSummary.attentionScore === 0 ? 'Stable' : 'Needs attention'}
+                </Badge>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Activation blockers</Text>
+                <CardTitle>
+                  {operationalSummary.verificationHealth.driversAwaitingActivation}
+                </CardTitle>
+                <Text tone="muted">
+                  {operationalSummary.driverActivity.activeUnverified} active but unverified
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Licence review queue</Text>
+                <CardTitle>
+                  {operationalSummary.verificationHealth.pendingLicenceReviewCount}
+                </CardTitle>
+                <Text tone="muted">
+                  {operationalSummary.verificationHealth.providerRetryRequiredCount} provider retry
+                  cases
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">At-risk assignments</Text>
+                <CardTitle>{operationalSummary.riskSummary.atRiskAssignmentCount}</CardTitle>
+                <Text tone="muted">
+                  {operationalSummary.riskSummary.vehiclesAtRiskCount} vehicles at risk
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Inspection compliance</Text>
+                <CardTitle>
+                  {operationalSummary.riskSummary.inspectionComplianceRate.toFixed(2)}%
+                </CardTitle>
+                <Text tone="muted">
+                  {operationalSummary.riskSummary.criticalMaintenanceCount} critical maintenance
+                  items
+                </Text>
+              </CardHeader>
+            </Card>
+          </div>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
           <div className="space-y-6">
             <Card>
@@ -228,7 +295,10 @@ export default async function TenantDetailPage({
               <CardContent className="space-y-3">
                 {tenant.ownerSummary?.adminContacts?.length ? (
                   tenant.ownerSummary.adminContacts.map((contact) => (
-                    <div className="rounded-2xl border border-slate-200 px-4 py-3" key={contact.userId}>
+                    <div
+                      className="rounded-2xl border border-slate-200 px-4 py-3"
+                      key={contact.userId}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
@@ -249,12 +319,154 @@ export default async function TenantDetailPage({
                     </div>
                   ))
                 ) : (
-                  <Text>No tenant owner or admin contacts have been projected into the control plane yet.</Text>
+                  <Text>
+                    No tenant owner or admin contacts have been projected into the control plane
+                    yet.
+                  </Text>
                 )}
               </CardContent>
             </Card>
 
             <TenantPlanCard plans={plans} tenant={tenant} />
+
+            {operationalSummary ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Operational support view</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3">
+                      <Text tone="muted">Driver activity</Text>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {operationalSummary.driverActivity.activeVerified} verified active ·{' '}
+                        {operationalSummary.driverActivity.activeUnverified} unverified active
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {operationalSummary.driverActivity.onboardingPool} in onboarding pool
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3">
+                      <Text tone="muted">Licence pressure</Text>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {operationalSummary.verificationHealth.expiredLicencesCount} expired ·{' '}
+                        {operationalSummary.verificationHealth.expiringLicencesSoonCount} due soon
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {operationalSummary.verificationHealth.pendingLicenceReviewCount} manual
+                        reviews pending
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3">
+                      <Text tone="muted">Operational risk</Text>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {operationalSummary.riskSummary.atRiskAssignmentCount} at-risk assignments
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {operationalSummary.riskSummary.vehiclesAtRiskCount} vehicles at risk
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="space-y-3">
+                      <Text tone="muted">Top driver issues</Text>
+                      {operationalSummary.topDriverIssues.length === 0 ? (
+                        <Text>
+                          No driver blockers are currently projected for platform support.
+                        </Text>
+                      ) : (
+                        operationalSummary.topDriverIssues.map((driver) => (
+                          <div
+                            className="rounded-2xl border border-slate-200 px-4 py-3"
+                            key={driver.driverId}
+                          >
+                            <p className="text-sm font-semibold text-slate-900">
+                              {driver.fullName}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Fleet {driver.fleetId} · activation {driver.activationReadiness} ·
+                              assignment {driver.assignmentReadiness}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-700">
+                              {driver.activationReadinessReasons[0] ??
+                                driver.remittanceRiskReason ??
+                                'Needs operational review.'}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <Text tone="muted">Top vehicle issues</Text>
+                      {operationalSummary.topVehicleIssues.length === 0 ? (
+                        <Text>
+                          No fleet-risk blockers are currently projected for platform support.
+                        </Text>
+                      ) : (
+                        operationalSummary.topVehicleIssues.map((vehicle) => (
+                          <div
+                            className="rounded-2xl border border-slate-200 px-4 py-3"
+                            key={vehicle.vehicleId}
+                          >
+                            <p className="text-sm font-semibold text-slate-900">
+                              {vehicle.primaryLabel}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Fleet {vehicle.fleetId} · status {vehicle.status}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-700">
+                              {vehicle.remittanceRiskReason ?? vehicle.maintenanceSummary}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Text tone="muted">Upcoming licence expiries</Text>
+                    {operationalSummary.topLicenceExpiries.length === 0 ? (
+                      <Text>
+                        No approved licence expiries are currently projected for this tenant.
+                      </Text>
+                    ) : (
+                      operationalSummary.topLicenceExpiries.map((item) => (
+                        <div
+                          className="rounded-2xl border border-slate-200 px-4 py-3"
+                          key={item.driverId}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {item.fullName}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Fleet {item.fleetId} · expires{' '}
+                                {new Date(item.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge
+                              tone={
+                                item.daysUntilExpiry < 0
+                                  ? 'danger'
+                                  : item.daysUntilExpiry <= 30
+                                    ? 'warning'
+                                    : 'neutral'
+                              }
+                            >
+                              {item.daysUntilExpiry < 0
+                                ? `${Math.abs(item.daysUntilExpiry)} days overdue`
+                                : `${item.daysUntilExpiry} days`}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
             <Card>
               <CardHeader>
@@ -278,7 +490,9 @@ export default async function TenantDetailPage({
                           <TableCell>
                             <Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge>
                           </TableCell>
-                          <TableCell>{formatCurrency(invoice.amountDueMinorUnits, invoice.currency)}</TableCell>
+                          <TableCell>
+                            {formatCurrency(invoice.amountDueMinorUnits, invoice.currency)}
+                          </TableCell>
                           <TableCell className="text-sm text-slate-600">
                             {new Date(invoice.periodStart).toLocaleDateString()} to{' '}
                             {new Date(invoice.periodEnd).toLocaleDateString()}
@@ -289,7 +503,9 @@ export default async function TenantDetailPage({
                   </Table>
                 </TableViewport>
                 {tenant.invoices.length === 0 ? (
-                  <Text className="pt-4">No invoices have been recorded for this organisation yet.</Text>
+                  <Text className="pt-4">
+                    No invoices have been recorded for this organisation yet.
+                  </Text>
                 ) : null}
               </CardContent>
             </Card>
@@ -312,7 +528,8 @@ export default async function TenantDetailPage({
                             {entry.referenceType ?? 'manual_adjustment'}
                           </p>
                           <Text tone="muted">
-                            {entry.description ?? 'No description'} · {new Date(entry.createdAt).toLocaleString()}
+                            {entry.description ?? 'No description'} ·{' '}
+                            {new Date(entry.createdAt).toLocaleString()}
                           </Text>
                         </div>
                         <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>
@@ -360,7 +577,8 @@ export default async function TenantDetailPage({
               <CardContent className="space-y-2">
                 <Text tone="muted">
                   This page is intentionally platform-scoped. It manages control-plane lifecycle,
-                  plan, billing, wallet, and rollout posture without leaking into tenant daily operations.
+                  plan, billing, wallet, and rollout posture without leaking into tenant daily
+                  operations.
                 </Text>
                 <Text tone="muted">
                   Owner/admin references are not yet exposed by the control-plane tenant contract.

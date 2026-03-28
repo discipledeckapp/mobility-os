@@ -1,6 +1,7 @@
 import { TenantRole } from '@mobility-os/authz-model';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+// biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
+import { ConfigService } from '@nestjs/config';
 import type { Prisma, User, UserNotification, UserPushDevice } from '@prisma/client';
 import {
   NOTIFICATION_TOPICS,
@@ -9,9 +10,11 @@ import {
   readUserSettings,
   writeUserSettings,
 } from '../auth/user-settings';
-import type { PrismaService } from '../database/prisma.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
+import { PrismaService } from '../database/prisma.service';
 import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
-import type { ZeptoMailService } from './zeptomail.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
+import { ZeptoMailService } from './zeptomail.service';
 
 type NotificationRecipient = Pick<
   User,

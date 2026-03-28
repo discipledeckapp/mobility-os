@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { InternalServiceAuthGuard } from './guards/internal-service-auth.guard';
 import { PlatformAuthGuard } from './guards/platform-auth.guard';
+import { PlatformRolesGuard } from './guards/platform-roles.guard';
 
 @Module({
   imports: [
@@ -27,7 +28,13 @@ import { PlatformAuthGuard } from './guards/platform-auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PlatformAuthGuard, InternalServiceAuthGuard],
-  exports: [JwtModule, AuthService, PlatformAuthGuard, InternalServiceAuthGuard],
+  providers: [AuthService, PlatformAuthGuard, InternalServiceAuthGuard, PlatformRolesGuard],
+  exports: [
+    JwtModule,
+    AuthService,
+    PlatformAuthGuard,
+    InternalServiceAuthGuard,
+    PlatformRolesGuard,
+  ],
 })
 export class AuthModule {}

@@ -6,7 +6,7 @@ import {
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
 
-interface ApiCoreTenantRecord {
+export interface ApiCoreTenantRecord {
   id: string;
   slug: string;
   name: string;

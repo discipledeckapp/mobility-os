@@ -3,12 +3,13 @@ import { AuthModule } from '../auth/auth.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { VehicleRiskModule } from '../vehicle-risk/vehicle-risk.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
+import { InternalReportsController } from './internal-reports.controller';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 
 @Module({
   imports: [AuthModule, DriversModule, VehiclesModule, VehicleRiskModule],
-  controllers: [ReportsController],
+  controllers: [ReportsController, InternalReportsController],
   providers: [ReportsService],
 })
 export class ReportsModule {}

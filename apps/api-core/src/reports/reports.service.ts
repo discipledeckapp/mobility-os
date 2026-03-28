@@ -8,6 +8,7 @@ import { DriversService } from '../drivers/drivers.service';
 import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { VehiclesService } from '../vehicles/vehicles.service';
+import type { InternalOperationalTenantSummaryDto } from './dto/internal-operational-oversight.dto';
 
 @Injectable()
 export class ReportsService {
@@ -879,6 +880,128 @@ export class ReportsService {
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
+  }
+
+  async getControlPlaneOperationalSummary(
+    tenantId: string,
+  ): Promise<InternalOperationalTenantSummaryDto> {
+    const [
+      overview,
+      readiness,
+      licenceExpiry,
+      vehiclesAtRisk,
+      maintenanceBacklog,
+      inspectionCompliance,
+    ] = await Promise.all([
+      this.getOverview(tenantId),
+      this.getOperationalReadiness(tenantId),
+      this.getLicenceExpiryReport(tenantId),
+      this.getVehiclesAtRisk(tenantId),
+      this.getMaintenanceBacklog(tenantId),
+      this.getInspectionCompliance(tenantId),
+    ]);
+
+    const [pendingLicenceReviewCount, providerRetryRequiredCount] = await Promise.all([
+      this.prisma.driverDocumentVerification.count({
+        where: {
+          tenantId,
+          documentType: 'drivers-license',
+          status: 'manual_review',
+        },
+      }),
+      this.prisma.driverDocumentVerification.count({
+        where: {
+          tenantId,
+          documentType: 'drivers-license',
+          status: 'provider_unavailable',
+        },
+      }),
+    ]);
+
+    const expiringLicencesSoonCount = licenceExpiry.filter(
+      (item) => item.daysUntilExpiry >= 0 && item.daysUntilExpiry <= 30,
+    ).length;
+    const expiredLicencesCount = licenceExpiry.filter((item) => item.daysUntilExpiry < 0).length;
+    const driversAwaitingActivation = readiness.drivers.filter(
+      (driver) => driver.activationReadiness !== 'ready',
+    ).length;
+
+    const topDriverIssues = readiness.drivers
+      .filter(
+        (driver) =>
+          driver.activationReadiness !== 'ready' ||
+          driver.assignmentReadiness !== 'ready' ||
+          driver.remittanceRiskStatus === 'at_risk',
+      )
+      .sort((left, right) => {
+        const leftScore =
+          left.activationReadiness !== 'ready'
+            ? 3
+            : left.assignmentReadiness !== 'ready'
+              ? 2
+              : left.remittanceRiskStatus === 'at_risk'
+                ? 1
+                : 0;
+        const rightScore =
+          right.activationReadiness !== 'ready'
+            ? 3
+            : right.assignmentReadiness !== 'ready'
+              ? 2
+              : right.remittanceRiskStatus === 'at_risk'
+                ? 1
+                : 0;
+        return rightScore - leftScore;
+      })
+      .slice(0, 5);
+
+    const topVehicleIssues = readiness.vehicles
+      .filter(
+        (vehicle) =>
+          vehicle.status !== 'available' ||
+          vehicle.remittanceRiskStatus === 'at_risk' ||
+          /overdue|critical|warning|maintenance/i.test(vehicle.maintenanceSummary),
+      )
+      .slice(0, 5);
+
+    return {
+      tenantId,
+      generatedAt: new Date().toISOString(),
+      driverActivity: overview.driverActivity,
+      verificationHealth: {
+        driversAwaitingActivation,
+        pendingLicenceReviewCount,
+        providerRetryRequiredCount,
+        expiringLicencesSoonCount,
+        expiredLicencesCount,
+      },
+      riskSummary: {
+        atRiskAssignmentCount: overview.remittanceProjection.atRiskAssignmentCount,
+        vehiclesAtRiskCount: vehiclesAtRisk.length,
+        criticalMaintenanceCount: maintenanceBacklog.critical,
+        inspectionComplianceRate: inspectionCompliance.complianceRate,
+      },
+      topDriverIssues: topDriverIssues.map((driver) => ({
+        driverId: driver.id,
+        fullName: driver.fullName,
+        fleetId: driver.fleetId,
+        activationReadiness: driver.activationReadiness,
+        activationReadinessReasons: driver.activationReadinessReasons,
+        assignmentReadiness: driver.assignmentReadiness,
+        remittanceRiskStatus: driver.remittanceRiskStatus,
+        remittanceRiskReason: driver.remittanceRiskReason,
+        riskBand: driver.riskBand,
+      })),
+      topVehicleIssues: topVehicleIssues.map((vehicle) => ({
+        vehicleId: vehicle.id,
+        primaryLabel: vehicle.primaryLabel,
+        fleetId: vehicle.fleetId,
+        status: vehicle.status,
+        maintenanceSummary: vehicle.maintenanceSummary,
+        remittanceRiskStatus: vehicle.remittanceRiskStatus,
+        remittanceRiskReason: vehicle.remittanceRiskReason,
+      })),
+      topLicenceExpiries: licenceExpiry.slice(0, 5),
+    };
   }
 
   private buildDailyTrend(

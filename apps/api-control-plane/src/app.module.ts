@@ -18,6 +18,7 @@ import { DatabaseModule } from './database/database.module';
 import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { HealthModule } from './health/health.module';
 import { MeteringModule } from './metering/metering.module';
+import { OperationsModule } from './operations/operations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PlansModule } from './plans/plans.module';
 import { PlatformSettingsModule } from './platform-settings/platform-settings.module';
@@ -141,6 +142,7 @@ function createScheduleImports() {
     ControlPlaneRecordsModule,
     PlatformWalletsModule,
     MeteringModule,
+    OperationsModule,
     TenantLifecycleModule,
     FeatureFlagsModule,
     PaymentsModule,
