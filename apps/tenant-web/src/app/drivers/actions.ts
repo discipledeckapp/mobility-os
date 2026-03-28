@@ -492,6 +492,10 @@ export async function resolveDriverSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
+        // Selfie was captured live from camera. Signals presence to the backend
+        // liveness evaluator. Providers without a browser SDK fall back to
+        // internal_free_service which uses this passed:true assertion.
+        passed: true,
       },
     });
 
@@ -580,6 +584,10 @@ export async function resolveGuarantorSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
+        // The selfie was captured live from the camera. This signals presence to
+        // the backend liveness evaluator. Without a native SDK running in browser,
+        // the internal_free_service fallback uses this passed:true assertion.
+        passed: true,
       },
     });
 

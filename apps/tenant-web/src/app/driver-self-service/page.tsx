@@ -88,9 +88,117 @@ function OtpEntryForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   );
 }
 
-function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
+function EyeIcon({ show }: { show: boolean }) {
+  return show ? (
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" x2="23" y1="1" y2="23" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const [identifier, setIdentifier] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!identifier.trim()) {
+      setError('Enter the email or phone number linked to your account.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/password-reset/request`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ identifier: identifier.trim() }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        setError(body.message ?? 'Unable to send reset link. Please try again.');
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError('Something went wrong. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          If an account exists for that email or phone number, a password reset link has been sent. Check your inbox or messages.
+        </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm font-medium text-blue-600 underline hover:text-blue-700"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Text tone="muted">
+        Enter the email address or phone number linked to your account and we will send you a reset link.
+      </Text>
+      <input
+        type="text"
+        value={identifier}
+        onChange={(e) => setIdentifier(e.target.value)}
+        placeholder="Email or phone number"
+        autoComplete="username"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+      />
+      {error ? <Text tone="danger">{error}</Text> : null}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+      >
+        {loading ? 'Sending reset link…' : 'Send reset link'}
+      </button>
+      <p className="text-center text-sm text-slate-500">
+        <button
+          type="button"
+          onClick={onBack}
+          className="font-medium text-blue-600 underline hover:text-blue-700"
+        >
+          Back to sign in
+        </button>
+      </p>
+    </form>
+  );
+}
+
+function PasswordLoginForm({
+  onSuccess,
+  onForgotPassword,
+}: {
+  onSuccess: (token: string) => void;
+  onForgotPassword: () => void;
+}) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +225,7 @@ function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Text tone="muted">
-        Already set up your account? Sign in with your email or phone number and password.
+        Sign in with the email or phone number and password you set during account setup.
       </Text>
       <input
         type="text"
@@ -127,14 +235,24 @@ function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }
         autoComplete="username"
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
       />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        autoComplete="current-password"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-      />
+      <div className="relative">
+        <input
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          autoComplete="current-password"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        />
+        <button
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+          onClick={() => setShowPassword((v) => !v)}
+          type="button"
+        >
+          <EyeIcon show={showPassword} />
+        </button>
+      </div>
       {error ? <Text tone="danger">{error}</Text> : null}
       <button
         type="submit"
@@ -143,12 +261,21 @@ function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }
       >
         {loading ? 'Signing in…' : 'Sign in to continue'}
       </button>
+      <p className="text-center text-sm text-slate-500">
+        <button
+          type="button"
+          onClick={onForgotPassword}
+          className="font-medium text-blue-600 underline hover:text-blue-700"
+        >
+          Forgot your password?
+        </button>
+      </p>
     </form>
   );
 }
 
 function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => void; showSavedNotice?: boolean }) {
-  const [view, setView] = useState<'otp' | 'login'>('login');
+  const [view, setView] = useState<'login' | 'otp' | 'forgot'>('login');
   const router = useRouter();
 
   function handleSuccess(token: string) {
@@ -157,17 +284,26 @@ function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => v
     onToken(token);
   }
 
+  const titles: Record<typeof view, string> = {
+    login: 'Sign in to continue',
+    otp: 'Enter your verification code',
+    forgot: 'Reset your password',
+  };
+
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4fb_100%)] px-4 py-10">
-      <div className="mx-auto max-w-md">
-        <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
-          <CardHeader className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
-              Driver onboarding
-            </Text>
-            <CardTitle>
-              {view === 'otp' ? 'Enter your verification code' : 'Sign in to continue'}
-            </CardTitle>
+    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,#dbeafe_0%,#eff6ff_40%,#f8fbff_70%,#ffffff_100%)] px-4 py-12">
+      <div className="mx-auto max-w-md space-y-6">
+        {/* Branding */}
+        <div className="text-center space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
+            Mobiris
+          </p>
+          <p className="text-sm text-slate-500">Driver onboarding portal</p>
+        </div>
+
+        <Card className="border-slate-200 bg-white shadow-[0_32px_80px_-30px_rgba(15,23,42,0.28)]">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-xl">{titles[view]}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {showSavedNotice ? (
@@ -175,6 +311,7 @@ function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => v
                 Your progress has been saved. Sign in below to continue where you left off.
               </div>
             ) : null}
+
             {view === 'otp' ? (
               <>
                 <OtpEntryForm onSuccess={handleSuccess} />
@@ -189,9 +326,14 @@ function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => v
                   </button>
                 </p>
               </>
+            ) : view === 'forgot' ? (
+              <ForgotPasswordForm onBack={() => setView('login')} />
             ) : (
               <>
-                <PasswordLoginForm onSuccess={handleSuccess} />
+                <PasswordLoginForm
+                  onSuccess={handleSuccess}
+                  onForgotPassword={() => setView('forgot')}
+                />
                 <p className="text-center text-sm text-slate-500">
                   New driver with a code?{' '}
                   <button
@@ -206,6 +348,10 @@ function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => v
             )}
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs text-slate-400">
+          Secured by Mobiris · Powered by Growth Figures Limited
+        </p>
       </div>
     </main>
   );
@@ -316,19 +462,6 @@ function StepProgress({ currentStep }: { currentStep: FlowStep }) {
 // Individual step components
 // ---------------------------------------------------------------------------
 
-function EyeToggleIcon({ show }: { show: boolean }) {
-  return show ? (
-    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" x2="23" y1="1" y2="23" />
-    </svg>
-  ) : (
-    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
 
 function AccountSetupStep({
   token,
@@ -418,7 +551,7 @@ function AccountSetupStep({
               onClick={() => setShowPassword((v) => !v)}
               type="button"
             >
-              <EyeToggleIcon show={showPassword} />
+              <EyeIcon show={showPassword} />
             </button>
           </div>
           {password.length > 0 && password.length < 8 ? (
@@ -439,7 +572,7 @@ function AccountSetupStep({
               onClick={() => setShowConfirm((v) => !v)}
               type="button"
             >
-              <EyeToggleIcon show={showConfirm} />
+              <EyeIcon show={showConfirm} />
             </button>
           </div>
           {error ? <Text tone="danger">{error}</Text> : null}
@@ -932,6 +1065,10 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStepRecord | null>(null);
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
+  // Incremented after each verification attempt. Used as a React key on
+  // DriverIdentityVerification to force a full remount (resetting all useActionState
+  // and camera state) whether the step changes or not.
+  const [verificationKey, setVerificationKey] = useState(0);
   const loaded = useRef(false);
 
   const refreshContext = useCallback(async () => {
@@ -1077,8 +1214,12 @@ function DriverVerificationFlow({ token }: { token: string }) {
           <DriverIdentityVerification
             defaultCountryCode={driver.nationality ?? null}
             driver={driver}
+            key={verificationKey}
             mode="self_service"
             onVerificationSubmitted={() => {
+              // Increment key so the next attempt (if step stays identity_verification)
+              // starts with a completely fresh component and camera state.
+              setVerificationKey((k) => k + 1);
               void refreshContext();
             }}
             selfServiceToken={token}

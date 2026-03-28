@@ -104,16 +104,6 @@ function isIdentifierPhaseComplete(
   return identifierTypes.every((id) => validateIdentifierValue(values[id.type] ?? '', id) === null);
 }
 
-function friendlyDecisionLabel(decision: string): string {
-  switch (decision) {
-    case 'verified': return 'Verification successful';
-    case 'review_needed': return 'Verification requires review';
-    case 'failed': return 'Verification failed';
-    case 'pending': return 'Verification in progress';
-    default: return 'Verification in progress';
-  }
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DriverIdentityVerification({
@@ -212,6 +202,8 @@ export function DriverIdentityVerification({
   const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [captureProgress, setCaptureProgress] = useState(0); // 0 = idle, 1–3 = capturing frame N
+  // Controlled consent state — persists across submission and cannot be silently reset.
+  const [subjectConsent, setSubjectConsent] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -534,19 +526,26 @@ export function DriverIdentityVerification({
 
                   {/* Video — always in DOM once session starts; hidden until stream ready.
                       Container uses max-h transition; stream is attached AFTER it expands
-                      so the browser can render frames into an element with positive dimensions. */}
-                  <div className={`overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? 'max-h-72 min-h-[18rem]' : 'max-h-0 border-0'}`}>
+                      so the browser can render frames into an element with positive dimensions.
+                      The face oval uses box-shadow to create a focused capture region. */}
+                  <div className={`relative overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? `${mode === 'self_service' || mode === 'guarantor_self_service' ? 'max-h-[32rem] min-h-[22rem]' : 'max-h-[28rem] min-h-[20rem]'}` : 'max-h-0 border-0'}`}>
                     <video
                       autoPlay
-                      className="w-full object-cover"
+                      className="h-full w-full object-cover"
                       muted
                       playsInline
                       ref={videoRef}
                       onPlaying={() => {
                         setVideoPlaying(true);
-                        setCameraGuidance('Camera is ready — centre your face and capture');
+                        setCameraGuidance('Align your face with the oval, then capture');
                       }}
                     />
+                    {/* Face oval guide — only rendered when video is actively playing */}
+                    {cameraReady && videoPlaying ? (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="h-56 w-44 rounded-full border-[3px] border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]" />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
@@ -712,79 +711,94 @@ export function DriverIdentityVerification({
                 />
               ))}
 
-              <Text tone="muted">
-                {!livenessDone
-                  ? 'Complete the face capture in step 1 before submitting.'
-                  : !idPhaseComplete
-                    ? 'Enter your identification number in step 2 before submitting.'
-                    : 'Ready to submit your verification.'}
-              </Text>
-
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  className="size-4 accent-[var(--mobiris-primary)]"
-                  name="subjectConsent"
-                  type="checkbox"
-                />
-                <span>
-                  {mode === 'guarantor_self_service'
-                    ? 'I confirm I have given consent for my identity and liveness to be verified.'
-                    : mode === 'self_service'
-                      ? 'I confirm I have given consent for my identity and liveness to be verified.'
-                      : 'I confirm the driver has given consent for identity and liveness verification.'}
-                </span>
-              </label>
-
-              {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
-                <Text tone="muted">
-                  By continuing you agree to the{' '}
-                  <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
-                    Terms of Use
-                  </a>{' '}
-                  and{' '}
-                  <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
-                    Privacy Policy
-                  </a>
-                  .
-                </Text>
-              ) : null}
-
-              <Button
-                disabled={!livenessDone || !idPhaseComplete || isResolving || !session}
-                type="submit"
-              >
-                {isResolving ? 'Submitting...' : 'Submit verification'}
-              </Button>
-
-              {resolveState.error ? (
-                <Text tone="danger">
-                  {mode === 'self_service'
-                    ? sanitizeSelfServiceError(resolveState.error)
-                    : resolveState.error}
-                </Text>
-              ) : null}
-
+              {/* Submission result — shown in place of the submit action once resolved */}
               {result ? (
                 <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-[var(--mobiris-primary-tint)] p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={identityTone}>{identityLabel}</Badge>
-                    {resolveState.success ? <Text>{resolveState.success}</Text> : null}
                   </div>
-                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                    <Text>{friendlyDecisionLabel(result.decision)}</Text>
-                    <Text>
-                      {result.livenessPassed === true
-                        ? 'Live selfie completed'
-                        : result.livenessPassed === false
-                          ? 'Live selfie could not be confirmed'
-                          : 'Verification is being processed'}
-                    </Text>
-                  </div>
-                  {identityStatus === 'review_needed' ? (
-                    <Text>This driver cannot be activated yet. Your operations team will review the case and take action.</Text>
+                  <Text>
+                    {identityStatus === 'verified'
+                      ? 'Verification successful. Loading next step…'
+                      : identityStatus === 'review_needed'
+                        ? 'Your verification has been submitted and is under manual review. You will be notified of the outcome.'
+                        : identityStatus === 'failed'
+                          ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
+                          : 'Verification submitted. Loading next step…'}
+                  </Text>
+                  {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
+                      <span>Please wait…</span>
+                    </div>
+                  ) : null}
+                  {mode === 'operator' && identityStatus === 'review_needed' ? (
+                    <Text tone="muted">Your operations team will review the case and take action.</Text>
                   ) : null}
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <Text tone="muted">
+                    {!livenessDone
+                      ? 'Complete the face capture in step 1 before submitting.'
+                      : !idPhaseComplete
+                        ? 'Enter your identification number in step 2 before submitting.'
+                        : subjectConsent
+                          ? 'Ready to submit your verification.'
+                          : 'Confirm consent below to enable submission.'}
+                  </Text>
+
+                  {/* Controlled consent checkbox — state persists across form resets */}
+                  <label className="flex cursor-pointer items-start gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700 transition-colors hover:bg-slate-100/70 select-none">
+                    <input
+                      checked={subjectConsent}
+                      className="mt-0.5 size-4 accent-[var(--mobiris-primary)]"
+                      name="subjectConsent"
+                      onChange={(e) => setSubjectConsent(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>
+                      {mode === 'guarantor_self_service' || mode === 'self_service'
+                        ? 'I consent to my identity documents and live selfie being processed for verification purposes.'
+                        : 'I confirm the driver has given consent for identity and liveness verification.'}
+                    </span>
+                  </label>
+
+                  {(mode === 'self_service' || mode === 'guarantor_self_service') ? (
+                    <Text tone="muted">
+                      By submitting you agree to the{' '}
+                      <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/terms" rel="noreferrer" target="_blank">
+                        Terms of Use
+                      </a>{' '}
+                      and{' '}
+                      <a className="font-semibold text-[var(--mobiris-primary)] underline" href="/privacy" rel="noreferrer" target="_blank">
+                        Privacy Policy
+                      </a>
+                      .
+                    </Text>
+                  ) : null}
+
+                  <Button
+                    disabled={!livenessDone || !idPhaseComplete || isResolving || !session || !subjectConsent}
+                    type="submit"
+                  >
+                    {isResolving ? (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        Submitting…
+                      </span>
+                    ) : 'Submit verification'}
+                  </Button>
+
+                  {resolveState.error ? (
+                    <Text tone="danger">
+                      {mode === 'self_service' || mode === 'guarantor_self_service'
+                        ? sanitizeSelfServiceError(resolveState.error)
+                        : resolveState.error}
+                    </Text>
+                  ) : null}
+                </>
+              )}
             </form>
 
           </CardContent>
