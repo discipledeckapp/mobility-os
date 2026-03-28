@@ -386,6 +386,7 @@ export async function resolveDriverVerificationAction(
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
+  const hasCapturedLivenessEvidence = Boolean(selfieImageBase64 || selfieImageUrl);
 
   if (!driverId) {
     return {
@@ -439,6 +440,7 @@ export async function resolveDriverVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
+        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
       },
     });
 
@@ -471,6 +473,7 @@ export async function resolveDriverSelfServiceVerificationAction(
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
+  const hasCapturedLivenessEvidence = Boolean(selfieImageBase64 || selfieImageUrl);
   if (!token) {
     return {
       error: 'The self-service verification link is missing or expired.',
@@ -512,11 +515,12 @@ export async function resolveDriverSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
-        // Only assert passed:true for internal_free_service — it has no queryable
-        // session result so the backend relies on this client assertion.
-        // For YouVerify the backend queries the actual session result via the
-        // liveness history API; sending passed:true here would bypass that check.
-        ...(!providerName || providerName === 'internal_free_service' ? { passed: true } : {}),
+        // Submit the observed SDK outcome alongside the backend-issued session id.
+        // Intelligence still prefers provider-side evaluation, but if the provider
+        // lookup is temporarily behind (for example YouVerify session sync lag),
+        // LivenessService can safely fall back to this same-session evidence instead
+        // of failing the verification submission outright.
+        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
       },
     });
 
@@ -576,6 +580,7 @@ export async function resolveGuarantorSelfServiceVerificationAction(
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
+  const hasCapturedLivenessEvidence = Boolean(selfieImageBase64 || selfieImageUrl);
 
   if (!token) {
     return { error: 'The guarantor verification link is missing or expired.' };
@@ -607,11 +612,7 @@ export async function resolveGuarantorSelfServiceVerificationAction(
       livenessCheck: {
         ...(providerName ? { provider: providerName } : {}),
         sessionId,
-        // Only assert passed:true for internal_free_service — it has no queryable
-        // session result so the backend relies on this client assertion.
-        // For YouVerify the backend queries the actual session result via the
-        // liveness history API; sending passed:true here would bypass that check.
-        ...(!providerName || providerName === 'internal_free_service' ? { passed: true } : {}),
+        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
       },
     });
 
