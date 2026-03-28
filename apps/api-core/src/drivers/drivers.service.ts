@@ -1770,12 +1770,12 @@ export class DriversService {
     if (requiresGuarantor) {
       const guarantor = await this.prisma.driverGuarantor.findFirst({
         where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
-        select: { id: true, identityStatus: true },
+        select: { id: true, status: true },
       });
       const needsGuarantorVerification = settings.operations.requireGuarantorVerification === true;
       if (guarantor) {
         guarantorVerified = needsGuarantorVerification
-          ? guarantor.identityStatus === 'verified'
+          ? guarantor.status === 'verified'
           : true;
       } else {
         guarantorVerified = false;
