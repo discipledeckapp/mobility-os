@@ -264,6 +264,9 @@ export function DriverIdentityVerification({
     const raw = process.env.NEXT_PUBLIC_YOUVERIFY_SANDBOX?.trim().toLowerCase();
     return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
   })();
+  const youVerifyTasks = [
+    { id: 'motions' as const, difficulty: 'easy' as const, maxNods: 2, maxBlinks: 2 },
+  ];
 
   // Attach stream after the container finishes expanding (fixes black screen on
   // mobile Safari/Chrome where play() into a zero-height element renders black).
@@ -299,6 +302,7 @@ export function DriverIdentityVerification({
         sessionId: session.sessionId,
         sessionToken: session.clientAuthToken,
         sandboxEnvironment: youVerifySandboxEnvironment,
+        tasks: youVerifyTasks,
         presentation: 'modal',
         onSuccess(data) {
           const raw = data.faceImage ?? '';
