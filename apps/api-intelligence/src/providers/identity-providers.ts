@@ -529,7 +529,7 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
 
     try {
       const endpointPath = `/v2/api/identity/${countrySlug}/${identifierSlug}`;
-      const requestBody = this.buildRequestBody(identifier, providerVerification);
+      const requestBody = await this.buildRequestBody(identifier, providerVerification);
 
       this.logger.log(
         JSON.stringify({
@@ -631,7 +631,7 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
     };
   }
 
-  private buildRequestBody(
+  private async buildRequestBody(
     identifier: VerificationIdentifierInput,
     providerVerification?: {
       subjectConsent?: boolean;
@@ -645,7 +645,9 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       selfieImageBase64?: string;
       selfieImageUrl?: string;
     },
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
+    const selfieImage = await this.resolveSelfieImage(providerVerification);
+
     return {
       id: identifier.value,
       isSubjectConsent: true,
@@ -672,16 +674,64 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
             },
           }
         : {}),
-      ...(providerVerification?.selfieImageBase64 || providerVerification?.selfieImageUrl
+      ...(selfieImage
         ? {
             selfie: {
-              image: providerVerification.selfieImageBase64 ?? providerVerification.selfieImageUrl,
+              image: selfieImage,
             },
           }
         : {}),
       ...(identifier.type === 'BANK_ID' ? { premiumBVN: true } : {}),
       ...(identifier.type === 'NATIONAL_ID' ? { premiumNIN: true } : {}),
     };
+  }
+
+  private async resolveSelfieImage(providerVerification?: {
+    selfieImageBase64?: string;
+    selfieImageUrl?: string;
+  }): Promise<string | undefined> {
+    const base64 = providerVerification?.selfieImageBase64?.trim();
+    if (base64) {
+      return base64;
+    }
+
+    const imageUrl = providerVerification?.selfieImageUrl?.trim();
+    if (!imageUrl) {
+      return undefined;
+    }
+
+    const dataUrlMatch = imageUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
+    if (dataUrlMatch?.[1]) {
+      return dataUrlMatch[1];
+    }
+
+    if (!/^https?:\/\//i.test(imageUrl)) {
+      return imageUrl;
+    }
+
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'youverify_selfie_fetch_failed',
+            statusCode: response.status,
+          }),
+        );
+        return imageUrl;
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer).toString('base64');
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'youverify_selfie_fetch_error',
+          reason: error instanceof Error ? error.message : 'unknown_error',
+        }),
+      );
+      return imageUrl;
+    }
   }
 }
 

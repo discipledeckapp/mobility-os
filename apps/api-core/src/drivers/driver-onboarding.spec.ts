@@ -667,8 +667,8 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     );
   });
 
-  function setupDriver(entitlementStatus = 'paid') {
-    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+  function setupDriver(entitlementStatus = 'paid', driverOverrides: Record<string, unknown> = {}) {
+    prisma.driver.findUnique.mockResolvedValue(makeDriver(driverOverrides));
     prisma.verificationEntitlement.findFirst.mockResolvedValue(
       makeEntitlement({
         status: entitlementStatus,
@@ -680,7 +680,9 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
   }
 
   it('creates a verification record and returns verified status on provider match', async () => {
-    setupDriver('paid');
+    setupDriver('paid', {
+      selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+    });
     const verificationRecord = {
       id: 'docver_1',
       tenantId: 'tenant_1',
@@ -774,7 +776,9 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
   });
 
   it('normalizes driver licence verification to a slug and fails invalid licence records', async () => {
-    setupDriver('paid');
+    setupDriver('paid', {
+      selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+    });
     prisma.driverDocumentVerification.create.mockResolvedValue({
       id: 'docver_licence_1',
       documentType: 'drivers-license',
@@ -821,6 +825,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     expect(intelligenceClient.verifyDocumentIdentifier).toHaveBeenCalledWith(
       expect.objectContaining({
         identifierType: 'DRIVERS_LICENSE',
+        selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
       }),
     );
   });

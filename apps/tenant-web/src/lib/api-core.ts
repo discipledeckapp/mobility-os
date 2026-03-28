@@ -504,6 +504,7 @@ export interface DriverIdentityResolutionInput {
     countryCode?: string;
   }>;
   selfieImageBase64?: string;
+  selfieImageUrl?: string;
   subjectConsent?: boolean;
   livenessCheck?: {
     provider?: string;

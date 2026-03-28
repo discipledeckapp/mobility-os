@@ -3858,7 +3858,12 @@ export class DriversService {
 
     const persistedSelfieImageUrl = dto.selfieImageBase64
       ? await this.persistSelfiePortraitForDriverGuarantor(driver.id, dto.selfieImageBase64)
-      : null;
+      : dto.selfieImageUrl
+        ? await this.persistIdentityReferenceImage(
+            dto.selfieImageUrl,
+            `guarantor-selfie-${driver.id}-${Date.now()}`,
+          )
+        : null;
 
     let result: DriverIdentityResolutionResult;
     try {
@@ -3888,6 +3893,7 @@ export class DriversService {
               : {}),
           },
           ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
+          ...(dto.selfieImageUrl ? { selfieImageUrl: dto.selfieImageUrl } : {}),
           ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
           ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
         },
@@ -5913,7 +5919,12 @@ export class DriversService {
 
     const persistedSelfieImageUrl = dto.selfieImageBase64
       ? await this.persistSelfiePortraitForDriver(tenantId, driver.id, dto.selfieImageBase64)
-      : null;
+      : dto.selfieImageUrl
+        ? await this.persistIdentityReferenceImage(
+            dto.selfieImageUrl,
+            `driver-selfie-${driver.id}-${Date.now()}`,
+          )
+        : null;
 
     const result: DriverIdentityResolutionResult = await this.intelligenceClient.resolveEnrollment({
       tenantId,
@@ -5940,6 +5951,7 @@ export class DriversService {
           ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
         },
         ...(dto.selfieImageBase64 ? { selfieImageBase64: dto.selfieImageBase64 } : {}),
+        ...(dto.selfieImageUrl ? { selfieImageUrl: dto.selfieImageUrl } : {}),
         ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
       },

@@ -79,6 +79,48 @@ function getDisplayIdentityName(
   return joined.length > 0 ? joined : null;
 }
 
+function getBlobObjectUrl(value: string | null): string | null {
+  return typeof value === 'string' && value.startsWith('blob:') ? value : null;
+}
+
+function normalizeCapturedSelfie(rawValue?: string | null): {
+  previewUrl: string | null;
+  selfieImageBase64: string;
+  selfieImageUrl: string;
+} {
+  const trimmed = rawValue?.trim() ?? '';
+
+  if (!trimmed) {
+    return {
+      previewUrl: null,
+      selfieImageBase64: '',
+      selfieImageUrl: '',
+    };
+  }
+
+  if (trimmed.startsWith('data:')) {
+    return {
+      previewUrl: trimmed,
+      selfieImageBase64: trimmed.split(',')[1] ?? '',
+      selfieImageUrl: '',
+    };
+  }
+
+  if (/^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith('blob:')) {
+    return {
+      previewUrl: trimmed,
+      selfieImageBase64: '',
+      selfieImageUrl: trimmed,
+    };
+  }
+
+  return {
+    previewUrl: `data:image/jpeg;base64,${trimmed}`,
+    selfieImageBase64: trimmed,
+    selfieImageUrl: '',
+  };
+}
+
 // ── Identifier helpers ────────────────────────────────────────────────────────
 
 function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[] {
@@ -225,6 +267,7 @@ export function DriverIdentityVerification({
 
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const [selfieImageBase64, setSelfieImageBase64] = useState('');
+  const [selfieImageUrl, setSelfieImageUrl] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
@@ -235,6 +278,7 @@ export function DriverIdentityVerification({
   const [isLaunchingYv, setIsLaunchingYv] = useState(false);
   const [autoLaunchYv, setAutoLaunchYv] = useState(false);
   const [livenessLoadingProgress, setLivenessLoadingProgress] = useState(0);
+  const [submitLoadingProgress, setSubmitLoadingProgress] = useState(0);
   // Controlled consent state — persists across submission and cannot be silently reset.
   const [subjectConsent, setSubjectConsent] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -253,7 +297,7 @@ export function DriverIdentityVerification({
     : 'Your organisation wallet will cover the verification fee for this driver.';
 
   // Selfie captured = liveness step done; identifier phase = step 2
-  const livenessDone = Boolean(selfieImageBase64);
+  const livenessDone = Boolean(selfieImageBase64 || selfieImageUrl);
   const isPreparingYouVerify =
     !livenessDone &&
     (isStarting ||
@@ -263,11 +307,13 @@ export function DriverIdentityVerification({
         Boolean(session.clientAuthToken) &&
         launchedSessionRef.current !== session.sessionId));
   const showLivenessLoadingModal = session?.providerName === 'youverify' && isPreparingYouVerify;
+  const showSubmitLoadingModal = isResolving && !result;
 
   useEffect(() => {
     return () => {
-      if (selfiePreviewUrl) {
-        URL.revokeObjectURL(selfiePreviewUrl);
+      const previewUrl = getBlobObjectUrl(selfiePreviewUrl);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
   }, [selfiePreviewUrl]);
@@ -302,6 +348,31 @@ export function DriverIdentityVerification({
 
     return () => clearInterval(interval);
   }, [showLivenessLoadingModal]);
+
+  useEffect(() => {
+    if (!showSubmitLoadingModal) {
+      setSubmitLoadingProgress(0);
+      return;
+    }
+
+    setSubmitLoadingProgress((current) => (current > 0 ? current : 12));
+    const interval = setInterval(() => {
+      setSubmitLoadingProgress((current) => {
+        if (current >= 94) {
+          return current;
+        }
+        if (current < 45) {
+          return current + 8;
+        }
+        if (current < 72) {
+          return current + 5;
+        }
+        return current + 2;
+      });
+    }, 240);
+
+    return () => clearInterval(interval);
+  }, [showSubmitLoadingModal]);
 
   useEffect(() => {
     if (mode === 'operator' && resolveState.result) {
@@ -386,12 +457,10 @@ export function DriverIdentityVerification({
         tasks: youVerifyTasks,
         presentation: 'modal',
         onSuccess(data: YouVerifyLivenessData) {
-          const raw = data.faceImage ?? '';
-          const isDataUrl = raw.startsWith('data:');
-          const base64 = isDataUrl ? (raw.split(',')[1] ?? '') : raw;
-          const preview = isDataUrl ? raw : `data:image/jpeg;base64,${raw}`;
-          setSelfieImageBase64(base64);
-          setSelfiePreviewUrl(preview);
+          const normalizedSelfie = normalizeCapturedSelfie(data.faceImage);
+          setSelfieImageBase64(normalizedSelfie.selfieImageBase64);
+          setSelfieImageUrl(normalizedSelfie.selfieImageUrl);
+          setSelfiePreviewUrl(normalizedSelfie.previewUrl);
           setAutoLaunchYv(false);
           setLivenessLoadingProgress(100);
           setIsLaunchingYv(false);
@@ -521,8 +590,12 @@ export function DriverIdentityVerification({
     }
 
     const [, base64 = ''] = best.dataUrl.split(',');
-    if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
+    const previewUrl = getBlobObjectUrl(selfiePreviewUrl);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelfieImageBase64(base64);
+    setSelfieImageUrl('');
     setSelfiePreviewUrl(best.dataUrl);
     setCameraReady(false);
     stopStream();
@@ -530,9 +603,13 @@ export function DriverIdentityVerification({
 
   function resetSelfieCapture(): void {
     stopStream();
-    if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
+    const previewUrl = getBlobObjectUrl(selfiePreviewUrl);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelfiePreviewUrl(null);
     setSelfieImageBase64('');
+    setSelfieImageUrl('');
     setCameraError(null);
     setCameraReady(false);
     setVideoPlaying(false);
@@ -574,6 +651,32 @@ export function DriverIdentityVerification({
                 <div className="flex items-center justify-between text-sm text-slate-500">
                   <span>Please keep this tab open</span>
                   <span>{livenessLoadingProgress}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {showSubmitLoadingModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[var(--mobiris-radius-card)] border border-white/10 bg-white p-6 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.75)]">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Text tone="strong">Submitting identity verification</Text>
+                <Text tone="muted">
+                  Comparing your live selfie and identifier details with the verification provider.
+                </Text>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-[var(--mobiris-primary)] transition-[width] duration-200 ease-out"
+                    style={{ width: `${submitLoadingProgress}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm text-slate-500">
+                  <span>Please keep this tab open</span>
+                  <span>{submitLoadingProgress}%</span>
                 </div>
               </div>
             </div>
@@ -898,9 +1001,18 @@ export function DriverIdentityVerification({
                     className="max-h-40 rounded-[var(--mobiris-radius-card)] object-cover"
                     src={selfiePreviewUrl}
                   />
-                  <Button onClick={resetSelfieCapture} type="button" variant="ghost" size="sm">
-                    {session?.providerName === 'youverify' ? 'Redo verification' : 'Retake selfie'}
-                  </Button>
+                  {mode === 'operator' ? (
+                    <Button onClick={resetSelfieCapture} size="sm" type="button" variant="ghost">
+                      {session?.providerName === 'youverify'
+                        ? 'Capture a different selfie'
+                        : 'Retake selfie'}
+                    </Button>
+                  ) : (
+                    <Text tone="muted">
+                      Liveness is already saved for this session. Continue below to avoid an
+                      unnecessary repeat verification.
+                    </Text>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -1033,6 +1145,7 @@ export function DriverIdentityVerification({
               <input name="providerName" type="hidden" value={session?.providerName ?? ''} />
               <input name="sessionId" type="hidden" value={session?.sessionId ?? ''} />
               <input name="selfieImageBase64" type="hidden" value={selfieImageBase64} />
+              <input name="selfieImageUrl" type="hidden" value={selfieImageUrl} />
               {identifierTypes.map((idType) => (
                 <input
                   key={idType.type}
@@ -1164,14 +1277,7 @@ export function DriverIdentityVerification({
                     }
                     type="submit"
                   >
-                    {isResolving ? (
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                        Submitting…
-                      </span>
-                    ) : (
-                      'Submit verification'
-                    )}
+                    {isResolving ? 'Submitting verification...' : 'Submit verification'}
                   </Button>
 
                   {resolveState.error ? (

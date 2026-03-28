@@ -110,6 +110,11 @@ export class ResolveDriverIdentityDto {
   @IsString()
   selfieImageBase64?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  selfieImageUrl?: string;
+
   @ApiPropertyOptional({ type: DriverLivenessCheckDto })
   @IsOptional()
   @IsObject()

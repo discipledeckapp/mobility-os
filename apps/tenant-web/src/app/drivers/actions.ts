@@ -384,6 +384,7 @@ export async function resolveDriverVerificationAction(
   const providerName = getOptionalTrimmedValue(formData, 'providerName');
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
+  const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
 
   if (!driverId) {
@@ -429,6 +430,7 @@ export async function resolveDriverVerificationAction(
       ...(countryCode ? { countryCode } : {}),
       subjectConsent,
       ...(selfieImageBase64 ? { selfieImageBase64 } : {}),
+      ...(selfieImageUrl ? { selfieImageUrl } : {}),
       identifiers: enteredIdentifiers.map((identifier) => ({
         type: identifier.type,
         value: identifier.value,
@@ -467,6 +469,7 @@ export async function resolveDriverSelfServiceVerificationAction(
   const providerName = getOptionalTrimmedValue(formData, 'providerName');
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
+  const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
   if (!token) {
     return {
@@ -500,6 +503,7 @@ export async function resolveDriverSelfServiceVerificationAction(
       ...(countryCode ? { countryCode } : {}),
       subjectConsent,
       ...(selfieImageBase64 ? { selfieImageBase64 } : {}),
+      ...(selfieImageUrl ? { selfieImageUrl } : {}),
       identifiers: enteredIdentifiers.map((identifier) => ({
         type: identifier.type,
         value: identifier.value,
@@ -570,6 +574,7 @@ export async function resolveGuarantorSelfServiceVerificationAction(
   const providerName = getOptionalTrimmedValue(formData, 'providerName');
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
+  const selfieImageUrl = getOptionalTrimmedValue(formData, 'selfieImageUrl');
   const enteredIdentifiers = getIdentifierValues(formData);
 
   if (!token) {
@@ -593,6 +598,7 @@ export async function resolveGuarantorSelfServiceVerificationAction(
       ...(countryCode ? { countryCode } : {}),
       subjectConsent,
       ...(selfieImageBase64 ? { selfieImageBase64 } : {}),
+      ...(selfieImageUrl ? { selfieImageUrl } : {}),
       identifiers: enteredIdentifiers.map((identifier) => ({
         type: identifier.type,
         value: identifier.value,
