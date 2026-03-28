@@ -471,7 +471,12 @@ export class LivenessService {
 
   private async initializeYouVerifySession(
     input: LivenessSessionInitInput,
-  ): Promise<{ sessionId?: string; clientAuthToken?: string; expiresAt?: string; reason?: string }> {
+  ): Promise<{
+    sessionId?: string;
+    clientAuthToken?: string;
+    expiresAt?: string;
+    reason?: string;
+  }> {
     const mock = this.configService.get<string>('YOUVERIFY_LIVENESS_MOCK_RESPONSE');
     if (mock) {
       // In mock mode supply a fake sessionToken so the youverify-liveness-web SDK
@@ -521,43 +526,48 @@ export class LivenessService {
       const { sessionId, expiresAt } = sessionPayload.data;
 
       // Step 2 — generate the SDK auth token required by youverify-liveness-web.
-      // The token endpoint returns an authToken (called sessionToken by the SDK)
-      // plus optionally an updated sessionId. If YOUVERIFY_PUBLIC_MERCHANT_ID is
-      // not set we skip this step and return without a clientAuthToken — the frontend
-      // will fall back to the camera-only capture path in that case.
+      // YOUVERIFY_PUBLIC_MERCHANT_ID is required. If it is absent or the token
+      // request fails the session init fails hard — there is no camera fallback.
       const publicMerchantId = this.configService.get<string>('YOUVERIFY_PUBLIC_MERCHANT_ID');
+      if (!publicMerchantId) {
+        return { reason: 'provider_error' };
+      }
+
       let clientAuthToken: string | undefined;
+      try {
+        const tokenResponse = await requestProviderJson({
+          providerName: 'youverify',
+          operation: 'liveness:token',
+          method: 'POST',
+          url: `${base}/v2/api/identity/sdk/liveness/token`,
+          headers: { token: apiKey },
+          body: {
+            publicMerchantID: publicMerchantId,
+            deviceCorrelationId: `mobiris-web-${input.tenantId}-${Date.now()}`,
+          },
+        });
 
-      if (publicMerchantId) {
-        try {
-          const tokenResponse = await requestProviderJson({
-            providerName: 'youverify',
-            operation: 'liveness:token',
-            method: 'POST',
-            url: `${base}/v2/api/identity/sdk/liveness/token`,
-            headers: { token: apiKey },
-            body: {
-              publicMerchantID: publicMerchantId,
-              deviceCorrelationId: `mobiris-web-${input.tenantId}-${Date.now()}`,
-            },
-          });
-
-          if (!summarizeProviderFailure('youverify', 'liveness:token', tokenResponse)) {
-            const tokenPayload = tokenResponse.payload as {
-              data?: { authToken?: string };
-              authToken?: string;
-            };
-            clientAuthToken = tokenPayload.data?.authToken ?? tokenPayload.authToken;
-          }
-        } catch {
-          // Non-fatal — the session is still valid. Frontend falls back to camera capture.
+        if (summarizeProviderFailure('youverify', 'liveness:token', tokenResponse)) {
+          return { reason: 'provider_error' };
         }
+
+        const tokenPayload = tokenResponse.payload as {
+          data?: { authToken?: string };
+          authToken?: string;
+        };
+        clientAuthToken = tokenPayload.data?.authToken ?? tokenPayload.authToken;
+      } catch {
+        return { reason: 'provider_error' };
+      }
+
+      if (!clientAuthToken) {
+        return { reason: 'provider_error' };
       }
 
       return {
         sessionId,
         ...(expiresAt ? { expiresAt } : {}),
-        ...(clientAuthToken ? { clientAuthToken } : {}),
+        clientAuthToken,
         reason: 'initialized',
       };
     } catch {
@@ -742,12 +752,10 @@ export class LivenessService {
 
       const records = Array.isArray(payload.data) ? payload.data : [];
       // Find the record matching this specific session, or use the first returned.
-      const record =
-        records.find((r) => r.sessionId === evidence.sessionId) ?? records[0];
+      const record = records.find((r) => r.sessionId === evidence.sessionId) ?? records[0];
 
       if (!record) {
         // No result yet — SDK has not submitted liveness data.
-        // Allow the fallback chain to continue (e.g. to internal_free_service).
         return { passed: false, reason: 'provider_error' };
       }
 
@@ -762,9 +770,7 @@ export class LivenessService {
 
   // ── Smile Identity Liveness ──────────────────────────────────────────────────
 
-  private async initializeSmileIdentitySession(
-    input: LivenessSessionInitInput,
-  ): Promise<{
+  private async initializeSmileIdentitySession(input: LivenessSessionInitInput): Promise<{
     sessionId?: string;
     clientAuthToken?: string;
     expiresAt?: string;
@@ -788,7 +794,9 @@ export class LivenessService {
     }
 
     const timestamp = new Date().toISOString();
-    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
+    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString(
+      'base64',
+    );
 
     try {
       const response = await requestProviderJson({
@@ -860,7 +868,9 @@ export class LivenessService {
     const jobId = evidence.sessionId.slice(separatorIndex + 2);
 
     const timestamp = new Date().toISOString();
-    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString('base64');
+    const signature = hmac(Buffer.from(apiKey), `${timestamp}${partnerId}sid_request`).toString(
+      'base64',
+    );
 
     try {
       const response = await requestProviderJson({
@@ -893,8 +903,7 @@ export class LivenessService {
         return { passed: false, reason: 'session_pending' };
       }
 
-      const passed =
-        payload.job_success === true && payload.Actions?.Liveness_Check === 'Passed';
+      const passed = payload.job_success === true && payload.Actions?.Liveness_Check === 'Passed';
 
       return {
         passed,

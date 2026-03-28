@@ -50,17 +50,13 @@ interface VerificationBillingPolicyResponse {
 
 /**
  * Default routing used when control plane is unreachable (e.g. local dev).
- * azure_face is first; internal_free_service is the final fallback.
+ * YouVerify is the only permitted liveness provider — no camera-capture fallbacks.
+ * If YouVerify is not configured the session init will fail rather than silently
+ * degrade to an internal assertion.
  */
 export const DEFAULT_LIVENESS_ROUTING: IdentityVerificationRoutingCountrySetting = {
   countryCode: '*',
-  livenessProviders: [
-    { name: 'azure_face', enabled: true, priority: 1 },
-    { name: 'amazon_rekognition', enabled: true, priority: 2 },
-    { name: 'youverify', enabled: true, priority: 3 },
-    { name: 'smile_identity', enabled: true, priority: 4 },
-    { name: 'internal_free_service', enabled: true, priority: 5 },
-  ],
+  livenessProviders: [{ name: 'youverify', enabled: true, priority: 1 }],
   lookupProviders: [
     {
       name: 'youverify',
@@ -75,8 +71,8 @@ export const DEFAULT_LIVENESS_ROUTING: IdentityVerificationRoutingCountrySetting
       allowedIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
     },
   ],
-  fallbackOnProviderError: true,
-  fallbackOnProviderUnavailable: true,
+  fallbackOnProviderError: false,
+  fallbackOnProviderUnavailable: false,
   fallbackOnNoMatch: false,
 };
 

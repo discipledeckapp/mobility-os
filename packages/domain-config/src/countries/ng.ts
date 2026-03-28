@@ -25,8 +25,20 @@ export const NG: CountryConfig = {
    * These map to generic identifier types in the intelligence/domain layer.
    */
   supportedIdentifierTypes: [
-    { type: 'NATIONAL_ID', label: 'NIN (National Identification Number)', exactLength: 11, numericOnly: true, required: true },
-    { type: 'BANK_ID', label: 'BVN (Bank Verification Number)', exactLength: 11, numericOnly: true, required: false },
+    {
+      type: 'NATIONAL_ID',
+      label: 'NIN (National Identification Number)',
+      exactLength: 11,
+      numericOnly: true,
+      required: true,
+    },
+    {
+      type: 'BANK_ID',
+      label: 'BVN (Bank Verification Number)',
+      exactLength: 11,
+      numericOnly: true,
+      required: false,
+    },
     { type: 'PHONE', label: 'Phone Number' },
   ],
   /**
@@ -78,7 +90,7 @@ export const NG: CountryConfig = {
       },
       {
         name: 'internal_free_service',
-        supportsLiveness: true,
+        supportsLiveness: false,
         supportsLookup: false,
         allowedLookupIdentifierTypes: [],
       },

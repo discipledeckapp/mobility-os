@@ -273,12 +273,6 @@ export function DriverIdentityVerification({
       hasClientAuthToken: Boolean(session.clientAuthToken),
       fallbackChain: session.fallbackChain,
     });
-    if (session.providerName === 'internal_free_service') {
-      console.warn(
-        '[DriverVerification] using internal_free_service — no third-party liveness SDK ran. ' +
-          'The selfie captured by the camera is sent to the NIN verification provider for face matching.',
-      );
-    }
     if (session.providerName === 'youverify') {
       if (session.clientAuthToken) {
         console.info(
@@ -286,9 +280,9 @@ export function DriverIdentityVerification({
             'The youverify-liveness-web SDK will run on "Launch face verification".',
         );
       } else {
-        console.warn(
-          '[DriverVerification] YouVerify session created but clientAuthToken is missing. ' +
-            'Falling back to camera capture; selfie will be sent to YouVerify for NIN photo matching.',
+        console.error(
+          '[DriverVerification] YouVerify session initialised but clientAuthToken is absent. ' +
+            'This is a configuration error — YOUVERIFY_PUBLIC_MERCHANT_ID may be missing.',
         );
       }
     }
@@ -634,45 +628,53 @@ export function DriverIdentityVerification({
                 </form>
               ) : null}
 
-              {/* Session active — YouVerify SDK path or camera fallback */}
+              {/* Session active — YouVerify SDK path, hard error, or camera for other providers */}
               {session && !livenessDone ? (
-                session.providerName === 'youverify' && session.clientAuthToken ? (
-                  /* YouVerify browser SDK — launches the native liveness modal */
-                  <div className="space-y-3">
-                    <Text tone="muted">
-                      Click below to open the face verification window. Follow the on-screen prompts
-                      to complete your liveness check.
-                    </Text>
-                    <Button
-                      disabled={isLaunchingYv}
-                      onClick={() => void launchYouVerifySDK()}
-                      type="button"
-                    >
-                      {isLaunchingYv ? (
-                        <span className="flex items-center gap-2">
-                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                          Opening…
-                        </span>
-                      ) : (
-                        'Launch face verification'
-                      )}
-                    </Button>
-                    {yvSdkError ? (
-                      <div className="space-y-2">
-                        <Text tone="danger">{yvSdkError}</Text>
-                        <Button
-                          onClick={() => setYvSdkError(null)}
-                          size="sm"
-                          type="button"
-                          variant="ghost"
-                        >
-                          Try again
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
+                session.providerName === 'youverify' ? (
+                  session.clientAuthToken ? (
+                    /* YouVerify browser SDK — launches the native liveness modal */
+                    <div className="space-y-3">
+                      <Text tone="muted">
+                        Click below to open the face verification window. Follow the on-screen
+                        prompts to complete your liveness check.
+                      </Text>
+                      <Button
+                        disabled={isLaunchingYv}
+                        onClick={() => void launchYouVerifySDK()}
+                        type="button"
+                      >
+                        {isLaunchingYv ? (
+                          <span className="flex items-center gap-2">
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            Opening…
+                          </span>
+                        ) : (
+                          'Launch face verification'
+                        )}
+                      </Button>
+                      {yvSdkError ? (
+                        <div className="space-y-2">
+                          <Text tone="danger">{yvSdkError}</Text>
+                          <Button
+                            onClick={() => setYvSdkError(null)}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            Try again
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    /* YouVerify session missing auth token — hard configuration error */
+                    <div className="rounded-[var(--mobiris-radius-card)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      Face liveness verification is not available right now. Please contact support
+                      or try again later.
+                    </div>
+                  )
                 ) : (
-                  /* Camera capture path — internal_free_service or provider without clientAuthToken */
+                  /* Camera capture path — non-YouVerify providers (azure_face, smile_identity, etc.) */
                   <div className="space-y-3">
                     {/* Guidance text */}
                     <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-700">

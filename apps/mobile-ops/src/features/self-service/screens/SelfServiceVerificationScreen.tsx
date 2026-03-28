@@ -10,7 +10,8 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -679,14 +680,47 @@ export function SelfServiceVerificationScreen({
     }
   };
 
+  // Auto-refresh when the screen gains focus while payment is pending.
+  // This covers the Paystack return path: Paystack redirects to the
+  // mobiris://self-service/verify deep link, which focuses this screen.
+  // Without this refresh, the driver state stays stale and the user sees
+  // the payment step again even after a successful payment.
+  useFocusEffect(
+    useCallback(() => {
+      if (!token || !needsVerificationPayment) return;
+      refreshSelfService().catch(() => undefined);
+    }, [token, needsVerificationPayment, refreshSelfService]),
+  );
+
   const onConfirmPayment = async () => {
+    if (!token) return;
+    // Use the checkout initiation endpoint as the primary recovery path — it
+    // returns already_paid when payment is confirmed, which is more reliable
+    // than relying solely on the driver state refresh timing.
     try {
+      const checkout = await initiateDriverKycCheckout(
+        token,
+        'paystack',
+        buildSelfServiceVerificationDeepLink(),
+      );
+      if (checkout.status === 'already_paid' || !checkout.checkoutUrl) {
+        await refreshSelfService();
+        showToast('Payment confirmed — continuing to verification.', 'success');
+        setCurrentStep('identity');
+        return;
+      }
+      // Payment genuinely not found yet — refresh state and stay on step.
       await refreshSelfService();
-      showToast('Payment status refreshed.', 'success');
+      showToast(
+        'Payment not confirmed yet. If you completed payment, wait a moment and try again.',
+        'info',
+      );
     } catch (error) {
       Alert.alert(
-        'Payment',
-        error instanceof Error ? error.message : 'Unable to refresh payment status.',
+        'Payment recovery',
+        error instanceof Error
+          ? error.message
+          : 'Unable to check payment status. Please try again.',
       );
     }
   };
@@ -1240,6 +1274,15 @@ export function SelfServiceVerificationScreen({
               ? 'Center your face, move closer if needed, and hold still for a clear capture.'
               : 'Take a clear face photo for your operator record.'}
           </Text>
+          {biometricVerificationRequired ? (
+            <View style={styles.livenessBrowserNotice}>
+              <Text style={styles.livenessBrowserNoticeText}>
+                Face liveness verification requires the YouVerify browser SDK and cannot run inside
+                this app. Open the verification link sent to you via SMS or email in a browser to
+                complete this step. Your selfie here is for your operator record only.
+              </Text>
+            </View>
+          ) : null}
 
           {selfiePreviewUri ? (
             <View style={styles.selfiePreviewContainer}>
@@ -1699,6 +1742,18 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: tokens.colors.primaryTint, borderColor: tokens.colors.primary },
   chipLabel: { color: tokens.colors.ink, fontSize: 13, fontWeight: '600' },
   chipLabelActive: { color: tokens.colors.primaryDark },
+  livenessBrowserNotice: {
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#fffbeb',
+    padding: tokens.spacing.sm,
+  },
+  livenessBrowserNoticeText: {
+    color: '#92400e',
+    fontSize: 13,
+    lineHeight: 18,
+  },
   selfiePreviewContainer: {
     gap: tokens.spacing.xs,
     borderRadius: tokens.radius.card,
