@@ -147,8 +147,8 @@ function PasswordLoginForm({ onSuccess }: { onSuccess: (token: string) => void }
   );
 }
 
-function EntryPage({ onToken }: { onToken: (token: string) => void }) {
-  const [view, setView] = useState<'otp' | 'login'>('otp');
+function EntryPage({ onToken, showSavedNotice }: { onToken: (token: string) => void; showSavedNotice?: boolean }) {
+  const [view, setView] = useState<'otp' | 'login'>('login');
   const router = useRouter();
 
   function handleSuccess(token: string) {
@@ -170,6 +170,11 @@ function EntryPage({ onToken }: { onToken: (token: string) => void }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {showSavedNotice ? (
+              <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                Your progress has been saved. Sign in below to continue where you left off.
+              </div>
+            ) : null}
             {view === 'otp' ? (
               <>
                 <OtpEntryForm onSuccess={handleSuccess} />
@@ -262,35 +267,47 @@ function formatMinorCurrency(amountMinorUnits: number, currency?: string | null)
 
 function StepProgress({ currentStep }: { currentStep: FlowStep }) {
   const steps: Array<{ key: FlowStep; label: string }> = [
-    { key: 'account', label: 'Sign-in account' },
-    { key: 'profile', label: 'Profile' },
+    { key: 'account', label: 'Sign-in' },
     { key: 'consent', label: 'Consent' },
     { key: 'payment', label: 'Payment' },
-    { key: 'identity_verification', label: 'Live verification' },
+    { key: 'identity_verification', label: 'Verification' },
     { key: 'document_verification', label: 'Documents' },
     { key: 'manual_review', label: 'Review' },
     { key: 'complete', label: 'Complete' },
   ];
-  const currentIndex = steps.findIndex((step) => step.key === currentStep);
+  // Map 'profile' step to 'consent' for progress display (profile is auto-populated from NIN)
+  const displayStep = currentStep === 'profile' ? 'consent' : currentStep;
+  const currentIndex = steps.findIndex((step) => step.key === displayStep);
+
+  const pct = steps.length > 1 ? Math.round((currentIndex / (steps.length - 1)) * 100) : 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-      {steps.map((step, index) => (
-        <div className="flex items-center gap-2" key={step.key}>
-          <span
-            className={`rounded-full px-2.5 py-0.5 ${
-              index < currentIndex
-                ? 'bg-emerald-500 text-white'
-                : index === currentIndex
-                  ? 'bg-[var(--mobiris-primary)] text-white'
-                  : 'bg-slate-100 text-slate-500'
-            }`}
-          >
-            {index < currentIndex ? '✓' : `Step ${index + 1}`}
-          </span>
-          <span>{step.label}</span>
-        </div>
-      ))}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+        {steps.map((step, index) => (
+          <div className="flex items-center gap-2" key={step.key}>
+            <span
+              className={`rounded-full px-2.5 py-0.5 ${
+                index < currentIndex
+                  ? 'bg-emerald-500 text-white'
+                  : index === currentIndex
+                    ? 'bg-[var(--mobiris-primary)] text-white'
+                    : 'bg-slate-100 text-slate-500'
+              }`}
+            >
+              {index < currentIndex ? '✓' : `${index + 1}`}
+            </span>
+            <span className={index === currentIndex ? 'font-semibold text-[var(--mobiris-ink)]' : ''}>{step.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="relative h-1 w-full overflow-hidden rounded-full bg-slate-200">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-[var(--mobiris-primary)] transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-slate-400">{pct}% complete</p>
     </div>
   );
 }
@@ -298,6 +315,20 @@ function StepProgress({ currentStep }: { currentStep: FlowStep }) {
 // ---------------------------------------------------------------------------
 // Individual step components
 // ---------------------------------------------------------------------------
+
+function EyeToggleIcon({ show }: { show: boolean }) {
+  return show ? (
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" x2="23" y1="1" y2="23" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
 
 function AccountSetupStep({
   token,
@@ -311,6 +342,8 @@ function AccountSetupStep({
   const [email, setEmail] = useState(driver.email ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -367,25 +400,51 @@ function AccountSetupStep({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
+            autoComplete="email"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          />
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm password"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password (min. 8 characters)"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+              onClick={() => setShowPassword((v) => !v)}
+              type="button"
+            >
+              <EyeToggleIcon show={showPassword} />
+            </button>
+          </div>
+          {password.length > 0 && password.length < 8 ? (
+            <p className="text-xs text-amber-600">Use at least 8 characters.</p>
+          ) : null}
+          <div className="relative">
+            <input
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+              className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+              onClick={() => setShowConfirm((v) => !v)}
+              type="button"
+            >
+              <EyeToggleIcon show={showConfirm} />
+            </button>
+          </div>
           {error ? <Text tone="danger">{error}</Text> : null}
           <Button disabled={submitting} type="submit">
-            {submitting ? 'Creating account…' : 'Create sign-in account'}
+            {submitting ? 'Setting up your account…' : 'Create sign-in account'}
           </Button>
         </form>
       </CardContent>
@@ -871,7 +930,7 @@ function ManualReviewStep({ identityStatus }: { identityStatus?: string }) {
   );
 }
 
-function CompletionStep({ driver }: { driver: DriverRecord }) {
+function CompletionStep({ driver, onboardingStep }: { driver: DriverRecord; onboardingStep: OnboardingStepRecord }) {
   const statusLabel =
     driver.identityStatus === 'verified'
       ? 'Verification complete'
@@ -881,28 +940,87 @@ function CompletionStep({ driver }: { driver: DriverRecord }) {
           ? 'Verification needs another attempt'
           : 'Verification submitted';
 
+  const requiresGuarantor = onboardingStep.requiresGuarantor ?? false;
+  const guarantorVerified = onboardingStep.guarantorVerified ?? false;
+
   return (
-    <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
-      <CardHeader className="space-y-2">
-        <CardTitle>{statusLabel}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Text tone="muted">
-          {driver.identityStatus === 'verified'
-            ? 'Your verification and required onboarding steps are complete. Your organisation will contact you about your assignment.'
-            : driver.identityStatus === 'review_needed'
-              ? 'Your verification has been submitted and is now under review.'
-              : driver.identityStatus === 'failed'
-                ? 'We could not complete verification yet. Review the required steps and try again.'
-                : 'Your verification is complete.'}
-        </Text>
-        {!driver.hasMobileAccess ? (
+    <div className="space-y-6">
+      <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>{statusLabel}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
           <Text tone="muted">
-            Your sign-in account is not set up yet. Complete the app access step to sign in later.
+            {driver.identityStatus === 'verified'
+              ? 'Your identity verification and required onboarding steps are complete. Your organisation will contact you about your vehicle assignment.'
+              : driver.identityStatus === 'review_needed'
+                ? 'Your verification has been submitted and is under review. You will be contacted once a decision is made.'
+                : driver.identityStatus === 'failed'
+                  ? 'We could not complete verification yet. Review the required steps and try again.'
+                  : 'Your verification is complete.'}
           </Text>
-        ) : null}
-      </CardContent>
-    </Card>
+          {!driver.hasMobileAccess ? (
+            <Text tone="muted">
+              You can also sign in to the Mobiris driver app using your email and password.
+            </Text>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {requiresGuarantor && !guarantorVerified ? (
+        <Card className="border-amber-200 bg-amber-50/70 shadow-[0_24px_70px_-35px_rgba(15,23,42,0.15)]">
+          <CardHeader className="space-y-1">
+            <CardTitle>Guarantor verification required</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Text tone="muted">
+              Your organisation requires a guarantor to complete your onboarding. Your organisation
+              will send your guarantor a verification link separately. If your guarantor has not
+              received their link, ask your organisation to resend it.
+            </Text>
+            <Text tone="muted" className="text-xs">
+              A guarantor is someone who vouches for you and agrees to be responsible if needed.
+              They must complete their own identity check.
+            </Text>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+// Auto-advances past the profile step — profile data is populated from NIN.
+// If the driver already has name and DOB, skip straight through.
+function AutoAdvanceProfileStep({
+  token,
+  driver,
+  onComplete,
+}: {
+  token: string;
+  driver: DriverRecord;
+  onComplete: () => Promise<void>;
+}) {
+  const advanced = useRef(false);
+  useEffect(() => {
+    if (advanced.current) return;
+    advanced.current = true;
+    updateDriverSelfServiceProfile(token, {
+      firstName: driver.firstName ?? '',
+      lastName: driver.lastName ?? '',
+      dateOfBirth: driver.dateOfBirth ?? '',
+    })
+      .catch(() => {
+        // Best-effort — continue even if profile update fails
+      })
+      .finally(() => {
+        void onComplete();
+      });
+  }, [token, driver, onComplete]);
+
+  return (
+    <main className="flex min-h-[40vh] items-center justify-center">
+      <Text tone="muted">Continuing your onboarding…</Text>
+    </main>
   );
 }
 
@@ -939,8 +1057,26 @@ function DriverVerificationFlow({ token }: { token: string }) {
 
   if (state === 'loading') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4fb_100%)]">
-        <Text tone="muted">Loading your onboarding…</Text>
+      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4fb_100%)] px-4">
+        <div className="mx-auto w-full max-w-sm space-y-6 text-center">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
+              Mobiris
+            </p>
+            <p className="text-lg font-semibold text-[var(--mobiris-ink)]">Loading your onboarding</p>
+            <p className="text-sm text-slate-500">Fetching your progress — this only takes a moment.</p>
+          </div>
+          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="absolute inset-y-0 left-0 w-1/3 animate-[loading-bar_1.4s_ease-in-out_infinite] rounded-full bg-[var(--mobiris-primary)]" />
+          </div>
+        </div>
+        <style>{`
+          @keyframes loading-bar {
+            0% { left: -33%; width: 33%; }
+            50% { left: 50%; width: 33%; }
+            100% { left: 100%; width: 33%; }
+          }
+        `}</style>
       </main>
     );
   }
@@ -998,7 +1134,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
             <div className="flex flex-wrap gap-3">
               <a
                 className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                href="/driver-self-service"
+                href={`/driver-self-service?saved=1`}
               >
                 Save and exit
               </a>
@@ -1021,7 +1157,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
         ) : null}
 
         {currentStep === 'profile' ? (
-          <ProfileCompletionStep driver={driver} onComplete={refreshContext} token={token} />
+          <AutoAdvanceProfileStep driver={driver} onComplete={refreshContext} token={token} />
         ) : null}
 
         {currentStep === 'consent' ? (
@@ -1072,7 +1208,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
           />
         ) : null}
 
-        {currentStep === 'complete' ? <CompletionStep driver={driver} /> : null}
+        {currentStep === 'complete' ? <CompletionStep driver={driver} onboardingStep={onboardingStep} /> : null}
       </div>
     </main>
   );
@@ -1087,9 +1223,10 @@ function DriverSelfServiceInner() {
   const [tokenOverride, setTokenOverride] = useState<string | null>(null);
 
   const token = tokenOverride ?? searchParams?.get('token') ?? null;
+  const saved = searchParams?.get('saved') === '1';
 
   if (!token) {
-    return <EntryPage onToken={setTokenOverride} />;
+    return <EntryPage onToken={setTokenOverride} showSavedNotice={saved} />;
   }
 
   return <DriverVerificationFlow token={token} />;

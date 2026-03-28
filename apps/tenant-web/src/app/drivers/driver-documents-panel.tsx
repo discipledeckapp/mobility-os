@@ -238,55 +238,58 @@ export function DriverDocumentsPanel({
         <CardTitle>Driver documents</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form action={formAction} className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]">
-          {mode === 'self_service' ? (
-            <input name="token" type="hidden" value={selfServiceToken ?? ''} />
-          ) : (
-            <input name="driverId" type="hidden" value={driverId} />
-          )}
-          <SearchableSelect
-            inputId={`driver-document-type-${driverId}`}
-            label="Document type"
-            name="documentType"
-            onChange={setDocumentType}
-            options={mode === 'self_service' ? allDocumentOptions : requiredDocumentOptions}
-            placeholder="Select document type"
-            required
-            value={documentType}
-          />
-          <div className="space-y-2">
-            <Label htmlFor={`driver-document-file-${driverId}`}>Document file</Label>
-            <input
-              accept="application/pdf,image/jpeg,image/png,image/webp"
-              className="block w-full rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 py-2 text-sm text-[var(--mobiris-ink)]"
-              id={`driver-document-file-${driverId}`}
-              name="documentFile"
-              type="file"
-            />
-            <Text tone="muted">
-              Upload PDF, JPEG, PNG, or WEBP files up to 10 MB. Document content must match the file type.
-            </Text>
-          </div>
-          <div className="flex items-end">
-            <ActionPendingButtonState
-              label="Upload document"
-              pending={isPending}
-              pendingLabel="Uploading securely"
-              type="submit"
-            />
-          </div>
-        </form>
-
-        {isPending ? (
-          <InlineLoadingState
-            message="Preparing the file, validating it, and attaching it to the driver record."
-            title="Uploading document"
-            variant="upload"
-          />
-        ) : null}
-        {state.error ? <Text tone="danger">{state.error}</Text> : null}
-        {removeError ? <Text tone="danger">{removeError}</Text> : null}
-        {state.success ? <Text tone="success">{state.success}</Text> : null}
+        {mode === 'self_service' ? (
+          <>
+            <form action={formAction} className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+              <input name="token" type="hidden" value={selfServiceToken ?? ''} />
+              <SearchableSelect
+                inputId={`driver-document-type-${driverId}`}
+                label="Document type"
+                name="documentType"
+                onChange={setDocumentType}
+                options={allDocumentOptions}
+                placeholder="Select document type"
+                required
+                value={documentType}
+              />
+              <div className="space-y-2">
+                <Label htmlFor={`driver-document-file-${driverId}`}>Document file</Label>
+                <input
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  className="block w-full rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-3 py-2 text-sm text-[var(--mobiris-ink)]"
+                  id={`driver-document-file-${driverId}`}
+                  name="documentFile"
+                  type="file"
+                />
+                <Text tone="muted">
+                  Upload PDF, JPEG, PNG, or WEBP files up to 10 MB. Document content must match the file type.
+                </Text>
+              </div>
+              <div className="flex items-end">
+                <ActionPendingButtonState
+                  label="Upload document"
+                  pending={isPending}
+                  pendingLabel="Uploading securely"
+                  type="submit"
+                />
+              </div>
+            </form>
+            {isPending ? (
+              <InlineLoadingState
+                message="Preparing the file, validating it, and attaching it to the driver record."
+                title="Uploading document"
+                variant="upload"
+              />
+            ) : null}
+            {state.error ? <Text tone="danger">{state.error}</Text> : null}
+            {removeError ? <Text tone="danger">{removeError}</Text> : null}
+            {state.success ? <Text tone="success">{state.success}</Text> : null}
+          </>
+        ) : (
+          <Text tone="muted">
+            Documents are submitted by drivers during self-service onboarding. Use the review controls below to approve or reject each document.
+          </Text>
+        )}
         <div className="space-y-3">
           {documents.length === 0 ? (
             <div className="flex h-36 items-center justify-center rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-dashed border-[var(--mobiris-border)] bg-slate-50 p-6 text-center">

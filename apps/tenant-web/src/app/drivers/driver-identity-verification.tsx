@@ -408,14 +408,11 @@ export function DriverIdentityVerification({
                   ) : null}
                 </span>
               </label>
-              <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit" variant="ghost">
+              <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit">
                 {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
               </Button>
             </form>
           </span>
-          <Button onClick={() => setIsOpen((current) => !current)} size="sm" variant="secondary">
-            {isOpen ? 'Hide verification' : identityStatus === 'verified' ? 'Re-verify identity' : 'Verify identity'}
-          </Button>
           <Button onClick={() => router.refresh()} size="sm" variant="ghost">
             Refresh verification status
           </Button>
@@ -433,7 +430,7 @@ export function DriverIdentityVerification({
           <Text tone="success">{sendState.success}</Text>
           {sendState.delivery ? (
             <>
-              <Text tone="muted">{sendState.delivery.verificationUrl}</Text>
+              <Text tone="muted">Share the link directly with the driver using the buttons below.</Text>
               <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={async () => {

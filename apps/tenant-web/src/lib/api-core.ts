@@ -2296,6 +2296,8 @@ export type OnboardingStepRecord = {
   hasConsentOnFile?: boolean;
   requiredDocumentTypes?: string[];
   verifiedDocumentTypes?: string[];
+  requiresGuarantor?: boolean;
+  guarantorVerified?: boolean;
 };
 
 export async function getDriverOnboardingStep(

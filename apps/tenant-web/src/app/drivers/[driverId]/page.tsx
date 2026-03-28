@@ -145,10 +145,10 @@ export default async function DriverDetailsPage({
   searchParams,
 }: {
   params: Promise<{ driverId: string }>;
-  searchParams: Promise<{ tab?: string; walletWarning?: string }>;
+  searchParams: Promise<{ tab?: string; walletWarning?: string; created?: string }>;
 }) {
   const { driverId } = await params;
-  const { tab, walletWarning } = await searchParams;
+  const { tab, walletWarning, created } = await searchParams;
   const token = await getTenantApiToken().catch(() => undefined);
 
   const [driver, assignments, remittances, vehicles, fleets, tenant, documents, guarantor, mobileAccess] = await Promise.all([
@@ -194,6 +194,29 @@ export default async function DriverDetailsPage({
       eyebrow="Operators"
       title="Driver readiness"
     >
+      {/* Driver created success banner */}
+      {created === '1' ? (
+        <Card className="border-emerald-300 bg-emerald-50/80">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-start gap-3">
+              <svg aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-600" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-emerald-900">Driver created — invitation sent</p>
+                <p className="text-sm text-emerald-800">
+                  A self-service link was sent automatically to the driver&apos;s email. The current policy requires{' '}
+                  <strong>{tenant?.driverPaysKyc ? 'the driver to pay ₦5,000' : 'the organisation wallet to cover the cost'}</strong>{' '}
+                  for identity verification. Request the driver to self-verify below, or{' '}
+                  <a className="font-semibold underline hover:no-underline" href="/settings?section=drivers">adjust in Settings → Drivers</a>.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Wallet warning banner */}
       {walletWarning === '1' ? (
         <Card className="border-amber-300 bg-amber-50/80">
@@ -612,7 +635,7 @@ export default async function DriverDetailsPage({
                 <DriverIdentityVerification
                   defaultCountryCode={tenant?.country ?? null}
                   driver={driver}
-                  orgDriverPaysKyc={tenant?.driverPaysKyc ?? false}
+                  orgDriverPaysKyc={tenant?.driverPaysKyc ?? true}
                 />
               </CardContent>
             </Card>

@@ -1615,6 +1615,8 @@ export class DriversService {
     hasConsentOnFile?: boolean;
     requiredDocumentTypes?: string[];
     verifiedDocumentTypes?: string[];
+    requiresGuarantor?: boolean;
+    guarantorVerified?: boolean;
   }> {
     const payload = await this.verifySelfServiceToken(token);
     const [driver, settings] = await Promise.all([
@@ -1762,12 +1764,31 @@ export class DriversService {
       }
     }
 
-    // All steps done
+    // All steps done — include guarantor status for completion screen
+    const requiresGuarantor = settings.operations.requireGuarantor !== false;
+    let guarantorVerified = !requiresGuarantor;
+    if (requiresGuarantor) {
+      const guarantor = await this.prisma.driverGuarantor.findFirst({
+        where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
+        select: { id: true, identityStatus: true },
+      });
+      const needsGuarantorVerification = settings.operations.requireGuarantorVerification === true;
+      if (guarantor) {
+        guarantorVerified = needsGuarantorVerification
+          ? guarantor.identityStatus === 'verified'
+          : true;
+      } else {
+        guarantorVerified = false;
+      }
+    }
+
     return {
       step: 'complete',
       reason: 'All onboarding requirements are met.',
       identityStatus: driver.identityStatus,
       verificationState,
+      requiresGuarantor,
+      guarantorVerified,
     };
   }
 

@@ -574,7 +574,7 @@ export function SettingsPanel({
                         </p>
                         <label className="flex items-center gap-3 text-sm">
                           <input
-                            defaultChecked={!(tenant.driverPaysKyc ?? false)}
+                            defaultChecked={!(tenant.driverPaysKyc ?? true)}
                             disabled={!requiresIdentityVerification}
                             name="driverPaysKyc"
                             type="radio"
@@ -587,7 +587,7 @@ export function SettingsPanel({
                         <label className="flex items-start gap-3 text-sm">
                           <input
                             className="mt-0.5"
-                            defaultChecked={tenant.driverPaysKyc ?? false}
+                            defaultChecked={tenant.driverPaysKyc ?? true}
                             disabled={!requiresIdentityVerification}
                             name="driverPaysKyc"
                             type="radio"

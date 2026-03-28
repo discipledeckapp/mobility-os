@@ -200,7 +200,7 @@ export async function createDriverAction(
     // Non-blocking — don't fail driver creation over a balance check
   }
 
-  redirect(`/drivers/${driverId}?tab=verification${walletWarning ? '&walletWarning=1' : ''}`);
+  redirect(`/drivers/${driverId}?tab=verification&created=1${walletWarning ? '&walletWarning=1' : ''}`);
 }
 
 function getOptionalTrimmedValue(formData: FormData, key: string): string {
@@ -452,17 +452,17 @@ export async function resolveDriverSelfServiceVerificationAction(
   const subjectConsent = getOptionalBooleanValue(formData, 'subjectConsent');
   const selfieImageBase64 = await getOptionalImageBase64(formData, 'selfieImage');
   const enteredIdentifiers = getIdentifierValues(formData);
-  const verificationMode = getOptionalTrimmedValue(formData, 'verificationMode');
-
   if (!token) {
     return {
       error: 'The self-service verification link is missing or expired.',
     };
   }
 
-  if (verificationMode !== 'manual' && !sessionId) {
+  // Biometric liveness is always required in the self-service flow. The 'manual'
+  // mode is reserved for operator-initiated manual override only, not self-service.
+  if (!sessionId) {
     return {
-      error: 'Start live verification before submitting this identity check.',
+      error: 'Complete the live selfie check before submitting your identity verification.',
     };
   }
 

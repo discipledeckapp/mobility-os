@@ -105,14 +105,16 @@ function getCountryDocumentDefaults(countryCode?: string | null): {
 } {
   if (!countryCode || !isCountrySupported(countryCode)) {
     return {
-      requiredDriverDocumentSlugs: [],
+      requiredDriverDocumentSlugs: ['national-id'],
       requiredVehicleDocumentSlugs: ['vehicle-license', 'insurance'],
     };
   }
 
   const country = getCountryConfig(countryCode as string);
   return {
-    requiredDriverDocumentSlugs: [],
+    requiredDriverDocumentSlugs: country.requiredDriverDocumentSlugs?.length
+      ? country.requiredDriverDocumentSlugs
+      : ['national-id'],
     requiredVehicleDocumentSlugs: country.requiredVehicleDocumentSlugs,
   };
 }
@@ -266,7 +268,7 @@ export function readOrganisationSettings(
         documentDefaults.requiredVehicleDocumentSlugs,
       ),
       driverPaysKyc:
-        typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : false,
+        typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : true,
       requireGuarantor:
         typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : true,
       requireGuarantorVerification:
