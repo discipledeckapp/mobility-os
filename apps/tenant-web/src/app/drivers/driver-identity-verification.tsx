@@ -260,6 +260,11 @@ export function DriverIdentityVerification({
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
 
+  const youVerifySandboxEnvironment = (() => {
+    const raw = process.env.NEXT_PUBLIC_YOUVERIFY_SANDBOX?.trim().toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+  })();
+
   // Attach stream after the container finishes expanding (fixes black screen on
   // mobile Safari/Chrome where play() into a zero-height element renders black).
   // We wait ~200 ms for the CSS max-h transition to settle before calling play().
@@ -293,7 +298,7 @@ export function DriverIdentityVerification({
       const sdk = new WebSDK({
         sessionId: session.sessionId,
         sessionToken: session.clientAuthToken,
-        sandboxEnvironment: process.env.NODE_ENV !== 'production',
+        sandboxEnvironment: youVerifySandboxEnvironment,
         presentation: 'modal',
         onSuccess(data) {
           const raw = data.faceImage ?? '';

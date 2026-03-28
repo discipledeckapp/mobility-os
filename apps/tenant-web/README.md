@@ -67,10 +67,14 @@ pnpm --filter tenant-web build
 
 Key variables:
 - `NEXT_PUBLIC_API_URL` — URL of `api-core`
+- `NEXT_PUBLIC_YOUVERIFY_SANDBOX` — set to `true` when tenant-web should initialize the YouVerify web SDK in sandbox mode
 - `NODE_ENV` — set by Vercel automatically
 
 For production, point `NEXT_PUBLIC_API_URL` at the deployed `api-core` base URL, e.g.
 `https://mobility-os-api-core.onrender.com/api/v1`.
+
+If you are running a production deployment against YouVerify sandbox credentials for a pilot,
+set `NEXT_PUBLIC_YOUVERIFY_SANDBOX=true`. Do not rely on `NODE_ENV` to infer sandbox mode.
 
 ## Related Docs
 

@@ -213,6 +213,10 @@ services:
         sync: false
       - key: YOUVERIFY_LIVENESS_MOCK_RESPONSE
         sync: false
+      - key: YOUVERIFY_PUBLIC_MERCHANT_ID
+        sync: false
+      - key: YOUVERIFY_WEBHOOK_SIGNING_KEY
+        sync: false
       - key: SMILE_IDENTITY_API_KEY
         sync: false
       - key: SMILE_IDENTITY_PARTNER_ID
@@ -256,6 +260,8 @@ services:
       - key: PORT
         value: 3000
       - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_YOUVERIFY_SANDBOX
         sync: false
 
   - type: web
