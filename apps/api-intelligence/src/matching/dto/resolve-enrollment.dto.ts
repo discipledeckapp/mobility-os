@@ -61,12 +61,22 @@ export class IdentityValidationDataDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  middleName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   lastName?: string;
 
   @ApiPropertyOptional({ description: 'ISO-8601 date string' })
   @IsOptional()
   @IsString()
   dateOfBirth?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  gender?: string;
 }
 
 export class ProviderVerificationContextDto {

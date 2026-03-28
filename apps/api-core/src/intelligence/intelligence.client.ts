@@ -137,6 +137,12 @@ interface PersonRolePresence {
   hasMultiRolePresence: boolean;
 }
 
+interface SecondaryIdentityEvidenceResult {
+  reviewCaseId: string | null;
+  riskScore: number;
+  riskBand: string;
+}
+
 @Injectable()
 export class IntelligenceClient {
   constructor(private readonly configService: ConfigService) {}
@@ -228,9 +234,13 @@ export class IntelligenceClient {
     identifierValue: string;
     validationData?: {
       firstName?: string;
+      middleName?: string;
       lastName?: string;
       dateOfBirth?: string;
+      gender?: string;
     };
+    selfieImageBase64?: string;
+    selfieImageUrl?: string;
   }): Promise<MatchingResult> {
     return this.post<MatchingResult>('/api/v1/internal/matching/enrollments', {
       tenantId: input.tenantId,
@@ -247,6 +257,8 @@ export class IntelligenceClient {
             providerVerification: {
               subjectConsent: true,
               validationData: input.validationData,
+              ...(input.selfieImageBase64 ? { selfieImageBase64: input.selfieImageBase64 } : {}),
+              ...(input.selfieImageUrl ? { selfieImageUrl: input.selfieImageUrl } : {}),
             },
           }
         : {}),
@@ -258,6 +270,74 @@ export class IntelligenceClient {
       '/api/v1/internal/persons/retire-biometric-assets',
       {
         urls,
+      },
+    );
+  }
+
+  async recordDriverLicenceEvidence(input: {
+    personId: string;
+    tenantId: string;
+    driverId: string;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    providerName?: string;
+    providerReference?: string | null;
+    validity?: string | null;
+    issueDate?: string | null;
+    expiryDate?: string | null;
+    demographicMatchScore?: number | null;
+    biometricMatchScore?: number | null;
+    overallLinkageScore?: number | null;
+    linkageReasons?: string[];
+    manualReviewRequired: boolean;
+    evidence?: Record<string, unknown>;
+  }): Promise<SecondaryIdentityEvidenceResult> {
+    return this.post<SecondaryIdentityEvidenceResult>(
+      '/api/v1/internal/persons/secondary-identity-evidence',
+      {
+        personId: input.personId,
+        tenantId: input.tenantId,
+        driverId: input.driverId,
+        linkageDecision: input.linkageDecision,
+        ...(input.providerName ? { providerName: input.providerName } : {}),
+        ...(input.providerReference ? { providerReference: input.providerReference } : {}),
+        ...(input.validity ? { validity: input.validity } : {}),
+        ...(input.issueDate ? { issueDate: input.issueDate } : {}),
+        ...(input.expiryDate ? { expiryDate: input.expiryDate } : {}),
+        ...(input.demographicMatchScore !== null && input.demographicMatchScore !== undefined
+          ? { demographicMatchScore: input.demographicMatchScore }
+          : {}),
+        ...(input.biometricMatchScore !== null && input.biometricMatchScore !== undefined
+          ? { biometricMatchScore: input.biometricMatchScore }
+          : {}),
+        ...(input.overallLinkageScore !== null && input.overallLinkageScore !== undefined
+          ? { overallLinkageScore: input.overallLinkageScore }
+          : {}),
+        ...(input.linkageReasons?.length ? { linkageReasons: input.linkageReasons } : {}),
+        manualReviewRequired: input.manualReviewRequired,
+        ...(input.evidence ? { evidence: input.evidence } : {}),
+      },
+    );
+  }
+
+  async resolveDriverLicenceEvidenceReview(input: {
+    personId: string;
+    reviewCaseId: string;
+    decision: 'approved' | 'rejected' | 'request_reverification';
+    reviewerId: string;
+    reviewerRole: string;
+    notes?: string;
+    evidenceSnapshot?: Record<string, unknown>;
+  }): Promise<SecondaryIdentityEvidenceResult> {
+    return this.post<SecondaryIdentityEvidenceResult>(
+      '/api/v1/internal/persons/secondary-identity-evidence/review',
+      {
+        personId: input.personId,
+        reviewCaseId: input.reviewCaseId,
+        decision: input.decision,
+        reviewerId: input.reviewerId,
+        reviewerRole: input.reviewerRole,
+        ...(input.notes ? { notes: input.notes } : {}),
+        ...(input.evidenceSnapshot ? { evidenceSnapshot: input.evidenceSnapshot } : {}),
       },
     );
   }

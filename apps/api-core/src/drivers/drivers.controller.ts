@@ -112,6 +112,42 @@ type DriverDocumentSummary = {
   pendingDocumentCount: number;
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
+  driverLicenceVerification?: {
+    id: string;
+    status: string;
+    licenceNumber: string;
+    maskedLicenceNumber: string;
+    validity: 'valid' | 'invalid' | 'unknown' | null;
+    issueDate: string | null;
+    expiryDate: string | null;
+    expiresSoon: boolean;
+    isExpired: boolean;
+    providerName: string | null;
+    providerReference: string | null;
+    holderFullName: string | null;
+    holderDateOfBirth: string | null;
+    holderGender: string | null;
+    stateOfIssuance: string | null;
+    licenceClass: string | null;
+    portraitUrl: string | null;
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    linkageConfidence: number | null;
+    overallLinkageScore: number | null;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    linkageReasons: string[];
+    reviewCaseId: string | null;
+    manualReviewRequired: boolean;
+    reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    reviewNotes: string | null;
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
+    failureReason: string | null;
+    verifiedAt: string | null;
+  } | null;
 };
 
 type DriverMobileAccessSummary = {
@@ -198,6 +234,23 @@ export class DriversController {
   ) {
     return this.service.listDocumentReviewQueue(ctx.tenantId, {
       ...(status ? { status } : {}),
+      ...(q ? { q } : {}),
+      ...(typeof page === 'number' ? { page } : {}),
+      ...(typeof limit === 'number' ? { limit } : {}),
+    });
+  }
+
+  @Get('licence-verifications/review-queue')
+  @RequirePermissions(Permission.DocumentsRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  listDriverLicenceReviewQueue(
+    @CurrentTenant() ctx: TenantContext,
+    @Query('q') q?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.service.listDriverLicenceReviewQueue(ctx.tenantId, {
       ...(q ? { q } : {}),
       ...(typeof page === 'number' ? { page } : {}),
       ...(typeof limit === 'number' ? { limit } : {}),
@@ -488,6 +541,27 @@ export class DriversController {
     );
   }
 
+  @Patch(':id/licence-verification/review')
+  @RequirePermissions(Permission.DocumentsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  reviewDriverLicenceVerification(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('decision') decision: 'approved' | 'rejected' | 'request_reverification',
+    @Body('notes') notes?: string,
+  ) {
+    if (!decision) {
+      throw new BadRequestException('decision is required');
+    }
+    return this.service.reviewDriverLicenceVerification(
+      ctx.tenantId,
+      id,
+      { decision, ...(notes ? { notes } : {}) },
+      ctx.userId ?? 'tenant_operator',
+    );
+  }
+
   @Post()
   @RequirePermissions(Permission.DriversWrite)
   @UseGuards(PermissionsGuard)
@@ -732,6 +806,8 @@ export class DriversController {
       pendingDocumentCount: driver.pendingDocumentCount ?? 0,
       rejectedDocumentCount: driver.rejectedDocumentCount ?? 0,
       expiredDocumentCount: driver.expiredDocumentCount ?? 0,
+      driverLicenceVerification:
+        (driver as Partial<DriverDocumentSummary>).driverLicenceVerification ?? null,
       authenticationAccess: driver.authenticationAccess ?? 'not_ready',
       authenticationAccessReasons: driver.authenticationAccessReasons ?? [],
       activationReadiness: driver.activationReadiness ?? 'not_ready',
@@ -885,6 +961,8 @@ export class DriverSelfServiceController {
       guarantorReverificationReason: guarantorSummary.guarantorReverificationReason ?? null,
       guarantorIsAlsoDriver: guarantorSummary.guarantorIsAlsoDriver ?? false,
       hasApprovedLicence: (driver as Partial<DriverDocumentSummary>).hasApprovedLicence ?? false,
+      driverLicenceVerification:
+        (driver as Partial<DriverDocumentSummary>).driverLicenceVerification ?? null,
       hasMobileAccess: (driver as Partial<DriverMobileAccessSummary>).hasMobileAccess ?? false,
       mobileAccessStatus: (driver as Partial<DriverMobileAccessSummary>).mobileAccessStatus ?? null,
       enabledDriverIdentifierTypes:

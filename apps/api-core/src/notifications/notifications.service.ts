@@ -1,9 +1,7 @@
-import { Logger, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Prisma, type User, type UserNotification, type UserPushDevice } from '@prisma/client';
 import { TenantRole } from '@mobility-os/authz-model';
-import { PrismaService } from '../database/prisma.service';
-import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import type { Prisma, User, UserNotification, UserPushDevice } from '@prisma/client';
 import {
   NOTIFICATION_TOPICS,
   type NotificationPreferenceMap,
@@ -11,7 +9,9 @@ import {
   readUserSettings,
   writeUserSettings,
 } from '../auth/user-settings';
-import { ZeptoMailService } from './zeptomail.service';
+import type { PrismaService } from '../database/prisma.service';
+import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
+import type { ZeptoMailService } from './zeptomail.service';
 
 type NotificationRecipient = Pick<
   User,
@@ -103,7 +103,9 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const activeTokens = devices
       .filter((device) => !device.disabledAt)
       .map((device) => device.deviceToken)
-      .filter((token) => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken['));
+      .filter(
+        (token) => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken['),
+      );
 
     if (activeTokens.length === 0) {
       return;
@@ -205,7 +207,11 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   async createNotificationForUser(
     user: NotificationRecipient,
     payload: NotificationPayload,
-    options: { tenantCountry?: string | null; dedupeWithinHours?: number; organisationName?: string | null } = {},
+    options: {
+      tenantCountry?: string | null;
+      dedupeWithinHours?: number;
+      organisationName?: string | null;
+    } = {},
   ): Promise<UserNotification | null> {
     const preferences = this.getUserPreferences(user, options.tenantCountry);
     const topicPreferences = preferences[payload.topic];
@@ -292,7 +298,11 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async markRead(tenantId: string, userId: string, notificationId: string): Promise<UserNotification> {
+  async markRead(
+    tenantId: string,
+    userId: string,
+    notificationId: string,
+  ): Promise<UserNotification> {
     const notification = await this.prisma.userNotification.findFirst({
       where: { id: notificationId, tenantId, userId },
       select: { id: true },
@@ -337,10 +347,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     return { message: 'Push device registered.' };
   }
 
-  async getPreferences(
-    tenantId: string,
-    userId: string,
-  ): Promise<NotificationPreferenceMap> {
+  async getPreferences(tenantId: string, userId: string): Promise<NotificationPreferenceMap> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, tenantId, isActive: true },
       include: { tenant: true },
@@ -358,7 +365,9 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   async updatePreferences(
     tenantId: string,
     userId: string,
-    nextPreferences: Partial<Record<NotificationTopic, Partial<NotificationPreferenceMap[NotificationTopic]>>>,
+    nextPreferences: Partial<
+      Record<NotificationTopic, Partial<NotificationPreferenceMap[NotificationTopic]>>
+    >,
   ): Promise<NotificationPreferenceMap> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, tenantId, isActive: true },
@@ -450,6 +459,46 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  private async getTenantDriverNotificationRecipients(tenantId: string, driverId: string) {
+    const [operatorUsers, linkedDriverUsers] = await Promise.all([
+      this.prisma.user.findMany({
+        where: {
+          tenantId,
+          isActive: true,
+          role: {
+            in: [TenantRole.TenantOwner, TenantRole.FleetManager, TenantRole.FinanceOfficer],
+          },
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          email: true,
+          name: true,
+          role: true,
+          driverId: true,
+          settings: true,
+        },
+      }),
+      this.prisma.user.findMany({
+        where: { tenantId, driverId, isActive: true },
+        select: {
+          id: true,
+          tenantId: true,
+          email: true,
+          name: true,
+          role: true,
+          driverId: true,
+          settings: true,
+        },
+      }),
+    ]);
+
+    return {
+      operators: operatorUsers,
+      driverUsers: linkedDriverUsers,
+    };
+  }
+
   private async createDirectDriverEmailNotification(input: {
     email: string;
     name: string;
@@ -476,9 +525,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
             };
       await this.mailer.sendEmail({
         to: [{ address: input.email, name: input.name }],
-        subject: input.organisationName
-          ? `${input.organisationName}: ${input.title}`
-          : input.title,
+        subject: input.organisationName ? `${input.organisationName}: ${input.title}` : input.title,
         htmlBody: this.buildNotificationEmailHtml(emailShellInput),
       });
     } catch (error) {
@@ -540,7 +587,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         maximumFractionDigits: 2,
       }).format(remittance.amountMinorUnits / 100);
       const companyName =
-        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name;
+        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
+        tenant.name;
       const driverFullName = `${driver.firstName} ${driver.lastName}`.trim();
       const recipients = await this.getReminderRecipients(tenantId, {
         driverId: remittance.driverId,
@@ -577,7 +625,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
-      if (driver.email && recipients.every((recipient) => recipient.driverId !== remittance.driverId)) {
+      if (
+        driver.email &&
+        recipients.every((recipient) => recipient.driverId !== remittance.driverId)
+      ) {
         await this.createDirectDriverEmailNotification({
           email: driver.email,
           name: driverFullName,
@@ -702,7 +753,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         schedule.vehicle.systemVehicleCode ||
         `${schedule.vehicle.make} ${schedule.vehicle.model}`.trim();
       const companyName =
-        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ?? tenant.name;
+        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
+        tenant.name;
       const assignment = activeAssignmentByVehicleId.get(schedule.vehicleId);
       const recipients = await this.getReminderRecipients(tenantId, {
         driverId: assignment?.driverId ?? null,
@@ -787,7 +839,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
       select: { country: true, metadata: true, name: true },
     });
     const organisationName = company
-      ? (readOrganisationSettings(company.metadata, company.country).branding.displayName ?? company.name)
+      ? (readOrganisationSettings(company.metadata, company.country).branding.displayName ??
+        company.name)
       : null;
     let created = 0;
 
@@ -810,6 +863,202 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
       if (notification) {
         created += 1;
       }
+    }
+
+    return { created };
+  }
+
+  async notifyDriverVerificationStatus(input: {
+    tenantId: string;
+    driverId: string;
+    driverName: string;
+    driverEmail?: string | null;
+    organisationName?: string | null;
+    tenantCountry?: string | null;
+    decision: 'verified' | 'failed' | 'pending';
+    detail: string;
+    actionUrl: string;
+  }): Promise<{ created: number }> {
+    const recipients = await this.getTenantDriverNotificationRecipients(
+      input.tenantId,
+      input.driverId,
+    );
+    const title =
+      input.decision === 'verified'
+        ? 'Driver verification completed'
+        : input.decision === 'failed'
+          ? 'Driver verification failed'
+          : 'Driver verification pending';
+    let created = 0;
+
+    for (const recipient of [...recipients.operators, ...recipients.driverUsers]) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'driver_verification_status',
+          title,
+          body: `${input.driverName}: ${input.detail}`,
+          actionUrl: input.actionUrl,
+          metadata: { driverId: input.driverId, decision: input.decision },
+        },
+        {
+          ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),
+          ...(input.organisationName !== undefined
+            ? { organisationName: input.organisationName }
+            : {}),
+        },
+      );
+      if (notification) created += 1;
+    }
+
+    if (input.driverEmail && recipients.driverUsers.length === 0) {
+      await this.createDirectDriverEmailNotification({
+        email: input.driverEmail,
+        name: input.driverName,
+        title,
+        body: input.detail,
+        ...(input.organisationName !== undefined
+          ? { organisationName: input.organisationName }
+          : {}),
+        ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
+      });
+    }
+
+    return { created };
+  }
+
+  async notifyDriverLicenceReviewPending(input: {
+    tenantId: string;
+    driverId: string;
+    driverName: string;
+    driverEmail?: string | null;
+    organisationName?: string | null;
+    tenantCountry?: string | null;
+    actionUrl: string;
+  }): Promise<{ created: number }> {
+    const recipients = await this.getTenantDriverNotificationRecipients(
+      input.tenantId,
+      input.driverId,
+    );
+    let created = 0;
+
+    for (const recipient of recipients.operators) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'driver_licence_review_pending',
+          title: 'Driver licence review required',
+          body: `${input.driverName}'s driver licence needs a human review before activation can continue.`,
+          actionUrl: input.actionUrl,
+          metadata: { driverId: input.driverId },
+        },
+        {
+          ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),
+          ...(input.organisationName !== undefined
+            ? { organisationName: input.organisationName }
+            : {}),
+        },
+      );
+      if (notification) created += 1;
+    }
+
+    for (const recipient of recipients.driverUsers) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'driver_licence_review_pending',
+          title: 'Driver licence review pending',
+          body: 'Your driver’s licence verification is pending review. We will notify you once a decision has been made.',
+          actionUrl: '/driver-self-service',
+          metadata: { driverId: input.driverId },
+        },
+        {
+          ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),
+          ...(input.organisationName !== undefined
+            ? { organisationName: input.organisationName }
+            : {}),
+        },
+      );
+      if (notification) created += 1;
+    }
+
+    if (input.driverEmail && recipients.driverUsers.length === 0) {
+      await this.createDirectDriverEmailNotification({
+        email: input.driverEmail,
+        name: input.driverName,
+        title: 'Driver licence review pending',
+        body: 'Your driver’s licence verification is pending review. We will notify you once a decision has been made.',
+        ...(input.organisationName !== undefined
+          ? { organisationName: input.organisationName }
+          : {}),
+        actionUrl: '/driver-self-service',
+      });
+    }
+
+    return { created };
+  }
+
+  async notifyDriverLicenceReviewResolved(input: {
+    tenantId: string;
+    driverId: string;
+    driverName: string;
+    driverEmail?: string | null;
+    organisationName?: string | null;
+    tenantCountry?: string | null;
+    decision: 'approved' | 'rejected' | 'request_reverification';
+    actionUrl: string;
+  }): Promise<{ created: number }> {
+    const recipients = await this.getTenantDriverNotificationRecipients(
+      input.tenantId,
+      input.driverId,
+    );
+    const title =
+      input.decision === 'approved'
+        ? 'Driver licence approved'
+        : input.decision === 'rejected'
+          ? 'Driver licence rejected'
+          : 'Driver licence re-verification requested';
+    const operatorBody = `${input.driverName}'s driver licence review was ${input.decision.replace(/_/g, ' ')}.`;
+    const driverBody =
+      input.decision === 'approved'
+        ? 'Your driver’s licence verification has been approved.'
+        : input.decision === 'rejected'
+          ? 'Your driver’s licence verification was rejected. Please contact your fleet manager or retry when instructed.'
+          : 'A new driver’s licence verification is required before onboarding can continue.';
+    let created = 0;
+
+    for (const recipient of [...recipients.operators, ...recipients.driverUsers]) {
+      const isDriverRecipient = recipient.driverId === input.driverId;
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'driver_licence_review_resolved',
+          title,
+          body: isDriverRecipient ? driverBody : operatorBody,
+          actionUrl: isDriverRecipient ? '/driver-self-service' : input.actionUrl,
+          metadata: { driverId: input.driverId, decision: input.decision },
+        },
+        {
+          ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),
+          ...(input.organisationName !== undefined
+            ? { organisationName: input.organisationName }
+            : {}),
+        },
+      );
+      if (notification) created += 1;
+    }
+
+    if (input.driverEmail && recipients.driverUsers.length === 0) {
+      await this.createDirectDriverEmailNotification({
+        email: input.driverEmail,
+        name: input.driverName,
+        title,
+        body: driverBody,
+        ...(input.organisationName !== undefined
+          ? { organisationName: input.organisationName }
+          : {}),
+        actionUrl: '/driver-self-service',
+      });
     }
 
     return { created };

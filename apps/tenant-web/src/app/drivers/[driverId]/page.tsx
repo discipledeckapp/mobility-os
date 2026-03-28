@@ -247,6 +247,7 @@ export default async function DriverDetailsPage({
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
   const driverDisplayName = getDriverDisplayName(driver);
   const identityProfile = getDriverIdentityProfile(driver);
+  const driverLicenceVerification = driver.driverLicenceVerification ?? null;
   const isUnverifiedDriver = driver.identityStatus !== 'verified';
   const verificationSteps = getVerificationStepSummary(driver);
   return (
@@ -942,6 +943,302 @@ export default async function DriverDetailsPage({
                       )}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 bg-white">
+                <CardHeader>
+                  <CardTitle>Driver&apos;s licence verification</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {driverLicenceVerification ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          tone={
+                            driverLicenceVerification.status === 'verified'
+                              ? 'success'
+                              : driverLicenceVerification.status === 'failed'
+                                ? 'danger'
+                                : 'warning'
+                          }
+                        >
+                          {driverLicenceVerification.status.replace(/_/g, ' ')}
+                        </Badge>
+                        <Badge
+                          tone={
+                            driverLicenceVerification.validity === 'valid'
+                              ? 'success'
+                              : driverLicenceVerification.validity === 'invalid'
+                                ? 'danger'
+                                : 'warning'
+                          }
+                        >
+                          Validity: {driverLicenceVerification.validity ?? 'unknown'}
+                        </Badge>
+                        <Badge
+                          tone={
+                            driverLicenceVerification.linkageStatus === 'matched'
+                              ? 'success'
+                              : driverLicenceVerification.linkageStatus === 'mismatch'
+                                ? 'danger'
+                                : 'warning'
+                          }
+                        >
+                          Linkage: {driverLicenceVerification.linkageStatus.replace(/_/g, ' ')}
+                        </Badge>
+                        <Badge
+                          tone={
+                            driverLicenceVerification.linkageDecision === 'auto_pass'
+                              ? 'success'
+                              : driverLicenceVerification.linkageDecision === 'fail'
+                                ? 'danger'
+                                : 'warning'
+                          }
+                        >
+                          Decision: {driverLicenceVerification.linkageDecision.replace(/_/g, ' ')}
+                        </Badge>
+                        <Badge
+                          tone={
+                            driverLicenceVerification.riskImpact === 'low'
+                              ? 'success'
+                              : driverLicenceVerification.riskImpact === 'medium'
+                                ? 'warning'
+                                : 'danger'
+                          }
+                        >
+                          Risk impact: {driverLicenceVerification.riskImpact}
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-1">
+                          <Text tone="muted">Licence number</Text>
+                          <Text>{driverLicenceVerification.maskedLicenceNumber}</Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Issue date</Text>
+                          <Text>{getSafeIdentityValue(driverLicenceVerification.issueDate)}</Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Expiry date</Text>
+                          <Text>{getSafeIdentityValue(driverLicenceVerification.expiryDate)}</Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">State of issuance</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.stateOfIssuance)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Licence class / type</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.licenceClass)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Verified at</Text>
+                          <Text>{getSafeIdentityValue(driverLicenceVerification.verifiedAt)}</Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Holder name</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderFullName)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Holder date of birth</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderDateOfBirth)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Holder gender</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderGender)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Demographic match</Text>
+                          <Text>
+                            {driverLicenceVerification.demographicMatchScore !== null
+                              ? `${driverLicenceVerification.demographicMatchScore}%`
+                              : 'Not returned'}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Biometric match</Text>
+                          <Text>
+                            {driverLicenceVerification.biometricMatchScore !== null
+                              ? `${driverLicenceVerification.biometricMatchScore}%`
+                              : 'Not returned'}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Overall linkage confidence</Text>
+                          <Text>
+                            {driverLicenceVerification.overallLinkageScore !== null
+                              ? `${driverLicenceVerification.overallLinkageScore}%`
+                              : 'Not returned'}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Review case</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.reviewCaseId)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Review decision</Text>
+                          <Text>
+                            {driverLicenceVerification.reviewDecision
+                              ? driverLicenceVerification.reviewDecision.replace(/_/g, ' ')
+                              : 'Not reviewed'}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Reviewed by</Text>
+                          <Text>{getSafeIdentityValue(driverLicenceVerification.reviewedBy)}</Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Reviewed at</Text>
+                          <Text>{getSafeIdentityValue(driverLicenceVerification.reviewedAt)}</Text>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="space-y-3">
+                          <Text tone="muted">Live selfie</Text>
+                          <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
+                            {identityProfile.selfieImageUrl ? (
+                              <img
+                                alt={`${driverDisplayName} live selfie`}
+                                className="aspect-[4/3] w-full object-cover"
+                                src={identityProfile.selfieImageUrl}
+                              />
+                            ) : (
+                              <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                                <Text tone="muted">Not returned.</Text>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <Text tone="muted">NIN portrait</Text>
+                          <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
+                            {identityProfile.providerImageUrl ? (
+                              <img
+                                alt={`${driverDisplayName} NIN portrait`}
+                                className="aspect-[4/3] w-full object-cover"
+                                src={identityProfile.providerImageUrl}
+                              />
+                            ) : (
+                              <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                                <Text tone="muted">Not returned.</Text>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <Text tone="muted">Licence portrait</Text>
+                          <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
+                            {driverLicenceVerification.portraitUrl ? (
+                              <img
+                                alt={`${driverDisplayName} driver's licence portrait`}
+                                className="aspect-[4/3] w-full object-cover"
+                                src={driverLicenceVerification.portraitUrl}
+                              />
+                            ) : (
+                              <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                                <Text tone="muted">Not returned.</Text>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-3">
+                          <Text tone="muted">Operational risk summary</Text>
+                          <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/70 p-4">
+                            <Text>{driverLicenceVerification.riskSummary}</Text>
+                            {driverLicenceVerification.failureReason ? (
+                              <Text tone="danger" className="mt-3">
+                                {driverLicenceVerification.failureReason}
+                              </Text>
+                            ) : null}
+                            {driverLicenceVerification.expiresSoon &&
+                            !driverLicenceVerification.isExpired ? (
+                              <Text tone="accent" className="mt-3">
+                                This licence is close to expiry and should be renewed soon.
+                              </Text>
+                            ) : null}
+                            {driverLicenceVerification.isExpired ? (
+                              <Text tone="danger" className="mt-3">
+                                This licence is expired and should block driver readiness until
+                                renewed.
+                              </Text>
+                            ) : null}
+                            {driverLicenceVerification.linkageReasons.length > 0 ? (
+                              <div className="mt-3 space-y-1">
+                                <Text tone="muted">Linkage notes</Text>
+                                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                                  {driverLicenceVerification.linkageReasons.map((reason) => (
+                                    <li key={reason}>{reason}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                            {driverLicenceVerification.reviewNotes ? (
+                              <Text tone="muted" className="mt-3">
+                                Review note: {driverLicenceVerification.reviewNotes}
+                              </Text>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <Text tone="muted">Manual review history</Text>
+                          <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/70 p-4">
+                            {driverLicenceVerification.reviewDecision ? (
+                              <>
+                                <Text tone="strong">
+                                  {driverLicenceVerification.reviewDecision === 'approved'
+                                    ? 'Manually approved'
+                                    : driverLicenceVerification.reviewDecision === 'rejected'
+                                      ? 'Manually rejected'
+                                      : 'Re-verification requested'}
+                                </Text>
+                                <Text className="mt-2">
+                                  Reviewer:{' '}
+                                  {getSafeIdentityValue(driverLicenceVerification.reviewedBy)}
+                                </Text>
+                                <Text className="mt-1">
+                                  Date: {getSafeIdentityValue(driverLicenceVerification.reviewedAt)}
+                                </Text>
+                              </>
+                            ) : driverLicenceVerification.manualReviewRequired ? (
+                              <Text>
+                                A human reviewer still needs to decide this licence verification.
+                              </Text>
+                            ) : (
+                              <Text tone="muted">No manual review decision has been recorded.</Text>
+                            )}
+                            <div className="mt-4">
+                              <Link
+                                className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                                href={`/drivers/${driver.id}/review`}
+                              >
+                                Open review flow
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <Text tone="muted">
+                      Driver&apos;s licence verification has not been requested for this driver yet.
+                    </Text>
+                  )}
                 </CardContent>
               </Card>
 

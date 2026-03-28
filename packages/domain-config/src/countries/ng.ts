@@ -45,7 +45,7 @@ export const NG: CountryConfig = {
    * Document type slugs required for driver onboarding.
    * These map to slugs in the document-types registry.
    */
-  requiredDriverDocumentSlugs: ['national-id', 'drivers-license'],
+  requiredDriverDocumentSlugs: ['national-id'],
   /**
    * Document type slugs required for vehicle registration.
    */
@@ -80,7 +80,7 @@ export const NG: CountryConfig = {
         name: 'youverify',
         supportsLiveness: true,
         supportsLookup: true,
-        allowedLookupIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        allowedLookupIdentifierTypes: ['NATIONAL_ID', 'BANK_ID', 'DRIVERS_LICENSE'],
       },
       {
         name: 'smile_identity',
@@ -100,7 +100,7 @@ export const NG: CountryConfig = {
         name: 'youverify',
         priority: 1,
         enabled: true,
-        allowedLookupIdentifierTypes: ['NATIONAL_ID', 'BANK_ID'],
+        allowedLookupIdentifierTypes: ['NATIONAL_ID', 'BANK_ID', 'DRIVERS_LICENSE'],
       },
       {
         name: 'smile_identity',

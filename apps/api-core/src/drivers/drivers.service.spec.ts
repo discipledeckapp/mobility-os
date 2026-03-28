@@ -24,6 +24,7 @@ describe('DriversService', () => {
     },
     driverDocumentVerification: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
     },
@@ -53,6 +54,7 @@ describe('DriversService', () => {
     resolveEnrollment: jest.fn(),
     queryPersonRisk: jest.fn(),
     queryPersonRolePresence: jest.fn(),
+    resolveDriverLicenceEvidenceReview: jest.fn(),
   };
   const jwtService = {
     signAsync: jest.fn(),
@@ -75,6 +77,11 @@ describe('DriversService', () => {
     evaluateDriverPolicies: jest.fn(),
     listActiveActionsByEntityIds: jest.fn(),
     applyDriverEnforcement: jest.fn((readiness: unknown) => readiness),
+  };
+  const notificationsService = {
+    notifyDriverVerificationStatus: jest.fn(),
+    notifyDriverLicenceReviewPending: jest.fn(),
+    notifyDriverLicenceReviewResolved: jest.fn(),
   };
 
   let service: DriversService;
@@ -128,6 +135,7 @@ describe('DriversService', () => {
       { fireEvent: jest.fn() } as never,
       { initializeDriverKycCheckout: jest.fn() } as never,
       policyService as never,
+      notificationsService as never,
       auditService as never,
     );
   });
@@ -410,6 +418,141 @@ describe('DriversService', () => {
     await expect(
       service.reviewDocument('tenant_1', 'driver_1', 'doc_1', { status: 'approved' }, 'user_1'),
     ).rejects.toThrow('An expiry date is required before this document can be approved.');
+  });
+
+  it('resolves a pending driver licence review and notifies the driver and operators', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      email: 'ada@example.com',
+      personId: 'person_1',
+    });
+    prisma.driverDocumentVerification.findFirst.mockResolvedValue({
+      id: 'docver_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      documentType: 'drivers-license',
+      idNumber: 'DL12345',
+      countryCode: 'NG',
+      provider: 'youverify',
+      status: 'manual_review',
+      providerMatch: null,
+      providerConfidence: 82,
+      providerFirstName: 'Ada',
+      providerLastName: 'Okafor',
+      providerDateOfBirth: '1990-01-01',
+      providerExpiryDate: '2030-01-01',
+      failureReason: "Driver's licence verification is pending review.",
+      providerResult: {
+        validity: 'valid',
+        expiryDate: '2030-01-01',
+        reviewCaseId: 'review_1',
+        manualReviewRequired: true,
+        linkage: {
+          status: 'pending',
+          decision: 'pending_human_review',
+          demographicMatchScore: 84,
+          biometricMatchScore: 78,
+          overallLinkageScore: 81,
+          reasons: ['Biometric linkage data needs a human review.'],
+        },
+        risk: {
+          impact: 'medium',
+          summary: "Driver's licence needs additional verification before confidence can improve.",
+        },
+      },
+      verifiedAt: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNotes: null,
+      createdAt: new Date('2026-03-28T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-28T10:00:00.000Z'),
+    });
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'user_1',
+      tenantId: 'tenant_1',
+      role: 'TENANT_OWNER',
+      name: 'Owner One',
+      isActive: true,
+    });
+    prisma.driverDocumentVerification.update.mockResolvedValue({
+      id: 'docver_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      documentType: 'drivers-license',
+      idNumber: 'DL12345',
+      countryCode: 'NG',
+      provider: 'youverify',
+      status: 'verified',
+      providerMatch: true,
+      providerConfidence: 82,
+      providerFirstName: 'Ada',
+      providerLastName: 'Okafor',
+      providerDateOfBirth: '1990-01-01',
+      providerExpiryDate: '2030-01-01',
+      failureReason: null,
+      providerResult: {
+        validity: 'valid',
+        expiryDate: '2030-01-01',
+        reviewCaseId: 'review_1',
+        manualReviewRequired: false,
+        reviewDecision: 'approved',
+        linkage: {
+          status: 'pending',
+          decision: 'auto_pass',
+          demographicMatchScore: 84,
+          biometricMatchScore: 78,
+          overallLinkageScore: 81,
+          reasons: ['Biometric linkage data needs a human review.'],
+        },
+        risk: {
+          impact: 'low',
+          summary: "Driver's licence is valid and strongly linked to the verified identity.",
+        },
+      },
+      verifiedAt: new Date('2026-03-28T11:00:00.000Z'),
+      reviewedBy: 'user_1',
+      reviewedAt: new Date('2026-03-28T11:00:00.000Z'),
+      reviewNotes: 'Manual check completed.',
+      createdAt: new Date('2026-03-28T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-28T11:00:00.000Z'),
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Mobiris Fleet',
+      country: 'NG',
+      metadata: {},
+    });
+    intelligenceClient.resolveDriverLicenceEvidenceReview.mockResolvedValue({
+      riskScore: 22,
+      riskBand: 'low',
+    });
+
+    const result = await service.reviewDriverLicenceVerification(
+      'tenant_1',
+      'driver_1',
+      { decision: 'approved', notes: 'Manual check completed.' },
+      'user_1',
+    );
+
+    expect(intelligenceClient.resolveDriverLicenceEvidenceReview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'person_1',
+        reviewCaseId: 'review_1',
+        decision: 'approved',
+      }),
+    );
+    expect(notificationsService.notifyDriverLicenceReviewResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        decision: 'approved',
+      }),
+    );
+    expect(result?.reviewDecision).toBe('approved');
+    expect(result?.status).toBe('verified');
   });
 
   it('marks a guarantor as disconnected instead of deleting the record', async () => {

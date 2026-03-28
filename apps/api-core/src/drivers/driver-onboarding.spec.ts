@@ -207,6 +207,11 @@ function buildService(
     listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
     applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
   };
+  const notificationsService = {
+    notifyDriverVerificationStatus: jest.fn(),
+    notifyDriverLicenceReviewPending: jest.fn(),
+    notifyDriverLicenceReviewResolved: jest.fn(),
+  };
   const auditService = { recordTenantAction: jest.fn() };
 
   return new DriversService(
@@ -219,6 +224,7 @@ function buildService(
     { fireEvent: jest.fn() } as never,
     { initializeDriverKycCheckout: jest.fn() } as never,
     policyService as never,
+    notificationsService as never,
     auditService as never,
   );
 }
@@ -267,6 +273,11 @@ describe('Driver onboarding — OTP exchange (invited first-time driver)', () =>
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
     );
@@ -348,6 +359,11 @@ describe('Driver onboarding — returning driver password login', () => {
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
       } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -378,6 +394,11 @@ describe('Driver onboarding — returning driver password login', () => {
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
       } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
 
@@ -405,6 +426,11 @@ describe('Driver onboarding — returning driver password login', () => {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
     );
@@ -446,6 +472,11 @@ describe('Driver onboarding — consent creation', () => {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
     );
@@ -531,6 +562,11 @@ describe('Driver onboarding — payment decision logic', () => {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
     );
@@ -621,6 +657,11 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
     );
@@ -784,7 +825,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     );
   });
 
-  it('routes to manual_review (not a crash) when provider is unavailable', async () => {
+  it('returns provider_unavailable without crashing when provider is unavailable', async () => {
     setupDriver('paid');
     prisma.driverDocumentVerification.create.mockResolvedValue({
       id: 'docver_3',
@@ -794,7 +835,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     });
     prisma.driverDocumentVerification.update.mockResolvedValue({
       id: 'docver_3',
-      status: 'manual_review',
+      status: 'provider_unavailable',
     });
 
     intelligenceClient.verifyDocumentIdentifier.mockRejectedValue(new Error('Service unavailable'));
@@ -805,9 +846,8 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       countryCode: 'NG',
     });
 
-    // Must route to manual_review, not crash
-    expect(result.status).toBe('manual_review');
-    expect(result.failureReason).toContain('Service unavailable');
+    expect(result.status).toBe('provider_unavailable');
+    expect(result.failureReason).toBe('Document verification is temporarily unavailable.');
   });
 
   it('blocks document verification if payment has not been made', async () => {
@@ -860,6 +900,11 @@ describe('Driver onboarding — onboarding step state machine', () => {
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
         applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
       } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
+      } as never,
       { recordTenantAction: jest.fn() } as never,
     );
   }
@@ -873,13 +918,18 @@ describe('Driver onboarding — onboarding step state machine', () => {
     expect(step.step).toBe('account');
   });
 
-  it('returns profile step when name or DOB is missing', async () => {
-    setup();
+  it('returns identity_verification when name or DOB is missing because profile is provider-filled', async () => {
+    setup({ operations: { driverPaysKyc: false } });
     prisma.driver.findUnique.mockResolvedValue(makeDriver({ firstName: null }));
     prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({
+      id: 'consent_1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     const step = await service.getOnboardingStep(VALID_TOKEN);
-    expect(step.step).toBe('profile');
+    expect(step.step).toBe('identity_verification');
   });
 
   it('returns payment step when driver has not paid and driverPaysKyc is true', async () => {

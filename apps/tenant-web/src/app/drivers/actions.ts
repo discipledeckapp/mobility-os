@@ -23,6 +23,7 @@ import {
   resolveGuarantorSelfServiceIdentity,
   retryDriverIdentityVerification,
   reviewDriverDocument,
+  reviewDriverLicenceVerification,
   sendDriverSelfServiceLink,
   sendGuarantorSelfServiceLink,
   unlinkDriverMobileAccessUser,
@@ -73,6 +74,11 @@ export interface UploadDriverDocumentActionState {
 }
 
 export interface ReviewDriverDocumentActionState {
+  error?: string;
+  success?: string;
+}
+
+export interface ReviewDriverLicenceVerificationActionState {
   error?: string;
   success?: string;
 }
@@ -958,6 +964,49 @@ export async function reviewDriverDocumentAction(
   return {
     success:
       status === 'approved' ? 'Document approved successfully.' : 'Document rejected successfully.',
+  };
+}
+
+export async function reviewDriverLicenceVerificationAction(
+  _prevState: ReviewDriverLicenceVerificationActionState,
+  formData: FormData,
+): Promise<ReviewDriverLicenceVerificationActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const decision = getOptionalTrimmedValue(formData, 'decision');
+  const notes = getOptionalTrimmedValue(formData, 'notes');
+
+  if (!driverId) {
+    return { error: 'Driver is required before review.' };
+  }
+
+  if (decision !== 'approved' && decision !== 'rejected' && decision !== 'request_reverification') {
+    return { error: 'Choose whether to approve, reject, or request re-verification.' };
+  }
+
+  try {
+    await reviewDriverLicenceVerification(driverId, {
+      decision,
+      ...(notes ? { notes } : {}),
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to update the driver's licence review.",
+    };
+  }
+
+  revalidatePath('/drivers');
+  revalidatePath('/drivers/review-queue');
+  revalidatePath(`/drivers/${driverId}`);
+  revalidatePath(`/drivers/${driverId}/review`);
+
+  return {
+    success:
+      decision === 'approved'
+        ? "Driver's licence approved successfully."
+        : decision === 'rejected'
+          ? "Driver's licence rejected successfully."
+          : "Re-verification has been requested for the driver's licence.",
   };
 }
 

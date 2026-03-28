@@ -30,8 +30,10 @@ export interface VerifyEnrollmentIdentityInput {
     subjectConsent?: boolean;
     validationData?: {
       firstName?: string;
+      middleName?: string;
       lastName?: string;
       dateOfBirth?: string;
+      gender?: string;
     };
     selfieImageBase64?: string;
     selfieImageUrl?: string;

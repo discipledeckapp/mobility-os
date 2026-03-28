@@ -145,10 +145,7 @@ function normalizeDocumentSlugList(
   const normalized = value
     .filter((item): item is string => typeof item === 'string')
     .map((item) => item.trim().toLowerCase())
-    .filter(
-      (item) =>
-        item.length > 0 && (allowedSlugs.has(item) || Boolean(options.allowCustom)),
-    );
+    .filter((item) => item.length > 0 && (allowedSlugs.has(item) || Boolean(options.allowCustom)));
 
   if (normalized.length > 0) {
     return Array.from(new Set(normalized));
@@ -204,8 +201,10 @@ export function readOrganisationSettings(
   const identifierDefaults = getCountryIdentifierDefaults(countryCode);
   const allowedIdentifierTypes = new Set(
     isCountrySupported(countryCode ?? '')
-      ? getCountryConfig(countryCode ?? '').supportedIdentifierTypes
-          .filter((identifier) => identifier.type !== 'PHONE' && identifier.type !== 'EMAIL')
+      ? getCountryConfig(countryCode ?? '')
+          .supportedIdentifierTypes.filter(
+            (identifier) => identifier.type !== 'PHONE' && identifier.type !== 'EMAIL',
+          )
           .map((identifier) => identifier.type)
       : identifierDefaults.enabledDriverIdentifierTypes,
   );

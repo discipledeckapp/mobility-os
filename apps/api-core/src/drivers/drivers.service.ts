@@ -35,6 +35,8 @@ import { PrismaService } from '../database/prisma.service';
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuthEmailService } from '../notifications/auth-email.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { NotificationsService } from '../notifications/notifications.service';
 import type { EnforcementSummary } from '../policy/policy.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PolicyService } from '../policy/policy.service';
@@ -100,6 +102,42 @@ type DriverDocumentSummary = {
   rejectedDocumentCount: number;
   expiredDocumentCount: number;
   approvedDocumentTypes: string[];
+  driverLicenceVerification?: {
+    id: string;
+    status: string;
+    licenceNumber: string;
+    maskedLicenceNumber: string;
+    validity: 'valid' | 'invalid' | 'unknown' | null;
+    issueDate: string | null;
+    expiryDate: string | null;
+    expiresSoon: boolean;
+    isExpired: boolean;
+    providerName: string | null;
+    providerReference: string | null;
+    holderFullName: string | null;
+    holderDateOfBirth: string | null;
+    holderGender: string | null;
+    stateOfIssuance: string | null;
+    licenceClass: string | null;
+    portraitUrl: string | null;
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    linkageConfidence: number | null;
+    overallLinkageScore: number | null;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    linkageReasons: string[];
+    reviewCaseId: string | null;
+    manualReviewRequired: boolean;
+    reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    reviewNotes: string | null;
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
+    failureReason: string | null;
+    verifiedAt: string | null;
+  } | null;
 };
 
 type DriverMobileAccessSummary = {
@@ -344,11 +382,34 @@ function isVerificationMetadataRecord(
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 type DriverDocumentReviewQueueItem = DriverDocumentRecord & {
   driverName: string;
   driverPhone: string;
   driverStatus: string;
   fleetId: string;
+};
+
+type DriverLicenceReviewQueueItem = {
+  id: string;
+  tenantId: string;
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
+  status: string;
+  validity: 'valid' | 'invalid' | 'unknown' | null;
+  expiryDate: string | null;
+  linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  overallLinkageScore: number | null;
+  riskImpact: 'low' | 'medium' | 'high' | 'critical';
+  reviewCaseId: string | null;
+  createdAt: Date;
+  verifiedAt: Date | null;
 };
 
 type DriverAdminOverrideState = {
@@ -434,10 +495,434 @@ export class DriversService {
     }
   }
 
+  private readJsonString(
+    value: Prisma.JsonValue | Record<string, unknown> | null | undefined,
+    key: string,
+  ): string | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+    return typeof value[key] === 'string' ? (value[key] as string) : null;
+  }
+
+  private normalizeComparableText(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ');
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private normalizeComparableGender(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (['m', 'male'].includes(normalized)) return 'male';
+    if (['f', 'female'].includes(normalized)) return 'female';
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private computeTextSimilarity(left?: string | null, right?: string | null): number | null {
+    const a = this.normalizeComparableText(left);
+    const b = this.normalizeComparableText(right);
+    if (!a || !b) {
+      return null;
+    }
+    if (a === b) {
+      return 100;
+    }
+    const aTokens = new Set(a.split(' ').filter(Boolean));
+    const bTokens = new Set(b.split(' ').filter(Boolean));
+    const overlap = [...aTokens].filter((token) => bTokens.has(token)).length;
+    const total = new Set([...aTokens, ...bTokens]).size;
+    if (total === 0) {
+      return null;
+    }
+    return Math.max(0, Math.min(100, Math.round((overlap / total) * 100)));
+  }
+
+  private isDateExpired(value?: string | null): boolean {
+    if (!value) {
+      return false;
+    }
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) && timestamp < Date.now();
+  }
+
+  private isDateExpiringSoon(value?: string | null, withinDays = 30): boolean {
+    if (!value) {
+      return false;
+    }
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) {
+      return false;
+    }
+    const diffMs = timestamp - Date.now();
+    return diffMs >= 0 && diffMs <= withinDays * 24 * 60 * 60 * 1000;
+  }
+
+  private maskSensitiveDocumentNumber(value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.length <= 4) {
+      return trimmed;
+    }
+    return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+  }
+
+  private getDriverIdentityReference(
+    driver: DriverWithIdentityState & Partial<DriverDocumentSummary>,
+  ): {
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    dateOfBirth: string | null;
+    gender: string | null;
+    fullName: string | null;
+    selfieImageUrl: string | null;
+    providerImageUrl: string | null;
+  } {
+    const profile = isVerificationMetadataRecord(driver.identityProfile)
+      ? driver.identityProfile
+      : null;
+    const firstName = this.readJsonString(profile, 'firstName') ?? driver.firstName ?? null;
+    const middleName = this.readJsonString(profile, 'middleName');
+    const lastName = this.readJsonString(profile, 'lastName') ?? driver.lastName ?? null;
+    const dateOfBirth = this.readJsonString(profile, 'dateOfBirth') ?? driver.dateOfBirth ?? null;
+    const gender =
+      this.normalizeComparableGender(this.readJsonString(profile, 'gender') ?? driver.gender) ??
+      null;
+    const fullName =
+      this.readJsonString(profile, 'fullName') ??
+      [firstName, middleName, lastName].filter(Boolean).join(' ').trim() ??
+      null;
+    return {
+      firstName,
+      middleName,
+      lastName,
+      dateOfBirth,
+      gender,
+      fullName: fullName || null,
+      selfieImageUrl:
+        this.readJsonString(profile, 'selfieImageUrl') ?? driver.selfieImageUrl ?? null,
+      providerImageUrl:
+        this.readJsonString(profile, 'providerImageUrl') ?? driver.providerImageUrl ?? null,
+    };
+  }
+
+  private evaluateDriverLicenceLinkage(
+    reference: ReturnType<DriversService['getDriverIdentityReference']>,
+    provider: {
+      firstName?: string | null;
+      middleName?: string | null;
+      lastName?: string | null;
+      dateOfBirth?: string | null;
+      gender?: string | null;
+      auditRecord?: Record<string, unknown> | null;
+    },
+  ): {
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    overallLinkageScore: number | null;
+    linkageReasons: string[];
+    hardFailure: boolean;
+  } {
+    const weightedScores: Array<{ score: number; weight: number }> = [];
+    const linkageReasons: string[] = [];
+    const firstNameScore = this.computeTextSimilarity(reference.firstName, provider.firstName);
+    if (firstNameScore !== null) weightedScores.push({ score: firstNameScore, weight: 15 });
+    const middleNameScore = this.computeTextSimilarity(reference.middleName, provider.middleName);
+    if (middleNameScore !== null) weightedScores.push({ score: middleNameScore, weight: 10 });
+    const lastNameScore = this.computeTextSimilarity(reference.lastName, provider.lastName);
+    if (lastNameScore !== null) weightedScores.push({ score: lastNameScore, weight: 20 });
+    const fullNameScore = this.computeTextSimilarity(
+      reference.fullName,
+      [provider.firstName, provider.middleName, provider.lastName].filter(Boolean).join(' '),
+    );
+    if (fullNameScore !== null) weightedScores.push({ score: fullNameScore, weight: 10 });
+    if (reference.dateOfBirth && provider.dateOfBirth) {
+      if (reference.dateOfBirth !== provider.dateOfBirth) {
+        linkageReasons.push('Date of birth does not match the NIN-verified identity.');
+      }
+      weightedScores.push({
+        score: reference.dateOfBirth === provider.dateOfBirth ? 100 : 0,
+        weight: 35,
+      });
+    }
+    const normalizedProviderGender = this.normalizeComparableGender(provider.gender);
+    if (reference.gender && normalizedProviderGender) {
+      if (reference.gender !== normalizedProviderGender) {
+        linkageReasons.push(
+          'Gender returned by the licence provider differs from the verified identity.',
+        );
+      }
+      weightedScores.push({
+        score: reference.gender === normalizedProviderGender ? 100 : 0,
+        weight: 10,
+      });
+    }
+
+    const totalWeight = weightedScores.reduce((sum, entry) => sum + entry.weight, 0);
+    const demographicMatchScore =
+      totalWeight > 0
+        ? Math.round(
+            weightedScores.reduce((sum, entry) => sum + entry.score * entry.weight, 0) /
+              totalWeight,
+          )
+        : null;
+
+    const validations =
+      provider.auditRecord && isObjectRecord(provider.auditRecord.validations)
+        ? provider.auditRecord.validations
+        : null;
+    const selfie = validations && isObjectRecord(validations.selfie) ? validations.selfie : null;
+    const biometricMatch =
+      selfie && typeof selfie.match === 'boolean' ? (selfie.match as boolean) : null;
+    const biometricConfidence =
+      selfie && typeof selfie.confidenceLevel === 'number'
+        ? (selfie.confidenceLevel as number)
+        : null;
+    const biometricMatchScore =
+      biometricMatch === false
+        ? (biometricConfidence ?? 0)
+        : biometricConfidence !== null
+          ? Math.max(0, Math.min(100, Math.round(biometricConfidence)))
+          : null;
+
+    const overallLinkageScore =
+      demographicMatchScore !== null && biometricMatchScore !== null
+        ? Math.round(demographicMatchScore * 0.55 + biometricMatchScore * 0.45)
+        : demographicMatchScore;
+
+    const hardFailure =
+      (reference.dateOfBirth !== null &&
+        provider.dateOfBirth !== null &&
+        reference.dateOfBirth !== provider.dateOfBirth) ||
+      (biometricMatchScore !== null && biometricMatchScore < 60);
+
+    if (biometricMatchScore === null) {
+      linkageReasons.push(
+        'Biometric linkage data was not returned, so human review is required before auto-pass.',
+      );
+      return {
+        linkageStatus: 'insufficient_data',
+        demographicMatchScore,
+        biometricMatchScore,
+        overallLinkageScore,
+        linkageReasons,
+        hardFailure,
+      };
+    }
+
+    if (
+      hardFailure ||
+      (demographicMatchScore !== null && demographicMatchScore < 65) ||
+      biometricMatchScore < 70 ||
+      (overallLinkageScore !== null && overallLinkageScore < 60)
+    ) {
+      if (biometricMatchScore < 70) {
+        linkageReasons.push(
+          'Biometric similarity is too weak for the licence to be linked safely.',
+        );
+      }
+      return {
+        linkageStatus: 'mismatch',
+        demographicMatchScore,
+        biometricMatchScore,
+        overallLinkageScore,
+        linkageReasons,
+        hardFailure,
+      };
+    }
+
+    if (
+      (demographicMatchScore !== null && demographicMatchScore < 85) ||
+      biometricMatchScore < 85 ||
+      (overallLinkageScore !== null && overallLinkageScore < 85)
+    ) {
+      linkageReasons.push(
+        'The licence is valid, but the linkage confidence is not strong enough for automatic approval.',
+      );
+      return {
+        linkageStatus: 'pending',
+        demographicMatchScore,
+        biometricMatchScore,
+        overallLinkageScore,
+        linkageReasons,
+        hardFailure,
+      };
+    }
+
+    return {
+      linkageStatus: 'matched',
+      demographicMatchScore,
+      biometricMatchScore,
+      overallLinkageScore,
+      linkageReasons,
+      hardFailure,
+    };
+  }
+
+  private assessDriverLicenceRisk(input: {
+    validity: 'valid' | 'invalid' | 'unknown' | null;
+    expiryDate: string | null;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  }): {
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
+  } {
+    if (input.validity === 'invalid' || this.isDateExpired(input.expiryDate)) {
+      return {
+        riskImpact: 'critical',
+        riskSummary: "Driver's licence is expired or invalid and should block driving readiness.",
+      };
+    }
+    if (input.linkageDecision === 'fail') {
+      return {
+        riskImpact: 'high',
+        riskSummary: "Driver's licence could not be linked to the verified identity.",
+      };
+    }
+    if (input.linkageDecision === 'pending_human_review') {
+      return {
+        riskImpact: 'medium',
+        riskSummary:
+          "Driver's licence needs additional verification before confidence can improve.",
+      };
+    }
+    if (this.isDateExpiringSoon(input.expiryDate, 60)) {
+      return {
+        riskImpact: 'medium',
+        riskSummary:
+          "Driver's licence is valid but close to expiry. Renewal should be planned soon.",
+      };
+    }
+    return {
+      riskImpact: 'low',
+      riskSummary: "Driver's licence is valid and strongly linked to the verified identity.",
+    };
+  }
+
+  private buildDriverLicenceVerificationSummary(
+    verification: DriverDocumentVerificationRecord,
+  ): DriverDocumentSummary['driverLicenceVerification'] {
+    if (
+      this.normalizeStoredDocumentType(verification.documentType) !== DRIVER_LICENCE_DOCUMENT_TYPE
+    ) {
+      return null;
+    }
+    const providerResult = isVerificationMetadataRecord(verification.providerResult)
+      ? verification.providerResult
+      : null;
+    const holder =
+      providerResult && isVerificationMetadataRecord(providerResult.holder)
+        ? providerResult.holder
+        : null;
+    const linkage =
+      providerResult && isVerificationMetadataRecord(providerResult.linkage)
+        ? providerResult.linkage
+        : null;
+    const risk =
+      providerResult && isVerificationMetadataRecord(providerResult.risk)
+        ? providerResult.risk
+        : null;
+    const expiryDate =
+      verification.providerExpiryDate ?? this.readJsonString(providerResult, 'expiryDate');
+    return {
+      id: verification.id,
+      status: verification.status,
+      licenceNumber: verification.idNumber,
+      maskedLicenceNumber: this.maskSensitiveDocumentNumber(verification.idNumber),
+      validity:
+        providerResult && typeof providerResult.validity === 'string'
+          ? (providerResult.validity as 'valid' | 'invalid' | 'unknown')
+          : null,
+      issueDate: this.readJsonString(providerResult, 'issueDate'),
+      expiryDate,
+      expiresSoon: this.isDateExpiringSoon(expiryDate, 60),
+      isExpired: this.isDateExpired(expiryDate),
+      providerName: verification.provider ?? null,
+      providerReference: this.readJsonString(providerResult, 'providerReference'),
+      holderFullName:
+        [
+          holder && typeof holder.firstName === 'string' ? holder.firstName : null,
+          holder && typeof holder.middleName === 'string' ? holder.middleName : null,
+          holder && typeof holder.lastName === 'string' ? holder.lastName : null,
+        ]
+          .filter(Boolean)
+          .join(' ') || null,
+      holderDateOfBirth:
+        holder && typeof holder.dateOfBirth === 'string' ? holder.dateOfBirth : null,
+      holderGender: holder && typeof holder.gender === 'string' ? holder.gender : null,
+      stateOfIssuance: this.readJsonString(providerResult, 'stateOfIssuance'),
+      licenceClass: this.readJsonString(providerResult, 'licenceClass'),
+      portraitUrl: this.readJsonString(providerResult, 'portraitUrl'),
+      linkageStatus:
+        linkage && typeof linkage.status === 'string'
+          ? (linkage.status as 'matched' | 'mismatch' | 'pending' | 'insufficient_data')
+          : 'pending',
+      demographicMatchScore:
+        linkage && typeof linkage.demographicMatchScore === 'number'
+          ? linkage.demographicMatchScore
+          : null,
+      biometricMatchScore:
+        linkage && typeof linkage.biometricMatchScore === 'number'
+          ? linkage.biometricMatchScore
+          : null,
+      linkageConfidence:
+        linkage && typeof linkage.overallLinkageScore === 'number'
+          ? linkage.overallLinkageScore
+          : linkage && typeof linkage.linkageConfidence === 'number'
+            ? linkage.linkageConfidence
+            : null,
+      overallLinkageScore:
+        linkage && typeof linkage.overallLinkageScore === 'number'
+          ? linkage.overallLinkageScore
+          : null,
+      linkageDecision:
+        linkage && typeof linkage.decision === 'string'
+          ? (linkage.decision as 'auto_pass' | 'pending_human_review' | 'fail')
+          : 'pending_human_review',
+      linkageReasons:
+        linkage &&
+        Array.isArray(linkage.reasons) &&
+        linkage.reasons.every((value) => typeof value === 'string')
+          ? (linkage.reasons as string[])
+          : [],
+      reviewCaseId: this.readJsonString(providerResult, 'reviewCaseId'),
+      manualReviewRequired:
+        providerResult && typeof providerResult.manualReviewRequired === 'boolean'
+          ? providerResult.manualReviewRequired
+          : verification.status === 'manual_review',
+      reviewDecision:
+        providerResult && typeof providerResult.reviewDecision === 'string'
+          ? (providerResult.reviewDecision as 'approved' | 'rejected' | 'request_reverification')
+          : null,
+      reviewedBy: verification.reviewedBy ?? null,
+      reviewedAt: verification.reviewedAt ? verification.reviewedAt.toISOString() : null,
+      reviewNotes: verification.reviewNotes ?? null,
+      riskImpact:
+        risk && typeof risk.impact === 'string'
+          ? (risk.impact as 'low' | 'medium' | 'high' | 'critical')
+          : 'medium',
+      riskSummary:
+        risk && typeof risk.summary === 'string'
+          ? risk.summary
+          : (verification.failureReason ?? 'Driver licence verification is pending.'),
+      failureReason: verification.failureReason ?? null,
+      verifiedAt: verification.verifiedAt ? verification.verifiedAt.toISOString() : null,
+    };
+  }
+
   private get driverDocumentVerifications(): {
     create(args: {
       data: Record<string, unknown>;
     }): Promise<DriverDocumentVerificationRecord>;
+    findFirst(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord | null>;
     update(args: {
       where: { id: string };
       data: Record<string, unknown>;
@@ -450,6 +935,9 @@ export class DriversService {
           create(args: {
             data: Record<string, unknown>;
           }): Promise<DriverDocumentVerificationRecord>;
+          findFirst(
+            args: Record<string, unknown>,
+          ): Promise<DriverDocumentVerificationRecord | null>;
           update(args: {
             where: { id: string };
             data: Record<string, unknown>;
@@ -470,6 +958,7 @@ export class DriversService {
     private readonly meteringClient: ControlPlaneMeteringClient,
     private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
     private readonly policyService: PolicyService,
+    private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -1198,6 +1687,30 @@ export class DriversService {
     });
 
     return readOrganisationSettings(tenant?.metadata, tenant?.country);
+  }
+
+  private async getTenantNotificationContext(tenantId: string): Promise<{
+    tenantCountry: string | null;
+    organisationName: string | null;
+  }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, country: true, metadata: true },
+    });
+
+    if (!tenant) {
+      return {
+        tenantCountry: null,
+        organisationName: null,
+      };
+    }
+
+    return {
+      tenantCountry: tenant.country ?? null,
+      organisationName:
+        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
+        tenant.name,
+    };
   }
 
   private async buildDriverMobileAccessSettings(
@@ -2676,6 +3189,96 @@ export class DriversService {
     };
   }
 
+  async listDriverLicenceReviewQueue(
+    tenantId: string,
+    input: {
+      q?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<PaginatedResponse<DriverLicenceReviewQueueItem>> {
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 50;
+    const searchQuery = input.q?.trim().toLowerCase() ?? '';
+    const verifications = await this.driverDocumentVerifications.findMany({
+      where: {
+        tenantId,
+        documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
+        status: 'manual_review',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const latestByDriverId = new Map<string, DriverDocumentVerificationRecord>();
+    for (const verification of verifications) {
+      if (!latestByDriverId.has(verification.driverId)) {
+        latestByDriverId.set(verification.driverId, verification);
+      }
+    }
+
+    const driverIds = [...latestByDriverId.keys()];
+    const drivers = driverIds.length
+      ? await this.prisma.driver.findMany({
+          where: { tenantId, id: { in: driverIds } },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            status: true,
+            fleetId: true,
+          },
+        })
+      : [];
+    const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
+
+    const queueItems = [...latestByDriverId.values()]
+      .map((verification) => {
+        const driver = driverMap.get(verification.driverId);
+        const summary = this.buildDriverLicenceVerificationSummary(verification);
+        if (!driver || !summary) {
+          return null;
+        }
+        return {
+          id: verification.id,
+          tenantId: verification.tenantId,
+          driverId: verification.driverId,
+          driverName: this.formatDriverName(driver),
+          driverPhone: driver.phone,
+          driverStatus: driver.status,
+          fleetId: driver.fleetId,
+          status: verification.status,
+          validity: summary.validity,
+          expiryDate: summary.expiryDate,
+          linkageDecision: summary.linkageDecision,
+          overallLinkageScore: summary.overallLinkageScore,
+          riskImpact: summary.riskImpact,
+          reviewCaseId: summary.reviewCaseId,
+          createdAt: verification.createdAt,
+          verifiedAt: verification.verifiedAt ?? null,
+        };
+      })
+      .filter((item): item is DriverLicenceReviewQueueItem => Boolean(item))
+      .filter((item) => {
+        if (!searchQuery) {
+          return true;
+        }
+        return `${item.driverName} ${item.driverPhone} ${item.driverStatus} ${
+          item.reviewCaseId ?? ''
+        }`
+          .toLowerCase()
+          .includes(searchQuery);
+      });
+
+    const startIndex = (page - 1) * limit;
+    return {
+      data: queueItems.slice(startIndex, startIndex + limit),
+      total: queueItems.length,
+      page,
+      limit,
+    };
+  }
+
   async importDriversFromCsv(
     tenantId: string,
     csvContent: string,
@@ -2939,6 +3542,169 @@ export class DriversService {
         reviewedAt: new Date(),
       },
     });
+  }
+
+  async reviewDriverLicenceVerification(
+    tenantId: string,
+    driverId: string,
+    input: {
+      decision: 'approved' | 'rejected' | 'request_reverification';
+      notes?: string;
+    },
+    reviewedBy: string,
+  ): Promise<DriverDocumentSummary['driverLicenceVerification']> {
+    const driver = await this.findOne(tenantId, driverId);
+    const verification = await this.driverDocumentVerifications.findFirst({
+      where: {
+        tenantId,
+        driverId,
+        documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!verification) {
+      throw new NotFoundException(`No driver's licence verification record was found.`);
+    }
+
+    const currentSummary = this.buildDriverLicenceVerificationSummary(verification);
+    if (!currentSummary) {
+      throw new BadRequestException("Driver's licence review data is unavailable.");
+    }
+    if (verification.status !== 'manual_review' && currentSummary.reviewDecision !== null) {
+      throw new BadRequestException("Driver's licence review has already been resolved.");
+    }
+    if (!driver.personId || !currentSummary.reviewCaseId) {
+      throw new BadRequestException(
+        "Driver's licence review cannot be completed because the review case is missing.",
+      );
+    }
+
+    const reviewer = await this.prisma.user.findFirst({
+      where: { id: reviewedBy, tenantId, isActive: true },
+      select: { id: true, role: true, name: true },
+    });
+    if (!reviewer) {
+      throw new UnauthorizedException('Reviewer session is no longer valid.');
+    }
+
+    const nextStatus = input.decision === 'approved' ? 'verified' : 'failed';
+    const reviewedAt = new Date();
+    const reviewNotes = input.notes?.trim() ? input.notes.trim() : null;
+    const nextFailureReason =
+      input.decision === 'approved'
+        ? null
+        : input.decision === 'rejected'
+          ? "Unable to verify that this driver's licence belongs to this person."
+          : "A new driver's licence verification is required before onboarding can continue.";
+    const nextRiskAssessment = this.assessDriverLicenceRisk({
+      validity: currentSummary.validity,
+      expiryDate: currentSummary.expiryDate,
+      linkageDecision: input.decision === 'approved' ? 'auto_pass' : 'fail',
+    });
+
+    const currentProviderResult = isVerificationMetadataRecord(verification.providerResult)
+      ? verification.providerResult
+      : {};
+    const currentLinkage = isVerificationMetadataRecord(currentProviderResult.linkage)
+      ? currentProviderResult.linkage
+      : {};
+
+    const providerResult: Prisma.InputJsonObject = {
+      ...currentProviderResult,
+      manualReviewRequired: false,
+      reviewCaseId: currentSummary.reviewCaseId,
+      reviewDecision: input.decision,
+      reviewResolvedAt: reviewedAt.toISOString(),
+      reviewResolvedBy: reviewer.id,
+      reviewResolvedByRole: reviewer.role,
+      reviewNotes,
+      linkage: {
+        ...currentLinkage,
+        decision: input.decision === 'approved' ? 'auto_pass' : 'fail',
+        reviewedDecision: input.decision,
+      },
+      risk: {
+        impact: nextRiskAssessment.riskImpact,
+        summary: nextRiskAssessment.riskSummary,
+      },
+    };
+
+    await this.intelligenceClient.resolveDriverLicenceEvidenceReview({
+      personId: driver.personId,
+      reviewCaseId: currentSummary.reviewCaseId,
+      decision: input.decision,
+      reviewerId: reviewer.id,
+      reviewerRole: reviewer.role,
+      ...(reviewNotes ? { notes: reviewNotes } : {}),
+      evidenceSnapshot: {
+        driverId: driver.id,
+        tenantId,
+        verificationRecordId: verification.id,
+        maskedLicenceNumber: currentSummary.maskedLicenceNumber,
+        validity: currentSummary.validity,
+        issueDate: currentSummary.issueDate,
+        expiryDate: currentSummary.expiryDate,
+        demographicMatchScore: currentSummary.demographicMatchScore,
+        biometricMatchScore: currentSummary.biometricMatchScore,
+        overallLinkageScore: currentSummary.overallLinkageScore,
+      },
+    });
+
+    const updatedVerification = await this.driverDocumentVerifications.update({
+      where: { id: verification.id },
+      data: {
+        status: nextStatus,
+        providerMatch: input.decision === 'approved',
+        failureReason: nextFailureReason,
+        providerResult,
+        reviewedBy: reviewer.id,
+        reviewedAt,
+        reviewNotes,
+        verifiedAt: input.decision === 'approved' ? reviewedAt : null,
+        updatedAt: reviewedAt,
+      },
+    });
+
+    const notificationContext = await this.getTenantNotificationContext(tenantId);
+    await this.notificationsService.notifyDriverLicenceReviewResolved({
+      tenantId,
+      driverId: driver.id,
+      driverName: this.formatDriverName(driver),
+      ...(driver.email ? { driverEmail: driver.email } : {}),
+      ...notificationContext,
+      decision: input.decision,
+      actionUrl: `/drivers/${driver.id}/review`,
+    });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      actorId: reviewer.id,
+      entityType: 'driver_document_verification',
+      entityId: verification.id,
+      action: 'driver.licence_review.resolved',
+      metadata: {
+        driverId: driver.id,
+        decision: input.decision,
+        reviewCaseId: currentSummary.reviewCaseId,
+        notes: reviewNotes,
+        reviewerRole: reviewer.role,
+      },
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'driver_licence_review_resolved',
+        tenantId,
+        driverId: driver.id,
+        verificationRecordId: verification.id,
+        decision: input.decision,
+        reviewerId: reviewer.id,
+        reviewCaseId: currentSummary.reviewCaseId,
+      }),
+    );
+
+    return this.buildDriverLicenceVerificationSummary(updatedVerification);
   }
 
   async hasApprovedLicence(tenantId: string, driverId: string): Promise<boolean> {
@@ -3226,10 +3992,32 @@ export class DriversService {
     providerDateOfBirth: string | null;
     providerIssueDate: string | null;
     providerExpiryDate: string | null;
+    providerMiddleName: string | null;
+    providerGender: string | null;
+    providerStateOfIssuance: string | null;
+    providerLicenceClass: string | null;
     portraitAvailable: boolean | null;
+    portraitUrl: string | null;
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    linkageConfidence: number | null;
+    overallLinkageScore: number | null;
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    linkageReasons: string[];
+    reviewCaseId: string | null;
+    manualReviewRequired: boolean;
+    reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    reviewNotes: string | null;
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
     matchScore: number | null;
     riskScore: number | null;
     failureReason: string | null;
+    providerReference: string | null;
+    verifiedAt: string | null;
   }> {
     const payload = await this.verifySelfServiceToken(token);
     const driver = await this.findOne(payload.tenantId, payload.driverId);
@@ -3264,28 +4052,72 @@ export class DriversService {
     let providerMatch: boolean | null = null;
     let providerValidity: 'valid' | 'invalid' | 'unknown' | null = null;
     let providerFirstName: string | null = null;
+    let providerMiddleName: string | null = null;
     let providerLastName: string | null = null;
     let providerDateOfBirth: string | null = null;
     let providerIssueDate: string | null = null;
     let providerExpiryDate: string | null = null;
+    let providerGender: string | null = null;
+    let providerStateOfIssuance: string | null = null;
+    let providerLicenceClass: string | null = null;
     let portraitAvailable: boolean | null = null;
+    let portraitUrl: string | null = null;
+    let demographicMatchScore: number | null = null;
+    let biometricMatchScore: number | null = null;
+    let linkageConfidence: number | null = null;
+    let overallLinkageScore: number | null = null;
+    let linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data' = 'pending';
+    let linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail' = 'pending_human_review';
+    let linkageReasons: string[] = [];
+    let reviewCaseId: string | null = null;
+    let manualReviewRequired = false;
+    let riskImpact: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+    let riskSummary = "Driver's licence verification is pending.";
     let matchScore: number | null = null;
     let riskScore: number | null = null;
     let failureReason: string | null = null;
     let providerName: string | null = null;
+    let providerReference: string | null = null;
     let providerResult: Prisma.JsonObject | null = null;
+    const isDriverLicenceVerification = documentSlug === DRIVER_LICENCE_DOCUMENT_TYPE;
+    const identityReference = this.getDriverIdentityReference(driver);
 
     try {
+      this.logger.log(
+        JSON.stringify({
+          event: 'driver_licence_verification_started',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          documentType: documentSlug,
+          countryCode,
+        }),
+      );
+      this.logger.log(
+        JSON.stringify({
+          event: 'driver_licence_provider_request_started',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          provider: 'youverify',
+          hasSelfie: Boolean(identityReference.selfieImageUrl),
+          hasDob: Boolean(identityReference.dateOfBirth),
+        }),
+      );
+
       const result = await this.intelligenceClient.verifyDocumentIdentifier({
         tenantId: payload.tenantId,
         countryCode,
         identifierType,
         identifierValue: idNumber,
         validationData: {
-          ...(dto.firstName ? { firstName: dto.firstName } : {}),
-          ...(dto.lastName ? { lastName: dto.lastName } : {}),
-          ...(dto.dateOfBirth ? { dateOfBirth: dto.dateOfBirth } : {}),
+          ...(identityReference.firstName ? { firstName: identityReference.firstName } : {}),
+          ...(identityReference.middleName ? { middleName: identityReference.middleName } : {}),
+          ...(identityReference.lastName ? { lastName: identityReference.lastName } : {}),
+          ...(identityReference.dateOfBirth ? { dateOfBirth: identityReference.dateOfBirth } : {}),
+          ...(identityReference.gender ? { gender: identityReference.gender } : {}),
         },
+        ...(identityReference.selfieImageUrl
+          ? { selfieImageUrl: identityReference.selfieImageUrl }
+          : {}),
       });
 
       providerName = result.providerName ?? null;
@@ -3295,57 +4127,269 @@ export class DriversService {
       portraitAvailable = result.verificationMetadata?.portraitAvailable ?? null;
       matchScore = result.verificationMetadata?.matchScore ?? null;
       riskScore = result.verificationMetadata?.riskScore ?? null;
-      providerResult = {
-        providerName: result.providerName ?? null,
-        providerLookupStatus: result.providerLookupStatus ?? null,
-        providerVerificationStatus: result.providerVerificationStatus ?? null,
-        validity: providerValidity,
-        issueDate: providerIssueDate,
-        expiryDate: providerExpiryDate,
-        portraitAvailable,
-        matchScore,
-        riskScore,
-      };
+      providerFirstName = result.verifiedProfile?.firstName ?? null;
+      providerMiddleName = result.verifiedProfile?.middleName ?? null;
+      providerLastName = result.verifiedProfile?.lastName ?? null;
+      providerDateOfBirth = result.verifiedProfile?.dateOfBirth ?? null;
+      providerGender = result.verifiedProfile?.gender ?? null;
+
+      const auditRecord = isObjectRecord(result.providerAudit) ? result.providerAudit : null;
+      providerReference =
+        auditRecord && typeof auditRecord.providerReference === 'string'
+          ? auditRecord.providerReference
+          : null;
+      providerStateOfIssuance =
+        auditRecord && typeof auditRecord.stateOfIssuance === 'string'
+          ? auditRecord.stateOfIssuance
+          : null;
+      providerLicenceClass =
+        auditRecord && typeof auditRecord.licenceClass === 'string'
+          ? auditRecord.licenceClass
+          : null;
+
+      portraitUrl = await this.persistIdentityReferenceImage(
+        result.verifiedProfile?.photoUrl ?? undefined,
+        `driver-licence-${driver.id}-${Date.now()}`,
+      );
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'driver_licence_provider_response_received',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          providerName,
+          providerReference,
+          providerLookupStatus: result.providerLookupStatus ?? null,
+          providerVerificationStatus: result.providerVerificationStatus ?? null,
+          providerValidity,
+        }),
+      );
+
+      if (isDriverLicenceVerification) {
+        const linkageAssessment = this.evaluateDriverLicenceLinkage(identityReference, {
+          firstName: providerFirstName,
+          middleName: providerMiddleName,
+          lastName: providerLastName,
+          dateOfBirth: providerDateOfBirth,
+          gender: providerGender,
+          auditRecord,
+        });
+        demographicMatchScore = linkageAssessment.demographicMatchScore;
+        biometricMatchScore = linkageAssessment.biometricMatchScore;
+        linkageConfidence = linkageAssessment.overallLinkageScore;
+        overallLinkageScore = linkageAssessment.overallLinkageScore;
+        linkageStatus = linkageAssessment.linkageStatus;
+        linkageReasons = linkageAssessment.linkageReasons;
+
+        if (
+          providerValidity === 'invalid' ||
+          this.isDateExpired(providerExpiryDate) ||
+          linkageAssessment.hardFailure ||
+          linkageStatus === 'mismatch'
+        ) {
+          linkageDecision = 'fail';
+        } else if (linkageStatus === 'matched') {
+          linkageDecision = 'auto_pass';
+        } else {
+          linkageDecision = 'pending_human_review';
+        }
+        manualReviewRequired = linkageDecision === 'pending_human_review';
+
+        const licenceRiskAssessment = this.assessDriverLicenceRisk({
+          validity: providerValidity,
+          expiryDate: providerExpiryDate,
+          linkageDecision,
+        });
+        riskImpact = licenceRiskAssessment.riskImpact;
+        riskSummary = licenceRiskAssessment.riskSummary;
+      } else {
+        linkageStatus = 'pending';
+        linkageDecision = providerValidity === 'valid' ? 'auto_pass' : 'pending_human_review';
+        if (providerValidity === 'invalid') {
+          riskImpact = 'high';
+          riskSummary = 'Document verification failed validity checks.';
+        } else if (providerValidity === 'valid') {
+          riskImpact = 'low';
+          riskSummary = 'Document was verified successfully.';
+        } else {
+          riskImpact = 'medium';
+          riskSummary = 'Document verification needs manual review.';
+        }
+      }
 
       if (
-        (result.decision === 'enrolled' ||
-          result.decision === 'matched' ||
-          result.isVerifiedMatch === true) &&
-        providerValidity !== 'invalid'
+        result.providerLookupStatus === 'provider_unavailable' ||
+        result.providerVerificationStatus === 'provider_unavailable'
       ) {
-        status = 'verified';
-        providerMatch = true;
+        status = 'provider_unavailable';
+        providerMatch = null;
+        failureReason = isDriverLicenceVerification
+          ? "Driver's licence verification is temporarily unavailable."
+          : 'Document verification is temporarily unavailable.';
       } else if (result.providerLookupStatus === 'no_match' || result.decision === 'no_match') {
         status = 'failed';
         providerMatch = false;
-        failureReason = 'The document number could not be found in the provider database.';
+        failureReason = isDriverLicenceVerification
+          ? "We could not confirm that this driver's licence is valid."
+          : 'We could not confirm that this document is valid.';
+      } else if (providerValidity === 'invalid') {
+        status = 'failed';
+        providerMatch = false;
+        failureReason = isDriverLicenceVerification
+          ? "We could not confirm that this driver's licence is valid."
+          : 'We could not confirm that this document is valid.';
+      } else if (isDriverLicenceVerification && linkageDecision === 'fail') {
+        status = 'failed';
+        providerMatch = false;
+        failureReason = "Unable to verify that this driver's licence belongs to this person.";
+      } else if (isDriverLicenceVerification && linkageDecision === 'pending_human_review') {
+        status = 'manual_review';
+        providerMatch = null;
+        failureReason = "Driver's licence verification is pending review.";
+      } else if (
+        (result.decision === 'enrolled' ||
+          result.decision === 'matched' ||
+          result.isVerifiedMatch === true) &&
+        (!isDriverLicenceVerification || linkageDecision === 'auto_pass')
+      ) {
+        status = 'verified';
+        providerMatch = true;
       } else if (result.decision === 'review') {
         status = 'manual_review';
         providerMatch = null;
         failureReason = 'Automated verification was inconclusive. Manual review required.';
       } else {
         status = 'manual_review';
+        providerMatch = null;
         failureReason = result.providerLookupStatus ?? 'Provider returned an inconclusive result.';
       }
 
-      if (result.verifiedProfile) {
-        providerFirstName = result.verifiedProfile.fullName?.split(' ')[0] ?? null;
-        providerLastName = result.verifiedProfile.fullName?.split(' ').slice(1).join(' ') ?? null;
-        providerDateOfBirth = result.verifiedProfile.dateOfBirth ?? null;
+      if (isDriverLicenceVerification && driver.personId) {
+        const canonicalEvidence = await this.intelligenceClient.recordDriverLicenceEvidence({
+          personId: driver.personId,
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          linkageDecision,
+          ...(providerName ? { providerName } : {}),
+          ...(providerReference ? { providerReference } : {}),
+          ...(providerValidity ? { validity: providerValidity } : {}),
+          ...(providerIssueDate ? { issueDate: providerIssueDate } : {}),
+          ...(providerExpiryDate ? { expiryDate: providerExpiryDate } : {}),
+          ...(demographicMatchScore !== null ? { demographicMatchScore } : {}),
+          ...(biometricMatchScore !== null ? { biometricMatchScore } : {}),
+          ...(overallLinkageScore !== null ? { overallLinkageScore } : {}),
+          ...(linkageReasons.length ? { linkageReasons } : {}),
+          manualReviewRequired,
+          evidence: {
+            documentType: documentSlug,
+            holder: {
+              firstName: providerFirstName,
+              middleName: providerMiddleName,
+              lastName: providerLastName,
+              dateOfBirth: providerDateOfBirth,
+              gender: providerGender,
+            },
+            portraitUrl,
+            stateOfIssuance: providerStateOfIssuance,
+            licenceClass: providerLicenceClass,
+          },
+        });
+        reviewCaseId = canonicalEvidence.reviewCaseId;
       }
 
-      if (providerValidity === 'invalid') {
-        status = 'failed';
-        providerMatch = false;
-        failureReason = 'The licence record is not valid with the issuing authority.';
-      }
+      providerResult = {
+        providerName: result.providerName ?? null,
+        providerReference,
+        providerLookupStatus: result.providerLookupStatus ?? null,
+        providerVerificationStatus: result.providerVerificationStatus ?? null,
+        validity: providerValidity,
+        issueDate: providerIssueDate,
+        expiryDate: providerExpiryDate,
+        portraitAvailable,
+        portraitUrl,
+        matchScore,
+        riskScore,
+        stateOfIssuance: providerStateOfIssuance,
+        licenceClass: providerLicenceClass,
+        holder: {
+          firstName: providerFirstName,
+          middleName: providerMiddleName,
+          lastName: providerLastName,
+          dateOfBirth: providerDateOfBirth,
+          gender: providerGender,
+        },
+        linkage: {
+          status: linkageStatus,
+          demographicMatchScore,
+          biometricMatchScore,
+          overallLinkageScore,
+          decision: linkageDecision,
+          reasons: linkageReasons,
+        },
+        reviewCaseId,
+        manualReviewRequired,
+        risk: {
+          impact: riskImpact,
+          summary: riskSummary,
+        },
+        audit: (auditRecord as Prisma.JsonObject | null) ?? null,
+      };
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'driver_licence_verification_linkage_evaluated',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          linkageStatus,
+          demographicMatchScore,
+          biometricMatchScore,
+          overallLinkageScore,
+          linkageDecision,
+          riskImpact,
+          reviewCaseId,
+        }),
+      );
+      this.logger.log(
+        JSON.stringify({
+          event: 'driver_licence_verification_normalized',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          providerName,
+          hasPortrait: Boolean(portraitUrl),
+          stateOfIssuance: providerStateOfIssuance,
+          licenceClass: providerLicenceClass,
+        }),
+      );
     } catch (err) {
-      // Provider error — route to manual review rather than crashing the onboarding flow.
-      status = 'manual_review';
+      const message =
+        err instanceof Error ? err.message : 'Provider verification failed unexpectedly.';
+      status = /temporarily unavailable|request failed|not configured|unavailable/i.test(message)
+        ? 'provider_unavailable'
+        : 'manual_review';
       failureReason =
-        err instanceof Error
-          ? `Provider verification failed: ${err.message}`
-          : 'Provider verification failed. Manual review will be required.';
+        status === 'provider_unavailable'
+          ? isDriverLicenceVerification
+            ? "Driver's licence verification is temporarily unavailable."
+            : 'Document verification is temporarily unavailable.'
+          : `Provider verification failed: ${message}`;
+      riskImpact = isDriverLicenceVerification ? 'medium' : 'high';
+      riskSummary =
+        status === 'provider_unavailable'
+          ? isDriverLicenceVerification
+            ? "Driver's licence verification is temporarily unavailable."
+            : 'Document verification is temporarily unavailable.'
+          : isDriverLicenceVerification
+            ? 'Driver licence verification needs manual review.'
+            : 'Document verification needs manual review.';
+      this.logger.warn(
+        JSON.stringify({
+          event: 'driver_licence_verification_error',
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          status,
+          error: message,
+        }),
+      );
     }
 
     // Update the record with the outcome
@@ -3355,7 +4399,7 @@ export class DriversService {
         provider: providerName ?? 'unknown',
         status,
         providerMatch,
-        providerConfidence: matchScore,
+        providerConfidence: linkageConfidence ?? matchScore,
         providerFirstName,
         providerLastName,
         providerDateOfBirth,
@@ -3366,6 +4410,47 @@ export class DriversService {
         updatedAt: new Date(),
       },
     });
+
+    if (isDriverLicenceVerification) {
+      const notificationContext = await this.getTenantNotificationContext(payload.tenantId);
+      if (status === 'manual_review') {
+        await this.notificationsService.notifyDriverLicenceReviewPending({
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          driverName: this.formatDriverName(driver),
+          ...(driver.email ? { driverEmail: driver.email } : {}),
+          ...notificationContext,
+          actionUrl: `/drivers/${driver.id}/review`,
+        });
+      } else {
+        await this.notificationsService.notifyDriverVerificationStatus({
+          tenantId: payload.tenantId,
+          driverId: driver.id,
+          driverName: this.formatDriverName(driver),
+          ...(driver.email ? { driverEmail: driver.email } : {}),
+          ...notificationContext,
+          decision: status === 'verified' ? 'verified' : status === 'failed' ? 'failed' : 'pending',
+          detail:
+            status === 'verified'
+              ? "Driver's licence verification passed."
+              : (failureReason ?? "Driver's licence verification is still being processed."),
+          actionUrl: `/drivers/${driver.id}`,
+        });
+      }
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'driver_licence_verification_persisted',
+        tenantId: payload.tenantId,
+        driverId: driver.id,
+        verificationRecordId: verificationRecord.id,
+        status,
+        linkageStatus,
+        linkageDecision,
+        riskImpact,
+      }),
+    );
 
     return {
       id: verificationRecord.id,
@@ -3378,10 +4463,35 @@ export class DriversService {
       providerDateOfBirth,
       providerIssueDate,
       providerExpiryDate,
+      providerMiddleName,
+      providerGender,
+      providerStateOfIssuance,
+      providerLicenceClass,
       portraitAvailable,
+      portraitUrl,
+      demographicMatchScore,
+      biometricMatchScore,
+      linkageConfidence,
+      overallLinkageScore,
+      linkageStatus,
+      linkageDecision,
+      linkageReasons,
+      reviewCaseId,
+      manualReviewRequired,
+      reviewDecision: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNotes: null,
+      riskImpact,
+      riskSummary,
       matchScore,
       riskScore,
       failureReason,
+      providerReference,
+      verifiedAt:
+        status === 'verified'
+          ? new Date().toISOString()
+          : (verificationRecord.verifiedAt?.toISOString() ?? null),
     };
   }
 
@@ -3399,9 +4509,30 @@ export class DriversService {
       providerDateOfBirth: string | null;
       providerIssueDate: string | null;
       providerExpiryDate: string | null;
+      providerMiddleName: string | null;
+      providerGender: string | null;
+      providerStateOfIssuance: string | null;
+      providerLicenceClass: string | null;
       portraitAvailable: boolean | null;
+      portraitUrl: string | null;
+      demographicMatchScore: number | null;
+      biometricMatchScore: number | null;
+      linkageConfidence: number | null;
+      overallLinkageScore: number | null;
+      linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+      linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+      linkageReasons: string[];
+      reviewCaseId: string | null;
+      manualReviewRequired: boolean;
+      reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+      reviewedBy: string | null;
+      reviewedAt: string | null;
+      reviewNotes: string | null;
+      riskImpact: 'low' | 'medium' | 'high' | 'critical';
+      riskSummary: string;
       matchScore: number | null;
       riskScore: number | null;
+      providerReference: string | null;
       failureReason: string | null;
       verifiedAt: string | null;
       createdAt: string;
@@ -3434,16 +4565,135 @@ export class DriversService {
           ? verification.providerResult.issueDate
           : null,
       providerExpiryDate: verification.providerExpiryDate ?? null,
+      providerMiddleName:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.holder) &&
+        typeof verification.providerResult.holder.middleName === 'string'
+          ? verification.providerResult.holder.middleName
+          : null,
+      providerGender:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.holder) &&
+        typeof verification.providerResult.holder.gender === 'string'
+          ? verification.providerResult.holder.gender
+          : null,
+      providerStateOfIssuance:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.stateOfIssuance === 'string'
+          ? verification.providerResult.stateOfIssuance
+          : null,
+      providerLicenceClass:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.licenceClass === 'string'
+          ? verification.providerResult.licenceClass
+          : null,
       portraitAvailable:
         isVerificationMetadataRecord(verification.providerResult) &&
         typeof verification.providerResult.portraitAvailable === 'boolean'
           ? verification.providerResult.portraitAvailable
           : null,
+      portraitUrl:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.portraitUrl === 'string'
+          ? verification.providerResult.portraitUrl
+          : null,
+      demographicMatchScore:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.demographicMatchScore === 'number'
+          ? verification.providerResult.linkage.demographicMatchScore
+          : null,
+      biometricMatchScore:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.biometricMatchScore === 'number'
+          ? verification.providerResult.linkage.biometricMatchScore
+          : null,
+      linkageConfidence:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.overallLinkageScore === 'number'
+          ? verification.providerResult.linkage.overallLinkageScore
+          : isVerificationMetadataRecord(verification.providerResult) &&
+              isVerificationMetadataRecord(verification.providerResult.linkage) &&
+              typeof verification.providerResult.linkage.linkageConfidence === 'number'
+            ? verification.providerResult.linkage.linkageConfidence
+            : null,
+      overallLinkageScore:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.overallLinkageScore === 'number'
+          ? verification.providerResult.linkage.overallLinkageScore
+          : null,
+      linkageStatus:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.status === 'string'
+          ? (verification.providerResult.linkage.status as
+              | 'matched'
+              | 'mismatch'
+              | 'pending'
+              | 'insufficient_data')
+          : 'pending',
+      linkageDecision:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        typeof verification.providerResult.linkage.decision === 'string'
+          ? (verification.providerResult.linkage.decision as
+              | 'auto_pass'
+              | 'pending_human_review'
+              | 'fail')
+          : 'pending_human_review',
+      linkageReasons:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        Array.isArray(verification.providerResult.linkage.reasons) &&
+        verification.providerResult.linkage.reasons.every((value) => typeof value === 'string')
+          ? (verification.providerResult.linkage.reasons as string[])
+          : [],
+      reviewCaseId:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.reviewCaseId === 'string'
+          ? verification.providerResult.reviewCaseId
+          : null,
+      manualReviewRequired:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.manualReviewRequired === 'boolean'
+          ? verification.providerResult.manualReviewRequired
+          : verification.status === 'manual_review',
+      reviewDecision:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.reviewDecision === 'string'
+          ? (verification.providerResult.reviewDecision as
+              | 'approved'
+              | 'rejected'
+              | 'request_reverification')
+          : null,
+      reviewedBy: verification.reviewedBy ?? null,
+      reviewedAt: verification.reviewedAt ? verification.reviewedAt.toISOString() : null,
+      reviewNotes: verification.reviewNotes ?? null,
+      riskImpact:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.risk) &&
+        typeof verification.providerResult.risk.impact === 'string'
+          ? (verification.providerResult.risk.impact as 'low' | 'medium' | 'high' | 'critical')
+          : 'medium',
+      riskSummary:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.risk) &&
+        typeof verification.providerResult.risk.summary === 'string'
+          ? verification.providerResult.risk.summary
+          : (verification.failureReason ?? 'Document verification is pending.'),
       matchScore: verification.providerConfidence ?? null,
       riskScore:
         isVerificationMetadataRecord(verification.providerResult) &&
         typeof verification.providerResult.riskScore === 'number'
           ? verification.providerResult.riskScore
+          : null,
+      providerReference:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        typeof verification.providerResult.providerReference === 'string'
+          ? verification.providerResult.providerReference
           : null,
       failureReason: verification.failureReason ?? null,
       verifiedAt: verification.verifiedAt ? verification.verifiedAt.toISOString() : null,
@@ -5251,6 +6501,7 @@ export class DriversService {
       guarantorStatus?: string | null;
       guarantorPersonId?: string | null;
       hasApprovedLicence: boolean;
+      driverLicenceVerification?: DriverDocumentSummary['driverLicenceVerification'];
       hasMobileAccess: boolean;
       mobileAccessStatus?: string | null;
       approvedDocumentTypes?: string[];
@@ -5307,9 +6558,49 @@ export class DriversService {
     }
 
     const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
-    const missingRequiredDocuments = settings.requiredDriverDocumentSlugs.filter(
-      (slug) => !approvedDocumentTypes.has(slug),
-    );
+    const latestLicenceVerification = driver.driverLicenceVerification ?? null;
+    const missingRequiredDocuments = settings.requiredDriverDocumentSlugs.filter((slug) => {
+      if (slug !== DRIVER_LICENCE_DOCUMENT_TYPE) {
+        return !approvedDocumentTypes.has(slug);
+      }
+
+      if (approvedDocumentTypes.has(slug)) {
+        return false;
+      }
+
+      return latestLicenceVerification === null;
+    });
+
+    if (settings.requiredDriverDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
+      if (
+        latestLicenceVerification?.isExpired ||
+        latestLicenceVerification?.validity === 'invalid'
+      ) {
+        activationReasons.push(
+          "Driver's licence is expired or invalid. Renew and reverify it before activation.",
+        );
+      } else if (latestLicenceVerification?.linkageStatus === 'mismatch') {
+        activationReasons.push(
+          "Driver's licence could not be linked to the driver's verified identity.",
+        );
+      } else if (
+        latestLicenceVerification &&
+        latestLicenceVerification.status !== 'verified' &&
+        latestLicenceVerification.status !== 'failed'
+      ) {
+        activationReasons.push("Driver's licence verification is still pending.");
+      }
+    } else if (
+      latestLicenceVerification?.isExpired ||
+      latestLicenceVerification?.validity === 'invalid'
+    ) {
+      localRiskFlags.push('expired_driver_licence');
+    }
+
+    if (latestLicenceVerification?.expiresSoon && !latestLicenceVerification.isExpired) {
+      localRiskFlags.push('driver_licence_expiring_soon');
+    }
+
     if (missingRequiredDocuments.length > 0) {
       activationReasons.push(
         `Required driver documents are still missing: ${missingRequiredDocuments.join(', ')}.`,
@@ -5786,11 +7077,6 @@ export class DriversService {
         where: {
           tenantId,
           driverId: { in: driverIds },
-          status: 'verified',
-        },
-        select: {
-          driverId: true,
-          documentType: true,
         },
       }),
     ]);
@@ -5803,6 +7089,7 @@ export class DriversService {
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
         approvedDocumentTypes: [],
+        driverLicenceVerification: null,
       });
     }
 
@@ -5831,19 +7118,48 @@ export class DriversService {
       }
     }
 
-    // Zero-trust verified ID numbers count toward approved document types.
-    // Deduplicate by documentType per driver so a repeated verification
-    // does not inflate the approved list.
+    const latestDriverLicenceVerificationByDriverId = new Map<
+      string,
+      DriverDocumentVerificationRecord
+    >();
     for (const verification of zeroTrustVerifications) {
       const summary = summaries.get(verification.driverId);
       if (!summary) continue;
       const normalizedDocumentType = this.normalizeStoredDocumentType(verification.documentType);
-      if (!summary.approvedDocumentTypes.includes(normalizedDocumentType)) {
-        summary.approvedDocumentTypes.push(normalizedDocumentType);
+
+      if (verification.status === 'verified') {
+        if (!summary.approvedDocumentTypes.includes(normalizedDocumentType)) {
+          summary.approvedDocumentTypes.push(normalizedDocumentType);
+        }
+        if (
+          normalizedDocumentType === DRIVER_LICENCE_DOCUMENT_TYPE &&
+          !summary.hasApprovedLicence
+        ) {
+          summary.hasApprovedLicence = true;
+        }
+      } else if (
+        verification.status === 'pending' ||
+        verification.status === 'manual_review' ||
+        verification.status === 'provider_unavailable'
+      ) {
+        summary.pendingDocumentCount += 1;
+      } else if (verification.status === 'failed') {
+        summary.rejectedDocumentCount += 1;
       }
-      if (normalizedDocumentType === DRIVER_LICENCE_DOCUMENT_TYPE && !summary.hasApprovedLicence) {
-        summary.hasApprovedLicence = true;
+
+      if (normalizedDocumentType === DRIVER_LICENCE_DOCUMENT_TYPE) {
+        const latest = latestDriverLicenceVerificationByDriverId.get(verification.driverId);
+        if (!latest || latest.createdAt < verification.createdAt) {
+          latestDriverLicenceVerificationByDriverId.set(verification.driverId, verification);
+        }
       }
+    }
+
+    for (const [driverId, latestVerification] of latestDriverLicenceVerificationByDriverId) {
+      const summary = summaries.get(driverId);
+      if (!summary) continue;
+      summary.driverLicenceVerification =
+        this.buildDriverLicenceVerificationSummary(latestVerification) ?? null;
     }
 
     return drivers.map((driver) => ({
@@ -5854,6 +7170,7 @@ export class DriversService {
         rejectedDocumentCount: 0,
         expiredDocumentCount: 0,
         approvedDocumentTypes: [],
+        driverLicenceVerification: null,
       }),
     }));
   }

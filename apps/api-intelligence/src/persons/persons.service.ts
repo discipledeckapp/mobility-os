@@ -3,8 +3,8 @@ import { RiskScore } from '@mobility-os/intelligence-domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { PrismaService } from '../database/prisma.service';
-import type { IntelPerson } from '../generated/prisma';
-import { LinkageEventsService } from '../linkage-events/linkage-events.service';
+import type { IntelPerson, Prisma } from '../generated/prisma';
+import type { LinkageEventsService } from '../linkage-events/linkage-events.service';
 import type { CreatePersonDto } from './dto/create-person.dto';
 import type { IntelligenceQueryResultDto } from './dto/person-response.dto';
 
@@ -41,6 +41,34 @@ interface RecordPersonAssociationInput {
   verifiedAt?: Date;
 }
 
+interface SecondaryIdentityEvidenceInput {
+  personId: string;
+  tenantId: string;
+  driverId: string;
+  linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  providerName?: string;
+  providerReference?: string;
+  validity?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  demographicMatchScore?: number;
+  biometricMatchScore?: number;
+  overallLinkageScore?: number;
+  linkageReasons?: string[];
+  manualReviewRequired: boolean;
+  evidence?: Record<string, unknown>;
+}
+
+interface ResolveSecondaryIdentityReviewInput {
+  personId: string;
+  reviewCaseId: string;
+  decision: 'approved' | 'rejected' | 'request_reverification';
+  reviewerId: string;
+  reviewerRole: string;
+  notes?: string;
+  evidenceSnapshot?: Record<string, unknown>;
+}
+
 @Injectable()
 export class PersonsService {
   constructor(
@@ -66,16 +94,18 @@ export class PersonsService {
     return person;
   }
 
-  async listForStaff(input: {
-    q?: string;
-    limit?: number;
-    riskBand?: string;
-    countryCode?: string;
-    watchlistStatus?: 'flagged' | 'clear';
-    reviewState?: 'open' | 'in_review' | 'resolved' | 'escalated';
-    roleType?: 'driver' | 'guarantor' | 'owner' | 'admin';
-    reverificationRequired?: boolean;
-  } = {}): Promise<IntelPerson[]> {
+  async listForStaff(
+    input: {
+      q?: string;
+      limit?: number;
+      riskBand?: string;
+      countryCode?: string;
+      watchlistStatus?: 'flagged' | 'clear';
+      reviewState?: 'open' | 'in_review' | 'resolved' | 'escalated';
+      roleType?: 'driver' | 'guarantor' | 'owner' | 'admin';
+      reverificationRequired?: boolean;
+    } = {},
+  ): Promise<IntelPerson[]> {
     const q = input.q?.trim();
     const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
     const riskScoreWhere = this.riskBandToScoreWhere(input.riskBand);
@@ -164,6 +194,182 @@ export class PersonsService {
     });
   }
 
+  async recordSecondaryIdentityEvidence(input: SecondaryIdentityEvidenceInput): Promise<{
+    reviewCaseId: string | null;
+    riskScore: number;
+    riskBand: string;
+  }> {
+    const person = await this.findById(input.personId);
+    const nextRiskScore = this.deriveSecondaryIdentityRiskScore(person.globalRiskScore, {
+      linkageDecision: input.linkageDecision,
+      validity: input.validity ?? null,
+      expiryDate: input.expiryDate ?? null,
+      manualReviewRequired: input.manualReviewRequired,
+    });
+
+    let reviewCaseId: string | null = null;
+    if (input.manualReviewRequired) {
+      const reviewCase = await this.prisma.intelReviewCase.create({
+        data: {
+          personId: input.personId,
+          confidenceScore: Math.max(
+            0,
+            Math.min(1, (input.overallLinkageScore ?? input.demographicMatchScore ?? 0) / 100),
+          ),
+          evidence: {
+            reviewType: 'driver_licence_linkage',
+            tenantId: input.tenantId,
+            driverId: input.driverId,
+            linkageDecision: input.linkageDecision,
+            validity: input.validity ?? null,
+            issueDate: input.issueDate ?? null,
+            expiryDate: input.expiryDate ?? null,
+            demographicMatchScore: input.demographicMatchScore ?? null,
+            biometricMatchScore: input.biometricMatchScore ?? null,
+            overallLinkageScore: input.overallLinkageScore ?? null,
+            linkageReasons: input.linkageReasons ?? [],
+            providerName: input.providerName ?? null,
+            providerReference: input.providerReference ?? null,
+            ...(input.evidence ? { evidence: input.evidence } : {}),
+          } as Prisma.InputJsonObject,
+          notes: 'Driver licence linkage requires tenant review.',
+        },
+      });
+      reviewCaseId = reviewCase.id;
+    }
+
+    await Promise.all([
+      this.prisma.intelPerson.update({
+        where: { id: input.personId },
+        data: { globalRiskScore: nextRiskScore },
+      }),
+      this.prisma.intelIdentityChangeEvent.create({
+        data: {
+          personId: input.personId,
+          eventType: 'secondary_identity_recorded',
+          source: 'driver_licence_verification',
+          verificationProvider: input.providerName ?? null,
+          tenantId: input.tenantId,
+          localEntityType: 'driver',
+          localEntityId: input.driverId,
+          changedFields: ['driver_licence_verification'],
+          newValues: {
+            linkageDecision: input.linkageDecision,
+            validity: input.validity ?? null,
+            issueDate: input.issueDate ?? null,
+            expiryDate: input.expiryDate ?? null,
+            demographicMatchScore: input.demographicMatchScore ?? null,
+            biometricMatchScore: input.biometricMatchScore ?? null,
+            overallLinkageScore: input.overallLinkageScore ?? null,
+            linkageReasons: input.linkageReasons ?? [],
+            manualReviewRequired: input.manualReviewRequired,
+            reviewCaseId,
+            providerReference: input.providerReference ?? null,
+            ...(input.evidence ? { evidence: input.evidence } : {}),
+          } as Prisma.InputJsonObject,
+          reason: 'Driver licence verification recorded as secondary identity evidence.',
+          verifiedAt: new Date(),
+        },
+      }),
+      this.linkageEventsService.record({
+        personId: input.personId,
+        eventType: 'risk_changed',
+        actor: 'system',
+        ...(input.overallLinkageScore !== undefined
+          ? { confidenceScore: input.overallLinkageScore / 100 }
+          : {}),
+        reason: 'Driver licence verification updated canonical confidence and risk posture.',
+        metadata: {
+          tenantId: input.tenantId,
+          driverId: input.driverId,
+          linkageDecision: input.linkageDecision,
+          reviewCaseId,
+          previousRiskScore: person.globalRiskScore,
+          nextRiskScore,
+        },
+      }),
+    ]);
+
+    return {
+      reviewCaseId,
+      riskScore: nextRiskScore,
+      riskBand: this.scoreToRiskBand(nextRiskScore),
+    };
+  }
+
+  async resolveSecondaryIdentityReview(input: ResolveSecondaryIdentityReviewInput): Promise<{
+    riskScore: number;
+    riskBand: string;
+  }> {
+    const person = await this.findById(input.personId);
+    const reviewCase = await this.prisma.intelReviewCase.findUnique({
+      where: { id: input.reviewCaseId },
+    });
+    if (!reviewCase || reviewCase.personId !== input.personId) {
+      throw new NotFoundException(`ReviewCase '${input.reviewCaseId}' not found`);
+    }
+
+    const nextRiskScore = this.deriveManualReviewRiskScore(person.globalRiskScore, input.decision);
+    const resolution =
+      input.decision === 'approved'
+        ? 'licence_linkage_approved'
+        : input.decision === 'rejected'
+          ? 'licence_linkage_rejected'
+          : 'licence_linkage_reverification_requested';
+
+    await Promise.all([
+      this.prisma.intelReviewCase.update({
+        where: { id: input.reviewCaseId },
+        data: {
+          status: 'resolved',
+          resolution,
+          reviewedBy: input.reviewerId,
+          reviewedAt: new Date(),
+          notes: input.notes ?? null,
+        },
+      }),
+      this.prisma.intelPerson.update({
+        where: { id: input.personId },
+        data: { globalRiskScore: nextRiskScore },
+      }),
+      this.prisma.intelIdentityChangeEvent.create({
+        data: {
+          personId: input.personId,
+          eventType: 'secondary_identity_reviewed',
+          source: 'driver_licence_review',
+          changedFields: ['driver_licence_review_decision'],
+          newValues: {
+            reviewCaseId: input.reviewCaseId,
+            decision: input.decision,
+            reviewerId: input.reviewerId,
+            reviewerRole: input.reviewerRole,
+            notes: input.notes ?? null,
+            evidenceSnapshot: input.evidenceSnapshot ?? null,
+          } as Prisma.InputJsonObject,
+          reason: `Driver licence review ${input.decision.replace(/_/g, ' ')}`,
+          verifiedAt: new Date(),
+        },
+      }),
+      this.linkageEventsService.record({
+        personId: input.personId,
+        eventType: 'risk_changed',
+        actor: input.reviewerId,
+        reason: `Driver licence review ${input.decision.replace(/_/g, ' ')}`,
+        metadata: {
+          reviewCaseId: input.reviewCaseId,
+          reviewerRole: input.reviewerRole,
+          previousRiskScore: person.globalRiskScore,
+          nextRiskScore,
+        },
+      }),
+    ]);
+
+    return {
+      riskScore: nextRiskScore,
+      riskBand: this.scoreToRiskBand(nextRiskScore),
+    };
+  }
+
   async setWatchlisted(id: string, isWatchlisted: boolean): Promise<IntelPerson> {
     await this.findById(id);
 
@@ -190,8 +396,11 @@ export class PersonsService {
    * automatically. The signal is idempotent — a second enrollment in the same
    * role at the same tenant is a no-op and does not produce a duplicate signal.
    */
-  async recordTenantPresence(input: RecordPersonAssociationInput): Promise<{ crossRoleConflict: boolean }> {
-    const oppositeRole = input.roleType === 'driver' ? 'guarantor' : input.roleType === 'guarantor' ? 'driver' : null;
+  async recordTenantPresence(
+    input: RecordPersonAssociationInput,
+  ): Promise<{ crossRoleConflict: boolean }> {
+    const oppositeRole =
+      input.roleType === 'driver' ? 'guarantor' : input.roleType === 'guarantor' ? 'driver' : null;
 
     const [, oppositePresence] = await Promise.all([
       this.prisma.intelPersonTenantPresence.upsert({
@@ -331,9 +540,7 @@ export class PersonsService {
           where: { id: personId },
           data: { globalPersonCode: candidate },
         });
-      } catch {
-        continue;
-      }
+      } catch {}
     }
 
     throw new BadRequestException('Unable to allocate a unique global person code');
@@ -397,7 +604,9 @@ export class PersonsService {
     });
 
     if (changedFields.length > 0) {
-      const previousValues = Object.fromEntries(changedFields.map((field) => [field, person[field]]));
+      const previousValues = Object.fromEntries(
+        changedFields.map((field) => [field, person[field]]),
+      );
       const newValues = Object.fromEntries(changedFields.map((field) => [field, updated[field]]));
       const reverificationReason = `Canonical verified identity changed: ${changedFields.join(', ')}`;
 
@@ -406,7 +615,9 @@ export class PersonsService {
           data: {
             personId: input.personId,
             source: input.source ?? 'verified_enrichment',
-            ...(input.verificationProvider ? { verificationProvider: input.verificationProvider } : {}),
+            ...(input.verificationProvider
+              ? { verificationProvider: input.verificationProvider }
+              : {}),
             ...(input.verificationCountryCode
               ? { verificationCountryCode: input.verificationCountryCode }
               : {}),
@@ -475,9 +686,7 @@ export class PersonsService {
     });
   }
 
-  private riskBandToScoreWhere(riskBand?: string):
-    | { lte?: number; gt?: number }
-    | undefined {
+  private riskBandToScoreWhere(riskBand?: string): { lte?: number; gt?: number } | undefined {
     switch (riskBand) {
       case 'low':
         return { lte: 30 };
@@ -490,5 +699,49 @@ export class PersonsService {
       default:
         return undefined;
     }
+  }
+
+  private scoreToRiskBand(score: number): string {
+    if (score <= 30) return 'low';
+    if (score <= 60) return 'medium';
+    if (score <= 80) return 'high';
+    return 'critical';
+  }
+
+  private deriveSecondaryIdentityRiskScore(
+    currentScore: number,
+    input: {
+      linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+      validity: string | null;
+      expiryDate: string | null;
+      manualReviewRequired: boolean;
+    },
+  ): number {
+    if (
+      input.validity === 'invalid' ||
+      (input.expiryDate ? new Date(input.expiryDate).getTime() < Date.now() : false)
+    ) {
+      return Math.min(100, currentScore + 25);
+    }
+    if (input.linkageDecision === 'fail') {
+      return Math.min(100, currentScore + 20);
+    }
+    if (input.linkageDecision === 'pending_human_review' || input.manualReviewRequired) {
+      return Math.min(100, currentScore + 10);
+    }
+    return Math.max(0, currentScore - 5);
+  }
+
+  private deriveManualReviewRiskScore(
+    currentScore: number,
+    decision: 'approved' | 'rejected' | 'request_reverification',
+  ): number {
+    if (decision === 'approved') {
+      return Math.max(0, currentScore - 10);
+    }
+    if (decision === 'request_reverification') {
+      return Math.min(100, currentScore + 5);
+    }
+    return Math.min(100, currentScore + 20);
   }
 }

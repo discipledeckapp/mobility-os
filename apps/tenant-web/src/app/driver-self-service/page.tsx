@@ -1,7 +1,16 @@
 'use client';
 
 import { getDocumentType } from '@mobility-os/domain-config';
-import { Button, Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Heading,
+  Text,
+} from '@mobility-os/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -954,6 +963,7 @@ function DocumentVerificationStep({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<DocumentVerificationRecord | null>(null);
+  const existingLicenceVerification = driver.driverLicenceVerification;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1013,10 +1023,110 @@ function DocumentVerificationStep({
 
           {lastResult && lastResult.status !== 'verified' ? (
             <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-              {lastResult.status === 'manual_review'
-                ? 'Your document has been submitted for manual review. You may continue while the review is in progress.'
-                : (lastResult.failureReason ??
-                  'The document number could not be verified automatically. Check the number and try again, or contact your organisation.')}
+              {lastResult.status === 'provider_unavailable'
+                ? "Driver's licence verification is temporarily unavailable."
+                : lastResult.reviewDecision === 'approved'
+                  ? "Your driver's licence verification has been approved."
+                  : lastResult.reviewDecision === 'rejected'
+                    ? "Your driver's licence verification was rejected. Please contact your organisation before trying again."
+                    : lastResult.reviewDecision === 'request_reverification'
+                      ? 'A new driver’s licence verification is required before onboarding can continue.'
+                      : lastResult.status === 'manual_review'
+                        ? 'Your document has been submitted for manual review. You may continue while the review is in progress.'
+                        : (lastResult.failureReason ??
+                          'The document number could not be verified automatically. Check the number and try again, or contact your organisation.')}
+            </div>
+          ) : null}
+
+          {!lastResult &&
+          selectedDocType === 'drivers-license' &&
+          existingLicenceVerification?.manualReviewRequired ? (
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              {existingLicenceVerification.reviewDecision === 'approved'
+                ? "Your driver's licence verification has been approved."
+                : existingLicenceVerification.reviewDecision === 'rejected'
+                  ? "Your driver's licence verification was rejected. Please contact your organisation before trying again."
+                  : existingLicenceVerification.reviewDecision === 'request_reverification'
+                    ? 'A new driver’s licence verification is required before onboarding can continue.'
+                    : 'Your driver’s licence verification is pending review. You do not need to submit it again right now.'}
+            </div>
+          ) : null}
+
+          {lastResult ? (
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={lastResult.status === 'verified' ? 'success' : 'warning'}>
+                  {lastResult.status === 'verified'
+                    ? 'Verification passed'
+                    : lastResult.status === 'failed'
+                      ? 'Verification failed'
+                      : lastResult.status === 'provider_unavailable'
+                        ? 'Provider unavailable'
+                        : 'Verification pending'}
+                </Badge>
+                {lastResult.providerValidity ? (
+                  <Badge tone={lastResult.providerValidity === 'valid' ? 'success' : 'danger'}>
+                    Validity: {lastResult.providerValidity}
+                  </Badge>
+                ) : null}
+                <Badge
+                  tone={
+                    lastResult.linkageDecision === 'auto_pass'
+                      ? 'success'
+                      : lastResult.linkageDecision === 'fail'
+                        ? 'danger'
+                        : 'warning'
+                  }
+                >
+                  Linkage: {lastResult.linkageDecision.replace(/_/g, ' ')}
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Text tone="muted">Licence number</Text>
+                  <Text>{lastResult.idNumber}</Text>
+                </div>
+                {lastResult.providerExpiryDate ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Expiry date</Text>
+                    <Text>{lastResult.providerExpiryDate}</Text>
+                  </div>
+                ) : null}
+                {lastResult.providerIssueDate ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Issue date</Text>
+                    <Text>{lastResult.providerIssueDate}</Text>
+                  </div>
+                ) : null}
+                {lastResult.providerStateOfIssuance ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">State of issuance</Text>
+                    <Text>{lastResult.providerStateOfIssuance}</Text>
+                  </div>
+                ) : null}
+                {lastResult.providerLicenceClass ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Licence class</Text>
+                    <Text>{lastResult.providerLicenceClass}</Text>
+                  </div>
+                ) : null}
+                {lastResult.overallLinkageScore !== null ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Linkage confidence</Text>
+                    <Text>{lastResult.overallLinkageScore}%</Text>
+                  </div>
+                ) : null}
+              </div>
+
+              <Text tone="muted">{lastResult.riskSummary}</Text>
+              {lastResult.linkageReasons.length > 0 ? (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  {lastResult.linkageReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 

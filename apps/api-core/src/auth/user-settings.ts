@@ -2,6 +2,15 @@ import type { TenantRole } from '@mobility-os/authz-model';
 import type { SupportedLanguage } from '../tenants/tenant-settings';
 
 export const NOTIFICATION_TOPICS = [
+  'verification_payment_receipt',
+  'driver_verification_status',
+  'driver_licence_review_pending',
+  'driver_licence_review_resolved',
+  'guarantor_status',
+  'assignment_issued',
+  'assignment_accepted',
+  'assignment_changed',
+  'assignment_ended',
   'remittance_due',
   'remittance_overdue',
   'remittance_reconciled',
@@ -64,6 +73,31 @@ function buildDefaultTopicPreference(
       email: true,
       inApp: isOperatorRole,
       push: false,
+    };
+  }
+
+  if (topic === 'verification_payment_receipt') {
+    return {
+      email: true,
+      inApp: true,
+      push: isDriverAudience,
+    };
+  }
+
+  if (
+    topic === 'driver_verification_status' ||
+    topic === 'driver_licence_review_pending' ||
+    topic === 'driver_licence_review_resolved' ||
+    topic === 'guarantor_status' ||
+    topic === 'assignment_issued' ||
+    topic === 'assignment_accepted' ||
+    topic === 'assignment_changed' ||
+    topic === 'assignment_ended'
+  ) {
+    return {
+      email: true,
+      inApp: true,
+      push: true,
     };
   }
 

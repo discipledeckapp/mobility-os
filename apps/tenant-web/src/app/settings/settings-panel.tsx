@@ -1,7 +1,6 @@
 'use client';
 
 import { DocumentScope, getDocumentTypesByScope } from '@mobility-os/domain-config';
-import { useActionState, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -13,28 +12,44 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import type { FleetRecord, TenantAuthSessionRecord, TenantRecord, TeamMemberRecord, VehicleRecord } from '../../lib/api-core';
-import {
-  changePasswordAction,
-  createDataSubjectRequestAction,
-  syncMaintenanceRemindersAction,
-  syncRemittanceRemindersAction,
-  updateProfileAction,
-  updateNotificationPreferencesAction,
-  updateOrganisationSettingsAction,
-  type SettingsActionState,
-} from './actions';
+import { useActionState, useMemo, useState } from 'react';
+import type {
+  FleetRecord,
+  TeamMemberRecord,
+  TenantAuthSessionRecord,
+  TenantRecord,
+  VehicleRecord,
+} from '../../lib/api-core';
 import type {
   DataSubjectRequestRecord,
   NotificationPreferencesRecord,
   PrivacySupportRecord,
   UserNotificationRecord,
 } from '../../lib/api-core';
+import {
+  type SettingsActionState,
+  changePasswordAction,
+  createDataSubjectRequestAction,
+  syncMaintenanceRemindersAction,
+  syncRemittanceRemindersAction,
+  updateNotificationPreferencesAction,
+  updateOrganisationSettingsAction,
+  updateProfileAction,
+} from './actions';
 import { TeamPanel } from './team-panel';
 
 const initialState: SettingsActionState = {};
 
 const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> = {
+  verification_payment_receipt: 'Verification payment receipts',
+  driver_verification_status: 'Driver verification updates',
+  driver_licence_review_pending: 'Licence review pending alerts',
+  driver_licence_review_resolved: 'Licence review decisions',
+  guarantor_status: 'Guarantor status updates',
+  assignment_issued: 'Assignment issued alerts',
+  assignment_accepted: 'Assignment accepted alerts',
+  assignment_changed: 'Assignment changed alerts',
+  assignment_ended: 'Assignment ended alerts',
   remittance_due: 'Remittance due reminders',
   remittance_overdue: 'Overdue remittance follow-up',
   remittance_reconciled: 'Reconciled remittance updates',
@@ -50,7 +65,14 @@ const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> =
   marketing_updates: 'Campaigns, offers, and optional marketing updates',
 };
 
-type SettingsSection = 'account' | 'organisation' | 'drivers' | 'fleet' | 'notifications' | 'team' | 'privacy';
+type SettingsSection =
+  | 'account'
+  | 'organisation'
+  | 'drivers'
+  | 'fleet'
+  | 'notifications'
+  | 'team'
+  | 'privacy';
 
 const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'account', label: 'Account' },
@@ -180,7 +202,9 @@ function LogoUploadField({ currentUrl }: { currentUrl?: string | null | undefine
         onChange={handleFile}
         type="file"
       />
-      <p className="text-xs text-slate-400">PNG, JPG, SVG or WebP. Shown in the workspace header.</p>
+      <p className="text-xs text-slate-400">
+        PNG, JPG, SVG or WebP. Shown in the workspace header.
+      </p>
     </div>
   );
 }
@@ -271,9 +295,7 @@ export function SettingsPanel({
   const [requiresIdentityVerification, setRequiresIdentityVerification] = useState(
     tenant.requireIdentityVerificationForActivation ?? true,
   );
-  const [requiresGuarantor, setRequiresGuarantor] = useState(
-    tenant.requireGuarantor ?? false,
-  );
+  const [requiresGuarantor, setRequiresGuarantor] = useState(tenant.requireGuarantor ?? false);
   const selectedDriverDocumentSlugs = useMemo(
     () => new Set(tenant.requiredDriverDocumentSlugs ?? []),
     [tenant.requiredDriverDocumentSlugs],
@@ -479,7 +501,10 @@ export function SettingsPanel({
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
-                <ReadOnlyField label="Organisation name" value={tenant.displayName ?? tenant.name} />
+                <ReadOnlyField
+                  label="Organisation name"
+                  value={tenant.displayName ?? tenant.name}
+                />
                 <ReadOnlyField label="Slug" value={tenant.slug} />
                 <ReadOnlyField label="Country" value={tenant.country} />
                 <ReadOnlyField
@@ -665,9 +690,13 @@ export function SettingsPanel({
                               value={document.slug}
                             />
                             <span className="space-y-0.5">
-                              <span className="block font-medium text-slate-800">{document.name}</span>
+                              <span className="block font-medium text-slate-800">
+                                {document.name}
+                              </span>
                               <span className="block text-slate-500">
-                                {document.hasExpiry ? 'Track expiry during onboarding.' : 'Collect once during onboarding.'}
+                                {document.hasExpiry
+                                  ? 'Track expiry during onboarding.'
+                                  : 'Collect once during onboarding.'}
                               </span>
                             </span>
                           </label>
@@ -685,7 +714,8 @@ export function SettingsPanel({
                           placeholder="guarantor-letter, union-card"
                         />
                         <Text tone="muted">
-                          Add any extra document types you want collected. Custom entries entered here will be included in onboarding.
+                          Add any extra document types you want collected. Custom entries entered
+                          here will be included in onboarding.
                         </Text>
                       </div>
                     </div>
@@ -732,9 +762,7 @@ export function SettingsPanel({
               <CardContent>
                 <form action={organisationAction} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="requiredVehicleDocumentSlugs">
-                      Required vehicle documents
-                    </Label>
+                    <Label htmlFor="requiredVehicleDocumentSlugs">Required vehicle documents</Label>
                     <Input
                       defaultValue={(
                         tenant.requiredVehicleDocumentSlugs ?? ['vehicle-license', 'insurance']
@@ -764,12 +792,7 @@ export function SettingsPanel({
 
         {/* Team section */}
         {activeSection === 'team' && (
-          <TeamPanel
-            canManage={canManage}
-            fleets={fleets}
-            members={members}
-            vehicles={vehicles}
-          />
+          <TeamPanel canManage={canManage} fleets={fleets} members={members} vehicles={vehicles} />
         )}
 
         {/* Notifications section */}
@@ -869,9 +892,7 @@ export function SettingsPanel({
                       </Button>
                     </form>
                   </div>
-                  {reminderState.error ? (
-                    <Text tone="danger">{reminderState.error}</Text>
-                  ) : null}
+                  {reminderState.error ? <Text tone="danger">{reminderState.error}</Text> : null}
                   {reminderState.success ? (
                     <Text tone="success">{reminderState.success}</Text>
                   ) : null}
@@ -930,7 +951,8 @@ export function SettingsPanel({
               <CardHeader>
                 <CardTitle>Privacy and data requests</CardTitle>
                 <CardDescription>
-                  Submit access, correction, deletion, or processing-restriction requests without leaving your account workflow.
+                  Submit access, correction, deletion, or processing-restriction requests without
+                  leaving your account workflow.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -967,10 +989,16 @@ export function SettingsPanel({
                     />
                   </div>
                   <p className="text-xs text-slate-500">
-                    Mobility OS records the request time, policy version, and request scope for audit. For verification-specific consent, use the dedicated verification consent step.
+                    Mobility OS records the request time, policy version, and request scope for
+                    audit. For verification-specific consent, use the dedicated verification consent
+                    step.
                   </p>
-                  {privacyRequestState.error ? <Text tone="danger">{privacyRequestState.error}</Text> : null}
-                  {privacyRequestState.success ? <Text tone="success">{privacyRequestState.success}</Text> : null}
+                  {privacyRequestState.error ? (
+                    <Text tone="danger">{privacyRequestState.error}</Text>
+                  ) : null}
+                  {privacyRequestState.success ? (
+                    <Text tone="success">{privacyRequestState.success}</Text>
+                  ) : null}
                   <Button disabled={privacyRequestPending} type="submit">
                     {privacyRequestPending ? 'Submitting…' : 'Submit privacy request'}
                   </Button>
@@ -986,20 +1014,41 @@ export function SettingsPanel({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <ReadOnlyField label="Privacy policy version" value={privacySupport?.privacyPolicyVersion ?? '2026-03-27'} />
-                <ReadOnlyField label="Terms version" value={privacySupport?.termsVersion ?? '2026-03-27'} />
-                <ReadOnlyField label="Support email" value={privacySupport?.supportEmail ?? 'support@mobiris.ng'} />
+                <ReadOnlyField
+                  label="Privacy policy version"
+                  value={privacySupport?.privacyPolicyVersion ?? '2026-03-27'}
+                />
+                <ReadOnlyField
+                  label="Terms version"
+                  value={privacySupport?.termsVersion ?? '2026-03-27'}
+                />
+                <ReadOnlyField
+                  label="Support email"
+                  value={privacySupport?.supportEmail ?? 'support@mobiris.ng'}
+                />
                 {privacySupport?.supportPhonePrimary ? (
-                  <ReadOnlyField label="Primary support phone" value={privacySupport.supportPhonePrimary} />
+                  <ReadOnlyField
+                    label="Primary support phone"
+                    value={privacySupport.supportPhonePrimary}
+                  />
                 ) : null}
                 {privacySupport?.supportPhoneSecondary ? (
-                  <ReadOnlyField label="Secondary support phone" value={privacySupport.supportPhoneSecondary} />
+                  <ReadOnlyField
+                    label="Secondary support phone"
+                    value={privacySupport.supportPhoneSecondary}
+                  />
                 ) : null}
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <a className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline" href="/privacy">
+                  <a
+                    className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline"
+                    href="/privacy"
+                  >
                     Open Privacy Policy
                   </a>
-                  <a className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline" href="/terms">
+                  <a
+                    className="text-sm font-semibold text-[var(--mobiris-primary)] underline hover:no-underline"
+                    href="/terms"
+                  >
                     Open Terms of Use
                   </a>
                 </div>
@@ -1015,10 +1064,15 @@ export function SettingsPanel({
               </CardHeader>
               <CardContent className="space-y-3">
                 {dataRequests.length === 0 ? (
-                  <Text tone="muted">No data requests have been submitted from this account yet.</Text>
+                  <Text tone="muted">
+                    No data requests have been submitted from this account yet.
+                  </Text>
                 ) : (
                   dataRequests.map((request) => (
-                    <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 px-4 py-3" key={request.id}>
+                    <div
+                      className="rounded-[var(--mobiris-radius-card)] border border-slate-200 px-4 py-3"
+                      key={request.id}
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold capitalize text-[var(--mobiris-ink)]">
                           {request.requestType.replace(/_/g, ' ')}
@@ -1034,7 +1088,9 @@ export function SettingsPanel({
                         <p className="mt-2 text-sm text-slate-600">{request.details}</p>
                       ) : null}
                       {request.resolutionNotes ? (
-                        <p className="mt-2 text-sm text-slate-600">Resolution: {request.resolutionNotes}</p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Resolution: {request.resolutionNotes}
+                        </p>
                       ) : null}
                     </div>
                   ))

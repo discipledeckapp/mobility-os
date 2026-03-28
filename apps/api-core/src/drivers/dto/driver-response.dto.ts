@@ -81,6 +81,49 @@ export class DriverResponseDto {
   })
   identityProviderRawData?: Record<string, unknown> | null;
 
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+    description:
+      "Latest driver's licence verification summary, when zero-trust licence verification has been attempted.",
+  })
+  driverLicenceVerification?: {
+    id: string;
+    status: string;
+    licenceNumber: string;
+    maskedLicenceNumber: string;
+    validity: 'valid' | 'invalid' | 'unknown' | null;
+    issueDate: string | null;
+    expiryDate: string | null;
+    expiresSoon: boolean;
+    isExpired: boolean;
+    providerName: string | null;
+    providerReference: string | null;
+    holderFullName: string | null;
+    holderDateOfBirth: string | null;
+    holderGender: string | null;
+    stateOfIssuance: string | null;
+    licenceClass: string | null;
+    portraitUrl: string | null;
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    linkageConfidence: number | null;
+    overallLinkageScore: number | null;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    linkageReasons: string[];
+    reviewCaseId: string | null;
+    manualReviewRequired: boolean;
+    reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    reviewNotes: string | null;
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
+    failureReason: string | null;
+    verifiedAt: string | null;
+  } | null;
+
   @ApiPropertyOptional({ description: 'ISO 8601 date (YYYY-MM-DD)' })
   dateOfBirth?: string | null;
 

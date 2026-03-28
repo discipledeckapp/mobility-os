@@ -23,6 +23,8 @@ export interface IdentityVerificationResult {
     issueDate?: string;
     expiryDate?: string;
     portraitAvailable?: boolean;
+    stateOfIssuance?: string;
+    licenceClass?: string;
   };
   enrichment?: {
     firstName?: string;
@@ -61,8 +63,10 @@ export interface IdentityProviderAdapter {
       subjectConsent?: boolean;
       validationData?: {
         firstName?: string;
+        middleName?: string;
         lastName?: string;
         dateOfBirth?: string;
+        gender?: string;
       };
       selfieImageBase64?: string;
       selfieImageUrl?: string;
@@ -111,6 +115,12 @@ function normalizeYouVerifyResponse(
   payload: Record<string, unknown>,
 ): IdentityVerificationResult {
   const data = isRecord(payload.data) ? payload.data : {};
+  const validations = isRecord(data.validations) ? data.validations : {};
+  const validationData = isRecord(validations.data) ? validations.data : {};
+  const selfieValidation = isRecord(validations.selfie) ? validations.selfie : {};
+  const selfieVerification = isRecord(selfieValidation.selfieVerification)
+    ? selfieValidation.selfieVerification
+    : {};
   const status = typeof data.status === 'string' ? data.status.toLowerCase() : '';
   const verificationStatus =
     typeof payload.message === 'string'
@@ -169,6 +179,52 @@ function normalizeYouVerifyResponse(
       : typeof data.signatureUrl === 'string'
         ? data.signatureUrl
         : undefined;
+  const selfieConfidenceLevel =
+    typeof selfieVerification.confidenceLevel === 'number'
+      ? selfieVerification.confidenceLevel
+      : undefined;
+  const selfieMatch =
+    typeof selfieVerification.match === 'boolean' ? selfieVerification.match : undefined;
+  const selfieImage =
+    typeof selfieVerification.image === 'string'
+      ? selfieVerification.image
+      : typeof selfieValidation.image === 'string'
+        ? selfieValidation.image
+        : undefined;
+  const issueDate =
+    typeof data.issueDate === 'string'
+      ? data.issueDate
+      : typeof data.issuedDate === 'string'
+        ? data.issuedDate
+        : undefined;
+  const expiryDate =
+    typeof data.expiryDate === 'string'
+      ? data.expiryDate
+      : typeof data.expirationDate === 'string'
+        ? data.expirationDate
+        : typeof data.expiredDate === 'string'
+          ? data.expiredDate
+          : undefined;
+  const stateOfIssuance =
+    typeof data.stateOfIssuance === 'string' ? data.stateOfIssuance : undefined;
+  const licenceClass =
+    typeof data.licenceClass === 'string'
+      ? data.licenceClass
+      : typeof data.licenseClass === 'string'
+        ? data.licenseClass
+        : typeof data.licenceType === 'string'
+          ? data.licenceType
+          : typeof data.licenseType === 'string'
+            ? data.licenseType
+            : typeof data.classOfVehicle === 'string'
+              ? data.classOfVehicle
+              : typeof data.vehicleClass === 'string'
+                ? data.vehicleClass
+                : undefined;
+  const validationMessages =
+    typeof validations.validationMessages === 'string' ? validations.validationMessages : undefined;
+  const allValidationPassed =
+    typeof data.allValidationPassed === 'boolean' ? data.allValidationPassed : undefined;
   const enrichment: NonNullable<IdentityVerificationResult['enrichment']> = {};
 
   if (firstName.length > 0) enrichment.firstName = firstName;
@@ -200,8 +256,25 @@ function normalizeYouVerifyResponse(
   if (typeof data.ninIdNumber === 'string') enrichment.ninIdNumber = data.ninIdNumber;
   if (typeof data.idNumber === 'string') enrichment.ninIdNumber = data.idNumber;
   if (typeof data.gender === 'string') enrichment.gender = data.gender;
-  if (photoUrl) enrichment.photoUrl = photoUrl;
+  const resolvedPhotoUrl = photoUrl ?? selfieImage;
+  if (resolvedPhotoUrl) enrichment.photoUrl = resolvedPhotoUrl;
   if (signatureUrl) enrichment.signatureUrl = signatureUrl;
+  const computedValidity =
+    typeof data.isValid === 'boolean'
+      ? data.isValid
+        ? 'valid'
+        : 'invalid'
+      : typeof data.valid === 'boolean'
+        ? data.valid
+          ? 'valid'
+          : 'invalid'
+        : expiryDate
+          ? new Date(expiryDate).getTime() < Date.now()
+            ? 'invalid'
+            : 'valid'
+          : status === 'found'
+            ? 'valid'
+            : 'unknown';
 
   return {
     status: status === 'found' ? 'verified' : 'no_match',
@@ -209,30 +282,36 @@ function normalizeYouVerifyResponse(
     verificationStatus,
     matchedIdentifierType: identifierType,
     documentMetadata: {
-      validity:
-        typeof data.isValid === 'boolean'
-          ? data.isValid
-            ? 'valid'
-            : 'invalid'
-          : typeof data.valid === 'boolean'
-            ? data.valid
-              ? 'valid'
-              : 'invalid'
-            : 'unknown',
-      ...optionalStringProperty(
-        'issueDate',
-        typeof data.issueDate === 'string' ? data.issueDate : data.issuedDate,
-      ),
-      ...optionalStringProperty(
-        'expiryDate',
-        typeof data.expiryDate === 'string' ? data.expiryDate : data.expirationDate,
-      ),
-      portraitAvailable: typeof data.image === 'string' && data.image.trim().length > 0,
+      validity: computedValidity,
+      ...optionalStringProperty('issueDate', issueDate),
+      ...optionalStringProperty('expiryDate', expiryDate),
+      ...optionalStringProperty('stateOfIssuance', stateOfIssuance),
+      ...optionalStringProperty('licenceClass', licenceClass),
+      portraitAvailable:
+        typeof data.image === 'string'
+          ? data.image.trim().length > 0
+          : typeof selfieImage === 'string' && selfieImage.trim().length > 0,
     },
     ...(Object.keys(enrichment).length > 0 ? { enrichment } : {}),
     auditData: {
       identifierType,
       verificationStatus,
+      providerReference: typeof data.id === 'string' ? data.id : null,
+      documentType: typeof data.type === 'string' ? data.type : null,
+      allValidationPassed,
+      dataValidation: typeof data.dataValidation === 'boolean' ? data.dataValidation : null,
+      selfieValidation: typeof data.selfieValidation === 'boolean' ? data.selfieValidation : null,
+      validationMessages,
+      stateOfIssuance,
+      licenceClass,
+      validations: {
+        data: validationData,
+        selfie: {
+          match: selfieMatch ?? null,
+          confidenceLevel: selfieConfidenceLevel ?? null,
+          image: selfieImage ?? null,
+        },
+      },
       data,
     },
     ...(typeof data.reason === 'string' ? { reason: data.reason } : {}),
@@ -297,8 +376,10 @@ function getLocalNigeriaMockVerification(
     subjectConsent?: boolean;
     validationData?: {
       firstName?: string;
+      middleName?: string;
       lastName?: string;
       dateOfBirth?: string;
+      gender?: string;
     };
     selfieImageBase64?: string;
     selfieImageUrl?: string;
@@ -384,8 +465,10 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       subjectConsent?: boolean;
       validationData?: {
         firstName?: string;
+        middleName?: string;
         lastName?: string;
         dateOfBirth?: string;
+        gender?: string;
       };
       selfieImageBase64?: string;
       selfieImageUrl?: string;
@@ -554,10 +637,13 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       subjectConsent?: boolean;
       validationData?: {
         firstName?: string;
+        middleName?: string;
         lastName?: string;
         dateOfBirth?: string;
+        gender?: string;
       };
       selfieImageBase64?: string;
+      selfieImageUrl?: string;
     },
   ): Record<string, unknown> {
     return {
@@ -570,20 +656,26 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
                 ...(providerVerification.validationData.firstName
                   ? { firstName: providerVerification.validationData.firstName }
                   : {}),
+                ...(providerVerification.validationData.middleName
+                  ? { middleName: providerVerification.validationData.middleName }
+                  : {}),
                 ...(providerVerification.validationData.lastName
                   ? { lastName: providerVerification.validationData.lastName }
                   : {}),
                 ...(providerVerification.validationData.dateOfBirth
                   ? { dateOfBirth: providerVerification.validationData.dateOfBirth }
                   : {}),
+                ...(providerVerification.validationData.gender
+                  ? { gender: providerVerification.validationData.gender }
+                  : {}),
               },
             },
           }
         : {}),
-      ...(providerVerification?.selfieImageBase64
+      ...(providerVerification?.selfieImageBase64 || providerVerification?.selfieImageUrl
         ? {
             selfie: {
-              image: providerVerification.selfieImageBase64,
+              image: providerVerification.selfieImageBase64 ?? providerVerification.selfieImageUrl,
             },
           }
         : {}),
@@ -669,8 +761,10 @@ export class SmileIdentityProvider implements IdentityProviderAdapter {
       subjectConsent?: boolean;
       validationData?: {
         firstName?: string;
+        middleName?: string;
         lastName?: string;
         dateOfBirth?: string;
+        gender?: string;
       };
       selfieImageBase64?: string;
       selfieImageUrl?: string;

@@ -159,6 +159,15 @@ export interface NotificationChannelPreferenceRecord {
 }
 
 export interface NotificationPreferencesRecord {
+  verification_payment_receipt: NotificationChannelPreferenceRecord;
+  driver_verification_status: NotificationChannelPreferenceRecord;
+  driver_licence_review_pending: NotificationChannelPreferenceRecord;
+  driver_licence_review_resolved: NotificationChannelPreferenceRecord;
+  guarantor_status: NotificationChannelPreferenceRecord;
+  assignment_issued: NotificationChannelPreferenceRecord;
+  assignment_accepted: NotificationChannelPreferenceRecord;
+  assignment_changed: NotificationChannelPreferenceRecord;
+  assignment_ended: NotificationChannelPreferenceRecord;
   remittance_due: NotificationChannelPreferenceRecord;
   remittance_overdue: NotificationChannelPreferenceRecord;
   remittance_reconciled: NotificationChannelPreferenceRecord;
@@ -261,6 +270,42 @@ export interface DriverRecord {
     riskScore?: number;
   } | null;
   identityProviderRawData?: Record<string, unknown> | null;
+  driverLicenceVerification?: {
+    id: string;
+    status: string;
+    licenceNumber: string;
+    maskedLicenceNumber: string;
+    validity: 'valid' | 'invalid' | 'unknown' | null;
+    issueDate: string | null;
+    expiryDate: string | null;
+    expiresSoon: boolean;
+    isExpired: boolean;
+    providerName: string | null;
+    providerReference: string | null;
+    holderFullName: string | null;
+    holderDateOfBirth: string | null;
+    holderGender: string | null;
+    stateOfIssuance: string | null;
+    licenceClass: string | null;
+    portraitUrl: string | null;
+    linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+    demographicMatchScore: number | null;
+    biometricMatchScore: number | null;
+    linkageConfidence: number | null;
+    overallLinkageScore: number | null;
+    linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+    linkageReasons: string[];
+    reviewCaseId: string | null;
+    manualReviewRequired: boolean;
+    reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+    reviewedBy: string | null;
+    reviewedAt: string | null;
+    reviewNotes: string | null;
+    riskImpact: 'low' | 'medium' | 'high' | 'critical';
+    riskSummary: string;
+    failureReason: string | null;
+    verifiedAt: string | null;
+  } | null;
   dateOfBirth?: string | null;
   gender?: string | null;
   nationality?: string | null;
@@ -408,6 +453,25 @@ export interface DriverDocumentReviewQueueRecord extends DriverDocumentRecord {
   driverPhone: string;
   driverStatus: string;
   fleetId: string;
+}
+
+export interface DriverLicenceReviewQueueRecord {
+  id: string;
+  tenantId: string;
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
+  status: string;
+  validity: 'valid' | 'invalid' | 'unknown' | null;
+  expiryDate: string | null;
+  linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  overallLinkageScore: number | null;
+  riskImpact: 'low' | 'medium' | 'high' | 'critical';
+  reviewCaseId: string | null;
+  createdAt: string;
+  verifiedAt?: string | null;
 }
 
 export interface DriverGuarantorRecord {
@@ -1969,6 +2033,23 @@ export async function listDriverDocumentReviewQueue(
   );
 }
 
+export async function listDriverLicenceReviewQueue(
+  input: PaginationParams & { q?: string } = {},
+  token?: string,
+): Promise<PaginatedApiResponse<DriverLicenceReviewQueueRecord>> {
+  const params = new URLSearchParams();
+  if (input.q) params.set('q', input.q);
+  if (typeof input.page === 'number') params.set('page', String(input.page));
+  if (typeof input.limit === 'number') params.set('limit', String(input.limit));
+  return apiCoreFetch(
+    `/drivers/licence-verifications/review-queue${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
 export async function updateDriverStatus(
   driverId: string,
   status: string,
@@ -2114,6 +2195,25 @@ export async function reviewDriverDocument(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function reviewDriverLicenceVerification(
+  driverId: string,
+  input: {
+    decision: 'approved' | 'rejected' | 'request_reverification';
+    notes?: string;
+  },
+  token?: string,
+): Promise<DriverRecord['driverLicenceVerification']> {
+  return apiCoreFetch<DriverRecord['driverLicenceVerification']>(
+    `/drivers/${driverId}/licence-verification/review`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function downloadDriversCsv(token?: string): Promise<string> {
@@ -2405,9 +2505,30 @@ export type DocumentVerificationRecord = {
   providerDateOfBirth: string | null;
   providerIssueDate: string | null;
   providerExpiryDate: string | null;
+  providerMiddleName: string | null;
+  providerGender: string | null;
+  providerStateOfIssuance: string | null;
+  providerLicenceClass: string | null;
   portraitAvailable: boolean | null;
+  portraitUrl: string | null;
+  demographicMatchScore: number | null;
+  biometricMatchScore: number | null;
+  linkageConfidence: number | null;
+  overallLinkageScore: number | null;
+  linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
+  linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  linkageReasons: string[];
+  reviewCaseId: string | null;
+  manualReviewRequired: boolean;
+  reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  riskImpact: 'low' | 'medium' | 'high' | 'critical';
+  riskSummary: string;
   matchScore: number | null;
   riskScore: number | null;
+  providerReference: string | null;
   failureReason: string | null;
   verifiedAt: string | null;
   createdAt: string;

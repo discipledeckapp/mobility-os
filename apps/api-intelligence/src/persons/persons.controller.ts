@@ -1,3 +1,4 @@
+import { RiskScore } from '@mobility-os/intelligence-domain';
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { Query } from '@nestjs/common';
 import {
@@ -8,7 +9,6 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { RiskScore } from '@mobility-os/intelligence-domain';
 import { IntelligenceApiKeyGuard } from '../auth/guards/intelligence-api-key.guard';
 import { PlatformAuthGuard } from '../auth/guards/platform-auth.guard';
 // biome-ignore lint/style/useImportType: NestJS @Body DTOs are referenced at runtime.
@@ -23,8 +23,10 @@ import {
   // biome-ignore lint/style/useImportType: NestJS @Body DTOs are referenced at runtime.
   UpdateWatchlistedDto,
 } from './dto/person-response.dto';
+import type { RecordSecondaryIdentityEvidenceDto } from './dto/record-secondary-identity-evidence.dto';
+import type { ResolveSecondaryIdentityReviewDto } from './dto/resolve-secondary-identity-review.dto';
 import {
-  RetireBiometricAssetsDto,
+  type RetireBiometricAssetsDto,
   RetireBiometricAssetsResponseDto,
 } from './dto/retire-biometric-assets.dto';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
@@ -45,9 +47,11 @@ import { PersonsService } from './persons.service';
 export class PersonsStaffController {
   constructor(private readonly personsService: PersonsService) {}
 
-  private toPersonResponse(person: {
-    globalRiskScore: number;
-  } & Omit<PersonResponseDto, 'riskBand'>): PersonResponseDto {
+  private toPersonResponse(
+    person: {
+      globalRiskScore: number;
+    } & Omit<PersonResponseDto, 'riskBand'>,
+  ): PersonResponseDto {
     return {
       ...person,
       riskBand: RiskScore.of(person.globalRiskScore).band,
@@ -89,7 +93,9 @@ export class PersonsStaffController {
   @Get(':id')
   @ApiOkResponse({ type: PersonResponseDto })
   findById(@Param('id') id: string): Promise<PersonResponseDto> {
-    return this.personsService.findById(id).then((person) => this.toPersonResponse(person as never));
+    return this.personsService
+      .findById(id)
+      .then((person) => this.toPersonResponse(person as never));
   }
 
   @Get(':id/associations')
@@ -128,7 +134,9 @@ export class PersonsStaffController {
       events.map((event) => ({
         ...event,
         changedFields: Array.isArray(event.changedFields)
-          ? event.changedFields.filter((value: unknown): value is string => typeof value === 'string')
+          ? event.changedFields.filter(
+              (value: unknown): value is string => typeof value === 'string',
+            )
           : [],
         previousValues:
           event.previousValues &&
@@ -137,9 +145,7 @@ export class PersonsStaffController {
             ? (event.previousValues as Record<string, unknown>)
             : null,
         newValues:
-          event.newValues &&
-          typeof event.newValues === 'object' &&
-          !Array.isArray(event.newValues)
+          event.newValues && typeof event.newValues === 'object' && !Array.isArray(event.newValues)
             ? (event.newValues as Record<string, unknown>)
             : null,
       })),
@@ -152,7 +158,9 @@ export class PersonsStaffController {
     @Param('id') id: string,
     @Body('score') score: number,
   ): Promise<PersonResponseDto> {
-    return this.personsService.updateRiskScore(id, score).then((person) => this.toPersonResponse(person as never));
+    return this.personsService
+      .updateRiskScore(id, score)
+      .then((person) => this.toPersonResponse(person as never));
   }
 
   @Patch(':id/watchlisted')
@@ -214,5 +222,17 @@ export class PersonsInternalController {
     @Body() dto: RetireBiometricAssetsDto,
   ): Promise<RetireBiometricAssetsResponseDto> {
     return this.personsService.retireBiometricAssets(dto.urls);
+  }
+
+  @Post('secondary-identity-evidence')
+  @ApiCreatedResponse({ type: Object })
+  recordSecondaryIdentityEvidence(@Body() dto: RecordSecondaryIdentityEvidenceDto) {
+    return this.personsService.recordSecondaryIdentityEvidence(dto);
+  }
+
+  @Post('secondary-identity-evidence/review')
+  @ApiCreatedResponse({ type: Object })
+  resolveSecondaryIdentityReview(@Body() dto: ResolveSecondaryIdentityReviewDto) {
+    return this.personsService.resolveSecondaryIdentityReview(dto);
   }
 }
