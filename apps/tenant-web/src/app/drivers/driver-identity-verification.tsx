@@ -137,7 +137,7 @@ export function DriverIdentityVerification({
 }) {
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
+  const [isOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
   const [sendLinkPaysKyc, setSendLinkPaysKyc] = useState(driver.driverPaysKyc ?? orgDriverPaysKyc);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
@@ -210,6 +210,7 @@ export function DriverIdentityVerification({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraGuidance, setCameraGuidance] = useState<string>('Position your face in the frame');
+  const [videoPlaying, setVideoPlaying] = useState(false);
   const [captureProgress, setCaptureProgress] = useState(0); // 0 = idle, 1–3 = capturing frame N
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -248,14 +249,21 @@ export function DriverIdentityVerification({
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
 
-  // Attach stream to video element after it mounts (fixes black screen)
+  // Attach stream after the container finishes expanding (fixes black screen on
+  // mobile Safari/Chrome where play() into a zero-height element renders black).
+  // We wait ~200 ms for the CSS max-h transition to settle before calling play().
   useEffect(() => {
-    const video = videoRef.current;
-    const stream = streamRef.current;
-    if (video && stream && !video.srcObject) {
-      video.srcObject = stream;
+    if (!cameraReady) return;
+    const tid = setTimeout(() => {
+      const video = videoRef.current;
+      const stream = streamRef.current;
+      if (!video || !stream) return;
+      if (!video.srcObject) {
+        video.srcObject = stream;
+      }
       void video.play().catch(() => {});
-    }
+    }, 200);
+    return () => clearTimeout(tid);
   }, [cameraReady]);
 
   function stopStream(): void {
@@ -279,16 +287,10 @@ export function DriverIdentityVerification({
       });
       stopStream();
       streamRef.current = stream;
-      const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-        setCameraReady(true);
-      } else {
-        // Video element not yet in DOM — setCameraReady will trigger re-render
-        // and the useEffect above will attach the stream.
-        setCameraReady(true);
-      }
+      // Do NOT call play() here — the video container is still max-h-0 at this point.
+      // setCameraReady triggers the container to expand; the useEffect handles
+      // attaching the stream and calling play() once the element has dimensions.
+      setCameraReady(true);
     } catch (error) {
       if (error instanceof Error && error.name === 'NotAllowedError') {
         setCameraError('Camera permission denied. Please allow camera access in your browser settings and try again.');
@@ -362,6 +364,7 @@ export function DriverIdentityVerification({
     setSelfieImageBase64('');
     setCameraError(null);
     setCameraReady(false);
+    setVideoPlaying(false);
     setCaptureProgress(0);
   }
 
@@ -529,7 +532,9 @@ export function DriverIdentityVerification({
                     {cameraError ? '⚠ ' : '📷 '}{cameraError ?? cameraGuidance}
                   </div>
 
-                  {/* Video — always in DOM once session starts; hidden until stream ready */}
+                  {/* Video — always in DOM once session starts; hidden until stream ready.
+                      Container uses max-h transition; stream is attached AFTER it expands
+                      so the browser can render frames into an element with positive dimensions. */}
                   <div className={`overflow-hidden rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-border)] bg-slate-950 transition-all ${cameraReady ? 'max-h-72 min-h-[18rem]' : 'max-h-0 border-0'}`}>
                     <video
                       autoPlay
@@ -537,7 +542,10 @@ export function DriverIdentityVerification({
                       muted
                       playsInline
                       ref={videoRef}
-                      onCanPlay={() => setCameraGuidance('Camera is ready — centre your face and capture')}
+                      onPlaying={() => {
+                        setVideoPlaying(true);
+                        setCameraGuidance('Camera is ready — centre your face and capture');
+                      }}
                     />
                   </div>
 
@@ -546,6 +554,11 @@ export function DriverIdentityVerification({
                       <Button onClick={() => void startCamera()} type="button">
                         Open camera
                       </Button>
+                    ) : !videoPlaying ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
+                        Starting camera…
+                      </div>
                     ) : captureProgress > 0 ? (
                       <div className="flex items-center gap-3">
                         <div className="flex gap-1.5">

@@ -489,14 +489,10 @@ export async function resolveDriverSelfServiceVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      ...(verificationMode !== 'manual'
-        ? {
-            livenessCheck: {
-              ...(providerName ? { provider: providerName } : {}),
-              sessionId,
-            },
-          }
-        : {}),
+      livenessCheck: {
+        ...(providerName ? { provider: providerName } : {}),
+        sessionId,
+      },
     });
 
     const feedback = getVerificationSubmissionFeedback(result);

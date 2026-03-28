@@ -1073,15 +1073,14 @@ export class DriversService {
             ? 'Your verification payment has already been received. Continue from where you stopped.'
             : 'Your verification payment has already been received. You can continue from where you stopped.';
       } else if (verificationEntitlementState === 'consumed') {
-        if (verificationAlreadySatisfied) {
-          verificationPaymentStatus = 'ready';
-          verificationPaymentMessage =
-            'Your verification payment has already been used for this completed onboarding flow.';
-        } else {
-          verificationPaymentStatus = 'driver_payment_required';
-          verificationPaymentMessage =
-            'Your previous paid verification attempt has already been used. A new payment is required only if your organisation policy allows another paid attempt.';
-        }
+        // The entitlement was consumed by a prior provider call. Regardless of
+        // whether that call succeeded or failed, we do NOT require a new payment —
+        // the driver has already paid. If verification failed, they can retry
+        // verification without paying again.
+        verificationPaymentStatus = 'ready';
+        verificationPaymentMessage = verificationAlreadySatisfied
+          ? 'Your verification payment has already been used for this completed onboarding flow.'
+          : 'Your verification payment was already received. You can retry verification.';
       } else if (verificationEntitlementState === 'expired') {
         verificationPaymentStatus = 'driver_payment_required';
         verificationPaymentMessage =
@@ -1635,10 +1634,11 @@ export class DriversService {
       return { step: 'account', reason: 'Driver needs to create a sign-in account.' };
     }
 
-    // Step 2: profile completeness
-    if (!driver.firstName || !driver.lastName || !driver.dateOfBirth) {
-      return { step: 'profile', reason: 'Driver profile is incomplete.' };
-    }
+    // Step 2: profile completeness — intentionally skipped.
+    // Name and DOB are populated from the YouVerify provider response after
+    // identity verification completes. Requiring profile data before verification
+    // creates a chicken-and-egg loop. Profile is collected via NIN lookup, not
+    // by asking the driver to type it manually.
 
     // Step 3: verification consent
     const existingConsent = await this.prisma.userConsent.findFirst({

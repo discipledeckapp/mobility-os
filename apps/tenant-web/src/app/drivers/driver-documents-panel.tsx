@@ -26,7 +26,6 @@ import {
   getCountryConfig,
   getDocumentTypesByScope,
   getDocumentType,
-  getRequiredDocuments,
   isCountrySupported,
 } from '@mobility-os/domain-config';
 import {
@@ -192,12 +191,6 @@ export function DriverDocumentsPanel({
       : countryCode && isCountrySupported(countryCode)
       ? getCountryConfig(countryCode).requiredDriverDocumentSlugs
       : ['national-id', 'drivers-license'];
-  const requiredDocumentOptions = getRequiredDocuments(
-    requiredDriverDocumentSlugs,
-  ).map((document) => ({
-    value: document.slug,
-    label: document.name,
-  }));
   const allDocumentOptions = getDocumentTypesByScope(DocumentScope.Driver).map((document) => ({
     value: document.slug,
     label: document.name,
