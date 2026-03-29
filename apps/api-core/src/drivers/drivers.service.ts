@@ -6588,7 +6588,11 @@ export class DriversService {
       }
     }
 
-    if (!driver.hasApprovedLicence) {
+    const driverLicenceRequired = settings.requiredDriverDocumentSlugs.includes(
+      DRIVER_LICENCE_DOCUMENT_TYPE,
+    );
+
+    if (driverLicenceRequired && !driver.hasApprovedLicence) {
       activationReasons.push('An approved driver licence is required.');
     }
 
@@ -6606,7 +6610,7 @@ export class DriversService {
       return latestLicenceVerification === null;
     });
 
-    if (settings.requiredDriverDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
+    if (driverLicenceRequired) {
       if (
         latestLicenceVerification?.isExpired ||
         latestLicenceVerification?.validity === 'invalid'

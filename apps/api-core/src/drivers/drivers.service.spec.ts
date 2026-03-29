@@ -325,6 +325,44 @@ describe('DriversService', () => {
     expect(result.status).toBe('active');
   });
 
+  it('allows activation without a driver licence when the tenant does not require one', async () => {
+    prisma.tenant.findUnique.mockResolvedValueOnce({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requiredDriverDocumentSlugs: [],
+          requireGuarantor: false,
+          requireGuarantorVerification: false,
+        },
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      status: 'inactive',
+      identityStatus: 'verified',
+    });
+    prisma.driverDocument.findFirst.mockResolvedValue(null);
+    prisma.driverDocument.findMany.mockResolvedValue([]);
+    prisma.user.findMany.mockResolvedValue([
+      { driverId: 'driver_1', isActive: true, mobileAccessRevoked: false },
+    ]);
+    prisma.driver.update.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      status: 'active',
+      identityStatus: 'verified',
+    });
+
+    const result = await service.updateStatus('tenant_1', 'driver_1', 'active');
+
+    expect(prisma.driver.update).toHaveBeenCalledWith({
+      where: { id: 'driver_1' },
+      data: { status: 'active' },
+    });
+    expect(result.status).toBe('active');
+  });
+
   it('uploads driver documents in pending status', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
