@@ -331,7 +331,7 @@ export function readOrganisationSettings(
         documentDefaults.requiredVehicleDocumentSlugs,
       ),
       driverPaysKyc:
-        typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : true,
+        typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : false,
       requireGuarantor:
         typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : false,
       guarantorBlocking:

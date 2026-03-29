@@ -289,20 +289,9 @@ export function SettingsPanel({
     initialState,
   );
 
-  const [requiresGuarantor, setRequiresGuarantor] = useState(tenant.requireGuarantor ?? false);
-  const [requiresDriverLicence, setRequiresDriverLicence] = useState(
-    (tenant.requiredDriverDocumentSlugs ?? []).includes('drivers-license'),
-  );
-  const resolvedTierLabel = requiresDriverLicence
-    ? 'Full Trust Verification'
-    : requiresGuarantor
-      ? 'Verified Identity'
-      : 'Basic Identity';
-  const resolvedTierDescription = requiresDriverLicence
-    ? 'Complete identity, accountability, and legal eligibility verification'
-    : requiresGuarantor
-      ? 'Confirm identity and accountability with guarantor'
-      : 'Confirm who the driver is';
+  const [selectedTier, setSelectedTier] = useState<
+    'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION'
+  >(tenant.verificationTier ?? 'BASIC_IDENTITY');
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -552,61 +541,98 @@ export function SettingsPanel({
               </CardHeader>
               <CardContent>
                 <form action={organisationAction} className="space-y-5">
-                  <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="space-y-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Resolved tier
+                      Verification tier
                     </p>
-                    <p className="text-lg font-semibold text-[var(--mobiris-ink)]">
-                      {resolvedTierLabel}
-                    </p>
-                    <Text tone="muted">{resolvedTierDescription}</Text>
-                    <Text tone="muted">
-                      Basic Identity includes liveness and NIN verification. Verified Identity adds
-                      guarantor verification. Full Trust Verification adds driver&apos;s licence
-                      verification and identity linkage.
-                    </Text>
-                  </div>
-
-                  <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Tier controls
-                    </p>
-                    <label className="flex items-center gap-3 text-sm">
+                    {(
+                      [
+                        {
+                          key: 'BASIC_IDENTITY' as const,
+                          label: 'Basic Identity',
+                          description: 'Confirm who the driver is',
+                          includes: [
+                            'Liveness + biometric check',
+                            'Government ID (NIN) verification',
+                          ],
+                        },
+                        {
+                          key: 'VERIFIED_IDENTITY' as const,
+                          label: 'Verified Identity',
+                          description: 'Identity and accountability',
+                          includes: [
+                            'Liveness + biometric check',
+                            'Government ID (NIN) verification',
+                            'Guarantor identity verification',
+                          ],
+                        },
+                        {
+                          key: 'FULL_TRUST_VERIFICATION' as const,
+                          label: 'Full Trust Verification',
+                          description: 'Identity, accountability, and legal eligibility',
+                          includes: [
+                            'Liveness + biometric check',
+                            'Government ID (NIN) verification',
+                            'Guarantor identity verification',
+                            "Driver's licence verification and identity linkage",
+                          ],
+                        },
+                      ] as const
+                    ).map((option) => (
+                      <label
+                        className={`flex cursor-pointer items-start gap-3 rounded-[var(--mobiris-radius-card)] border p-4 transition-colors ${
+                          selectedTier === option.key
+                            ? 'border-[var(--mobiris-primary)] bg-[var(--mobiris-primary)]/5'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                        key={option.key}
+                      >
+                        <input
+                          checked={selectedTier === option.key}
+                          className="mt-0.5"
+                          name="verificationTierSelect"
+                          onChange={() => setSelectedTier(option.key)}
+                          type="radio"
+                          value={option.key}
+                        />
+                        <span className="flex-1 space-y-1">
+                          <span className="block font-semibold text-[var(--mobiris-ink)]">
+                            {option.label}
+                          </span>
+                          <span className="block text-sm text-slate-500">
+                            {option.description}
+                          </span>
+                          <ul className="mt-2 space-y-0.5">
+                            {option.includes.map((item) => (
+                              <li
+                                className="flex items-center gap-1.5 text-xs text-slate-600"
+                                key={item}
+                              >
+                                <span className="text-emerald-500">✓</span>
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </span>
+                      </label>
+                    ))}
+                    <input
+                      name="requireGuarantor"
+                      type="hidden"
+                      value={selectedTier !== 'BASIC_IDENTITY' ? 'true' : 'false'}
+                    />
+                    {selectedTier === 'FULL_TRUST_VERIFICATION' ? (
                       <input
-                        checked={requiresGuarantor}
-                        name="requireGuarantor"
-                        onChange={(e) => setRequiresGuarantor(e.target.checked)}
-                        type="checkbox"
-                      />
-                      <span className="font-medium text-slate-800">
-                        Require guarantor verification
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-3 text-sm">
-                      <input
-                        checked={requiresDriverLicence}
                         name="requiredDriverDocumentSlugs"
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setRequiresDriverLicence(checked);
-                          if (checked) {
-                            setRequiresGuarantor(true);
-                          }
-                        }}
-                        type="checkbox"
+                        type="hidden"
                         value="drivers-license"
                       />
-                      <span className="space-y-0.5">
-                        <span className="block font-medium text-slate-800">
-                          Require driver&apos;s licence verification
-                        </span>
-                        <span className="block text-slate-500">
-                          Enabling this moves the organisation to Full Trust Verification, which
-                          also includes guarantor verification.
-                        </span>
-                      </span>
-                    </label>
-                    <input name="requireIdentityVerificationForActivation" type="hidden" value="true" />
+                    ) : null}
+                    <input
+                      name="requireIdentityVerificationForActivation"
+                      type="hidden"
+                      value="true"
+                    />
                   </div>
 
                   <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
@@ -619,17 +645,19 @@ export function SettingsPanel({
                       </p>
                       <label className="flex items-center gap-3 text-sm">
                         <input
-                          defaultChecked={!(tenant.driverPaysKyc ?? true)}
+                          defaultChecked={!(tenant.driverPaysKyc ?? false)}
                           name="driverPaysKyc"
                           type="radio"
                           value="false"
                         />
-                        <span className="text-slate-700">Organisation&apos;s verification wallet</span>
+                        <span className="text-slate-700">
+                          Your organisation pays for verification from your wallet
+                        </span>
                       </label>
                       <label className="flex items-start gap-3 text-sm">
                         <input
                           className="mt-0.5"
-                          defaultChecked={tenant.driverPaysKyc ?? true}
+                          defaultChecked={tenant.driverPaysKyc ?? false}
                           name="driverPaysKyc"
                           type="radio"
                           value="true"

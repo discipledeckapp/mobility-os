@@ -7279,16 +7279,13 @@ export class DriversService {
       }
     }
 
+    // Drivers-licence is handled by the dedicated block above; exclude it here to avoid
+    // duplicate activation reasons that inflate the reason count and push readiness to not_ready.
     const missingRequiredDocuments = settings.requiredDriverDocumentSlugs.filter((slug) => {
-      if (slug !== DRIVER_LICENCE_DOCUMENT_TYPE) {
-        return !approvedDocumentTypes.has(slug);
-      }
-
-      if (approvedDocumentTypes.has(slug)) {
+      if (slug === DRIVER_LICENCE_DOCUMENT_TYPE) {
         return false;
       }
-
-      return latestLicenceVerification === null;
+      return !approvedDocumentTypes.has(slug);
     });
 
     if (driverLicenceRequired) {
