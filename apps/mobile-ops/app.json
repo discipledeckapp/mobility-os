@@ -41,6 +41,7 @@
     },
     "extra": {
       "apiUrl": "https://api.mobiris.ng/api/v1",
+      "tenantWebUrl": "https://app.mobiris.ng",
       "enableOfflineQueue": true,
       "enableCrashReporting": false,
       "eas": {

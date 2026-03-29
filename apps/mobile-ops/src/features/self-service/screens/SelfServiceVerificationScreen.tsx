@@ -24,7 +24,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { startYouVerifyLiveness } from '../../../../modules/youverify-liveness';
+import {
+  isYouVerifyLivenessAvailable,
+  startYouVerifyLiveness,
+} from '../../../../modules/youverify-liveness';
 import {
   type DriverIdentityResolutionResult,
   type DriverLivenessReadinessRecord,
@@ -49,6 +52,7 @@ import {
   InlineProcessingCard,
 } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
+import { mobileEnv } from '../../../config/env';
 import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
@@ -480,12 +484,39 @@ export function SelfServiceVerificationScreen({
     [identifierTypes, identifierValues],
   );
 
+  const nativeLivenessSupported = Platform.OS !== 'android' || isYouVerifyLivenessAvailable();
   const biometricReady = !biometricVerificationRequired || nativeLivenessPassed === true;
   const canSubmitIdentity = useMemo(
     () =>
       verificationLifecycle !== 'completed' && Boolean(token && identifiersReady && biometricReady),
     [biometricReady, identifiersReady, token, verificationLifecycle],
   );
+
+  const openBrowserLivenessFallback = useCallback(async () => {
+    if (!token) return;
+
+    const browserUrl = `${mobileEnv.tenantWebUrl}/driver-self-service?token=${encodeURIComponent(
+      token,
+    )}`;
+
+    try {
+      const supported = await Linking.canOpenURL(browserUrl);
+      if (!supported) {
+        throw new Error('This device cannot open the browser verification flow right now.');
+      }
+      setLivenessFeedback(
+        'Continue in your browser to finish the secure face verification step. Return here afterwards and refresh your progress.',
+      );
+      await Linking.openURL(browserUrl);
+    } catch (error) {
+      Alert.alert(
+        'Face verification',
+        error instanceof Error
+          ? error.message
+          : 'Unable to open the browser verification flow right now.',
+      );
+    }
+  }, [token]);
 
   const documentChecklist = useMemo(
     () =>
@@ -565,6 +596,10 @@ export function SelfServiceVerificationScreen({
 
   const onStartNativeLiveness = async () => {
     if (!token || livenessRunning) return;
+    if (!nativeLivenessSupported) {
+      await openBrowserLivenessFallback();
+      return;
+    }
     if (livenessReadiness && !livenessReadiness.ready) {
       Alert.alert('Face verification', livenessReadiness.message);
       return;
@@ -1502,14 +1537,24 @@ export function SelfServiceVerificationScreen({
           {biometricVerificationRequired ? (
             <>
               <Text style={styles.copy}>
-                Your face will be verified live using YouVerify's liveness detection. The camera
-                launches in a secure fullscreen view. Hold still and follow the on-screen prompt.
+                Your face will be verified live using YouVerify's liveness detection.
+                {nativeLivenessSupported
+                  ? ' The camera launches in a secure fullscreen view. Hold still and follow the on-screen prompt.'
+                  : ' This Android build will hand you off to the secure browser flow for the capture step.'}
               </Text>
               <Text style={styles.hintText}>
                 Best results: stay in a well-lit area, remove anything covering your face, and keep
-                the phone steady until the native screen closes automatically.
+                the phone steady until the capture flow finishes.
               </Text>
-              {livenessReadiness && !livenessReadiness.ready ? (
+              {!nativeLivenessSupported ? (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningText}>
+                    Continue in your browser to complete live face verification, then come back to
+                    this app and refresh your progress.
+                  </Text>
+                </View>
+              ) : null}
+              {nativeLivenessSupported && livenessReadiness && !livenessReadiness.ready ? (
                 <View style={styles.warningCard}>
                   <Text style={styles.warningText}>{livenessReadiness.message}</Text>
                 </View>
@@ -1540,16 +1585,24 @@ export function SelfServiceVerificationScreen({
               {!identitySubmitted ? (
                 <Button
                   label={
-                    livenessRunning
-                      ? 'Starting verification…'
-                      : nativeLivenessPassed === true
-                        ? 'Redo face verification'
-                        : 'Start face verification'
+                    nativeLivenessSupported
+                      ? livenessRunning
+                        ? 'Starting verification…'
+                        : nativeLivenessPassed === true
+                          ? 'Redo face verification'
+                          : 'Start face verification'
+                      : 'Continue in browser'
                   }
-                  variant={nativeLivenessPassed === true ? 'secondary' : 'primary'}
-                  disabled={!livenessReady}
+                  variant={
+                    nativeLivenessSupported && nativeLivenessPassed === true
+                      ? 'secondary'
+                      : 'primary'
+                  }
+                  disabled={nativeLivenessSupported ? !livenessReady : false}
                   loading={livenessRunning}
-                  loadingLabel="Starting verification…"
+                  loadingLabel={
+                    nativeLivenessSupported ? 'Starting verification…' : 'Opening browser…'
+                  }
                   onPress={() => void onStartNativeLiveness()}
                 />
               ) : null}

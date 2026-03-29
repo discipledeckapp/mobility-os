@@ -1,10 +1,7 @@
 {
-  "platforms": ["ios", "android"],
+  "platforms": ["ios"],
   "ios": {
     "modules": ["YouVerifyLivenessModule"],
     "podspecPath": "./ios/YouVerifyLiveness.podspec"
-  },
-  "android": {
-    "modules": ["expo.modules.youverifyliveness.YouVerifyLivenessModule"]
   }
 }

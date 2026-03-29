@@ -1,4 +1,4 @@
-import { requireNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
 import type { YouVerifyLivenessInput, YouVerifyLivenessResult } from './src/YouVerifyLiveness.types';
 
@@ -19,7 +19,16 @@ export type { YouVerifyLivenessInput, YouVerifyLivenessResult };
  * liveness/token endpoint. It authorises exactly one face liveness session against
  * the Azure Face resource configured in YouVerify's sandbox/production account.
  */
-const YouVerifyLivenessNative = requireNativeModule('YouVerifyLiveness');
+type YouVerifyLivenessNativeModule = {
+  startLiveness(input: YouVerifyLivenessInput): Promise<YouVerifyLivenessResult>;
+};
+
+const YouVerifyLivenessNative =
+  requireOptionalNativeModule<YouVerifyLivenessNativeModule>('YouVerifyLiveness');
+
+export function isYouVerifyLivenessAvailable(): boolean {
+  return Boolean(YouVerifyLivenessNative);
+}
 
 /**
  * Launch the native face liveness challenge.
@@ -31,5 +40,10 @@ const YouVerifyLivenessNative = requireNativeModule('YouVerifyLiveness');
 export async function startYouVerifyLiveness(
   input: YouVerifyLivenessInput,
 ): Promise<YouVerifyLivenessResult> {
+  if (!YouVerifyLivenessNative) {
+    throw new Error(
+      'Native face verification is not available on this device build. Continue in your browser to finish the live verification step.',
+    );
+  }
   return YouVerifyLivenessNative.startLiveness(input);
 }
