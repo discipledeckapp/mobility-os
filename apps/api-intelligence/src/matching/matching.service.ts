@@ -12,6 +12,7 @@ import { LinkageEventsService } from '../linkage-events/linkage-events.service';
 import { PersonsService } from '../persons/persons.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { IdentityVerificationService } from '../providers/identity-verification.service';
+import type { VerifyEnrollmentIdentityOutput } from '../providers/identity-verification.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { LivenessService } from '../providers/liveness.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -88,6 +89,12 @@ function isSuccessfulVerificationMessage(status?: string): boolean {
     normalized === 'found'
   );
 }
+
+type EnrollmentPostProcessingResult = {
+  globalPersonCode?: string;
+  crossRoleConflict: boolean;
+  intelligenceResult: Partial<MatchingResultDto>;
+};
 
 @Injectable()
 export class MatchingService {
@@ -254,148 +261,17 @@ export class MatchingService {
       ? this.buildVerificationMetadata(verification, liveness)
       : undefined;
 
-    if (verification?.enrichment || dto.providerVerification?.selfieImageUrl) {
-      await this.personsService.applyIdentityEnrichment({
+    const { globalPersonCode, crossRoleConflict, intelligenceResult } =
+      await this.runEnrollmentPostProcessing({
+        dto,
         personId,
-        ...(isVerifiedMatch && verification?.enrichment?.fullName
-          ? { fullName: verification.enrichment.fullName }
-          : {}),
-        ...(isVerifiedMatch && verification?.enrichment?.dateOfBirth
-          ? {
-              dateOfBirth: verification.enrichment.dateOfBirth,
-            }
-          : {}),
-        ...(isVerifiedMatch && verification?.enrichment?.address
-          ? { address: verification.enrichment.address }
-          : {}),
-        ...(isVerifiedMatch && verification?.enrichment?.gender
-          ? { gender: verification.enrichment.gender }
-          : {}),
-        ...(verification?.enrichment?.photoUrl
-          ? { photoUrl: verification.enrichment.photoUrl }
-          : {}),
-        ...(dto.providerVerification?.selfieImageUrl
-          ? { selfieImageUrl: dto.providerVerification.selfieImageUrl }
-          : {}),
-        ...(verification?.enrichment?.photoUrl
-          ? { providerImageUrl: verification.enrichment.photoUrl }
-          : {}),
-        ...(verification?.verificationStatus
-          ? {
-              verificationStatus: verification.verificationStatus,
-            }
-          : {}),
-        ...(verification?.providerName ? { verificationProvider: verification.providerName } : {}),
-        ...(dto.countryCode ? { verificationCountryCode: dto.countryCode } : {}),
-        ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
-        ...(dto.association?.localEntityType
-          ? { localEntityType: dto.association.localEntityType }
-          : {}),
-        ...(dto.association?.localEntityId ? { localEntityId: dto.association.localEntityId } : {}),
-        source: 'verified_enrollment',
-        verificationConfidence: 0.95,
+        isVerifiedMatch,
+        verification,
+        providerVerification,
+        existingMatches,
+        normalizedIdentifiers,
+        decision,
       });
-    }
-
-    const existingMatchMap = new Map(
-      existingMatches.map((match) => [this.identifierKey(match.type, match.value), match.personId]),
-    );
-
-    for (const identifier of normalizedIdentifiers) {
-      const key = this.identifierKey(identifier.type, identifier.value);
-      if (existingMatchMap.get(key) === personId) {
-        continue;
-      }
-
-      await this.identifiersService.addIdentifier({
-        personId,
-        type: identifier.type,
-        value: identifier.value,
-        ...(identifier.countryCode ? { countryCode: identifier.countryCode } : {}),
-      });
-    }
-
-    if (dto.biometric) {
-      await this.biometricsService.enroll({
-        personId,
-        modality: dto.biometric.modality,
-        embeddingBase64: dto.biometric.embeddingBase64,
-        qualityScore: dto.biometric.qualityScore,
-      });
-    }
-
-    const { crossRoleConflict } = await this.personsService.recordTenantPresence({
-      personId,
-      tenantId: dto.tenantId,
-      roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
-      localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
-      localEntityId:
-        dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
-      ...(dto.association?.businessEntityId
-        ? { businessEntityId: dto.association.businessEntityId }
-        : {}),
-      ...(dto.association?.operatingUnitId
-        ? { operatingUnitId: dto.association.operatingUnitId }
-        : {}),
-      ...(dto.association?.fleetId ? { fleetId: dto.association.fleetId } : {}),
-      status: dto.association?.status ?? 'active',
-      source: dto.association?.source ?? 'identity_resolution',
-      ...(isVerifiedMatch ? { verifiedAt: new Date() } : {}),
-    });
-
-    let globalPersonCode: string | undefined;
-    if (isVerifiedMatch) {
-      const person = await this.personsService.ensureGlobalPersonCode(personId, dto.countryCode);
-      globalPersonCode = person.globalPersonCode ?? undefined;
-      await this.linkageEventsService.record({
-        personId,
-        eventType:
-          (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'guarantor'
-            ? 'linked_to_guarantor'
-            : (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'driver'
-              ? 'linked_to_driver'
-              : 'linked_to_owner',
-        actor: 'system',
-        confidenceScore: 0.95,
-        reason: 'verified enrollment linked canonical person to local record',
-        metadata: {
-          tenantId: dto.tenantId,
-          roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
-          localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
-          localEntityId:
-            dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
-          globalPersonCode,
-        },
-      });
-    }
-    await this.linkageEventsService.record({
-      personId,
-      eventType: decision === ResolutionDecision.NewPerson ? 'manual_linked' : 'auto_linked',
-      actor: 'system',
-      ...(decision === ResolutionDecision.AutoLinked ? { confidenceScore: 0.95 } : {}),
-      reason:
-        decision === ResolutionDecision.NewPerson
-          ? 'new canonical person created during enrollment'
-          : 'existing canonical person linked during enrollment',
-      metadata: {
-        tenantId: dto.tenantId,
-        countryCode: dto.countryCode ?? null,
-        identifierCount: normalizedIdentifiers.length,
-        biometricSubmitted: dto.biometric !== undefined,
-        livenessPassed: dto.livenessPassed ?? null,
-        providerVerificationAttempted: providerVerification.attempted,
-        providerFallbackChain: providerVerification.fallbackChain,
-        providerVerificationStatus:
-          providerVerification.verification?.verificationStatus ??
-          providerVerification.verification?.status ??
-          null,
-        providerName: providerVerification.verification?.providerName ?? null,
-        providerEnrichment: buildSafeProviderEnrichmentMetadata(
-          providerVerification.verification?.enrichment,
-        ),
-      },
-    });
-    const intelligenceResult = await this.personsService.queryForTenant(personId);
 
     this.logger.log(
       JSON.stringify({
@@ -417,6 +293,7 @@ export class MatchingService {
 
     return {
       decision,
+      personId,
       ...(globalPersonCode ? { globalPersonCode } : {}),
       ...(verification?.status ? { providerLookupStatus: verification.status } : {}),
       ...(verification?.verificationStatus
@@ -438,6 +315,243 @@ export class MatchingService {
       ...(verificationMetadata ? { verificationMetadata } : {}),
       ...(crossRoleConflict ? { crossRoleConflict: true } : {}),
       ...intelligenceResult,
+    };
+  }
+
+  private async runEnrollmentPostProcessing(input: {
+    dto: ResolveEnrollmentDto;
+    personId: string;
+    isVerifiedMatch: boolean;
+    verification: VerifyEnrollmentIdentityOutput['verification'];
+    providerVerification: VerifyEnrollmentIdentityOutput;
+    existingMatches: Array<{ id: string; personId: string; type: string; value: string }>;
+    normalizedIdentifiers: NormalizedIdentifier[];
+    decision: ResolutionDecision;
+  }): Promise<EnrollmentPostProcessingResult> {
+    const { dto, personId, isVerifiedMatch, verification, providerVerification } = input;
+    let globalPersonCode: string | undefined;
+    let crossRoleConflict = false;
+    let intelligenceResult: Partial<MatchingResultDto> = {};
+
+    const runStage = async <T>(stage: string, fn: () => Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await fn();
+      } catch (error) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'enrollment_post_processing_failed',
+            stage,
+            tenantId: dto.tenantId,
+            personId,
+            error: error instanceof Error ? error.message : 'unknown_error',
+          }),
+        );
+        return fallback;
+      }
+    };
+
+    await runStage(
+      'apply_identity_enrichment',
+      async () => {
+        if (!verification?.enrichment && !dto.providerVerification?.selfieImageUrl) {
+          return null;
+        }
+
+        await this.personsService.applyIdentityEnrichment({
+          personId,
+          ...(isVerifiedMatch && verification?.enrichment?.fullName
+            ? { fullName: verification.enrichment.fullName }
+            : {}),
+          ...(isVerifiedMatch && verification?.enrichment?.dateOfBirth
+            ? { dateOfBirth: verification.enrichment.dateOfBirth }
+            : {}),
+          ...(isVerifiedMatch && verification?.enrichment?.address
+            ? { address: verification.enrichment.address }
+            : {}),
+          ...(isVerifiedMatch && verification?.enrichment?.gender
+            ? { gender: verification.enrichment.gender }
+            : {}),
+          ...(verification?.enrichment?.photoUrl
+            ? { photoUrl: verification.enrichment.photoUrl }
+            : {}),
+          ...(dto.providerVerification?.selfieImageUrl
+            ? { selfieImageUrl: dto.providerVerification.selfieImageUrl }
+            : {}),
+          ...(verification?.enrichment?.photoUrl
+            ? { providerImageUrl: verification.enrichment.photoUrl }
+            : {}),
+          ...(verification?.verificationStatus
+            ? { verificationStatus: verification.verificationStatus }
+            : {}),
+          ...(verification?.providerName
+            ? { verificationProvider: verification.providerName }
+            : {}),
+          ...(dto.countryCode ? { verificationCountryCode: dto.countryCode } : {}),
+          ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
+          ...(dto.association?.localEntityType
+            ? { localEntityType: dto.association.localEntityType }
+            : {}),
+          ...(dto.association?.localEntityId
+            ? { localEntityId: dto.association.localEntityId }
+            : {}),
+          source: 'verified_enrollment',
+          verificationConfidence: 0.95,
+        });
+        return null;
+      },
+      null,
+    );
+
+    await runStage(
+      'add_identifiers',
+      async () => {
+        const existingMatchMap = new Map(
+          input.existingMatches.map((match) => [
+            this.identifierKey(match.type, match.value),
+            match.personId,
+          ]),
+        );
+
+        for (const identifier of input.normalizedIdentifiers) {
+          const key = this.identifierKey(identifier.type, identifier.value);
+          if (existingMatchMap.get(key) === personId) {
+            continue;
+          }
+
+          await this.identifiersService.addIdentifier({
+            personId,
+            type: identifier.type,
+            value: identifier.value,
+            ...(identifier.countryCode ? { countryCode: identifier.countryCode } : {}),
+          });
+        }
+        return null;
+      },
+      null,
+    );
+
+    await runStage(
+      'enroll_biometric',
+      async () => {
+        if (!dto.biometric) {
+          return null;
+        }
+
+        await this.biometricsService.enroll({
+          personId,
+          modality: dto.biometric.modality,
+          embeddingBase64: dto.biometric.embeddingBase64,
+          qualityScore: dto.biometric.qualityScore,
+        });
+        return null;
+      },
+      null,
+    );
+
+    const presenceResult = await runStage(
+      'record_tenant_presence',
+      () =>
+        this.personsService.recordTenantPresence({
+          personId,
+          tenantId: dto.tenantId,
+          roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
+          localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
+          localEntityId:
+            dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
+          ...(dto.association?.businessEntityId
+            ? { businessEntityId: dto.association.businessEntityId }
+            : {}),
+          ...(dto.association?.operatingUnitId
+            ? { operatingUnitId: dto.association.operatingUnitId }
+            : {}),
+          ...(dto.association?.fleetId ? { fleetId: dto.association.fleetId } : {}),
+          status: dto.association?.status ?? 'active',
+          source: dto.association?.source ?? 'identity_resolution',
+          ...(isVerifiedMatch ? { verifiedAt: new Date() } : {}),
+        }),
+      { crossRoleConflict: false },
+    );
+    crossRoleConflict = presenceResult.crossRoleConflict;
+
+    if (isVerifiedMatch) {
+      const person = await runStage(
+        'ensure_global_person_code',
+        () => this.personsService.ensureGlobalPersonCode(personId, dto.countryCode),
+        null,
+      );
+      globalPersonCode = person?.globalPersonCode ?? undefined;
+
+      await runStage(
+        'record_verified_linkage_event',
+        () =>
+          this.linkageEventsService.record({
+            personId,
+            eventType:
+              (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'guarantor'
+                ? 'linked_to_guarantor'
+                : (dto.association?.roleType ?? dto.roleType ?? 'driver') === 'driver'
+                  ? 'linked_to_driver'
+                  : 'linked_to_owner',
+            actor: 'system',
+            confidenceScore: 0.95,
+            reason: 'verified enrollment linked canonical person to local record',
+            metadata: {
+              tenantId: dto.tenantId,
+              roleType: dto.association?.roleType ?? dto.roleType ?? 'driver',
+              localEntityType: dto.association?.localEntityType ?? dto.roleType ?? 'driver',
+              localEntityId:
+                dto.association?.localEntityId ?? `${dto.tenantId}:${dto.roleType ?? 'driver'}`,
+              globalPersonCode,
+            },
+          }),
+        undefined,
+      );
+    }
+
+    await runStage(
+      'record_linkage_event',
+      () =>
+        this.linkageEventsService.record({
+          personId,
+          eventType:
+            input.decision === ResolutionDecision.NewPerson ? 'manual_linked' : 'auto_linked',
+          actor: 'system',
+          ...(input.decision === ResolutionDecision.AutoLinked ? { confidenceScore: 0.95 } : {}),
+          reason:
+            input.decision === ResolutionDecision.NewPerson
+              ? 'new canonical person created during enrollment'
+              : 'existing canonical person linked during enrollment',
+          metadata: {
+            tenantId: dto.tenantId,
+            countryCode: dto.countryCode ?? null,
+            identifierCount: input.normalizedIdentifiers.length,
+            biometricSubmitted: dto.biometric !== undefined,
+            livenessPassed: dto.livenessPassed ?? null,
+            providerVerificationAttempted: providerVerification.attempted,
+            providerFallbackChain: providerVerification.fallbackChain,
+            providerVerificationStatus:
+              providerVerification.verification?.verificationStatus ??
+              providerVerification.verification?.status ??
+              null,
+            providerName: providerVerification.verification?.providerName ?? null,
+            providerEnrichment: buildSafeProviderEnrichmentMetadata(
+              providerVerification.verification?.enrichment,
+            ),
+          },
+        }),
+      undefined,
+    );
+
+    intelligenceResult = await runStage<Partial<MatchingResultDto>>(
+      'query_tenant_intelligence',
+      () => this.personsService.queryForTenant(personId),
+      {},
+    );
+
+    return {
+      ...(globalPersonCode ? { globalPersonCode } : {}),
+      crossRoleConflict,
+      intelligenceResult,
     };
   }
 
