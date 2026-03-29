@@ -33,6 +33,48 @@ function clampPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function summarizeImageValue(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value.startsWith('data:image/')) {
+    return '[inline image omitted]';
+  }
+
+  if (value.length > 512) {
+    return '[large image reference omitted]';
+  }
+
+  return value;
+}
+
+function buildSafeProviderEnrichmentMetadata(
+  enrichment: NonNullable<
+    Awaited<ReturnType<IdentityVerificationService['verifyForEnrollment']>>['verification']
+  >['enrichment'],
+): Record<string, unknown> | null {
+  if (!enrichment) {
+    return null;
+  }
+
+  return {
+    ...enrichment,
+    ...(Object.prototype.hasOwnProperty.call(enrichment, 'photoUrl')
+      ? {
+          photoUrl: summarizeImageValue(enrichment.photoUrl),
+          photoAvailable: Boolean(enrichment.photoUrl),
+        }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(enrichment, 'signatureUrl')
+      ? {
+          signatureUrl: summarizeImageValue(enrichment.signatureUrl),
+          signatureAvailable: Boolean(enrichment.signatureUrl),
+        }
+      : {}),
+  };
+}
+
 function isSuccessfulVerificationMessage(status?: string): boolean {
   if (!status) {
     return false;
@@ -348,7 +390,9 @@ export class MatchingService {
           providerVerification.verification?.status ??
           null,
         providerName: providerVerification.verification?.providerName ?? null,
-        providerEnrichment: providerVerification.verification?.enrichment ?? null,
+        providerEnrichment: buildSafeProviderEnrichmentMetadata(
+          providerVerification.verification?.enrichment,
+        ),
       },
     });
     const intelligenceResult = await this.personsService.queryForTenant(personId);

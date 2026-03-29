@@ -70,6 +70,22 @@ interface ResolveSecondaryIdentityReviewInput {
   evidenceSnapshot?: Record<string, unknown>;
 }
 
+function sanitizeIdentityChangeValue(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (value.startsWith('data:image/')) {
+    return '[inline image omitted]';
+  }
+
+  if (value.length > 512) {
+    return '[large value omitted]';
+  }
+
+  return value;
+}
+
 @Injectable()
 export class PersonsService {
   constructor(
@@ -606,9 +622,11 @@ export class PersonsService {
 
     if (changedFields.length > 0) {
       const previousValues = Object.fromEntries(
-        changedFields.map((field) => [field, person[field]]),
-      );
-      const newValues = Object.fromEntries(changedFields.map((field) => [field, updated[field]]));
+        changedFields.map((field) => [field, sanitizeIdentityChangeValue(person[field])]),
+      ) as Prisma.InputJsonValue;
+      const newValues = Object.fromEntries(
+        changedFields.map((field) => [field, sanitizeIdentityChangeValue(updated[field])]),
+      ) as Prisma.InputJsonValue;
       const reverificationReason = `Canonical verified identity changed: ${changedFields.join(', ')}`;
 
       await Promise.all([
