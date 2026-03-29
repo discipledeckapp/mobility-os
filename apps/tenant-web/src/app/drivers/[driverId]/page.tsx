@@ -141,6 +141,14 @@ function getSafeIdentityValue(value: string | null | undefined): string {
   return value?.trim() ? value.trim() : 'Not returned';
 }
 
+function maskSensitiveValue(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? '';
+  if (trimmed.length <= 4) {
+    return trimmed || 'Not returned';
+  }
+  return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
+
 function getDriverIdentityProfile(driver: {
   identityProfile?: Record<string, unknown> | null;
   selfieImageUrl?: string | null;
@@ -172,20 +180,36 @@ function getDriverIdentityProfile(driver: {
     dateOfBirth: read('dateOfBirth'),
     gender: read('gender'),
     nationality: read('nationality'),
-    fullAddress: read('fullAddress') ?? read('address'),
-    addressLine: read('addressLine'),
-    town: read('town'),
-    localGovernmentArea: read('localGovernmentArea'),
-    state: read('state'),
-    mobileNumber: read('mobileNumber'),
-    emailAddress: read('emailAddress'),
-    birthState: read('birthState'),
-    birthLga: read('birthLga'),
-    nextOfKinState: read('nextOfKinState'),
-    religion: read('religion'),
     selfieImageUrl: read('selfieImageUrl') ?? driver.selfieImageUrl ?? null,
     providerImageUrl: read('providerImageUrl') ?? driver.providerImageUrl ?? null,
     signatureImageUrl: read('signatureImageUrl') ?? driver.identitySignatureImageUrl ?? null,
+  };
+}
+
+function getDriverOperationalProfile(driver: {
+  operationalProfile?: Record<string, unknown> | null;
+  phone?: string | null;
+  email?: string | null;
+}) {
+  const profile = driver.operationalProfile ?? {};
+  const read = (key: string): string | null => {
+    const value = profile[key];
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  };
+
+  return {
+    phoneNumber: read('phoneNumber') ?? driver.phone ?? null,
+    emailAddress: driver.email ?? null,
+    address: read('address'),
+    town: read('town'),
+    localGovernmentArea: read('localGovernmentArea'),
+    state: read('state'),
+    nextOfKinName: read('nextOfKinName'),
+    nextOfKinPhone: read('nextOfKinPhone'),
+    nextOfKinRelationship: read('nextOfKinRelationship'),
+    emergencyContactName: read('emergencyContactName'),
+    emergencyContactPhone: read('emergencyContactPhone'),
+    emergencyContactRelationship: read('emergencyContactRelationship'),
   };
 }
 
@@ -252,6 +276,7 @@ export default async function DriverDetailsPage({
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
   const driverDisplayName = getDriverDisplayName(driver);
   const identityProfile = getDriverIdentityProfile(driver);
+  const operationalProfile = getDriverOperationalProfile(driver);
   const driverLicenceVerification = driver.driverLicenceVerification ?? null;
   const isUnverifiedDriver = driver.identityStatus !== 'verified';
   const verificationSteps = getVerificationStepSummary(driver);
@@ -832,7 +857,15 @@ export default async function DriverDetailsPage({
 
               <Card className="border-slate-200 bg-white">
                 <CardHeader>
-                  <CardTitle>Identity summary</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>Verified identity</CardTitle>
+                    <Badge tone="success">Provider verified</Badge>
+                    <Badge tone="neutral">Read only</Badge>
+                  </div>
+                  <Text tone="muted">
+                    Source-of-truth fields returned from NIN and provider verification. These are
+                    not editable inline.
+                  </Text>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1">
@@ -843,7 +876,7 @@ export default async function DriverDetailsPage({
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">NIN ID number</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.ninIdNumber)}</Text>
+                    <Text>{maskSensitiveValue(identityProfile.ninIdNumber)}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Date of birth</Text>
@@ -1057,6 +1090,24 @@ export default async function DriverDetailsPage({
                           </Text>
                         </div>
                         <div className="space-y-1">
+                          <Text tone="muted">Holder first name</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderFirstName)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Holder middle name</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderMiddleName)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text tone="muted">Holder last name</Text>
+                          <Text>
+                            {getSafeIdentityValue(driverLicenceVerification.holderLastName)}
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
                           <Text tone="muted">Holder date of birth</Text>
                           <Text>
                             {getSafeIdentityValue(driverLicenceVerification.holderDateOfBirth)}
@@ -1097,22 +1148,6 @@ export default async function DriverDetailsPage({
                           <Text>
                             {getSafeIdentityValue(driverLicenceVerification.reviewCaseId)}
                           </Text>
-                        </div>
-                        <div className="space-y-1">
-                          <Text tone="muted">Review decision</Text>
-                          <Text>
-                            {driverLicenceVerification.reviewDecision
-                              ? driverLicenceVerification.reviewDecision.replace(/_/g, ' ')
-                              : 'Not reviewed'}
-                          </Text>
-                        </div>
-                        <div className="space-y-1">
-                          <Text tone="muted">Reviewed by</Text>
-                          <Text>{getSafeIdentityValue(driverLicenceVerification.reviewedBy)}</Text>
-                        </div>
-                        <div className="space-y-1">
-                          <Text tone="muted">Reviewed at</Text>
-                          <Text>{getSafeIdentityValue(driverLicenceVerification.reviewedAt)}</Text>
                         </div>
                       </div>
 
@@ -1206,38 +1241,45 @@ export default async function DriverDetailsPage({
                           </div>
                         </div>
                         <div className="space-y-3">
-                          <Text tone="muted">Manual review history</Text>
+                          <Text tone="muted">Identity comparison</Text>
                           <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/70 p-4">
-                            {driverLicenceVerification.reviewDecision ? (
-                              <>
-                                <Text tone="strong">
-                                  {driverLicenceVerification.reviewDecision === 'approved'
-                                    ? 'Manually approved'
-                                    : driverLicenceVerification.reviewDecision === 'rejected'
-                                      ? 'Manually rejected'
-                                      : 'Re-verification requested'}
-                                </Text>
-                                <Text className="mt-2">
-                                  Reviewer:{' '}
-                                  {getSafeIdentityValue(driverLicenceVerification.reviewedBy)}
-                                </Text>
-                                <Text className="mt-1">
-                                  Date: {getSafeIdentityValue(driverLicenceVerification.reviewedAt)}
-                                </Text>
-                              </>
-                            ) : driverLicenceVerification.manualReviewRequired ? (
-                              <Text>
-                                A human reviewer still needs to decide this licence verification.
-                              </Text>
+                            <Text>
+                              {driverLicenceVerification.identityComparison.matchedFieldCount}/
+                              {driverLicenceVerification.identityComparison.comparedFieldCount}{' '}
+                              foundational fields matched the verified identity record.
+                            </Text>
+                            <Text className="mt-2">
+                              Biometric comparison:{' '}
+                              {driverLicenceVerification.identityComparison.biometricMatch === null
+                                ? 'not returned'
+                                : driverLicenceVerification.identityComparison.biometricMatch
+                                  ? 'matched'
+                                  : 'mismatch'}
+                              {driverLicenceVerification.identityComparison.biometricConfidence !==
+                              null
+                                ? ` (${driverLicenceVerification.identityComparison.biometricConfidence}%)`
+                                : ''}
+                            </Text>
+                            {driverLicenceVerification.discrepancyFlags.length > 0 ? (
+                              <div className="mt-3 space-y-1">
+                                <Text tone="muted">Discrepancy flags</Text>
+                                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                                  {driverLicenceVerification.discrepancyFlags.map((flag) => (
+                                    <li key={flag}>{flag.replace(/_/g, ' ')}</li>
+                                  ))}
+                                </ul>
+                              </div>
                             ) : (
-                              <Text tone="muted">No manual review decision has been recorded.</Text>
+                              <Text tone="muted" className="mt-3">
+                                No discrepancy flags were raised against the verified identity.
+                              </Text>
                             )}
                             <div className="mt-4">
                               <Link
                                 className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
                                 href={`/drivers/${driver.id}/review`}
                               >
-                                Open review flow
+                                Open evidence view
                               </Link>
                             </div>
                           </div>
@@ -1254,64 +1296,78 @@ export default async function DriverDetailsPage({
 
               <Card className="border-slate-200 bg-white">
                 <CardHeader>
-                  <CardTitle>Contact &amp; residence</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>Contact &amp; operational details</CardTitle>
+                    <Badge tone="warning">Driver supplied</Badge>
+                    <Badge tone="neutral">Editable profile data</Badge>
+                  </div>
+                  <Text tone="muted">
+                    Operational fields collected after verification so dispatch, support, and
+                    compliance teams can work from driver-supplied data without changing verified
+                    identity records.
+                  </Text>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1">
                     <Text tone="muted">Mobile number</Text>
-                    <Text>
-                      {getSafeIdentityValue(identityProfile.mobileNumber ?? driver.phone)}
-                    </Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.phoneNumber)}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Email</Text>
-                    <Text>
-                      {getSafeIdentityValue(identityProfile.emailAddress ?? driver.email)}
-                    </Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.emailAddress)}</Text>
                   </div>
                   <div className="space-y-1">
-                    <Text tone="muted">Full address</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.fullAddress)}</Text>
-                  </div>
-                  <div className="space-y-1">
-                    <Text tone="muted">Address line</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.addressLine)}</Text>
+                    <Text tone="muted">Address</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.address)}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Town</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.town)}</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.town)}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">LGA</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.localGovernmentArea)}</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.localGovernmentArea)}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">State</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.state)}</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.state)}</Text>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="border-slate-200 bg-white">
                 <CardHeader>
-                  <CardTitle>Additional metadata</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>Emergency &amp; next of kin</CardTitle>
+                    <Badge tone="warning">Driver supplied</Badge>
+                  </div>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1">
-                    <Text tone="muted">Birth state</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.birthState)}</Text>
+                    <Text tone="muted">Next of kin</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.nextOfKinName)}</Text>
                   </div>
                   <div className="space-y-1">
-                    <Text tone="muted">Birth LGA</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.birthLga)}</Text>
+                    <Text tone="muted">Next of kin phone</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.nextOfKinPhone)}</Text>
                   </div>
                   <div className="space-y-1">
-                    <Text tone="muted">Next of kin state</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.nextOfKinState)}</Text>
+                    <Text tone="muted">Next of kin relationship</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.nextOfKinRelationship)}</Text>
                   </div>
                   <div className="space-y-1">
-                    <Text tone="muted">Religion</Text>
-                    <Text>{getSafeIdentityValue(identityProfile.religion)}</Text>
+                    <Text tone="muted">Emergency contact</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.emergencyContactName)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Emergency phone</Text>
+                    <Text>{getSafeIdentityValue(operationalProfile.emergencyContactPhone)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Emergency relationship</Text>
+                    <Text>
+                      {getSafeIdentityValue(operationalProfile.emergencyContactRelationship)}
+                    </Text>
                   </div>
                 </CardContent>
               </Card>

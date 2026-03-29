@@ -78,9 +78,7 @@ const FRANCOPHONE_COUNTRIES = new Set([
   'TG',
 ]);
 
-const DRIVER_DOCUMENT_SLUGS = new Set(
-  getDocumentTypesByScope(DocumentScope.Driver).map((document) => document.slug),
-);
+const DRIVER_DOCUMENT_SLUGS = new Set(['drivers-license']);
 const VEHICLE_DOCUMENT_SLUGS = new Set(
   getDocumentTypesByScope(DocumentScope.Vehicle).map((document) => document.slug),
 );
@@ -115,16 +113,14 @@ function getCountryDocumentDefaults(countryCode?: string | null): {
 } {
   if (!countryCode || !isCountrySupported(countryCode)) {
     return {
-      requiredDriverDocumentSlugs: ['national-id'],
+      requiredDriverDocumentSlugs: [],
       requiredVehicleDocumentSlugs: ['vehicle-license', 'insurance'],
     };
   }
 
   const country = getCountryConfig(countryCode as string);
   return {
-    requiredDriverDocumentSlugs: country.requiredDriverDocumentSlugs?.length
-      ? country.requiredDriverDocumentSlugs
-      : ['national-id'],
+    requiredDriverDocumentSlugs: [],
     requiredVehicleDocumentSlugs: country.requiredVehicleDocumentSlugs,
   };
 }
@@ -263,13 +259,13 @@ export function readOrganisationSettings(
         operations.customDriverDocumentTypes,
         DRIVER_DOCUMENT_SLUGS,
         [],
-        { allowCustom: true, preserveEmpty: true },
+        { preserveEmpty: true },
       ).filter((slug) => !DRIVER_DOCUMENT_SLUGS.has(slug)),
       requiredDriverDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredDriverDocumentSlugs,
         DRIVER_DOCUMENT_SLUGS,
         documentDefaults.requiredDriverDocumentSlugs,
-        { allowCustom: true, preserveEmpty: true },
+        { preserveEmpty: true },
       ),
       requiredVehicleDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredVehicleDocumentSlugs,

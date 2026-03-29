@@ -91,7 +91,7 @@ export class InternalOperationalVerificationHealthDto {
   driversAwaitingActivation!: number;
 
   @ApiProperty()
-  pendingLicenceReviewCount!: number;
+  licenceVerificationIssueCount!: number;
 
   @ApiProperty()
   providerRetryRequiredCount!: number;

@@ -163,7 +163,7 @@ export default async function HomePage() {
             </Card>
             <Card className="border-slate-200/80">
               <CardHeader>
-                <CardDescription>Licence review queue</CardDescription>
+                <CardDescription>Licence verification issues</CardDescription>
                 <CardTitle>{operationsOverview.totals.pendingLicenceReviews}</CardTitle>
                 <Text tone="muted">
                   {operationsOverview.totals.providerRetryRequired} provider retry cases still need

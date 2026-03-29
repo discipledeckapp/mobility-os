@@ -61,12 +61,12 @@ export default async function OperationsPage() {
           </Card>
           <Card className="border-slate-200/80">
             <CardHeader>
-              <CardDescription>Licence review + retry pressure</CardDescription>
+              <CardDescription>Licence verification issue pressure</CardDescription>
               <CardTitle>
                 {overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired}
               </CardTitle>
               <Text tone="muted">
-                {overview.totals.pendingLicenceReviews} manual review ·{' '}
+                {overview.totals.pendingLicenceReviews} failed verification ·{' '}
                 {overview.totals.providerRetryRequired} provider retry
               </Text>
             </CardHeader>
@@ -142,7 +142,7 @@ export default async function OperationsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-slate-700">
-                        {tenant.verificationHealth.pendingLicenceReviewCount} review ·{' '}
+                        {tenant.verificationHealth.licenceVerificationIssueCount} failed ·{' '}
                         {tenant.verificationHealth.providerRetryRequiredCount} retry
                         <div className="text-xs text-slate-500">
                           {tenant.verificationHealth.expiredLicencesCount} expired ·{' '}

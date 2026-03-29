@@ -124,6 +124,9 @@ type DriverDocumentSummary = {
     isExpired: boolean;
     providerName: string | null;
     providerReference: string | null;
+    holderFirstName: string | null;
+    holderMiddleName: string | null;
+    holderLastName: string | null;
     holderFullName: string | null;
     holderDateOfBirth: string | null;
     holderGender: string | null;
@@ -137,6 +140,18 @@ type DriverDocumentSummary = {
     overallLinkageScore: number | null;
     linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     reviewCaseId: string | null;
     manualReviewRequired: boolean;
     reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
@@ -546,27 +561,6 @@ export class DriversController {
     );
   }
 
-  @Patch(':id/licence-verification/review')
-  @RequirePermissions(Permission.DocumentsWrite)
-  @UseGuards(PermissionsGuard)
-  @ApiOkResponse({ type: Object })
-  reviewDriverLicenceVerification(
-    @CurrentTenant() ctx: TenantContext,
-    @Param('id') id: string,
-    @Body('decision') decision: 'approved' | 'rejected' | 'request_reverification',
-    @Body('notes') notes?: string,
-  ) {
-    if (!decision) {
-      throw new BadRequestException('decision is required');
-    }
-    return this.service.reviewDriverLicenceVerification(
-      ctx.tenantId,
-      id,
-      { decision, ...(notes ? { notes } : {}) },
-      ctx.userId ?? 'tenant_operator',
-    );
-  }
-
   @Post()
   @RequirePermissions(Permission.DriversWrite)
   @UseGuards(PermissionsGuard)
@@ -766,6 +760,9 @@ export class DriversController {
         (driver as Partial<DriverInviteSummary>).selfServiceInviteReason ?? null,
       identityProfile:
         (driver as { identityProfile?: Record<string, unknown> | null }).identityProfile ?? null,
+      operationalProfile:
+        (driver as { operationalProfile?: Record<string, unknown> | null }).operationalProfile ??
+        null,
       identityVerificationMetadata:
         (driver as { identityVerificationMetadata?: Record<string, unknown> | null })
           .identityVerificationMetadata ?? null,
@@ -930,6 +927,9 @@ export class DriverSelfServiceController {
       identitySignatureImageUrl: driver.identitySignatureImageUrl ?? null,
       identityProfile:
         (driver as { identityProfile?: Record<string, unknown> | null }).identityProfile ?? null,
+      operationalProfile:
+        (driver as { operationalProfile?: Record<string, unknown> | null }).operationalProfile ??
+        null,
       identityVerificationMetadata:
         (driver as { identityVerificationMetadata?: Record<string, unknown> | null })
           .identityVerificationMetadata ?? null,
@@ -1175,17 +1175,33 @@ export class DriverSelfServiceController {
   @ApiCreatedResponse({ type: Object })
   updateProfile(
     @Body('token') token: string,
-    @Body('firstName') firstName?: string,
-    @Body('lastName') lastName?: string,
-    @Body('dateOfBirth') dateOfBirth?: string,
+    @Body('phoneNumber') phoneNumber?: string,
+    @Body('address') address?: string,
+    @Body('town') town?: string,
+    @Body('localGovernmentArea') localGovernmentArea?: string,
+    @Body('state') state?: string,
+    @Body('nextOfKinName') nextOfKinName?: string,
+    @Body('nextOfKinPhone') nextOfKinPhone?: string,
+    @Body('nextOfKinRelationship') nextOfKinRelationship?: string,
+    @Body('emergencyContactName') emergencyContactName?: string,
+    @Body('emergencyContactPhone') emergencyContactPhone?: string,
+    @Body('emergencyContactRelationship') emergencyContactRelationship?: string,
   ): Promise<{ message: string }> {
     if (!token?.trim()) {
       throw new BadRequestException('token is required');
     }
     return this.service.updateProfileFromSelfService(token, {
-      ...(firstName ? { firstName } : {}),
-      ...(lastName ? { lastName } : {}),
-      ...(dateOfBirth ? { dateOfBirth } : {}),
+      ...(phoneNumber ? { phoneNumber } : {}),
+      ...(address ? { address } : {}),
+      ...(town ? { town } : {}),
+      ...(localGovernmentArea ? { localGovernmentArea } : {}),
+      ...(state ? { state } : {}),
+      ...(nextOfKinName ? { nextOfKinName } : {}),
+      ...(nextOfKinPhone ? { nextOfKinPhone } : {}),
+      ...(nextOfKinRelationship ? { nextOfKinRelationship } : {}),
+      ...(emergencyContactName ? { emergencyContactName } : {}),
+      ...(emergencyContactPhone ? { emergencyContactPhone } : {}),
+      ...(emergencyContactRelationship ? { emergencyContactRelationship } : {}),
     });
   }
 

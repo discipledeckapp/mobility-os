@@ -747,7 +747,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     );
   });
 
-  it('routes to manual_review when provider returns inconclusive result', async () => {
+  it('fails driver licence verification when provider returns an inconclusive result', async () => {
     setupDriver('paid');
     prisma.driverDocumentVerification.create.mockResolvedValue({
       id: 'docver_2',
@@ -757,7 +757,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     });
     prisma.driverDocumentVerification.update.mockResolvedValue({
       id: 'docver_2',
-      status: 'manual_review',
+      status: 'failed',
     });
 
     intelligenceClient.verifyDocumentIdentifier.mockResolvedValue({
@@ -767,12 +767,12 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
     });
 
     const result = await service.verifyDocumentIdFromSelfService(VALID_TOKEN, {
-      documentType: 'NATIONAL_ID',
+      documentType: 'drivers-license',
       idNumber: '12345678901',
       countryCode: 'NG',
     });
 
-    expect(result.status).toBe('manual_review');
+    expect(result.status).toBe('failed');
   });
 
   it('normalizes driver licence verification to a slug and fails invalid licence records', async () => {
@@ -973,7 +973,22 @@ describe('Driver onboarding — onboarding step state machine', () => {
         requiredDriverDocumentSlugs: [],
       },
     });
-    prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'verified' }));
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+        operationalProfile: {
+          phoneNumber: '+2348012345678',
+          address: '12 Marina Road',
+          town: 'Lagos',
+          localGovernmentArea: 'Eti-Osa',
+          state: 'Lagos',
+          nextOfKinName: 'Ngozi Okonkwo',
+          nextOfKinPhone: '+2348099999999',
+          emergencyContactName: 'Emeka Okonkwo',
+          emergencyContactPhone: '+2348088888888',
+        },
+      }),
+    );
     prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
     prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
     prisma.verificationEntitlement.findFirst.mockResolvedValue(
@@ -991,6 +1006,167 @@ describe('Driver onboarding — onboarding step state machine', () => {
 
     const step = await service.getOnboardingStep(VALID_TOKEN);
     expect(step.step).toBe('complete');
+  });
+
+  it('returns profile when verified identity is present but operational details are incomplete', async () => {
+    setup({
+      operations: {
+        driverPaysKyc: false,
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'verified' }));
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.step).toBe('profile');
+    expect(step.missingOperationalFields).toEqual(
+      expect.arrayContaining(['address', 'nextOfKinName', 'emergencyContactName']),
+    );
+  });
+
+  it('keeps onboarding complete when driver licence is optional even after a failed verification', async () => {
+    setup({
+      operations: {
+        driverPaysKyc: false,
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+        operationalProfile: {
+          phoneNumber: '+2348012345678',
+          address: '12 Marina Road',
+          town: 'Lagos',
+          localGovernmentArea: 'Eti-Osa',
+          state: 'Lagos',
+          nextOfKinName: 'Ngozi Okonkwo',
+          nextOfKinPhone: '+2348099999999',
+          emergencyContactName: 'Emeka Okonkwo',
+          emergencyContactPhone: '+2348088888888',
+        },
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([
+      {
+        id: 'licence_ver_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        documentType: 'drivers-license',
+        idNumber: 'DL12345',
+        countryCode: 'NG',
+        provider: 'youverify',
+        status: 'failed',
+        providerMatch: false,
+        providerConfidence: null,
+        providerFirstName: null,
+        providerLastName: null,
+        providerDateOfBirth: null,
+        providerExpiryDate: null,
+        failureReason: "Unable to verify that this driver's licence belongs to this person.",
+        providerResult: {},
+        verifiedAt: null,
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewNotes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.step).toBe('complete');
+  });
+
+  it('returns document_verification when a required driver licence verification failed', async () => {
+    setup({
+      operations: {
+        driverPaysKyc: false,
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: ['drivers-license'],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+        operationalProfile: {
+          phoneNumber: '+2348012345678',
+          address: '12 Marina Road',
+          town: 'Lagos',
+          localGovernmentArea: 'Eti-Osa',
+          state: 'Lagos',
+          nextOfKinName: 'Ngozi Okonkwo',
+          nextOfKinPhone: '+2348099999999',
+          emergencyContactName: 'Emeka Okonkwo',
+          emergencyContactPhone: '+2348088888888',
+        },
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([
+      {
+        id: 'licence_ver_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        documentType: 'drivers-license',
+        idNumber: 'DL12345',
+        countryCode: 'NG',
+        provider: 'youverify',
+        status: 'failed',
+        providerMatch: false,
+        providerConfidence: null,
+        providerFirstName: null,
+        providerLastName: null,
+        providerDateOfBirth: null,
+        providerExpiryDate: null,
+        failureReason: "Unable to verify that this driver's licence belongs to this person.",
+        providerResult: {},
+        verifiedAt: null,
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewNotes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.step).toBe('document_verification');
+    expect(step.documentVerificationStatus).toBe('failed');
   });
 });
 

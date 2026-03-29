@@ -121,6 +121,64 @@ function normalizeCapturedSelfie(rawValue?: string | null): {
   };
 }
 
+function maskSensitiveValue(value?: string | null): string {
+  const trimmed = value?.trim() ?? '';
+  if (trimmed.length <= 4) {
+    return trimmed;
+  }
+  return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
+
+function getBrowserLivenessSupport() {
+  if (typeof window === 'undefined') {
+    return {
+      supported: true,
+      warnings: [] as string[],
+      startError: null as string | null,
+      isWindows: false,
+    };
+  }
+
+  const ua = window.navigator.userAgent;
+  const isWindows = /Windows/i.test(ua);
+  const isFirefox = /Firefox/i.test(ua);
+  const isSecure = window.isSecureContext;
+  const supportsCamera = Boolean(window.navigator.mediaDevices?.getUserMedia);
+  const warnings: string[] = [];
+
+  if (isWindows && isFirefox) {
+    warnings.push('Windows Firefox can be unreliable for camera capture. Chrome or Edge works better.');
+  }
+  if (isWindows) {
+    warnings.push('If camera access is blocked, recheck browser site permissions and Windows privacy settings.');
+  }
+
+  if (!isSecure) {
+    return {
+      supported: false,
+      warnings,
+      startError: 'Camera access requires a secure HTTPS session in this browser.',
+      isWindows,
+    };
+  }
+
+  if (!supportsCamera) {
+    return {
+      supported: false,
+      warnings,
+      startError: 'This browser does not expose camera capture. Try a current version of Chrome, Edge, or Safari.',
+      isWindows,
+    };
+  }
+
+  return {
+    supported: true,
+    warnings,
+    startError: null,
+    isWindows,
+  };
+}
+
 // ── Identifier helpers ────────────────────────────────────────────────────────
 
 function getManualIdentifierTypes(countryCode: string): SupportedIdentifierType[] {
@@ -279,6 +337,7 @@ export function DriverIdentityVerification({
   const [autoLaunchYv, setAutoLaunchYv] = useState(false);
   const [livenessLoadingProgress, setLivenessLoadingProgress] = useState(0);
   const [submitLoadingProgress, setSubmitLoadingProgress] = useState(0);
+  const [browserWarnings, setBrowserWarnings] = useState<string[]>([]);
   // Controlled consent state — persists across submission and cannot be silently reset.
   const [subjectConsent, setSubjectConsent] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -393,6 +452,7 @@ export function DriverIdentityVerification({
     }
 
     youVerifySdkPromiseRef.current ??= import('youverify-liveness-web');
+    setBrowserWarnings(getBrowserLivenessSupport().warnings);
   }, []);
 
   useEffect(() => {
@@ -412,7 +472,7 @@ export function DriverIdentityVerification({
         id: 'blink' as const,
         difficulty: 'easy' as const,
         maxBlinks: 1,
-        timeout: 15_000,
+        timeout: 30_000,
       },
     ],
     [],
@@ -444,6 +504,13 @@ export function DriverIdentityVerification({
 
   const launchYouVerifySDK = useCallback(async (): Promise<void> => {
     if (!session?.sessionId || !session?.clientAuthToken) return;
+    if (session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now() + 5_000) {
+      setYvSdkError('Your face verification session expired before it could open. Start again.');
+      setAutoLaunchYv(false);
+      setIsLaunchingYv(false);
+      launchedSessionRef.current = null;
+      return;
+    }
     setYvSdkError(null);
     setIsLaunchingYv(true);
     launchedSessionRef.current = session.sessionId;
@@ -503,10 +570,9 @@ export function DriverIdentityVerification({
   async function startCamera(): Promise<void> {
     setCameraError(null);
     setCameraGuidance('Position your face in the frame');
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError(
-        'Camera access is not available in this browser. Please use a modern browser over HTTPS.',
-      );
+    const support = getBrowserLivenessSupport();
+    if (!support.supported) {
+      setCameraError(support.startError);
       return;
     }
     try {
@@ -845,6 +911,11 @@ export function DriverIdentityVerification({
                   ? "Use this device's camera to capture a live selfie. Make sure your face is well-lit and centred."
                   : "Start a liveness session, then capture a selfie using this device's camera."}
               </Text>
+              {browserWarnings.map((warning) => (
+                <Text key={warning} tone="muted">
+                  {warning}
+                </Text>
+              ))}
 
               {/* Start session form */}
               {!session && !livenessDone ? (
@@ -857,7 +928,14 @@ export function DriverIdentityVerification({
                   <input name="countryCode" type="hidden" value={countryCode} />
                   <Button
                     disabled={isStarting}
-                    onClick={() => {
+                    onClick={(event) => {
+                      const support = getBrowserLivenessSupport();
+                      if (!support.supported) {
+                        event.preventDefault();
+                        setYvSdkError(support.startError);
+                        setAutoLaunchYv(false);
+                        return;
+                      }
                       setYvSdkError(null);
                       setAutoLaunchYv(true);
                     }}
@@ -885,6 +963,11 @@ export function DriverIdentityVerification({
                         Your face verification window opens automatically after the secure session
                         is prepared.
                       </Text>
+                      {session.expiresAt ? (
+                        <Text tone="muted">
+                          Session expires at {new Date(session.expiresAt).toLocaleTimeString()}.
+                        </Text>
+                      ) : null}
                       {yvSdkError ? (
                         <div className="space-y-2">
                           <Text tone="danger">{yvSdkError}</Text>
@@ -1186,7 +1269,7 @@ export function DriverIdentityVerification({
                       {result.verifiedProfile?.ninIdNumber ? (
                         <div className="space-y-1">
                           <Text tone="muted">NIN</Text>
-                          <Text>{result.verifiedProfile.ninIdNumber}</Text>
+                          <Text>{maskSensitiveValue(result.verifiedProfile.ninIdNumber)}</Text>
                         </div>
                       ) : null}
                       {result.verifiedProfile?.dateOfBirth ? (

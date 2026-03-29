@@ -67,6 +67,7 @@ type DriverWithIdentityState = Driver & {
   identityLivenessReason?: string | null;
   identitySignatureImageUrl?: string | null;
   identityProfile?: Prisma.JsonValue | null;
+  operationalProfile?: Prisma.JsonValue | null;
   identityVerificationMetadata?: Prisma.JsonValue | null;
   identityProviderRawData?: Prisma.JsonValue | null;
 };
@@ -114,6 +115,9 @@ type DriverDocumentSummary = {
     isExpired: boolean;
     providerName: string | null;
     providerReference: string | null;
+    holderFirstName: string | null;
+    holderMiddleName: string | null;
+    holderLastName: string | null;
     holderFullName: string | null;
     holderDateOfBirth: string | null;
     holderGender: string | null;
@@ -127,6 +131,18 @@ type DriverDocumentSummary = {
     overallLinkageScore: number | null;
     linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     reviewCaseId: string | null;
     manualReviewRequired: boolean;
     reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
@@ -158,6 +174,20 @@ type DriverReadinessSummary = {
   enforcementActions?: EnforcementSummary[];
   /** Non-blocking risk signals that don't prevent readiness but should be surfaced. */
   localRiskFlags?: string[];
+};
+
+type DriverOperationalProfile = {
+  phoneNumber?: string;
+  address?: string;
+  town?: string;
+  localGovernmentArea?: string;
+  state?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
+  nextOfKinRelationship?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
 };
 
 type VerificationPaymentState = 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
@@ -507,6 +537,79 @@ export class DriversService {
     return typeof value[key] === 'string' ? (value[key] as string) : null;
   }
 
+  private readOperationalProfile(
+    value: Prisma.JsonValue | null | undefined,
+    fallback?: { phone?: string | null },
+  ): DriverOperationalProfile {
+    const profile = isVerificationMetadataRecord(value) ? value : null;
+    return {
+      ...(this.readJsonString(profile, 'phoneNumber') ?? fallback?.phone
+        ? { phoneNumber: this.readJsonString(profile, 'phoneNumber') ?? fallback?.phone ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'address')
+        ? { address: this.readJsonString(profile, 'address') ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'town')
+        ? { town: this.readJsonString(profile, 'town') ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'localGovernmentArea')
+        ? {
+            localGovernmentArea: this.readJsonString(profile, 'localGovernmentArea') ?? '',
+          }
+        : {}),
+      ...(this.readJsonString(profile, 'state')
+        ? { state: this.readJsonString(profile, 'state') ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'nextOfKinName')
+        ? { nextOfKinName: this.readJsonString(profile, 'nextOfKinName') ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'nextOfKinPhone')
+        ? { nextOfKinPhone: this.readJsonString(profile, 'nextOfKinPhone') ?? '' }
+        : {}),
+      ...(this.readJsonString(profile, 'nextOfKinRelationship')
+        ? {
+            nextOfKinRelationship: this.readJsonString(profile, 'nextOfKinRelationship') ?? '',
+          }
+        : {}),
+      ...(this.readJsonString(profile, 'emergencyContactName')
+        ? {
+            emergencyContactName: this.readJsonString(profile, 'emergencyContactName') ?? '',
+          }
+        : {}),
+      ...(this.readJsonString(profile, 'emergencyContactPhone')
+        ? {
+            emergencyContactPhone: this.readJsonString(profile, 'emergencyContactPhone') ?? '',
+          }
+        : {}),
+      ...(this.readJsonString(profile, 'emergencyContactRelationship')
+        ? {
+            emergencyContactRelationship:
+              this.readJsonString(profile, 'emergencyContactRelationship') ?? '',
+          }
+        : {}),
+    };
+  }
+
+  private getMissingOperationalProfileFields(
+    profile: DriverOperationalProfile,
+  ): Array<keyof DriverOperationalProfile> {
+    const requiredFields: Array<keyof DriverOperationalProfile> = [
+      'phoneNumber',
+      'address',
+      'town',
+      'localGovernmentArea',
+      'state',
+      'nextOfKinName',
+      'nextOfKinPhone',
+      'emergencyContactName',
+      'emergencyContactPhone',
+    ];
+    return requiredFields.filter((field) => {
+      const value = profile[field];
+      return typeof value !== 'string' || value.trim().length === 0;
+    });
+  }
+
   private normalizeComparableText(value?: string | null): string | null {
     if (!value) {
       return null;
@@ -631,24 +734,43 @@ export class DriversService {
     biometricMatchScore: number | null;
     overallLinkageScore: number | null;
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     hardFailure: boolean;
   } {
     const weightedScores: Array<{ score: number; weight: number }> = [];
     const linkageReasons: string[] = [];
+    const discrepancyFlags: string[] = [];
     const firstNameScore = this.computeTextSimilarity(reference.firstName, provider.firstName);
+    const firstNameMatch = firstNameScore === null ? null : firstNameScore >= 85;
     if (firstNameScore !== null) weightedScores.push({ score: firstNameScore, weight: 15 });
     const middleNameScore = this.computeTextSimilarity(reference.middleName, provider.middleName);
+    const middleNameMatch = middleNameScore === null ? null : middleNameScore >= 85;
     if (middleNameScore !== null) weightedScores.push({ score: middleNameScore, weight: 10 });
     const lastNameScore = this.computeTextSimilarity(reference.lastName, provider.lastName);
+    const lastNameMatch = lastNameScore === null ? null : lastNameScore >= 85;
     if (lastNameScore !== null) weightedScores.push({ score: lastNameScore, weight: 20 });
     const fullNameScore = this.computeTextSimilarity(
       reference.fullName,
       [provider.firstName, provider.middleName, provider.lastName].filter(Boolean).join(' '),
     );
     if (fullNameScore !== null) weightedScores.push({ score: fullNameScore, weight: 10 });
+    const dateOfBirthMatch =
+      reference.dateOfBirth && provider.dateOfBirth ? reference.dateOfBirth === provider.dateOfBirth : null;
     if (reference.dateOfBirth && provider.dateOfBirth) {
       if (reference.dateOfBirth !== provider.dateOfBirth) {
         linkageReasons.push('Date of birth does not match the NIN-verified identity.');
+        discrepancyFlags.push('date_of_birth_mismatch');
       }
       weightedScores.push({
         score: reference.dateOfBirth === provider.dateOfBirth ? 100 : 0,
@@ -656,11 +778,14 @@ export class DriversService {
       });
     }
     const normalizedProviderGender = this.normalizeComparableGender(provider.gender);
+    const genderMatch =
+      reference.gender && normalizedProviderGender ? reference.gender === normalizedProviderGender : null;
     if (reference.gender && normalizedProviderGender) {
       if (reference.gender !== normalizedProviderGender) {
         linkageReasons.push(
           'Gender returned by the licence provider differs from the verified identity.',
         );
+        discrepancyFlags.push('gender_mismatch');
       }
       weightedScores.push({
         score: reference.gender === normalizedProviderGender ? 100 : 0,
@@ -694,6 +819,24 @@ export class DriversService {
         : biometricConfidence !== null
           ? Math.max(0, Math.min(100, Math.round(biometricConfidence)))
           : null;
+    const biometricMatchResult = biometricMatch === null ? null : biometricMatch;
+
+    if (firstNameMatch === false) discrepancyFlags.push('first_name_mismatch');
+    if (middleNameMatch === false) discrepancyFlags.push('middle_name_mismatch');
+    if (lastNameMatch === false) discrepancyFlags.push('last_name_mismatch');
+    if (biometricMatch === false || (biometricMatchScore !== null && biometricMatchScore < 70)) {
+      discrepancyFlags.push('biometric_mismatch');
+    }
+
+    const comparedFieldMatches = [
+      firstNameMatch,
+      middleNameMatch,
+      lastNameMatch,
+      dateOfBirthMatch,
+      genderMatch,
+    ].filter((value): value is boolean => value !== null);
+    const matchedFieldCount = comparedFieldMatches.filter(Boolean).length;
+    const comparedFieldCount = comparedFieldMatches.length;
 
     const overallLinkageScore =
       demographicMatchScore !== null && biometricMatchScore !== null
@@ -716,6 +859,18 @@ export class DriversService {
         biometricMatchScore,
         overallLinkageScore,
         linkageReasons,
+        discrepancyFlags: Array.from(new Set(discrepancyFlags)),
+        identityComparison: {
+          firstNameMatch,
+          middleNameMatch,
+          lastNameMatch,
+          dateOfBirthMatch,
+          genderMatch,
+          biometricMatch: biometricMatchResult,
+          biometricConfidence: biometricMatchScore,
+          matchedFieldCount,
+          comparedFieldCount,
+        },
         hardFailure,
       };
     }
@@ -737,6 +892,18 @@ export class DriversService {
         biometricMatchScore,
         overallLinkageScore,
         linkageReasons,
+        discrepancyFlags: Array.from(new Set(discrepancyFlags)),
+        identityComparison: {
+          firstNameMatch,
+          middleNameMatch,
+          lastNameMatch,
+          dateOfBirthMatch,
+          genderMatch,
+          biometricMatch: biometricMatchResult,
+          biometricConfidence: biometricMatchScore,
+          matchedFieldCount,
+          comparedFieldCount,
+        },
         hardFailure,
       };
     }
@@ -755,6 +922,18 @@ export class DriversService {
         biometricMatchScore,
         overallLinkageScore,
         linkageReasons,
+        discrepancyFlags: Array.from(new Set(discrepancyFlags)),
+        identityComparison: {
+          firstNameMatch,
+          middleNameMatch,
+          lastNameMatch,
+          dateOfBirthMatch,
+          genderMatch,
+          biometricMatch: biometricMatchResult,
+          biometricConfidence: biometricMatchScore,
+          matchedFieldCount,
+          comparedFieldCount,
+        },
         hardFailure,
       };
     }
@@ -765,6 +944,18 @@ export class DriversService {
       biometricMatchScore,
       overallLinkageScore,
       linkageReasons,
+      discrepancyFlags: Array.from(new Set(discrepancyFlags)),
+      identityComparison: {
+        firstNameMatch,
+        middleNameMatch,
+        lastNameMatch,
+        dateOfBirthMatch,
+        genderMatch,
+        biometricMatch: biometricMatchResult,
+        biometricConfidence: biometricMatchScore,
+        matchedFieldCount,
+        comparedFieldCount,
+      },
       hardFailure,
     };
   }
@@ -849,6 +1040,12 @@ export class DriversService {
       isExpired: this.isDateExpired(expiryDate),
       providerName: verification.provider ?? null,
       providerReference: this.readJsonString(providerResult, 'providerReference'),
+      holderFirstName:
+        holder && typeof holder.firstName === 'string' ? holder.firstName : null,
+      holderMiddleName:
+        holder && typeof holder.middleName === 'string' ? holder.middleName : null,
+      holderLastName:
+        holder && typeof holder.lastName === 'string' ? holder.lastName : null,
       holderFullName:
         [
           holder && typeof holder.firstName === 'string' ? holder.firstName : null,
@@ -888,18 +1085,75 @@ export class DriversService {
       linkageDecision:
         linkage && typeof linkage.decision === 'string'
           ? (linkage.decision as 'auto_pass' | 'pending_human_review' | 'fail')
-          : 'pending_human_review',
+          : 'fail',
       linkageReasons:
         linkage &&
         Array.isArray(linkage.reasons) &&
         linkage.reasons.every((value) => typeof value === 'string')
           ? (linkage.reasons as string[])
           : [],
+      discrepancyFlags:
+        linkage &&
+        Array.isArray(linkage.discrepancyFlags) &&
+        linkage.discrepancyFlags.every((value) => typeof value === 'string')
+          ? (linkage.discrepancyFlags as string[])
+          : [],
+      identityComparison:
+        linkage && isVerificationMetadataRecord(linkage.identityComparison)
+          ? {
+              firstNameMatch:
+                typeof linkage.identityComparison.firstNameMatch === 'boolean'
+                  ? linkage.identityComparison.firstNameMatch
+                  : null,
+              middleNameMatch:
+                typeof linkage.identityComparison.middleNameMatch === 'boolean'
+                  ? linkage.identityComparison.middleNameMatch
+                  : null,
+              lastNameMatch:
+                typeof linkage.identityComparison.lastNameMatch === 'boolean'
+                  ? linkage.identityComparison.lastNameMatch
+                  : null,
+              dateOfBirthMatch:
+                typeof linkage.identityComparison.dateOfBirthMatch === 'boolean'
+                  ? linkage.identityComparison.dateOfBirthMatch
+                  : null,
+              genderMatch:
+                typeof linkage.identityComparison.genderMatch === 'boolean'
+                  ? linkage.identityComparison.genderMatch
+                  : null,
+              biometricMatch:
+                typeof linkage.identityComparison.biometricMatch === 'boolean'
+                  ? linkage.identityComparison.biometricMatch
+                  : null,
+              biometricConfidence:
+                typeof linkage.identityComparison.biometricConfidence === 'number'
+                  ? linkage.identityComparison.biometricConfidence
+                  : null,
+              matchedFieldCount:
+                typeof linkage.identityComparison.matchedFieldCount === 'number'
+                  ? linkage.identityComparison.matchedFieldCount
+                  : 0,
+              comparedFieldCount:
+                typeof linkage.identityComparison.comparedFieldCount === 'number'
+                  ? linkage.identityComparison.comparedFieldCount
+                  : 0,
+            }
+          : {
+              firstNameMatch: null,
+              middleNameMatch: null,
+              lastNameMatch: null,
+              dateOfBirthMatch: null,
+              genderMatch: null,
+              biometricMatch: null,
+              biometricConfidence: null,
+              matchedFieldCount: 0,
+              comparedFieldCount: 0,
+            },
       reviewCaseId: this.readJsonString(providerResult, 'reviewCaseId'),
       manualReviewRequired:
         providerResult && typeof providerResult.manualReviewRequired === 'boolean'
           ? providerResult.manualReviewRequired
-          : verification.status === 'manual_review',
+          : false,
       reviewDecision:
         providerResult && typeof providerResult.reviewDecision === 'string'
           ? (providerResult.reviewDecision as 'approved' | 'rejected' | 'request_reverification')
@@ -2331,8 +2585,11 @@ export class DriversService {
     identityStatus?: string;
     verificationState?: VerificationFlowState;
     hasConsentOnFile?: boolean;
+    missingOperationalFields?: string[];
     requiredDocumentTypes?: string[];
     verifiedDocumentTypes?: string[];
+    documentVerificationStatus?: string;
+    documentFailureReason?: string | null;
     requiresGuarantor?: boolean;
     guarantorBlocking?: boolean;
     guarantorVerified?: boolean;
@@ -2358,12 +2615,6 @@ export class DriversService {
     if (!linkedUser) {
       return { step: 'account', reason: 'Driver needs to create a sign-in account.' };
     }
-
-    // Step 2: profile completeness — intentionally skipped.
-    // Name and DOB are populated from the YouVerify provider response after
-    // identity verification completes. Requiring profile data before verification
-    // creates a chicken-and-egg loop. Profile is collected via NIN lookup, not
-    // by asking the driver to type it manually.
 
     // Step 3: verification consent
     const existingConsent = await this.prisma.userConsent.findFirst({
@@ -2458,33 +2709,75 @@ export class DriversService {
       };
     }
 
+    // Step 6b: operational profile completion after verified identity is available.
+    const operationalProfile = this.readOperationalProfile(
+      (driver as { operationalProfile?: Prisma.JsonValue | null }).operationalProfile,
+      { phone: driver.phone },
+    );
+    const missingOperationalFields = this.getMissingOperationalProfileFields(operationalProfile);
+    if (missingOperationalFields.length > 0) {
+      return {
+        step: 'profile',
+        reason: 'Complete your contact and operational details before continuing.',
+        missingOperationalFields,
+      };
+    }
+
     // Step 7: document verification (zero-trust ID number)
     const requiredDocumentSlugs = policy.requiredDriverDocumentSlugs ?? [];
-    if (requiredDocumentSlugs.length > 0) {
-      const verifiedDocVerifications = await this.driverDocumentVerifications.findMany({
+    if (requiredDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
+      const driverLicenceVerifications = await this.driverDocumentVerifications.findMany({
         where: {
           tenantId: payload.tenantId,
           driverId: driver.id,
-          status: 'verified',
+          documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
         },
-        select: { documentType: true },
+        orderBy: { createdAt: 'desc' },
       });
-      const verifiedTypes = new Set(
-        verifiedDocVerifications.map((verification) =>
-          this.normalizeStoredDocumentType(verification.documentType),
-        ),
-      );
-      const missingDocTypes = requiredDocumentSlugs.filter(
-        (slug) => !verifiedTypes.has(slug.toLowerCase()),
-      );
+      const latestDriverLicenceVerification = driverLicenceVerifications[0] ?? null;
+      const verifiedTypes = latestDriverLicenceVerification?.status === 'verified'
+        ? [DRIVER_LICENCE_DOCUMENT_TYPE]
+        : [];
 
-      if (missingDocTypes.length > 0) {
+      if (!latestDriverLicenceVerification) {
         return {
           step: 'document_verification',
-          reason: `Required document verification not complete: ${missingDocTypes.join(', ')}.`,
+          reason: "Driver's licence verification is required before onboarding can continue.",
           verificationState,
           requiredDocumentTypes: requiredDocumentSlugs,
-          verifiedDocumentTypes: Array.from(verifiedTypes),
+          verifiedDocumentTypes: verifiedTypes,
+        };
+      }
+
+      if (latestDriverLicenceVerification.status === 'failed') {
+        return {
+          step: 'document_verification',
+          reason:
+            latestDriverLicenceVerification.failureReason ??
+            "Driver's licence verification did not complete successfully.",
+          verificationState,
+          requiredDocumentTypes: requiredDocumentSlugs,
+          verifiedDocumentTypes: verifiedTypes,
+          documentVerificationStatus: latestDriverLicenceVerification.status,
+          ...(latestDriverLicenceVerification.failureReason
+            ? { documentFailureReason: latestDriverLicenceVerification.failureReason }
+            : {}),
+        };
+      }
+
+      if (latestDriverLicenceVerification.status === 'provider_unavailable') {
+        return {
+          step: 'document_verification',
+          reason:
+            latestDriverLicenceVerification.failureReason ??
+            "Driver's licence verification is temporarily unavailable. Please try again.",
+          verificationState,
+          requiredDocumentTypes: requiredDocumentSlugs,
+          verifiedDocumentTypes: verifiedTypes,
+          documentVerificationStatus: latestDriverLicenceVerification.status,
+          ...(latestDriverLicenceVerification.failureReason
+            ? { documentFailureReason: latestDriverLicenceVerification.failureReason }
+            : {}),
         };
       }
     }
@@ -3624,81 +3917,10 @@ export class DriversService {
   ): Promise<PaginatedResponse<DriverLicenceReviewQueueItem>> {
     const page = input.page ?? 1;
     const limit = input.limit ?? 50;
-    const searchQuery = input.q?.trim().toLowerCase() ?? '';
-    const verifications = await this.driverDocumentVerifications.findMany({
-      where: {
-        tenantId,
-        documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
-        status: 'manual_review',
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const latestByDriverId = new Map<string, DriverDocumentVerificationRecord>();
-    for (const verification of verifications) {
-      if (!latestByDriverId.has(verification.driverId)) {
-        latestByDriverId.set(verification.driverId, verification);
-      }
-    }
-
-    const driverIds = [...latestByDriverId.keys()];
-    const drivers = driverIds.length
-      ? await this.prisma.driver.findMany({
-          where: { tenantId, id: { in: driverIds } },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            status: true,
-            fleetId: true,
-          },
-        })
-      : [];
-    const driverMap = new Map(drivers.map((driver) => [driver.id, driver]));
-
-    const queueItems = [...latestByDriverId.values()]
-      .map((verification) => {
-        const driver = driverMap.get(verification.driverId);
-        const summary = this.buildDriverLicenceVerificationSummary(verification);
-        if (!driver || !summary) {
-          return null;
-        }
-        return {
-          id: verification.id,
-          tenantId: verification.tenantId,
-          driverId: verification.driverId,
-          driverName: this.formatDriverName(driver),
-          driverPhone: driver.phone,
-          driverStatus: driver.status,
-          fleetId: driver.fleetId,
-          status: verification.status,
-          validity: summary.validity,
-          expiryDate: summary.expiryDate,
-          linkageDecision: summary.linkageDecision,
-          overallLinkageScore: summary.overallLinkageScore,
-          riskImpact: summary.riskImpact,
-          reviewCaseId: summary.reviewCaseId,
-          createdAt: verification.createdAt,
-          verifiedAt: verification.verifiedAt ?? null,
-        };
-      })
-      .filter((item): item is DriverLicenceReviewQueueItem => Boolean(item))
-      .filter((item) => {
-        if (!searchQuery) {
-          return true;
-        }
-        return `${item.driverName} ${item.driverPhone} ${item.driverStatus} ${
-          item.reviewCaseId ?? ''
-        }`
-          .toLowerCase()
-          .includes(searchQuery);
-      });
-
     const startIndex = (page - 1) * limit;
     return {
-      data: queueItems.slice(startIndex, startIndex + limit),
-      total: queueItems.length,
+      data: [],
+      total: 0,
       page,
       limit,
     };
@@ -3967,169 +4189,6 @@ export class DriversService {
         reviewedAt: new Date(),
       },
     });
-  }
-
-  async reviewDriverLicenceVerification(
-    tenantId: string,
-    driverId: string,
-    input: {
-      decision: 'approved' | 'rejected' | 'request_reverification';
-      notes?: string;
-    },
-    reviewedBy: string,
-  ): Promise<DriverDocumentSummary['driverLicenceVerification']> {
-    const driver = await this.findOne(tenantId, driverId);
-    const verification = await this.driverDocumentVerifications.findFirst({
-      where: {
-        tenantId,
-        driverId,
-        documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!verification) {
-      throw new NotFoundException(`No driver's licence verification record was found.`);
-    }
-
-    const currentSummary = this.buildDriverLicenceVerificationSummary(verification);
-    if (!currentSummary) {
-      throw new BadRequestException("Driver's licence review data is unavailable.");
-    }
-    if (verification.status !== 'manual_review' && currentSummary.reviewDecision !== null) {
-      throw new BadRequestException("Driver's licence review has already been resolved.");
-    }
-    if (!driver.personId || !currentSummary.reviewCaseId) {
-      throw new BadRequestException(
-        "Driver's licence review cannot be completed because the review case is missing.",
-      );
-    }
-
-    const reviewer = await this.prisma.user.findFirst({
-      where: { id: reviewedBy, tenantId, isActive: true },
-      select: { id: true, role: true, name: true },
-    });
-    if (!reviewer) {
-      throw new UnauthorizedException('Reviewer session is no longer valid.');
-    }
-
-    const nextStatus = input.decision === 'approved' ? 'verified' : 'failed';
-    const reviewedAt = new Date();
-    const reviewNotes = input.notes?.trim() ? input.notes.trim() : null;
-    const nextFailureReason =
-      input.decision === 'approved'
-        ? null
-        : input.decision === 'rejected'
-          ? "Unable to verify that this driver's licence belongs to this person."
-          : "A new driver's licence verification is required before onboarding can continue.";
-    const nextRiskAssessment = this.assessDriverLicenceRisk({
-      validity: currentSummary.validity,
-      expiryDate: currentSummary.expiryDate,
-      linkageDecision: input.decision === 'approved' ? 'auto_pass' : 'fail',
-    });
-
-    const currentProviderResult = isVerificationMetadataRecord(verification.providerResult)
-      ? verification.providerResult
-      : {};
-    const currentLinkage = isVerificationMetadataRecord(currentProviderResult.linkage)
-      ? currentProviderResult.linkage
-      : {};
-
-    const providerResult: Prisma.InputJsonObject = {
-      ...currentProviderResult,
-      manualReviewRequired: false,
-      reviewCaseId: currentSummary.reviewCaseId,
-      reviewDecision: input.decision,
-      reviewResolvedAt: reviewedAt.toISOString(),
-      reviewResolvedBy: reviewer.id,
-      reviewResolvedByRole: reviewer.role,
-      reviewNotes,
-      linkage: {
-        ...currentLinkage,
-        decision: input.decision === 'approved' ? 'auto_pass' : 'fail',
-        reviewedDecision: input.decision,
-      },
-      risk: {
-        impact: nextRiskAssessment.riskImpact,
-        summary: nextRiskAssessment.riskSummary,
-      },
-    };
-
-    await this.intelligenceClient.resolveDriverLicenceEvidenceReview({
-      personId: driver.personId,
-      reviewCaseId: currentSummary.reviewCaseId,
-      decision: input.decision,
-      reviewerId: reviewer.id,
-      reviewerRole: reviewer.role,
-      ...(reviewNotes ? { notes: reviewNotes } : {}),
-      evidenceSnapshot: {
-        driverId: driver.id,
-        tenantId,
-        verificationRecordId: verification.id,
-        maskedLicenceNumber: currentSummary.maskedLicenceNumber,
-        validity: currentSummary.validity,
-        issueDate: currentSummary.issueDate,
-        expiryDate: currentSummary.expiryDate,
-        demographicMatchScore: currentSummary.demographicMatchScore,
-        biometricMatchScore: currentSummary.biometricMatchScore,
-        overallLinkageScore: currentSummary.overallLinkageScore,
-      },
-    });
-
-    const updatedVerification = await this.driverDocumentVerifications.update({
-      where: { id: verification.id },
-      data: {
-        status: nextStatus,
-        providerMatch: input.decision === 'approved',
-        failureReason: nextFailureReason,
-        providerResult,
-        reviewedBy: reviewer.id,
-        reviewedAt,
-        reviewNotes,
-        verifiedAt: input.decision === 'approved' ? reviewedAt : null,
-        updatedAt: reviewedAt,
-      },
-    });
-
-    const notificationContext = await this.getTenantNotificationContext(tenantId);
-    await this.notificationsService.notifyDriverLicenceReviewResolved({
-      tenantId,
-      driverId: driver.id,
-      driverName: this.formatDriverName(driver),
-      ...(driver.email ? { driverEmail: driver.email } : {}),
-      ...notificationContext,
-      decision: input.decision,
-      actionUrl: `/drivers/${driver.id}/review`,
-    });
-
-    await this.auditService.recordTenantAction({
-      tenantId,
-      actorId: reviewer.id,
-      entityType: 'driver_document_verification',
-      entityId: verification.id,
-      action: 'driver.licence_review.resolved',
-      metadata: {
-        driverId: driver.id,
-        decision: input.decision,
-        reviewCaseId: currentSummary.reviewCaseId,
-        notes: reviewNotes,
-        reviewerRole: reviewer.role,
-      },
-    });
-
-    this.logger.log(
-      JSON.stringify({
-        event: 'driver_licence_review_resolved',
-        tenantId,
-        driverId: driver.id,
-        verificationRecordId: verification.id,
-        decision: input.decision,
-        reviewerId: reviewer.id,
-        reviewCaseId: currentSummary.reviewCaseId,
-      }),
-    );
-
-    return this.buildDriverLicenceVerificationSummary(updatedVerification);
   }
 
   async hasApprovedLicence(tenantId: string, driverId: string): Promise<boolean> {
@@ -4431,11 +4490,11 @@ export class DriversService {
     providerMatch: boolean | null;
     providerValidity: 'valid' | 'invalid' | 'unknown' | null;
     providerFirstName: string | null;
+    providerMiddleName: string | null;
     providerLastName: string | null;
     providerDateOfBirth: string | null;
     providerIssueDate: string | null;
     providerExpiryDate: string | null;
-    providerMiddleName: string | null;
     providerGender: string | null;
     providerStateOfIssuance: string | null;
     providerLicenceClass: string | null;
@@ -4448,6 +4507,18 @@ export class DriversService {
     linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
     linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     reviewCaseId: string | null;
     manualReviewRequired: boolean;
     reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
@@ -4512,6 +4583,18 @@ export class DriversService {
     let linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data' = 'pending';
     let linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail' = 'pending_human_review';
     let linkageReasons: string[] = [];
+    let discrepancyFlags: string[] = [];
+    let identityComparison = {
+      firstNameMatch: null as boolean | null,
+      middleNameMatch: null as boolean | null,
+      lastNameMatch: null as boolean | null,
+      dateOfBirthMatch: null as boolean | null,
+      genderMatch: null as boolean | null,
+      biometricMatch: null as boolean | null,
+      biometricConfidence: null as number | null,
+      matchedFieldCount: 0,
+      comparedFieldCount: 0,
+    };
     let reviewCaseId: string | null = null;
     let manualReviewRequired = false;
     let riskImpact: 'low' | 'medium' | 'high' | 'critical' = 'medium';
@@ -4623,6 +4706,8 @@ export class DriversService {
         overallLinkageScore = linkageAssessment.overallLinkageScore;
         linkageStatus = linkageAssessment.linkageStatus;
         linkageReasons = linkageAssessment.linkageReasons;
+        discrepancyFlags = linkageAssessment.discrepancyFlags;
+        identityComparison = linkageAssessment.identityComparison;
 
         if (
           providerValidity === 'invalid' ||
@@ -4686,9 +4771,10 @@ export class DriversService {
         providerMatch = false;
         failureReason = "Unable to verify that this driver's licence belongs to this person.";
       } else if (isDriverLicenceVerification && linkageDecision === 'pending_human_review') {
-        status = 'manual_review';
-        providerMatch = null;
-        failureReason = "Driver's licence verification is pending review.";
+        status = 'failed';
+        providerMatch = false;
+        failureReason =
+          "Driver's licence verification could not be confirmed strongly enough. Check the licence number and verified identity details, then try again.";
       } else if (
         (result.decision === 'enrolled' ||
           result.decision === 'matched' ||
@@ -4698,12 +4784,13 @@ export class DriversService {
         status = 'verified';
         providerMatch = true;
       } else if (result.decision === 'review') {
-        status = 'manual_review';
-        providerMatch = null;
-        failureReason = 'Automated verification was inconclusive. Manual review required.';
+        status = 'failed';
+        providerMatch = false;
+        failureReason =
+          "Driver's licence verification was inconclusive. Retry with the exact provider-issued licence number.";
       } else {
-        status = 'manual_review';
-        providerMatch = null;
+        status = 'failed';
+        providerMatch = false;
         failureReason = result.providerLookupStatus ?? 'Provider returned an inconclusive result.';
       }
 
@@ -4722,6 +4809,7 @@ export class DriversService {
           ...(biometricMatchScore !== null ? { biometricMatchScore } : {}),
           ...(overallLinkageScore !== null ? { overallLinkageScore } : {}),
           ...(linkageReasons.length ? { linkageReasons } : {}),
+          ...(discrepancyFlags.length ? { discrepancyFlags } : {}),
           manualReviewRequired,
           evidence: {
             documentType: documentSlug,
@@ -4768,6 +4856,8 @@ export class DriversService {
           overallLinkageScore,
           decision: linkageDecision,
           reasons: linkageReasons,
+          discrepancyFlags,
+          identityComparison,
         },
         reviewCaseId,
         manualReviewRequired,
@@ -4808,7 +4898,7 @@ export class DriversService {
         err instanceof Error ? err.message : 'Provider verification failed unexpectedly.';
       status = /temporarily unavailable|request failed|not configured|unavailable/i.test(message)
         ? 'provider_unavailable'
-        : 'manual_review';
+        : 'failed';
       failureReason =
         status === 'provider_unavailable'
           ? isDriverLicenceVerification
@@ -4822,8 +4912,8 @@ export class DriversService {
             ? "Driver's licence verification is temporarily unavailable."
             : 'Document verification is temporarily unavailable.'
           : isDriverLicenceVerification
-            ? 'Driver licence verification needs manual review.'
-            : 'Document verification needs manual review.';
+            ? 'Driver licence verification failed.'
+            : 'Document verification failed.';
       this.logger.warn(
         JSON.stringify({
           event: 'driver_licence_verification_error',
@@ -4856,30 +4946,19 @@ export class DriversService {
 
     if (isDriverLicenceVerification) {
       const notificationContext = await this.getTenantNotificationContext(payload.tenantId);
-      if (status === 'manual_review') {
-        await this.notificationsService.notifyDriverLicenceReviewPending({
-          tenantId: payload.tenantId,
-          driverId: driver.id,
-          driverName: this.formatDriverName(driver),
-          ...(driver.email ? { driverEmail: driver.email } : {}),
-          ...notificationContext,
-          actionUrl: `/drivers/${driver.id}/review`,
-        });
-      } else {
-        await this.notificationsService.notifyDriverVerificationStatus({
-          tenantId: payload.tenantId,
-          driverId: driver.id,
-          driverName: this.formatDriverName(driver),
-          ...(driver.email ? { driverEmail: driver.email } : {}),
-          ...notificationContext,
-          decision: status === 'verified' ? 'verified' : status === 'failed' ? 'failed' : 'pending',
-          detail:
-            status === 'verified'
-              ? "Driver's licence verification passed."
-              : (failureReason ?? "Driver's licence verification is still being processed."),
-          actionUrl: `/drivers/${driver.id}`,
-        });
-      }
+      await this.notificationsService.notifyDriverVerificationStatus({
+        tenantId: payload.tenantId,
+        driverId: driver.id,
+        driverName: this.formatDriverName(driver),
+        ...(driver.email ? { driverEmail: driver.email } : {}),
+        ...notificationContext,
+        decision: status === 'verified' ? 'verified' : status === 'failed' ? 'failed' : 'pending',
+        detail:
+          status === 'verified'
+            ? "Driver's licence verification passed."
+            : (failureReason ?? "Driver's licence verification could not be completed."),
+        actionUrl: `/drivers/${driver.id}`,
+      });
     }
 
     this.logger.log(
@@ -4919,6 +4998,8 @@ export class DriversService {
       linkageStatus,
       linkageDecision,
       linkageReasons,
+      discrepancyFlags,
+      identityComparison,
       reviewCaseId,
       manualReviewRequired,
       reviewDecision: null,
@@ -4948,11 +5029,11 @@ export class DriversService {
       providerMatch: boolean | null;
       providerValidity: 'valid' | 'invalid' | 'unknown' | null;
       providerFirstName: string | null;
+      providerMiddleName: string | null;
       providerLastName: string | null;
       providerDateOfBirth: string | null;
       providerIssueDate: string | null;
       providerExpiryDate: string | null;
-      providerMiddleName: string | null;
       providerGender: string | null;
       providerStateOfIssuance: string | null;
       providerLicenceClass: string | null;
@@ -4965,6 +5046,18 @@ export class DriversService {
       linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
       linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
       linkageReasons: string[];
+      discrepancyFlags: string[];
+      identityComparison: {
+        firstNameMatch: boolean | null;
+        middleNameMatch: boolean | null;
+        lastNameMatch: boolean | null;
+        dateOfBirthMatch: boolean | null;
+        genderMatch: boolean | null;
+        biometricMatch: boolean | null;
+        biometricConfidence: number | null;
+        matchedFieldCount: number;
+        comparedFieldCount: number;
+      };
       reviewCaseId: string | null;
       manualReviewRequired: boolean;
       reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
@@ -5086,7 +5179,7 @@ export class DriversService {
               | 'auto_pass'
               | 'pending_human_review'
               | 'fail')
-          : 'pending_human_review',
+          : 'fail',
       linkageReasons:
         isVerificationMetadataRecord(verification.providerResult) &&
         isVerificationMetadataRecord(verification.providerResult.linkage) &&
@@ -5094,6 +5187,77 @@ export class DriversService {
         verification.providerResult.linkage.reasons.every((value) => typeof value === 'string')
           ? (verification.providerResult.linkage.reasons as string[])
           : [],
+      discrepancyFlags:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        Array.isArray(verification.providerResult.linkage.discrepancyFlags) &&
+        verification.providerResult.linkage.discrepancyFlags.every(
+          (value) => typeof value === 'string',
+        )
+          ? (verification.providerResult.linkage.discrepancyFlags as string[])
+          : [],
+      identityComparison:
+        isVerificationMetadataRecord(verification.providerResult) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage) &&
+        isVerificationMetadataRecord(verification.providerResult.linkage.identityComparison)
+          ? {
+              firstNameMatch:
+                typeof verification.providerResult.linkage.identityComparison.firstNameMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.firstNameMatch
+                  : null,
+              middleNameMatch:
+                typeof verification.providerResult.linkage.identityComparison.middleNameMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.middleNameMatch
+                  : null,
+              lastNameMatch:
+                typeof verification.providerResult.linkage.identityComparison.lastNameMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.lastNameMatch
+                  : null,
+              dateOfBirthMatch:
+                typeof verification.providerResult.linkage.identityComparison.dateOfBirthMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.dateOfBirthMatch
+                  : null,
+              genderMatch:
+                typeof verification.providerResult.linkage.identityComparison.genderMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.genderMatch
+                  : null,
+              biometricMatch:
+                typeof verification.providerResult.linkage.identityComparison.biometricMatch ===
+                'boolean'
+                  ? verification.providerResult.linkage.identityComparison.biometricMatch
+                  : null,
+              biometricConfidence:
+                typeof verification.providerResult.linkage.identityComparison
+                  .biometricConfidence === 'number'
+                  ? verification.providerResult.linkage.identityComparison.biometricConfidence
+                  : null,
+              matchedFieldCount:
+                typeof verification.providerResult.linkage.identityComparison.matchedFieldCount ===
+                'number'
+                  ? verification.providerResult.linkage.identityComparison.matchedFieldCount
+                  : 0,
+              comparedFieldCount:
+                typeof verification.providerResult.linkage.identityComparison
+                  .comparedFieldCount === 'number'
+                  ? verification.providerResult.linkage.identityComparison.comparedFieldCount
+                  : 0,
+            }
+          : {
+              firstNameMatch: null,
+              middleNameMatch: null,
+              lastNameMatch: null,
+              dateOfBirthMatch: null,
+              genderMatch: null,
+              biometricMatch: null,
+              biometricConfidence: null,
+              matchedFieldCount: 0,
+              comparedFieldCount: 0,
+            },
       reviewCaseId:
         isVerificationMetadataRecord(verification.providerResult) &&
         typeof verification.providerResult.reviewCaseId === 'string'
@@ -5103,7 +5267,7 @@ export class DriversService {
         isVerificationMetadataRecord(verification.providerResult) &&
         typeof verification.providerResult.manualReviewRequired === 'boolean'
           ? verification.providerResult.manualReviewRequired
-          : verification.status === 'manual_review',
+          : false,
       reviewDecision:
         isVerificationMetadataRecord(verification.providerResult) &&
         typeof verification.providerResult.reviewDecision === 'string'
@@ -5881,21 +6045,66 @@ export class DriversService {
 
   async updateProfileFromSelfService(
     token: string,
-    profile: { firstName?: string; lastName?: string; dateOfBirth?: string },
+    profile: DriverOperationalProfile,
   ): Promise<{ message: string }> {
     const payload = await this.verifySelfServiceToken(token);
-    const updates: { firstName?: string; lastName?: string; dateOfBirth?: string } = {};
-    if (profile.firstName?.trim()) updates.firstName = profile.firstName.trim();
-    if (profile.lastName?.trim()) updates.lastName = profile.lastName.trim();
-    if (profile.dateOfBirth?.trim()) updates.dateOfBirth = profile.dateOfBirth.trim();
-    if (Object.keys(updates).length === 0) {
+    const currentDriver = (await this.prisma.driver.findUnique({
+      where: { id: payload.driverId },
+    })) as (Driver & { operationalProfile?: Prisma.JsonValue | null }) | null;
+    if (!currentDriver || currentDriver.tenantId !== payload.tenantId) {
+      throw new NotFoundException('Driver not found.');
+    }
+
+    const normalizedProfile: DriverOperationalProfile = {
+      ...(profile.phoneNumber?.trim() ? { phoneNumber: profile.phoneNumber.trim() } : {}),
+      ...(profile.address?.trim() ? { address: profile.address.trim() } : {}),
+      ...(profile.town?.trim() ? { town: profile.town.trim() } : {}),
+      ...(profile.localGovernmentArea?.trim()
+        ? { localGovernmentArea: profile.localGovernmentArea.trim() }
+        : {}),
+      ...(profile.state?.trim() ? { state: profile.state.trim() } : {}),
+      ...(profile.nextOfKinName?.trim() ? { nextOfKinName: profile.nextOfKinName.trim() } : {}),
+      ...(profile.nextOfKinPhone?.trim()
+        ? { nextOfKinPhone: profile.nextOfKinPhone.trim() }
+        : {}),
+      ...(profile.nextOfKinRelationship?.trim()
+        ? { nextOfKinRelationship: profile.nextOfKinRelationship.trim() }
+        : {}),
+      ...(profile.emergencyContactName?.trim()
+        ? { emergencyContactName: profile.emergencyContactName.trim() }
+        : {}),
+      ...(profile.emergencyContactPhone?.trim()
+        ? { emergencyContactPhone: profile.emergencyContactPhone.trim() }
+        : {}),
+      ...(profile.emergencyContactRelationship?.trim()
+        ? {
+            emergencyContactRelationship: profile.emergencyContactRelationship.trim(),
+          }
+        : {}),
+    };
+
+    if (Object.keys(normalizedProfile).length === 0) {
       return { message: 'No changes.' };
     }
+
+    const existingOperationalProfile = this.readOperationalProfile(currentDriver.operationalProfile, {
+      phone: currentDriver.phone,
+    });
+    const nextOperationalProfile = {
+      ...existingOperationalProfile,
+      ...normalizedProfile,
+    };
+
     await this.prisma.driver.update({
       where: { id: payload.driverId },
-      data: updates,
+      data: {
+        ...(nextOperationalProfile.phoneNumber
+          ? { phone: nextOperationalProfile.phoneNumber }
+          : {}),
+        operationalProfile: nextOperationalProfile as Prisma.InputJsonValue,
+      } as never,
     });
-    return { message: 'Profile updated.' };
+    return { message: 'Operational profile updated.' };
   }
 
   async submitGuarantorFromSelfService(
@@ -6674,20 +6883,6 @@ export class DriversService {
       ...(profile?.gender?.trim()
         ? { gender: this.normalizeGenderValue(profile.gender) ?? profile.gender.trim() }
         : {}),
-      ...(profile?.address?.trim() ? { address: profile.address.trim() } : {}),
-      ...(profile?.fullAddress?.trim() ? { fullAddress: profile.fullAddress.trim() } : {}),
-      ...(profile?.addressLine?.trim() ? { addressLine: profile.addressLine.trim() } : {}),
-      ...(profile?.town?.trim() ? { town: profile.town.trim() } : {}),
-      ...(profile?.localGovernmentArea?.trim()
-        ? { localGovernmentArea: profile.localGovernmentArea.trim() }
-        : {}),
-      ...(profile?.state?.trim() ? { state: profile.state.trim() } : {}),
-      ...(profile?.mobileNumber?.trim() ? { mobileNumber: profile.mobileNumber.trim() } : {}),
-      ...(profile?.emailAddress?.trim() ? { emailAddress: profile.emailAddress.trim() } : {}),
-      ...(profile?.birthState?.trim() ? { birthState: profile.birthState.trim() } : {}),
-      ...(profile?.birthLga?.trim() ? { birthLga: profile.birthLga.trim() } : {}),
-      ...(profile?.nextOfKinState?.trim() ? { nextOfKinState: profile.nextOfKinState.trim() } : {}),
-      ...(profile?.religion?.trim() ? { religion: profile.religion.trim() } : {}),
       ...(profile?.ninIdNumber?.trim() ? { ninIdNumber: profile.ninIdNumber.trim() } : {}),
       ...(persistedImages.selfieImageUrl ? { selfieImageUrl: persistedImages.selfieImageUrl } : {}),
       ...(persistedImages.providerImageUrl
@@ -7050,13 +7245,15 @@ export class DriversService {
     const driverLicenceRequired = settings.requiredDriverDocumentSlugs.includes(
       DRIVER_LICENCE_DOCUMENT_TYPE,
     );
-
-    if (driverLicenceRequired && !driver.hasApprovedLicence) {
-      activationReasons.push('An approved driver licence is required.');
-    }
-
     const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
     const latestLicenceVerification = driver.driverLicenceVerification ?? null;
+
+    if (driverLicenceRequired && !driver.hasApprovedLicence) {
+      if (!latestLicenceVerification) {
+        activationReasons.push("A verified driver's licence is required.");
+      }
+    }
+
     const missingRequiredDocuments = settings.requiredDriverDocumentSlugs.filter((slug) => {
       if (slug !== DRIVER_LICENCE_DOCUMENT_TYPE) {
         return !approvedDocumentTypes.has(slug);
@@ -7081,6 +7278,10 @@ export class DriversService {
         activationReasons.push(
           "Driver's licence could not be linked to the driver's verified identity.",
         );
+      } else if (latestLicenceVerification?.status === 'provider_unavailable') {
+        activationReasons.push("Driver's licence verification needs to be retried.");
+      } else if (latestLicenceVerification?.status === 'failed') {
+        activationReasons.push("Driver's licence verification failed.");
       } else if (
         latestLicenceVerification &&
         latestLicenceVerification.status !== 'verified' &&
@@ -7637,7 +7838,6 @@ export class DriversService {
         }
       } else if (
         verification.status === 'pending' ||
-        verification.status === 'manual_review' ||
         verification.status === 'provider_unavailable'
       ) {
         summary.pendingDocumentCount += 1;

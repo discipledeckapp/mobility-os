@@ -45,7 +45,7 @@ export const NG: CountryConfig = {
    * Document type slugs required for driver onboarding.
    * These map to slugs in the document-types registry.
    */
-  requiredDriverDocumentSlugs: ['national-id'],
+  requiredDriverDocumentSlugs: [],
   /**
    * Document type slugs required for vehicle registration.
    */

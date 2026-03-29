@@ -432,7 +432,7 @@ export interface OperationsTenantSummaryRecord {
   };
   verificationHealth: {
     driversAwaitingActivation: number;
-    pendingLicenceReviewCount: number;
+    licenceVerificationIssueCount: number;
     providerRetryRequiredCount: number;
     expiringLicencesSoonCount: number;
     expiredLicencesCount: number;

@@ -927,12 +927,12 @@ export class ReportsService {
       this.getInspectionCompliance(tenantId),
     ]);
 
-    const [pendingLicenceReviewCount, providerRetryRequiredCount] = await Promise.all([
+    const [licenceVerificationIssueCount, providerRetryRequiredCount] = await Promise.all([
       this.prisma.driverDocumentVerification.count({
         where: {
           tenantId,
           documentType: 'drivers-license',
-          status: 'manual_review',
+          status: 'failed',
         },
       }),
       this.prisma.driverDocumentVerification.count({
@@ -995,7 +995,7 @@ export class ReportsService {
       driverActivity: overview.driverActivity,
       verificationHealth: {
         driversAwaitingActivation,
-        pendingLicenceReviewCount,
+        licenceVerificationIssueCount,
         providerRetryRequiredCount,
         expiringLicencesSoonCount,
         expiredLicencesCount,

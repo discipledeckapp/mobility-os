@@ -246,22 +246,23 @@ export interface DriverRecord {
     dateOfBirth?: string;
     nationality?: string;
     gender?: string;
-    address?: string;
-    fullAddress?: string;
-    addressLine?: string;
-    town?: string;
-    localGovernmentArea?: string;
-    state?: string;
-    mobileNumber?: string;
-    emailAddress?: string;
-    birthState?: string;
-    birthLga?: string;
-    nextOfKinState?: string;
-    religion?: string;
     ninIdNumber?: string;
     selfieImageUrl?: string;
     providerImageUrl?: string;
     signatureImageUrl?: string;
+  } | null;
+  operationalProfile?: {
+    phoneNumber?: string;
+    address?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    nextOfKinName?: string;
+    nextOfKinPhone?: string;
+    nextOfKinRelationship?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelationship?: string;
   } | null;
   identityVerificationMetadata?: {
     validity?: 'valid' | 'invalid' | 'unknown';
@@ -284,6 +285,9 @@ export interface DriverRecord {
     isExpired: boolean;
     providerName: string | null;
     providerReference: string | null;
+    holderFirstName: string | null;
+    holderMiddleName: string | null;
+    holderLastName: string | null;
     holderFullName: string | null;
     holderDateOfBirth: string | null;
     holderGender: string | null;
@@ -297,6 +301,18 @@ export interface DriverRecord {
     overallLinkageScore: number | null;
     linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     reviewCaseId: string | null;
     manualReviewRequired: boolean;
     reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;
@@ -2275,25 +2291,6 @@ export async function reviewDriverDocument(
   });
 }
 
-export async function reviewDriverLicenceVerification(
-  driverId: string,
-  input: {
-    decision: 'approved' | 'rejected' | 'request_reverification';
-    notes?: string;
-  },
-  token?: string,
-): Promise<DriverRecord['driverLicenceVerification']> {
-  return apiCoreFetch<DriverRecord['driverLicenceVerification']>(
-    `/drivers/${driverId}/licence-verification/review`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify(input),
-      cache: 'no-store',
-      token: await getTenantApiToken(token),
-    },
-  );
-}
-
 export async function downloadDriversCsv(token?: string): Promise<string> {
   return apiCoreFetch('/drivers/export.csv', {
     cache: 'no-store',
@@ -2508,7 +2505,19 @@ export async function initiateDriverKycCheckout(
 
 export async function updateDriverSelfServiceProfile(
   token: string,
-  profile: { firstName?: string; lastName?: string; dateOfBirth?: string },
+  profile: {
+    phoneNumber?: string;
+    address?: string;
+    town?: string;
+    localGovernmentArea?: string;
+    state?: string;
+    nextOfKinName?: string;
+    nextOfKinPhone?: string;
+    nextOfKinRelationship?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelationship?: string;
+  },
 ): Promise<{ message: string }> {
   return apiCoreFetch<{ message: string }>('/driver-self-service/update-profile', {
     method: 'POST',
@@ -2572,8 +2581,11 @@ export type OnboardingStepRecord = {
   identityStatus?: string;
   verificationState?: 'not_started' | 'in_progress' | 'provider_called' | 'success' | 'failed';
   hasConsentOnFile?: boolean;
+  missingOperationalFields?: string[];
   requiredDocumentTypes?: string[];
   verifiedDocumentTypes?: string[];
+  documentVerificationStatus?: string;
+  documentFailureReason?: string | null;
   requiresGuarantor?: boolean;
   guarantorBlocking?: boolean;
   guarantorVerified?: boolean;
@@ -2603,11 +2615,11 @@ export type DocumentVerificationRecord = {
   providerMatch: boolean | null;
   providerValidity: 'valid' | 'invalid' | 'unknown' | null;
   providerFirstName: string | null;
+  providerMiddleName: string | null;
   providerLastName: string | null;
   providerDateOfBirth: string | null;
   providerIssueDate: string | null;
   providerExpiryDate: string | null;
-  providerMiddleName: string | null;
   providerGender: string | null;
   providerStateOfIssuance: string | null;
   providerLicenceClass: string | null;
@@ -2620,6 +2632,18 @@ export type DocumentVerificationRecord = {
   linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
   linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
   linkageReasons: string[];
+  discrepancyFlags: string[];
+  identityComparison: {
+    firstNameMatch: boolean | null;
+    middleNameMatch: boolean | null;
+    lastNameMatch: boolean | null;
+    dateOfBirthMatch: boolean | null;
+    genderMatch: boolean | null;
+    biometricMatch: boolean | null;
+    biometricConfidence: number | null;
+    matchedFieldCount: number;
+    comparedFieldCount: number;
+  };
   reviewCaseId: string | null;
   manualReviewRequired: boolean;
   reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;

@@ -14,7 +14,7 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
-import { listDriverDocumentReviewQueue, listDriverLicenceReviewQueue } from '../../../lib/api-core';
+import { listDriverDocumentReviewQueue } from '../../../lib/api-core';
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'approved') return 'success';
@@ -24,20 +24,14 @@ function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neut
 }
 
 export default async function DriverReviewQueuePage() {
-  const [documentQueue, licenceQueue] = await Promise.all([
-    listDriverDocumentReviewQueue({ page: 1, limit: 100 }).catch(() => ({
+  const documentQueue = await listDriverDocumentReviewQueue({ page: 1, limit: 100 }).catch(
+    () => ({
       data: [],
       total: 0,
       page: 1,
       limit: 100,
-    })),
-    listDriverLicenceReviewQueue({ page: 1, limit: 100 }).catch(() => ({
-      data: [],
-      total: 0,
-      page: 1,
-      limit: 100,
-    })),
-  ]);
+    }),
+  );
 
   return (
     <TenantAppShell
@@ -89,76 +83,6 @@ export default async function DriverReviewQueuePage() {
                         <Link
                           className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
                           href={`/drivers/${document.driverId}/review`}
-                        >
-                          Open review flow
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Driver licence linkage reviews</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {licenceQueue.data.length === 0 ? (
-            <Text tone="muted">
-              There are no driver licence linkage reviews waiting for human approval right now.
-            </Text>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Validity</TableHead>
-                    <TableHead>Linkage</TableHead>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Review</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {licenceQueue.data.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Text tone="strong">{item.driverName}</Text>
-                          <Text tone="muted">{item.driverPhone}</Text>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge tone={item.validity === 'valid' ? 'success' : 'warning'}>
-                            {item.validity ?? 'unknown'}
-                          </Badge>
-                          <Text tone="muted">
-                            {item.expiryDate ? `Expires ${item.expiryDate}` : 'Expiry not returned'}
-                          </Text>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge tone="warning">{item.linkageDecision.replace(/_/g, ' ')}</Badge>
-                          <Text tone="muted">
-                            {item.overallLinkageScore !== null
-                              ? `Overall score ${item.overallLinkageScore}%`
-                              : 'Score not returned'}
-                          </Text>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={getStatusTone(item.riskImpact)}>{item.riskImpact}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                          href={`/drivers/${item.driverId}/review`}
                         >
                           Open review flow
                         </Link>

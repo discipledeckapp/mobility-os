@@ -14,6 +14,6 @@ export const GH: CountryConfig = {
     { type: 'NATIONAL_ID', label: 'Ghana Card' },
     { type: 'PHONE', label: 'Phone Number' },
   ],
-  requiredDriverDocumentSlugs: ['national-id', 'drivers-license'],
+  requiredDriverDocumentSlugs: [],
   requiredVehicleDocumentSlugs: ['vehicle-license', 'road-worthiness', 'insurance'],
 };

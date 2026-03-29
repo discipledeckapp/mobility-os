@@ -945,6 +945,42 @@ function getDocumentLabel(documentType: string): string {
   return DOCUMENT_TYPE_LABELS[normalized.toUpperCase()] ?? normalized;
 }
 
+function maskNin(value?: string | null): string {
+  const trimmed = value?.trim() ?? '';
+  if (trimmed.length <= 4) {
+    return trimmed || 'Not returned';
+  }
+  return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  required = true,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-slate-700">
+        {label}
+        {!required ? <span className="ml-1 text-slate-400">(Optional)</span> : null}
+      </label>
+      <input
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        type="text"
+        value={value}
+      />
+    </div>
+  );
+}
+
 function DocumentVerificationStep({
   token,
   driver,
@@ -1032,26 +1068,19 @@ function DocumentVerificationStep({
                   ? "Your driver's licence verification has been approved."
                   : lastResult.reviewDecision === 'rejected'
                     ? "Your driver's licence verification was rejected. Please contact your organisation before trying again."
-                    : lastResult.reviewDecision === 'request_reverification'
-                      ? 'A new driver’s licence verification is required before onboarding can continue.'
-                      : lastResult.status === 'manual_review'
-                        ? 'Your document has been submitted for manual review. You may continue while the review is in progress.'
-                        : (lastResult.failureReason ??
-                          'The document number could not be verified automatically. Check the number and try again, or contact your organisation.')}
+                  : lastResult.reviewDecision === 'request_reverification'
+                    ? 'A new driver’s licence verification is required before onboarding can continue.'
+                      : (lastResult.failureReason ??
+                        'The document number could not be verified automatically. Check the number and try again, or contact your organisation.')}
             </div>
           ) : null}
 
-          {!lastResult &&
-          selectedDocType === 'drivers-license' &&
-          existingLicenceVerification?.manualReviewRequired ? (
+          {!lastResult && selectedDocType === 'drivers-license' && existingLicenceVerification ? (
             <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-              {existingLicenceVerification.reviewDecision === 'approved'
+              {existingLicenceVerification.status === 'verified'
                 ? "Your driver's licence verification has been approved."
-                : existingLicenceVerification.reviewDecision === 'rejected'
-                  ? "Your driver's licence verification was rejected. Please contact your organisation before trying again."
-                  : existingLicenceVerification.reviewDecision === 'request_reverification'
-                    ? 'A new driver’s licence verification is required before onboarding can continue.'
-                    : 'Your driver’s licence verification is pending review. You do not need to submit it again right now.'}
+                : (existingLicenceVerification.failureReason ??
+                  'Your previous driver’s licence verification did not complete successfully. You can retry now.')}
             </div>
           ) : null}
 
@@ -1090,6 +1119,34 @@ function DocumentVerificationStep({
                   <Text tone="muted">Licence number</Text>
                   <Text>{lastResult.idNumber}</Text>
                 </div>
+                {(lastResult.providerFirstName ||
+                  lastResult.providerMiddleName ||
+                  lastResult.providerLastName) ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Holder name</Text>
+                    <Text>
+                      {[
+                        lastResult.providerFirstName,
+                        lastResult.providerMiddleName,
+                        lastResult.providerLastName,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    </Text>
+                  </div>
+                ) : null}
+                {lastResult.providerDateOfBirth ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Holder date of birth</Text>
+                    <Text>{lastResult.providerDateOfBirth}</Text>
+                  </div>
+                ) : null}
+                {lastResult.providerGender ? (
+                  <div className="space-y-1">
+                    <Text tone="muted">Holder gender</Text>
+                    <Text>{lastResult.providerGender}</Text>
+                  </div>
+                ) : null}
                 {lastResult.providerExpiryDate ? (
                   <div className="space-y-1">
                     <Text tone="muted">Expiry date</Text>
@@ -1118,6 +1175,42 @@ function DocumentVerificationStep({
                   <div className="space-y-1">
                     <Text tone="muted">Linkage confidence</Text>
                     <Text>{lastResult.overallLinkageScore}%</Text>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <Text tone="strong">Match against verified identity</Text>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Text tone="muted">Compared fields</Text>
+                    <Text>
+                      {lastResult.identityComparison.matchedFieldCount}/
+                      {lastResult.identityComparison.comparedFieldCount} matched
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Biometric comparison</Text>
+                    <Text>
+                      {lastResult.identityComparison.biometricMatch === null
+                        ? 'Not returned'
+                        : lastResult.identityComparison.biometricMatch
+                          ? 'Matched'
+                          : 'Mismatch'}
+                      {lastResult.identityComparison.biometricConfidence !== null
+                        ? ` (${lastResult.identityComparison.biometricConfidence}%)`
+                        : ''}
+                    </Text>
+                  </div>
+                </div>
+                {lastResult.discrepancyFlags.length > 0 ? (
+                  <div className="mt-3 space-y-1">
+                    <Text tone="muted">Discrepancies detected</Text>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                      {lastResult.discrepancyFlags.map((flag) => (
+                        <li key={flag}>{flag.replace(/_/g, ' ')}</li>
+                      ))}
+                    </ul>
                   </div>
                 ) : null}
               </div>
@@ -1172,9 +1265,11 @@ function DocumentVerificationStep({
                 />
               </div>
               {error ? <Text tone="danger">{error}</Text> : null}
-              <Button disabled={loading} type="submit">
-                {loading ? 'Verifying…' : 'Verify document'}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button disabled={loading} type="submit">
+                  {loading ? 'Verifying…' : 'Verify document'}
+                </Button>
+              </div>
             </form>
           ) : (
             <div className="space-y-3">
@@ -1190,7 +1285,13 @@ function DocumentVerificationStep({
   );
 }
 
-function ManualReviewStep({ identityStatus }: { identityStatus?: string }) {
+function ManualReviewStep({
+  identityStatus,
+  reason,
+}: {
+  identityStatus?: string;
+  reason?: string;
+}) {
   return (
     <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
       <CardHeader>
@@ -1198,7 +1299,9 @@ function ManualReviewStep({ identityStatus }: { identityStatus?: string }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <Text tone="muted">
-          {identityStatus === 'review_needed'
+          {reason
+            ? reason
+            : identityStatus === 'review_needed'
             ? 'Your verification submission has been received and is currently under manual review. You will be notified once a decision has been made.'
             : 'Your submission is being processed. This can take a short while. Check back if the status has not updated.'}
         </Text>
@@ -1385,44 +1488,172 @@ function CompletionStep({
   );
 }
 
-// Auto-advances past the profile step — profile data is populated from NIN.
-// If the driver already has name and DOB, skip straight through.
-function AutoAdvanceProfileStep({
+function OperationalProfileStep({
   token,
   driver,
+  onboardingStep,
   onComplete,
 }: {
   token: string;
   driver: DriverRecord;
+  onboardingStep: OnboardingStepRecord;
   onComplete: () => Promise<void>;
 }) {
-  const advanced = useRef(false);
-  useEffect(() => {
-    if (advanced.current) return;
-    advanced.current = true;
-    updateDriverSelfServiceProfile(token, {
-      firstName: driver.firstName ?? '',
-      lastName: driver.lastName ?? '',
-      dateOfBirth: driver.dateOfBirth ?? '',
-    })
-      .catch(() => {
-        // Best-effort — continue even if profile update fails
-      })
-      .finally(() => {
-        void onComplete();
+  const operationalProfile = driver.operationalProfile ?? {};
+  const [phoneNumber, setPhoneNumber] = useState(
+    operationalProfile.phoneNumber ?? driver.phone ?? '',
+  );
+  const [address, setAddress] = useState(operationalProfile.address ?? '');
+  const [town, setTown] = useState(operationalProfile.town ?? '');
+  const [localGovernmentArea, setLocalGovernmentArea] = useState(
+    operationalProfile.localGovernmentArea ?? '',
+  );
+  const [stateValue, setStateValue] = useState(operationalProfile.state ?? '');
+  const [nextOfKinName, setNextOfKinName] = useState(operationalProfile.nextOfKinName ?? '');
+  const [nextOfKinPhone, setNextOfKinPhone] = useState(operationalProfile.nextOfKinPhone ?? '');
+  const [nextOfKinRelationship, setNextOfKinRelationship] = useState(
+    operationalProfile.nextOfKinRelationship ?? '',
+  );
+  const [emergencyContactName, setEmergencyContactName] = useState(
+    operationalProfile.emergencyContactName ?? '',
+  );
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(
+    operationalProfile.emergencyContactPhone ?? '',
+  );
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = useState(
+    operationalProfile.emergencyContactRelationship ?? '',
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await updateDriverSelfServiceProfile(token, {
+        phoneNumber,
+        address,
+        town,
+        localGovernmentArea,
+        state: stateValue,
+        nextOfKinName,
+        nextOfKinPhone,
+        nextOfKinRelationship,
+        emergencyContactName,
+        emergencyContactPhone,
+        emergencyContactRelationship,
       });
-  }, [token, driver, onComplete]);
+      await onComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save your profile right now.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
       <SelfServiceBlockingOverlay
-        visible
-        title="Continuing your onboarding"
-        message="Syncing the profile details already returned from verification and preparing the next step."
+        visible={saving}
+        title="Saving your profile"
+        message="Updating your contact and operational details so onboarding can continue."
       />
-      <main className="flex min-h-[40vh] items-center justify-center">
-        <Text tone="muted">Continuing your onboarding…</Text>
-      </main>
+      <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Complete your profile</CardTitle>
+          <Text tone="muted">
+            Your verified identity is locked. Add the operational details your organisation needs
+            to finish onboarding.
+          </Text>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Text tone="strong">Verified identity</Text>
+              <Badge tone="success">Provider verified</Badge>
+              <Badge tone="neutral">Read only</Badge>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Text tone="muted">Full name</Text>
+                <Text>{[driver.firstName, driver.lastName].filter(Boolean).join(' ') || 'Not returned'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">NIN</Text>
+                <Text>{maskNin(driver.identityProfile?.ninIdNumber)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Date of birth</Text>
+                <Text>{driver.dateOfBirth ?? 'Not returned'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Gender</Text>
+                <Text>{driver.gender ?? 'Not returned'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Nationality</Text>
+                <Text>{driver.nationality ?? 'Not returned'}</Text>
+              </div>
+            </div>
+          </div>
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Text tone="strong">Contact and operational details</Text>
+              <Badge tone="warning">You can edit these</Badge>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Phone number" value={phoneNumber} onChange={setPhoneNumber} />
+              <Field label="Address" value={address} onChange={setAddress} />
+              <Field label="Town" value={town} onChange={setTown} />
+              <Field
+                label="LGA"
+                value={localGovernmentArea}
+                onChange={setLocalGovernmentArea}
+              />
+              <Field label="State" value={stateValue} onChange={setStateValue} />
+              <Field label="Next of kin name" value={nextOfKinName} onChange={setNextOfKinName} />
+              <Field
+                label="Next of kin phone"
+                value={nextOfKinPhone}
+                onChange={setNextOfKinPhone}
+              />
+              <Field
+                label="Next of kin relationship"
+                value={nextOfKinRelationship}
+                onChange={setNextOfKinRelationship}
+                required={false}
+              />
+              <Field
+                label="Emergency contact name"
+                value={emergencyContactName}
+                onChange={setEmergencyContactName}
+              />
+              <Field
+                label="Emergency contact phone"
+                value={emergencyContactPhone}
+                onChange={setEmergencyContactPhone}
+              />
+              <Field
+                label="Emergency contact relationship"
+                value={emergencyContactRelationship}
+                onChange={setEmergencyContactRelationship}
+                required={false}
+              />
+            </div>
+            {onboardingStep.missingOperationalFields?.length ? (
+              <Text tone="muted">
+                Required before continuing: {onboardingStep.missingOperationalFields.join(', ')}.
+              </Text>
+            ) : null}
+            {error ? <Text tone="danger">{error}</Text> : null}
+            <Button disabled={saving} type="submit">
+              {saving ? 'Saving…' : 'Save and continue'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </>
   );
 }
@@ -1627,7 +1858,12 @@ function DriverVerificationFlow({ token }: { token: string }) {
         ) : null}
 
         {currentStep === 'profile' ? (
-          <AutoAdvanceProfileStep driver={driver} onComplete={refreshContext} token={token} />
+          <OperationalProfileStep
+            driver={driver}
+            onboardingStep={onboardingStep}
+            onComplete={refreshContext}
+            token={token}
+          />
         ) : null}
 
         {currentStep === 'consent' ? (
@@ -1699,6 +1935,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
             {...(onboardingStep.identityStatus
               ? { identityStatus: onboardingStep.identityStatus }
               : {})}
+            {...(onboardingStep.reason ? { reason: onboardingStep.reason } : {})}
           />
         ) : null}
 

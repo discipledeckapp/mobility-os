@@ -81,6 +81,14 @@ export class DriverResponseDto {
   @ApiPropertyOptional({
     type: Object,
     additionalProperties: true,
+    description:
+      'Driver-supplied contact and operational fields captured after identity verification.',
+  })
+  operationalProfile?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
     description: 'Normalized verification metadata such as validity, match score, and risk score.',
   })
   identityVerificationMetadata?: Record<string, unknown> | null;
@@ -110,6 +118,9 @@ export class DriverResponseDto {
     isExpired: boolean;
     providerName: string | null;
     providerReference: string | null;
+    holderFirstName: string | null;
+    holderMiddleName: string | null;
+    holderLastName: string | null;
     holderFullName: string | null;
     holderDateOfBirth: string | null;
     holderGender: string | null;
@@ -123,6 +134,18 @@ export class DriverResponseDto {
     overallLinkageScore: number | null;
     linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
     linkageReasons: string[];
+    discrepancyFlags: string[];
+    identityComparison: {
+      firstNameMatch: boolean | null;
+      middleNameMatch: boolean | null;
+      lastNameMatch: boolean | null;
+      dateOfBirthMatch: boolean | null;
+      genderMatch: boolean | null;
+      biometricMatch: boolean | null;
+      biometricConfidence: number | null;
+      matchedFieldCount: number;
+      comparedFieldCount: number;
+    };
     reviewCaseId: string | null;
     manualReviewRequired: boolean;
     reviewDecision: 'approved' | 'rejected' | 'request_reverification' | null;

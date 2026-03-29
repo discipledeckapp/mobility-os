@@ -213,9 +213,9 @@ export default async function TenantDetailPage({
             </Card>
             <Card className="border-slate-200/80">
               <CardHeader>
-                <Text tone="muted">Licence review queue</Text>
+                <Text tone="muted">Licence verification issues</Text>
                 <CardTitle>
-                  {operationalSummary.verificationHealth.pendingLicenceReviewCount}
+                  {operationalSummary.verificationHealth.licenceVerificationIssueCount}
                 </CardTitle>
                 <Text tone="muted">
                   {operationalSummary.verificationHealth.providerRetryRequiredCount} provider retry
@@ -403,8 +403,8 @@ export default async function TenantDetailPage({
                         {operationalSummary.verificationHealth.expiringLicencesSoonCount} due soon
                       </p>
                       <p className="text-xs text-slate-500">
-                        {operationalSummary.verificationHealth.pendingLicenceReviewCount} manual
-                        reviews pending
+                        {operationalSummary.verificationHealth.licenceVerificationIssueCount}{' '}
+                        failed verification cases
                       </p>
                     </div>
                     <div className="rounded-2xl border border-slate-200 px-4 py-3">

@@ -14,6 +14,6 @@ export const KE: CountryConfig = {
     { type: 'NATIONAL_ID', label: 'National ID' },
     { type: 'PHONE', label: 'Phone Number' },
   ],
-  requiredDriverDocumentSlugs: ['national-id', 'drivers-license'],
+  requiredDriverDocumentSlugs: [],
   requiredVehicleDocumentSlugs: ['vehicle-license', 'insurance'],
 };

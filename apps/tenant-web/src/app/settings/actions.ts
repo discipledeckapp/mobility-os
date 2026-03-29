@@ -74,11 +74,6 @@ export async function updateOrganisationSettingsAction(
   const requireGuarantor = formData.get('requireGuarantor') === 'on';
   const guarantorBlocking = formData.get('guarantorBlocking') === 'on';
   const requireGuarantorVerification = formData.get('requireGuarantorVerification') === 'on';
-  const customDriverDocumentTypes = String(formData.get('customDriverDocumentTypes') ?? '')
-    .split(/[\n,]/)
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map((value) => value.toLowerCase());
   const requiredDriverDocumentSlugs = formData
     .getAll('requiredDriverDocumentSlugs')
     .map((value) => String(value).trim().toLowerCase())
@@ -104,10 +99,8 @@ export async function updateOrganisationSettingsAction(
       requireGuarantor,
       guarantorBlocking,
       requireGuarantorVerification,
-      customDriverDocumentTypes,
-      requiredDriverDocumentSlugs: Array.from(
-        new Set([...requiredDriverDocumentSlugs, ...customDriverDocumentTypes]),
-      ),
+      customDriverDocumentTypes: [],
+      requiredDriverDocumentSlugs: Array.from(new Set(requiredDriverDocumentSlugs)),
       ...(requiredVehicleDocumentSlugs.length > 0 ? { requiredVehicleDocumentSlugs } : {}),
       allowAdminAssignmentOverride: formData.get('allowAdminAssignmentOverride') === 'on',
     });

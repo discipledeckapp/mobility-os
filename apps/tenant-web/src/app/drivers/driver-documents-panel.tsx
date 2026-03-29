@@ -189,12 +189,16 @@ export function DriverDocumentsPanel({
     requiredDocumentSlugs?.length
       ? requiredDocumentSlugs
       : countryCode && isCountrySupported(countryCode)
-      ? getCountryConfig(countryCode).requiredDriverDocumentSlugs
-      : ['national-id', 'drivers-license'];
-  const allDocumentOptions = getDocumentTypesByScope(DocumentScope.Driver).map((document) => ({
-    value: document.slug,
-    label: document.name,
-  }));
+      ? getCountryConfig(countryCode).requiredDriverDocumentSlugs.filter(
+          (slug) => slug === 'drivers-license',
+        )
+      : [];
+  const allDocumentOptions = getDocumentTypesByScope(DocumentScope.Driver)
+    .filter((document) => document.slug === 'drivers-license')
+    .map((document) => ({
+      value: document.slug,
+      label: document.name,
+    }));
 
   const [state, formAction, isPending] = useActionState(
     mode === 'self_service' ? uploadDriverSelfServiceDocumentAction : uploadDriverDocumentAction,

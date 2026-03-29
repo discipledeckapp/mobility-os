@@ -13,7 +13,6 @@ import { TenantAppShell } from '../../../../features/shared/tenant-app-shell';
 import { getDriver, getTenantMe } from '../../../../lib/api-core';
 import { getDriverIdentityLabel, getDriverIdentityTone } from '../../../../lib/driver-identity';
 import { getFormattingLocale } from '../../../../lib/locale';
-import { DriverLicenceReviewPanel } from '../../driver-licence-review-panel';
 
 function formatDate(value?: string | null, locale = 'en-US'): string {
   if (!value) return 'Not recorded';
@@ -43,7 +42,7 @@ export default async function DriverReviewPage({
 
   return (
     <TenantAppShell
-      description="Inspect driver identity evidence, linkage scores, and complete any required manual licence review."
+      description="Inspect driver identity evidence, linkage scores, and provider-returned licence verification details."
       eyebrow="Operators"
       title="Driver review"
     >
@@ -93,7 +92,8 @@ export default async function DriverReviewPage({
               <CardHeader>
                 <CardTitle>Driver licence linkage summary</CardTitle>
                 <CardDescription>
-                  Review the provider response, linkage evidence, and risk posture before deciding.
+                  Review the provider response, linkage evidence, and risk posture captured during
+                  provider verification.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -115,15 +115,6 @@ export default async function DriverReviewPage({
                   >
                     {licenceVerification.linkageDecision.replace(/_/g, ' ')}
                   </Badge>
-                  {licenceVerification.reviewDecision ? (
-                    <Badge
-                      tone={
-                        licenceVerification.reviewDecision === 'approved' ? 'success' : 'warning'
-                      }
-                    >
-                      Review: {licenceVerification.reviewDecision.replace(/_/g, ' ')}
-                    </Badge>
-                  ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -231,36 +222,24 @@ export default async function DriverReviewPage({
                   {licenceVerification.failureReason ? (
                     <Text tone="danger">{licenceVerification.failureReason}</Text>
                   ) : null}
-                  {licenceVerification.reviewDecision ? (
-                    <Text tone="muted">
-                      {licenceVerification.reviewDecision === 'approved'
-                        ? `Manually approved by ${licenceVerification.reviewedBy ?? 'reviewer'} on ${formatDate(licenceVerification.reviewedAt, locale)}.`
-                        : `Review decision: ${licenceVerification.reviewDecision.replace(/_/g, ' ')} on ${formatDate(licenceVerification.reviewedAt, locale)}.`}
-                    </Text>
-                  ) : null}
                 </div>
               </CardContent>
             </Card>
-
-            <DriverLicenceReviewPanel
-              currentDecision={licenceVerification.reviewDecision}
-              driverId={driver.id}
-            />
           </>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Manual review guidance</CardTitle>
+              <CardTitle>Verification guidance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Text>
-                Identity resolution returned a manual-review outcome, so this driver should not be
-                treated as verified or ready for activation yet.
+                This page is for evidence inspection only. Driver&apos;s licence readiness now comes
+                directly from the provider verification outcome.
               </Text>
               <Text tone="muted">
-                Confirm the submitted identifier and selfie are correct, collect any missing
-                evidence from the driver, and escalate the case to the review team with the case
-                reference above.
+                If the licence failed verification, confirm the licence number and verified
+                identity details with the driver, then ask them to retry. If the provider is
+                unavailable, retry once service recovers.
               </Text>
             </CardContent>
           </Card>

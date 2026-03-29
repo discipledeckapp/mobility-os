@@ -240,6 +240,7 @@ model Driver {
   providerImageUrl String?
   identitySignatureImageUrl String?
   identityProfile Json?
+  operationalProfile Json?
   identityVerificationMetadata Json?
   identityProviderRawData Json?
 
@@ -491,7 +492,7 @@ model DriverDocumentVerification {
   countryCode  String
   // Provider used to verify: 'youverify' | 'smile_identity' | 'manual' | 'mock'.
   provider     String?
-  // pending | verified | failed | manual_review | expired
+  // pending | verified | failed | provider_unavailable | expired
   status       String  @default("pending")
   // Whether the provider returned a match against the submitted demographics.
   providerMatch Boolean?

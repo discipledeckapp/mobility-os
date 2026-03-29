@@ -12,7 +12,7 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useState } from 'react';
 import type {
   FleetRecord,
   TeamMemberRecord,
@@ -296,16 +296,8 @@ export function SettingsPanel({
     tenant.requireIdentityVerificationForActivation ?? true,
   );
   const [requiresGuarantor, setRequiresGuarantor] = useState(tenant.requireGuarantor ?? false);
-  const selectedDriverDocumentSlugs = useMemo(
-    () => new Set(tenant.requiredDriverDocumentSlugs ?? []),
-    [tenant.requiredDriverDocumentSlugs],
-  );
-  const customDriverDocumentTypes = useMemo(
-    () =>
-      (tenant.customDriverDocumentTypes ?? []).filter(
-        (slug) => !DRIVER_DOCUMENT_OPTIONS.some((document) => document.slug === slug),
-      ),
-    [tenant.customDriverDocumentTypes],
+  const [requiresDriverLicence, setRequiresDriverLicence] = useState(
+    (tenant.requiredDriverDocumentSlugs ?? []).includes('drivers-license'),
   );
 
   return (
@@ -685,11 +677,13 @@ export function SettingsPanel({
                     <div className="space-y-3 md:col-span-2">
                       <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
                       <div className="grid gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/60 p-4 md:grid-cols-2">
-                        {DRIVER_DOCUMENT_OPTIONS.map((document) => (
+                        {DRIVER_DOCUMENT_OPTIONS.map((document) =>
+                          document.slug === 'drivers-license' ? (
                           <label className="flex items-start gap-3 text-sm" key={document.slug}>
                             <input
-                              defaultChecked={selectedDriverDocumentSlugs.has(document.slug)}
+                              checked={requiresDriverLicence}
                               name="requiredDriverDocumentSlugs"
+                              onChange={(e) => setRequiresDriverLicence(e.target.checked)}
                               type="checkbox"
                               value={document.slug}
                             />
@@ -704,24 +698,18 @@ export function SettingsPanel({
                               </span>
                             </span>
                           </label>
-                        ))}
+                          ) : null
+                        )}
                       </div>
                       <Text tone="muted">
-                        Supporting documents stay optional unless you select them here.
+                        Only Driver&apos;s Licence is supported as an additional driver document.
+                        It stays optional unless you enable it here.
                       </Text>
-                      <div className="space-y-2">
-                        <Label htmlFor="customDriverDocumentTypes">Custom document types</Label>
-                        <Input
-                          defaultValue={customDriverDocumentTypes.join(', ')}
-                          id="customDriverDocumentTypes"
-                          name="customDriverDocumentTypes"
-                          placeholder="guarantor-letter, union-card"
-                        />
-                        <Text tone="muted">
-                          Add any extra document types you want collected. Custom entries entered
-                          here will be included in onboarding.
-                        </Text>
-                      </div>
+                      <Text tone="muted">
+                        Driver&apos;s licence is verified directly with the provider. When you mark
+                        it as required, readiness waits for a verified result. When you leave it
+                        off, assignment readiness is not blocked by licence verification.
+                      </Text>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="guarantorMaxActiveDrivers">
