@@ -24,6 +24,7 @@ import {
   createAssignmentAction,
   type CreateAssignmentActionState,
 } from './actions';
+import { useRouter } from 'next/navigation';
 
 const initialState: CreateAssignmentActionState = {};
 
@@ -140,10 +141,12 @@ export function CreateAssignmentForm({
   availableVehicles: VehicleRecord[];
   helperNote?: string | null;
 }) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     createAssignmentAction,
     initialState,
   );
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [fleetId, setFleetId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -203,13 +206,22 @@ export function CreateAssignmentForm({
   useEffect(() => {
     if (state.success) {
       setDisplaySuccess(state.success);
+      formRef.current?.reset();
+      setFleetId('');
+      setDriverId('');
+      setVehicleId('');
+      setPaymentModel('remittance');
+      setRemittanceFrequency('daily');
+      setHirePurchaseTargetDisplay('');
+      setHirePurchaseDurationPeriods('20');
+      router.refresh();
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
       successTimerRef.current = setTimeout(() => setDisplaySuccess(null), 4000);
     }
     return () => {
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
     };
-  }, [state.success]);
+  }, [router, state.success]);
 
   const totalTargetMinorUnits = Math.round((parseFloat(hirePurchaseTargetDisplay.replace(/,/g, '')) || 0) * 100);
   const durationPeriods = Number.parseInt(hirePurchaseDurationPeriods, 10) || 0;
@@ -235,7 +247,7 @@ export function CreateAssignmentForm({
         <div className="mb-4 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-slate-600">
           <span className="font-semibold text-blue-800">Before you start:</span> Both the driver and vehicle must be active and available. Only eligible options appear in the quick-picks below. Drivers also need an approved licence on file.
         </div>
-        <form action={formAction} className="grid gap-4 md:grid-cols-2">
+        <form action={formAction} className="grid gap-4 md:grid-cols-2" ref={formRef}>
           <FleetSelectField
             fleetError={fleetError}
             fleets={fleets}
@@ -576,7 +588,17 @@ export function CreateAssignmentForm({
         ) : null}
 
         {displaySuccess ? (
-          <Text className="mt-4" tone="success">{displaySuccess}</Text>
+          <div className="mt-4 space-y-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+            <Text tone="success">{displaySuccess}</Text>
+            {state.assignmentId ? (
+              <a
+                className="inline-flex text-sm font-medium text-emerald-700 underline"
+                href={`/assignments/${state.assignmentId}`}
+              >
+                Open assignment
+              </a>
+            ) : null}
+          </div>
         ) : null}
 
         {helperNote ? (

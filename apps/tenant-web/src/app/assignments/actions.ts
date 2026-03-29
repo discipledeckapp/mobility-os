@@ -17,6 +17,8 @@ import {
 export interface CreateAssignmentActionState {
   error?: string;
   success?: string;
+  assignmentId?: string;
+  assignmentStatus?: string;
 }
 
 export interface AssignmentResolutionActionState {
@@ -215,7 +217,15 @@ export async function createAssignmentAction(
   }
 
   try {
-    await createAssignment(payload);
+    const assignment = await createAssignment(payload);
+    revalidatePath('/assignments');
+    revalidatePath(`/assignments/${assignment.id}`);
+    revalidatePath('/');
+    return {
+      success: 'Assignment created and sent to the driver for action.',
+      assignmentId: assignment.id,
+      assignmentStatus: assignment.status,
+    };
   } catch (error) {
     return {
       error:
@@ -224,12 +234,6 @@ export async function createAssignmentAction(
           : 'Unable to create assignment at this time.',
     };
   }
-
-  revalidatePath('/assignments');
-  revalidatePath('/');
-  return {
-    success: 'Assignment created and sent to the driver for action.',
-  };
 }
 
 export async function updateAssignmentRemittancePlanAction(

@@ -55,6 +55,7 @@ import {
 import { DriverResponseDto } from './dto/driver-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { NotificationsService } from '../notifications/notifications.service';
+import { AssignmentsService } from '../assignments/assignments.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { LinkDriverUserDto } from './dto/link-driver-user.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -896,6 +897,7 @@ export class DriverSelfServiceController {
   constructor(
     private readonly service: DriversService,
     private readonly notificationsService: NotificationsService,
+    private readonly assignmentsService: AssignmentsService,
   ) {}
 
   @Post('exchange-otp')
@@ -1245,6 +1247,58 @@ export class DriverSelfServiceController {
     return {
       message: 'Your organisation has been notified that you are ready to continue verification.',
     };
+  }
+
+  @Post('assignments')
+  @ApiCreatedResponse({ type: Object })
+  listAssignments(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.listAssignmentsFromSelfService(token);
+  }
+
+  @Post('assignments/:assignmentId/accept')
+  @ApiCreatedResponse({ type: Object })
+  async acceptAssignment(
+    @Body('token') token: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body('note') note?: string,
+  ) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    const context = await this.service.getSelfServiceContext(token);
+    const assignment = await this.assignmentsService.findOne(context.tenantId, assignmentId);
+    if (assignment.driverId !== context.id) {
+      throw new BadRequestException('This assignment does not belong to the signed-in driver.');
+    }
+    return this.assignmentsService.acceptDriverTerms(context.tenantId, assignmentId, {
+      acceptedFrom: 'driver_self_service_web',
+      confirmationMethod: 'self_service_web',
+      ...(note ? { note } : {}),
+    });
+  }
+
+  @Post('assignments/:assignmentId/decline')
+  @ApiCreatedResponse({ type: Object })
+  async declineAssignment(
+    @Body('token') token: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body('note') note?: string,
+  ) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    const context = await this.service.getSelfServiceContext(token);
+    const assignment = await this.assignmentsService.findOne(context.tenantId, assignmentId);
+    if (assignment.driverId !== context.id) {
+      throw new BadRequestException('This assignment does not belong to the signed-in driver.');
+    }
+    return this.assignmentsService.decline(context.tenantId, assignmentId, {
+      declinedFrom: 'driver_self_service_web',
+      ...(note ? { note } : {}),
+    });
   }
 
   @Post('liveness-sessions')

@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { AssignmentsModule } from '../assignments/assignments.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { IntelligenceClient } from '../intelligence/intelligence.client';
@@ -10,7 +11,7 @@ import { DriverSelfServiceController, DriversController, GuarantorSelfServiceCon
 import { DriversService } from './drivers.service';
 
 @Module({
-  imports: [AuthModule, TenantBillingModule, PolicyModule, AuditModule],
+  imports: [AuthModule, TenantBillingModule, PolicyModule, AuditModule, forwardRef(() => AssignmentsModule)],
   controllers: [DriversController, DriverSelfServiceController, GuarantorSelfServiceController],
   providers: [DriversService, IntelligenceClient, DocumentStorageService, DriversVerificationSchedulerService],
   exports: [DriversService, IntelligenceClient, DocumentStorageService],

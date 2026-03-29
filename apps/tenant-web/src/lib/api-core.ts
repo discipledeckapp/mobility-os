@@ -1116,6 +1116,31 @@ export interface AssignmentRecord {
   updatedAt: string;
 }
 
+export interface DriverSelfServiceAssignmentRecord {
+  id: string;
+  status: string;
+  driverId: string;
+  vehicleId: string;
+  fleetId: string;
+  paymentModel?: 'remittance' | 'salary' | 'commission' | 'hire_purchase' | null;
+  remittanceAmountMinorUnits?: number | null;
+  remittanceCurrency?: string | null;
+  remittanceFrequency?: string | null;
+  remittanceStartDate?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehicle: {
+    id: string;
+    make?: string | null;
+    model?: string | null;
+    plate?: string | null;
+    tenantVehicleCode?: string | null;
+    systemVehicleCode?: string | null;
+    status: string;
+  };
+}
+
 export interface CreateAssignmentInput {
   fleetId?: string;
   driverId: string;
@@ -2624,6 +2649,46 @@ export async function notifyDriverSelfServiceOrganisation(
     body: JSON.stringify({ token }),
     cache: 'no-store',
   });
+}
+
+export async function listDriverSelfServiceAssignments(
+  token: string,
+): Promise<DriverSelfServiceAssignmentRecord[]> {
+  return apiCoreFetch<DriverSelfServiceAssignmentRecord[]>('/driver-self-service/assignments', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+    cache: 'no-store',
+  });
+}
+
+export async function acceptDriverSelfServiceAssignment(
+  token: string,
+  assignmentId: string,
+  note?: string,
+): Promise<AssignmentRecord> {
+  return apiCoreFetch<AssignmentRecord>(
+    `/driver-self-service/assignments/${assignmentId}/accept`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...(note ? { note } : {}) }),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function declineDriverSelfServiceAssignment(
+  token: string,
+  assignmentId: string,
+  note?: string,
+): Promise<AssignmentRecord> {
+  return apiCoreFetch<AssignmentRecord>(
+    `/driver-self-service/assignments/${assignmentId}/decline`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, ...(note ? { note } : {}) }),
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function updateDriverSelfServiceProfile(

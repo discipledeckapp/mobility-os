@@ -209,6 +209,31 @@ type DriverOperationalProfile = {
   emergencyContactRelationship?: string;
 };
 
+type SelfServiceAssignmentSummary = {
+  id: string;
+  status: string;
+  driverId: string;
+  vehicleId: string;
+  fleetId: string;
+  paymentModel: 'remittance' | 'salary' | 'commission' | 'hire_purchase' | null;
+  remittanceAmountMinorUnits: number | null;
+  remittanceCurrency: string | null;
+  remittanceFrequency: string | null;
+  remittanceStartDate: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehicle: {
+    id: string;
+    make: string | null;
+    model: string | null;
+    plate: string | null;
+    tenantVehicleCode: string | null;
+    systemVehicleCode: string | null;
+    status: string;
+  };
+};
+
 type DriverCanonicalInsights = {
   driverIdentity: {
     personId: string | null;
@@ -2861,6 +2886,61 @@ export class DriversService {
       guarantorBlocking,
       guarantorVerified,
     };
+  }
+
+  async listAssignmentsFromSelfService(token: string): Promise<SelfServiceAssignmentSummary[]> {
+    const payload = await this.verifySelfServiceToken(token);
+    const assignments = await this.prisma.assignment.findMany({
+      where: {
+        tenantId: payload.tenantId,
+        driverId: payload.driverId,
+        status: {
+          in: ['driver_action_required', 'pending_driver_confirmation', 'accepted', 'active'],
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: {
+        tenantId: payload.tenantId,
+        id: { in: assignments.map((assignment) => assignment.vehicleId) },
+      },
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        plate: true,
+        tenantVehicleCode: true,
+        systemVehicleCode: true,
+        status: true,
+      },
+    });
+    const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+
+    return assignments.map((assignment) => ({
+      id: assignment.id,
+      status: assignment.status,
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      fleetId: assignment.fleetId,
+      paymentModel: null,
+      remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
+      remittanceCurrency: assignment.remittanceCurrency,
+      remittanceFrequency: assignment.remittanceFrequency,
+      remittanceStartDate: assignment.remittanceStartDate,
+      notes: assignment.notes,
+      createdAt: assignment.createdAt.toISOString(),
+      updatedAt: assignment.updatedAt.toISOString(),
+      vehicle: {
+        id: assignment.vehicleId,
+        make: vehicleById.get(assignment.vehicleId)?.make ?? null,
+        model: vehicleById.get(assignment.vehicleId)?.model ?? null,
+        plate: vehicleById.get(assignment.vehicleId)?.plate ?? null,
+        tenantVehicleCode: vehicleById.get(assignment.vehicleId)?.tenantVehicleCode ?? null,
+        systemVehicleCode: vehicleById.get(assignment.vehicleId)?.systemVehicleCode ?? null,
+        status: vehicleById.get(assignment.vehicleId)?.status ?? 'assigned',
+      },
+    }));
   }
 
   async getMobileAccess(

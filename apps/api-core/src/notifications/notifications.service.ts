@@ -82,8 +82,15 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     actionUrl?: string | null | undefined;
   }) {
     const organisationName = input.organisationName?.trim();
+    const tenantWebUrl = this.config.get<string>('TENANT_WEB_URL') ?? 'http://localhost:3000';
+    const normalizedActionUrl =
+      input.actionUrl && /^https?:\/\//i.test(input.actionUrl)
+        ? input.actionUrl
+        : input.actionUrl
+          ? `${tenantWebUrl.replace(/\/$/, '')}${input.actionUrl.startsWith('/') ? input.actionUrl : `/${input.actionUrl}`}`
+          : null;
     const actionMarkup = input.actionUrl
-      ? `<p style="margin-top:20px;"><a href="${input.actionUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">Open Mobiris Fleet OS</a></p>`
+      ? `<p style="margin-top:20px;"><a href="${normalizedActionUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">Open Mobiris Fleet OS</a></p>`
       : '';
 
     return `
@@ -743,7 +750,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const body = input.requiresAcceptance
       ? `${input.vehicleLabel} has been assigned to you. Review the assignment details and accept the terms to begin operations.`
       : `${input.vehicleLabel} has been assigned to you and is ready for operations.`;
-    const actionUrl = `/assignments/${input.assignmentId}`;
+    const actionUrl = `/driver-self-service?assignmentId=${encodeURIComponent(input.assignmentId)}`;
 
     let delivered = 0;
     for (const recipient of recipients.driverUsers) {

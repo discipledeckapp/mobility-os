@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { DriversModule } from '../drivers/drivers.module';
@@ -8,7 +8,7 @@ import { AssignmentsController } from './assignments.controller';
 import { AssignmentsService } from './assignments.service';
 
 @Module({
-  imports: [AuditModule, AuthModule, DriversModule, VehicleRiskModule, PolicyModule],
+  imports: [AuditModule, AuthModule, forwardRef(() => DriversModule), VehicleRiskModule, PolicyModule],
   controllers: [AssignmentsController],
   providers: [AssignmentsService],
   exports: [AssignmentsService],

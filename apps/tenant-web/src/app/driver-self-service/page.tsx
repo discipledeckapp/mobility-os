@@ -14,14 +14,18 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
+  type DriverSelfServiceAssignmentRecord,
   type DocumentVerificationRecord,
   type DriverIdentityResolutionResult,
   type DriverRecord,
   type OnboardingStepRecord,
+  acceptDriverSelfServiceAssignment,
   createDriverSelfServiceAccount,
+  declineDriverSelfServiceAssignment,
   getDriverOnboardingStep,
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
+  listDriverSelfServiceAssignments,
   loginDriverSelfServiceWithPassword,
   notifyDriverSelfServiceOrganisation,
   recordDriverSelfServiceVerificationConsent,
@@ -329,13 +333,17 @@ function PasswordLoginForm({
 function EntryPage({
   onToken,
   showSavedNotice,
-}: { onToken: (token: string) => void; showSavedNotice?: boolean }) {
+  assignmentId,
+}: { onToken: (token: string) => void; showSavedNotice?: boolean; assignmentId?: string | null }) {
   const [view, setView] = useState<'login' | 'otp' | 'forgot'>('login');
   const router = useRouter();
 
   function handleSuccess(token: string) {
     // Push token into URL so the page can reload from the token if needed.
-    router.replace(`/driver-self-service?token=${encodeURIComponent(token)}`);
+    const nextUrl = assignmentId
+      ? `/driver-self-service?token=${encodeURIComponent(token)}&assignmentId=${encodeURIComponent(assignmentId)}`
+      : `/driver-self-service?token=${encodeURIComponent(token)}`;
+    router.replace(nextUrl as never);
     onToken(token);
   }
 
@@ -465,6 +473,119 @@ function formatMinorCurrency(amountMinorUnits: number, currency?: string | null)
     style: 'currency',
     currency: currency ?? 'NGN',
   }).format(amountMinorUnits / divisor);
+}
+
+function formatAssignmentStatus(status: string) {
+  if (status === 'driver_action_required' || status === 'pending_driver_confirmation') {
+    return 'Driver action required';
+  }
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatVehicleLabel(input: DriverSelfServiceAssignmentRecord['vehicle']) {
+  return [input.make, input.model].filter(Boolean).join(' ') || input.tenantVehicleCode || 'Assigned vehicle';
+}
+
+function AssignmentWorkspace({
+  token,
+  assignment,
+  onRefresh,
+}: {
+  token: string;
+  assignment: DriverSelfServiceAssignmentRecord;
+  onRefresh: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState<'accept' | 'reject' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAccept() {
+    setLoading('accept');
+    setError(null);
+    try {
+      await acceptDriverSelfServiceAssignment(token, assignment.id);
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to accept this assignment right now.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleReject() {
+    setLoading('reject');
+    setError(null);
+    try {
+      await declineDriverSelfServiceAssignment(token, assignment.id);
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to reject this assignment right now.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <Card className="border-blue-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+      <CardHeader className="space-y-2">
+        <CardTitle>Your vehicle assignment</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+          <Text className="font-semibold text-[var(--mobiris-ink)]">
+            You have been assigned a vehicle. Please accept to begin.
+          </Text>
+          <Text tone="muted">
+            Status: {formatAssignmentStatus(assignment.status)}
+          </Text>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 p-3">
+            <Text tone="muted">Vehicle</Text>
+            <Text>{formatVehicleLabel(assignment.vehicle)}</Text>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <Text tone="muted">Plate</Text>
+            <Text>{assignment.vehicle.plate ?? 'Not recorded'}</Text>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <Text tone="muted">Vehicle code</Text>
+            <Text>{assignment.vehicle.tenantVehicleCode ?? assignment.vehicle.systemVehicleCode ?? 'Not recorded'}</Text>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <Text tone="muted">Payment model</Text>
+            <Text>{assignment.paymentModel ? formatAssignmentStatus(assignment.paymentModel) : 'Not recorded'}</Text>
+          </div>
+        </div>
+        {assignment.remittanceAmountMinorUnits ? (
+          <Text tone="muted">
+            Expected amount: {formatMinorCurrency(
+              assignment.remittanceAmountMinorUnits,
+              assignment.remittanceCurrency,
+            )}
+            {assignment.remittanceFrequency ? ` · ${formatAssignmentStatus(assignment.remittanceFrequency)}` : ''}
+          </Text>
+        ) : null}
+        {assignment.notes ? <Text tone="muted">{assignment.notes}</Text> : null}
+        {(assignment.status === 'driver_action_required' ||
+          assignment.status === 'pending_driver_confirmation') ? (
+          <div className="flex flex-wrap gap-3">
+            <Button disabled={loading !== null} onClick={() => void handleAccept()} type="button">
+              {loading === 'accept' ? 'Accepting…' : 'Accept assignment'}
+            </Button>
+            <Button
+              disabled={loading !== null}
+              onClick={() => void handleReject()}
+              type="button"
+              variant="secondary"
+            >
+              {loading === 'reject' ? 'Rejecting…' : 'Reject assignment'}
+            </Button>
+          </div>
+        ) : null}
+        {error ? <Text tone="danger">{error}</Text> : null}
+      </CardContent>
+    </Card>
+  );
 }
 
 function StepProgress({
@@ -1751,6 +1872,7 @@ function OperationalProfileStep({
 function DriverVerificationFlow({ token }: { token: string }) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStepRecord | null>(null);
+  const [assignments, setAssignments] = useState<DriverSelfServiceAssignmentRecord[]>([]);
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
   const [refreshingAfterVerification, setRefreshingAfterVerification] = useState(false);
   const [postSubmitRefreshError, setPostSubmitRefreshError] = useState<string | null>(null);
@@ -1763,12 +1885,14 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const loaded = useRef(false);
 
   const refreshContext = useCallback(async () => {
-    const [nextDriver, nextStep] = await Promise.all([
+    const [nextDriver, nextStep, nextAssignments] = await Promise.all([
       getDriverSelfServiceContext(token),
       getDriverOnboardingStep(token),
+      listDriverSelfServiceAssignments(token),
     ]);
     setDriver(nextDriver);
     setOnboardingStep(nextStep);
+    setAssignments(nextAssignments);
   }, [token]);
 
   useEffect(() => {
@@ -1873,6 +1997,12 @@ function DriverVerificationFlow({ token }: { token: string }) {
     ...(tierComponents.includes('drivers_license') ? ["a verified driver's licence"] : []),
     'contact and operational details',
   ];
+  const currentAssignment =
+    assignments.find((assignment) =>
+      ['driver_action_required', 'pending_driver_confirmation', 'accepted', 'active'].includes(
+        assignment.status,
+      ),
+    ) ?? null;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
@@ -1964,6 +2094,14 @@ function DriverVerificationFlow({ token }: { token: string }) {
           verificationTierComponents={onboardingStep.verificationTierComponents}
         />
 
+        {currentAssignment ? (
+          <AssignmentWorkspace
+            assignment={currentAssignment}
+            onRefresh={refreshContext}
+            token={token}
+          />
+        ) : null}
+
         {currentStep === 'account' ? (
           <AccountSetupStep driver={driver} onComplete={refreshContext} token={token} />
         ) : null}
@@ -2050,7 +2188,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
           />
         ) : null}
 
-        {currentStep === 'complete' ? (
+        {currentStep === 'complete' && !currentAssignment ? (
           <CompletionStep driver={driver} onboardingStep={onboardingStep} />
         ) : null}
       </div>
@@ -2068,9 +2206,16 @@ function DriverSelfServiceInner() {
 
   const token = tokenOverride ?? searchParams?.get('token') ?? null;
   const saved = searchParams?.get('saved') === '1';
+  const assignmentId = searchParams?.get('assignmentId') ?? null;
 
   if (!token) {
-    return <EntryPage onToken={setTokenOverride} showSavedNotice={saved} />;
+    return (
+      <EntryPage
+        assignmentId={assignmentId}
+        onToken={setTokenOverride}
+        showSavedNotice={saved}
+      />
+    );
   }
 
   return <DriverVerificationFlow token={token} />;
