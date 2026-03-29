@@ -514,6 +514,7 @@ export function CreateAssignmentForm({
               label="Create assignment"
               pending={isPending}
               pendingLabel="Creating assignment"
+              type="submit"
               className={
                 selectableFleets.length === 0 ||
                 !fleetId ||
