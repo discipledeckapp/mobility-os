@@ -19,6 +19,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
 import {
+  getGovernanceOversight,
   getOperationalOversight,
   getPlatformApiToken,
   listFeatureFlags,
@@ -56,6 +57,7 @@ export default async function HomePage() {
     listPlatformWalletLedger({ page: 1, limit: 8 }, token),
   ]);
   const operationsOverview = await getOperationalOversight(token).catch(() => null);
+  const governanceOverview = await getGovernanceOversight(token).catch(() => null);
 
   const tenantStatusCounts = tenants.reduce<Record<string, number>>((acc, tenant) => {
     acc[tenant.status] = (acc[tenant.status] ?? 0) + 1;
@@ -193,6 +195,59 @@ export default async function HomePage() {
               <CardContent>
                 <Link href={'/operations' as Route}>
                   <Button variant="secondary">Open operations queue</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
+        {governanceOverview ? (
+          <div className="grid gap-4 xl:grid-cols-4">
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Privacy requests</CardDescription>
+                <CardTitle>
+                  {governanceOverview.privacy.totals.openRequests +
+                    governanceOverview.privacy.totals.pendingReviewRequests}
+                </CardTitle>
+                <Text tone="muted">
+                  {governanceOverview.privacy.totals.closedRequests} closed recently across tenant
+                  privacy workflows.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Consent activity</CardDescription>
+                <CardTitle>{governanceOverview.privacy.totals.consentEventsLast30Days}</CardTitle>
+                <Text tone="muted">
+                  {governanceOverview.privacy.totals.tenantsWithOpenPrivacyRequests} tenants with
+                  active privacy requests.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Unread notifications</CardDescription>
+                <CardTitle>{governanceOverview.notifications.totals.unreadNotifications}</CardTitle>
+                <Text tone="muted">
+                  {governanceOverview.notifications.totals.notificationsLast30Days} notifications
+                  sent in the last 30 days.
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <CardDescription>Push delivery posture</CardDescription>
+                <CardTitle>{governanceOverview.notifications.totals.pushDevices}</CardTitle>
+                <Text tone="muted">
+                  {governanceOverview.notifications.totals.pushEnabledUsers} push-enabled users are
+                  currently reachable.
+                </Text>
+              </CardHeader>
+              <CardContent>
+                <Link href={'/governance' as Route}>
+                  <Button variant="secondary">Open governance</Button>
                 </Link>
               </CardContent>
             </Card>

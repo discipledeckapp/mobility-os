@@ -681,8 +681,6 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
             },
           }
         : {}),
-      ...(identifier.type === 'BANK_ID' ? { premiumBVN: true } : {}),
-      ...(identifier.type === 'NATIONAL_ID' ? { premiumNIN: true } : {}),
     };
   }
 

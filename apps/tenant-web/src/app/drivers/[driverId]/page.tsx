@@ -194,10 +194,15 @@ export default async function DriverDetailsPage({
   searchParams,
 }: {
   params: Promise<{ driverId: string }>;
-  searchParams: Promise<{ tab?: string; walletWarning?: string; created?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    walletWarning?: string;
+    created?: string;
+    invite?: string;
+  }>;
 }) {
   const { driverId } = await params;
-  const { tab, walletWarning, created } = await searchParams;
+  const { tab, walletWarning, created, invite } = await searchParams;
   const token = await getTenantApiToken().catch(() => undefined);
 
   const [
@@ -278,15 +283,20 @@ export default async function DriverDetailsPage({
               </svg>
               <div className="space-y-1">
                 {(() => {
-                  // driverPaysKyc defaults to true — driver pays is the platform default.
                   const driverPays = tenant?.driverPaysKyc ?? true;
                   const requiresVerification =
                     tenant?.requireIdentityVerificationForActivation ?? true;
-                  const linkSent = Boolean(driver.email);
+                  const inviteStatus =
+                    invite === 'sent' || invite === 'failed' || invite === 'skipped'
+                      ? invite
+                      : null;
+                  const linkSent = inviteStatus === 'sent';
                   const heading = linkSent ? 'Driver created — invitation sent' : 'Driver created';
                   const linkCopy = linkSent
                     ? "A self-service verification link was sent to the driver's email address."
-                    : 'No email address is on record — send a verification link manually from this page.';
+                    : inviteStatus === 'failed'
+                      ? 'The driver was created, but Mobiris could not send the self-service verification link automatically.'
+                      : 'No self-service verification link was sent automatically for this driver.';
                   const paymentCopy = !requiresVerification
                     ? 'Identity verification is not required for activation under the current policy.'
                     : driverPays
@@ -303,7 +313,7 @@ export default async function DriverDetailsPage({
                         >
                           Adjust in Settings → Drivers
                         </a>
-                        {requiresVerification
+                        {requiresVerification && !linkSent
                           ? ' or request the driver to self-verify below.'
                           : '.'}
                       </p>

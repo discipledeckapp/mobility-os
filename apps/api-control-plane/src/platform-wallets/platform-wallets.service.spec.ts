@@ -17,12 +17,26 @@ describe('PlatformWalletsService', () => {
       findFirst: jest.fn(),
     },
   };
+  const subscriptionsService = {
+    ensureBootstrapSubscription: jest.fn(),
+  };
+  const apiCoreTenantsClient = {
+    getTenant: jest.fn(),
+    listTenants: jest.fn(),
+  };
 
   let service: PlatformWalletsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new PlatformWalletsService(prisma as never);
+    subscriptionsService.ensureBootstrapSubscription.mockResolvedValue(undefined);
+    apiCoreTenantsClient.getTenant.mockResolvedValue(null);
+    apiCoreTenantsClient.listTenants.mockResolvedValue([]);
+    service = new PlatformWalletsService(
+      prisma as never,
+      subscriptionsService as never,
+      apiCoreTenantsClient as never,
+    );
   });
 
   it('returns a derived platform wallet balance', async () => {

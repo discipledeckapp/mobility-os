@@ -166,6 +166,11 @@ type DriverReadinessSummary = {
   remittanceReadinessReasons: string[];
 };
 
+type DriverInviteSummary = {
+  selfServiceInviteStatus?: 'sent' | 'skipped' | 'failed' | null;
+  selfServiceInviteReason?: string | null;
+};
+
 @ApiTags('Drivers')
 @ApiBearerAuth()
 @UseGuards(TenantAuthGuard, TenantLifecycleGuard)
@@ -737,7 +742,8 @@ export class DriversController {
       Partial<DriverGuarantorSummary> &
       Partial<DriverDocumentSummary> &
       Partial<DriverMobileAccessSummary> &
-      Partial<DriverReadinessSummary> & { locked?: boolean },
+      Partial<DriverReadinessSummary> &
+      Partial<DriverInviteSummary> & { locked?: boolean },
   ): DriverResponseDto {
     return {
       id: driver.id,
@@ -754,6 +760,10 @@ export class DriversController {
       selfieImageUrl: driver.selfieImageUrl ?? null,
       providerImageUrl: driver.providerImageUrl ?? null,
       identitySignatureImageUrl: driver.identitySignatureImageUrl ?? null,
+      selfServiceInviteStatus:
+        (driver as Partial<DriverInviteSummary>).selfServiceInviteStatus ?? null,
+      selfServiceInviteReason:
+        (driver as Partial<DriverInviteSummary>).selfServiceInviteReason ?? null,
       identityProfile:
         (driver as { identityProfile?: Record<string, unknown> | null }).identityProfile ?? null,
       identityVerificationMetadata:

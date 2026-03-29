@@ -6,6 +6,8 @@ import { BillingService } from '../billing/billing.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { StaffNotificationService } from '../notifications/staff-notification.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneRecordsService } from '../records/records.service';
@@ -36,6 +38,7 @@ export class PaymentsService {
     private readonly paymentProvidersService: PaymentProvidersService,
     private readonly configService: ConfigService,
     private readonly tenantLifecycleService: TenantLifecycleService,
+    private readonly staffNotificationService: StaffNotificationService,
   ) {}
 
   async initializeInvoicePayment(
@@ -344,7 +347,7 @@ export class PaymentsService {
         where: { reference: dto.reference },
         data: { status: 'applied', appliedAt: new Date() },
       });
-      await this.recordsService.issueDocument({
+      const receiptDocument = await this.recordsService.issueDocument({
         ...(tenantId ? { tenantId } : {}),
         documentType: 'verification_fee_receipt',
         issuerType: 'platform',
@@ -370,6 +373,30 @@ export class PaymentsService {
           provider: dto.provider,
           paidAt: verified.paidAt ?? null,
         },
+      });
+      const receiptPaidAt = verified.paidAt ?? new Date().toISOString();
+      if (attempt?.customerEmail) {
+        await this.staffNotificationService.sendVerificationPaymentReceipt({
+          email: attempt.customerEmail,
+          name: attempt.customerName ?? 'Driver',
+          reference: dto.reference,
+          amountMinorUnits: verified.amountMinorUnits,
+          currency: verified.currency,
+          provider: dto.provider,
+          paidAt: receiptPaidAt,
+          documentUrl: receiptDocument.fileUrl,
+        });
+      }
+      await this.staffNotificationService.notifyVerificationPaymentReceived({
+        tenantId: tenantId ?? null,
+        driverId: dto.driverId ?? null,
+        payerEmail: attempt?.customerEmail ?? null,
+        reference: dto.reference,
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        provider: dto.provider,
+        paidAt: receiptPaidAt,
+        documentUrl: receiptDocument.fileUrl,
       });
       return {
         provider: dto.provider,

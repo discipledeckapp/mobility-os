@@ -16,6 +16,7 @@ import {
 import { ControlPlaneShell } from '../../../features/shared/control-plane-shell';
 import {
   getTenantDetail,
+  getTenantGovernanceSummary,
   getTenantOperationalSummary,
   getTenantPlatformWalletBalance,
   listFeatureFlags,
@@ -104,11 +105,12 @@ export default async function TenantDetailPage({
   params: Promise<{ tenantId: string }>;
 }) {
   const { tenantId } = await params;
-  const [tenant, plans, flags, operationalSummary] = await Promise.all([
+  const [tenant, plans, flags, operationalSummary, governanceSummary] = await Promise.all([
     getTenantDetail(tenantId),
     listPlans().catch(() => []),
     listFeatureFlags().catch(() => []),
     getTenantOperationalSummary(tenantId).catch(() => null),
+    getTenantGovernanceSummary(tenantId).catch(() => null),
   ]);
 
   let walletBalance: PlatformWalletBalanceRecord | null = null;
@@ -129,6 +131,9 @@ export default async function TenantDetailPage({
     ...resolveFeatureSource(flag, tenant.id, tenant.subscription?.planTier, tenant.country),
   }));
   const openInvoices = tenant.invoices.filter((invoice) => invoice.status === 'open');
+  const openPrivacyRequests =
+    (governanceSummary?.privacy.totals.openRequests ?? 0) +
+    (governanceSummary?.privacy.totals.pendingReviewRequests ?? 0);
 
   return (
     <ControlPlaneShell
@@ -236,6 +241,51 @@ export default async function TenantDetailPage({
                 <Text tone="muted">
                   {operationalSummary.riskSummary.criticalMaintenanceCount} critical maintenance
                   items
+                </Text>
+              </CardHeader>
+            </Card>
+          </div>
+        ) : null}
+
+        {governanceSummary ? (
+          <div className="grid gap-4 xl:grid-cols-4">
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Privacy queue</Text>
+                <CardTitle>{openPrivacyRequests}</CardTitle>
+                <Text tone="muted">
+                  {governanceSummary.privacy.totals.closedRequests} closed ·{' '}
+                  {governanceSummary.privacy.totals.consentEventsLast30Days} consent events in the
+                  last 30 days
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Notification health</Text>
+                <CardTitle>{governanceSummary.notifications.totals.unreadNotifications}</CardTitle>
+                <Text tone="muted">
+                  {governanceSummary.notifications.totals.notificationsLast30Days} sent in the last
+                  30 days
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Push posture</Text>
+                <CardTitle>{governanceSummary.notifications.totals.pushDevices}</CardTitle>
+                <Text tone="muted">
+                  {governanceSummary.notifications.totals.pushEnabledUsers} reachable users with
+                  registered devices
+                </Text>
+              </CardHeader>
+            </Card>
+            <Card className="border-slate-200/80">
+              <CardHeader>
+                <Text tone="muted">Canonical intelligence</Text>
+                <CardTitle>Cross-tenant</CardTitle>
+                <Text tone="muted">
+                  Canonical people, watchlists, and review cases stay in the intelligence plane.
                 </Text>
               </CardHeader>
             </Card>
@@ -463,6 +513,94 @@ export default async function TenantDetailPage({
                         </div>
                       ))
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {governanceSummary ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Governance and compliance view</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3">
+                      <Text tone="muted">Privacy support contact</Text>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {governanceSummary.privacy.support.supportEmail}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Policy v{governanceSummary.privacy.support.privacyPolicyVersion} · Terms v
+                        {governanceSummary.privacy.support.termsVersion}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3">
+                      <Text tone="muted">Notification mix</Text>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {governanceSummary.notifications.totals.verificationNotifications}{' '}
+                        verification ·{' '}
+                        {governanceSummary.notifications.totals.assignmentNotifications} assignment
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {governanceSummary.notifications.totals.remittanceNotifications} remittance
+                        · {governanceSummary.notifications.totals.complianceRiskNotifications}{' '}
+                        compliance
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-3">
+                      <Text tone="muted">Recent privacy activity</Text>
+                      {governanceSummary.privacy.requests.slice(0, 4).map((request) => (
+                        <div
+                          className="rounded-2xl border border-slate-200 px-4 py-3"
+                          key={request.id}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {request.requestType}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {request.subjectType} · {request.contactEmail ?? 'No contact email'}
+                              </p>
+                            </div>
+                            <Badge tone={request.status === 'closed' ? 'success' : 'warning'}>
+                              {request.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-3">
+                      <Text tone="muted">Recent notification activity</Text>
+                      {governanceSummary.notifications.notifications
+                        .slice(0, 4)
+                        .map((notification) => (
+                          <div
+                            className="rounded-2xl border border-slate-200 px-4 py-3"
+                            key={notification.id}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {notification.user?.email ?? 'Unknown recipient'} ·{' '}
+                                  {notification.topic}
+                                </p>
+                              </div>
+                              <Badge tone={notification.readAt ? 'success' : 'warning'}>
+                                {notification.readAt ? 'Read' : 'Unread'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

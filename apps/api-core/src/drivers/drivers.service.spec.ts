@@ -42,6 +42,7 @@ describe('DriversService', () => {
     },
     fleet: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     tenant: {
       findUnique: jest.fn(),
@@ -592,6 +593,116 @@ describe('DriversService', () => {
 
     await expect(service.sendSelfServiceLink('tenant_1', 'driver_1')).rejects.toThrow(
       'Driver has no email; please add one before sending a self-service link.',
+    );
+  });
+
+  it('automatically sends a self-service link when the driver pays verification fees', async () => {
+    prisma.fleet.findUnique.mockResolvedValue({
+      id: 'fleet_1',
+      tenantId: 'tenant_1',
+      status: 'active',
+      operatingUnit: {
+        id: 'ou_1',
+        businessEntityId: 'be_1',
+      },
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          autoSendDriverSelfServiceLinkOnCreate: false,
+          requireIdentityVerificationForActivation: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    prisma.driver.create.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      phone: null,
+      email: 'ada@example.com',
+      dateOfBirth: null,
+      nationality: 'NG',
+      status: 'inactive',
+      identityStatus: 'unverified',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const sendSelfServiceLinkSpy = jest.spyOn(service, 'sendSelfServiceLink').mockResolvedValue({
+      delivery: 'email',
+      verificationUrl: 'https://app.mobiris.ng/driver-self-service?token=test',
+      destination: 'ada@example.com',
+      otpCode: '123456',
+    });
+
+    const result = await service.create('tenant_1', {
+      fleetId: 'fleet_1',
+      email: 'ada@example.com',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      nationality: 'NG',
+    });
+
+    expect(sendSelfServiceLinkSpy).toHaveBeenCalledWith('tenant_1', 'driver_1');
+    expect(result.selfServiceInviteStatus).toBe('sent');
+  });
+
+  it('imports drivers from the published template column shape', async () => {
+    prisma.fleet.findMany.mockResolvedValue([
+      {
+        id: 'fleet_1',
+        name: 'Lagos Core Fleet',
+        status: 'active',
+      },
+    ]);
+    const createSpy = jest.spyOn(service, 'create').mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      firstName: 'Seyi',
+      lastName: 'Adelaju',
+      phone: '+2348012345678',
+      email: 'seyi@example.com',
+      dateOfBirth: '1992-05-20',
+      nationality: 'NG',
+      status: 'inactive',
+      identityStatus: 'unverified',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      selfServiceInviteStatus: 'sent',
+      selfServiceInviteReason: null,
+    } as never);
+
+    const result = await service.importDriversFromCsv(
+      'tenant_1',
+      [
+        'fleetName,firstName,lastName,phone,email,dateOfBirth,nationality',
+        'Lagos Core Fleet,Seyi,Adelaju,08012345678,seyi@example.com,1992-05-20,NG',
+      ].join('\n'),
+      {},
+    );
+
+    expect(result.createdCount).toBe(1);
+    expect(result.failedCount).toBe(0);
+    expect(createSpy).toHaveBeenCalledWith(
+      'tenant_1',
+      expect.objectContaining({
+        fleetId: 'fleet_1',
+        firstName: 'Seyi',
+        lastName: 'Adelaju',
+        phone: '08012345678',
+        email: 'seyi@example.com',
+        dateOfBirth: '1992-05-20',
+        nationality: 'NG',
+      }),
+      {},
     );
   });
 

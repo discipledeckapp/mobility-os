@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { ApiCoreTenantsClient } from '../tenants/api-core-tenants.client';
 import { PlatformWalletsInternalController } from './platform-wallets-internal.controller';
 import { PlatformWalletsController } from './platform-wallets.controller';
 import { PlatformWalletsService } from './platform-wallets.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, SubscriptionsModule],
   controllers: [PlatformWalletsController, PlatformWalletsInternalController],
-  providers: [PlatformWalletsService],
+  providers: [ApiCoreTenantsClient, PlatformWalletsService],
   exports: [PlatformWalletsService],
 })
 export class PlatformWalletsModule {}

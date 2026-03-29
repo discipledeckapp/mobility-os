@@ -1,12 +1,14 @@
 import { Global, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { AuthEmailService } from './auth-email.service';
+import { NotificationsInternalController } from './notifications-internal.controller';
 import { NotificationsService } from './notifications.service';
 import { ZeptoMailService } from './zeptomail.service';
 
 @Global()
 @Module({
   imports: [DatabaseModule],
+  controllers: [NotificationsInternalController],
   providers: [ZeptoMailService, AuthEmailService, NotificationsService],
   exports: [ZeptoMailService, AuthEmailService, NotificationsService],
 })

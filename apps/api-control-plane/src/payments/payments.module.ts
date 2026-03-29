@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PlatformWalletsModule } from '../platform-wallets/platform-wallets.module';
 import { ControlPlaneRecordsModule } from '../records/records.module';
 import { TenantLifecycleModule } from '../tenant-lifecycle/tenant-lifecycle.module';
@@ -14,6 +15,7 @@ import { PaymentsService } from './payments.service';
   imports: [
     AuthModule,
     forwardRef(() => BillingModule),
+    NotificationsModule,
     PlatformWalletsModule,
     ControlPlaneRecordsModule,
     TenantLifecycleModule,

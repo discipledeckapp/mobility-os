@@ -1,7 +1,12 @@
+import { getCountryConfig } from '@mobility-os/domain-config';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { CpPlatformWallet, CpWalletEntry } from '../generated/prisma';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ApiCoreTenantsClient } from '../tenants/api-core-tenants.client';
 import type { CreatePlatformWalletEntryDto } from './dto/create-platform-wallet-entry.dto';
 import type { PlatformWalletBalanceDto } from './dto/platform-wallet-balance.dto';
 import type {
@@ -12,9 +17,56 @@ import type { PlatformWalletSummaryDto } from './dto/platform-wallet-summary.dto
 
 @Injectable()
 export class PlatformWalletsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly apiCoreTenantsClient: ApiCoreTenantsClient,
+  ) {}
+
+  private resolveBootstrapCurrency(countryCode?: string | null): string | undefined {
+    if (!countryCode) {
+      return undefined;
+    }
+
+    try {
+      return getCountryConfig(countryCode).currency;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async ensureWalletScaffoldedForTenant(params: {
+    tenantId: string;
+    countryCode?: string | null;
+  }): Promise<void> {
+    const bootstrapCurrency = this.resolveBootstrapCurrency(params.countryCode);
+
+    await this.subscriptionsService
+      .ensureBootstrapSubscription({
+        tenantId: params.tenantId,
+        ...(bootstrapCurrency ? { currency: bootstrapCurrency } : {}),
+      })
+      .catch(() => undefined);
+
+    const currency = await this.resolveTenantBillingCurrency(params.tenantId).catch(() => null);
+    if (!currency) {
+      return;
+    }
+
+    await this.getOrCreateWallet(params.tenantId, currency);
+  }
 
   async listWalletSummaries(): Promise<PlatformWalletSummaryDto[]> {
+    const tenants = await this.apiCoreTenantsClient.listTenants().catch(() => []);
+    await Promise.all(
+      tenants.map((tenant) =>
+        this.ensureWalletScaffoldedForTenant({
+          tenantId: tenant.id,
+          countryCode: tenant.country,
+        }).catch(() => undefined),
+      ),
+    );
+
     const wallets = await this.prisma.cpPlatformWallet.findMany({
       include: {
         entries: {
@@ -66,9 +118,21 @@ export class PlatformWalletsService {
   }
 
   async getWalletByTenant(tenantId: string): Promise<CpPlatformWallet> {
-    const wallet = await this.prisma.cpPlatformWallet.findUnique({
+    let wallet = await this.prisma.cpPlatformWallet.findUnique({
       where: { tenantId },
     });
+
+    if (!wallet) {
+      const tenant = await this.apiCoreTenantsClient.getTenant(tenantId).catch(() => null);
+      await this.ensureWalletScaffoldedForTenant({
+        tenantId,
+        ...(tenant?.country ? { countryCode: tenant.country } : {}),
+      }).catch(() => undefined);
+
+      wallet = await this.prisma.cpPlatformWallet.findUnique({
+        where: { tenantId },
+      });
+    }
 
     if (!wallet) {
       throw new NotFoundException(`No platform wallet found for tenant '${tenantId}'`);

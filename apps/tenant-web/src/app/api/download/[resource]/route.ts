@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { getTenantApiToken } from '../../../../lib/api-core';
+import { convertCsvToXlsxBuffer } from '../../../../lib/bulk-import-spreadsheet';
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
@@ -36,7 +37,7 @@ const RESOURCE_MAP: Record<string, { path: string; filename: string }> = {
 };
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ resource: string }> },
 ) {
   const { resource } = await context.params;
@@ -60,13 +61,26 @@ export async function GET(
     });
   }
 
+  const requestedFormat = request.nextUrl.searchParams.get('format')?.trim().toLowerCase();
+  if (requestedFormat === 'xlsx') {
+    const csvContent = await response.text();
+    const fileName = match.filename.replace(/\.csv$/i, '.xlsx');
+    const workbookBuffer = convertCsvToXlsxBuffer(csvContent);
+    return new Response(new Uint8Array(workbookBuffer), {
+      status: 200,
+      headers: {
+        'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'content-disposition': `attachment; filename="${fileName}"`,
+      },
+    });
+  }
+
   return new Response(response.body, {
     status: 200,
     headers: {
       'content-type': response.headers.get('content-type') ?? 'text/csv; charset=utf-8',
       'content-disposition':
-        response.headers.get('content-disposition') ??
-        `attachment; filename="${match.filename}"`,
+        response.headers.get('content-disposition') ?? `attachment; filename="${match.filename}"`,
     },
   });
 }

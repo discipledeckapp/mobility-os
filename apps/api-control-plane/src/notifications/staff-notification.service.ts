@@ -63,6 +63,57 @@ export class StaffNotificationService {
 
   constructor(private readonly config: ConfigService) {}
 
+  private async sendZeptoEmail(input: {
+    toEmail: string;
+    toName: string;
+    subject: string;
+    htmlBody: string;
+    skipWarningContext: string;
+    successLogContext: string;
+    failureLogContext: string;
+  }): Promise<void> {
+    const apiKey = this.config.get<string>('ZEPTOMAIL_API_KEY');
+    if (!apiKey) {
+      this.logger.warn(
+        `Skipping ${input.skipWarningContext} — ZEPTOMAIL_API_KEY is not set. Recipient: ${maskEmailAddress(input.toEmail)}`,
+      );
+      return;
+    }
+
+    const fromAddress = this.config.get<string>('EMAIL_FROM_ADDRESS') ?? 'noreply@mobiris.ng';
+    const fromName = this.config.get<string>('EMAIL_FROM_NAME') ?? 'Mobiris';
+    const apiUrl =
+      this.config.get<string>('ZEPTOMAIL_API_URL') ?? 'https://api.zeptomail.com/v1.1/email';
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Zoho-enczapikey ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: { address: fromAddress, name: fromName },
+          to: [{ email_address: { address: input.toEmail, name: input.toName } }],
+          subject: input.subject,
+          htmlbody: input.htmlBody,
+        }),
+      });
+
+      if (!response.ok) {
+        await response.text().catch(() => '');
+        this.logger.error(`${input.failureLogContext} — status=${response.status} body=[redacted]`);
+      } else {
+        this.logger.log(`${input.successLogContext} — email=${maskEmailAddress(input.toEmail)}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `${input.failureLogContext} threw — ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   async notifyNewTenantProvisioned(input: {
     tenantName: string;
     tenantSlug: string;
@@ -172,7 +223,9 @@ export class StaffNotificationService {
 
       if (!response.ok) {
         await response.text().catch(() => '');
-        this.logger.error(`Staff invitation email failed — status=${response.status} body=[redacted]`);
+        this.logger.error(
+          `Staff invitation email failed — status=${response.status} body=[redacted]`,
+        );
       } else {
         this.logger.log(`Staff invitation sent — email=${maskEmailAddress(input.email)}`);
       }
@@ -233,7 +286,9 @@ export class StaffNotificationService {
 
       if (!response.ok) {
         await response.text().catch(() => '');
-        this.logger.error(`Platform password reset email failed — status=${response.status} body=[redacted]`);
+        this.logger.error(
+          `Platform password reset email failed — status=${response.status} body=[redacted]`,
+        );
       } else {
         this.logger.log(`Platform password reset sent — email=${maskEmailAddress(input.email)}`);
       }
@@ -242,6 +297,83 @@ export class StaffNotificationService {
         `Platform password reset email threw — ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  async sendVerificationPaymentReceipt(input: {
+    email: string;
+    name: string;
+    reference: string;
+    amountMinorUnits: number;
+    currency: string;
+    provider: string;
+    paidAt: string;
+    documentUrl?: string | null;
+  }): Promise<void> {
+    const receiptLinkMarkup = input.documentUrl
+      ? `<p style="margin:16px 0 0;"><a href="${input.documentUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:12px;">Download receipt</a></p>`
+      : '';
+
+    await this.sendZeptoEmail({
+      toEmail: input.email,
+      toName: input.name,
+      subject: `Mobiris verification payment receipt ${input.reference}`,
+      htmlBody: renderAdminEmailShell(
+        'Verification payment received',
+        `
+          <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#334155;">Hello ${input.name}, your identity verification payment has been received successfully.</p>
+          <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px 24px;margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Receipt summary</div>
+            <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;font-size:14px;line-height:2;">
+              <tr><td style="color:#64748b;width:140px;">Reference</td><td style="color:#0f172a;">${input.reference}</td></tr>
+              <tr><td style="color:#64748b;">Amount</td><td style="color:#0f172a;">${input.amountMinorUnits} ${input.currency}</td></tr>
+              <tr><td style="color:#64748b;">Provider</td><td style="color:#0f172a;">${input.provider}</td></tr>
+              <tr><td style="color:#64748b;">Paid at</td><td style="color:#0f172a;">${input.paidAt}</td></tr>
+            </table>
+            ${receiptLinkMarkup}
+          </div>
+        `,
+      ),
+      skipWarningContext: 'verification receipt email',
+      successLogContext: 'Verification receipt email sent',
+      failureLogContext: 'Verification receipt email failed',
+    });
+  }
+
+  async notifyVerificationPaymentReceived(input: {
+    tenantId?: string | null;
+    driverId?: string | null;
+    payerEmail?: string | null;
+    reference: string;
+    amountMinorUnits: number;
+    currency: string;
+    provider: string;
+    paidAt: string;
+    documentUrl?: string | null;
+  }): Promise<void> {
+    const receiptLinkMarkup = input.documentUrl
+      ? `<p style="margin:16px 0 0;"><a href="${input.documentUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:12px;">Open receipt</a></p>`
+      : '';
+    const bodyHtml = `
+      <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px 24px;margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Verification payment</div>
+        <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;font-size:14px;line-height:2;">
+          <tr><td style="color:#64748b;width:140px;">Reference</td><td style="color:#0f172a;">${input.reference}</td></tr>
+          <tr><td style="color:#64748b;">Amount</td><td style="color:#0f172a;">${input.amountMinorUnits} ${input.currency}</td></tr>
+          <tr><td style="color:#64748b;">Provider</td><td style="color:#0f172a;">${input.provider}</td></tr>
+          <tr><td style="color:#64748b;">Tenant</td><td style="color:#0f172a;">${input.tenantId ?? 'Not linked'}</td></tr>
+          <tr><td style="color:#64748b;">Driver</td><td style="color:#0f172a;">${input.driverId ?? 'Not linked'}</td></tr>
+          <tr><td style="color:#64748b;">Payer email</td><td style="color:#0f172a;">${input.payerEmail ?? 'Not returned'}</td></tr>
+          <tr><td style="color:#64748b;">Paid at</td><td style="color:#0f172a;">${input.paidAt}</td></tr>
+        </table>
+        ${receiptLinkMarkup}
+      </div>
+      <p style="margin:0;font-size:14px;line-height:1.7;color:#334155;">A driver-funded identity verification payment has been applied successfully in Mobiris.</p>
+    `;
+
+    await this.sendAdminEmail(
+      `Driver verification payment received ${input.reference}`,
+      renderAdminEmailShell('Driver verification payment received', bodyHtml),
+    );
   }
 
   private async sendAdminEmail(subject: string, htmlBody: string): Promise<void> {
@@ -284,12 +416,18 @@ export class StaffNotificationService {
 
       if (!response.ok) {
         await response.text().catch(() => '');
-        this.logger.error(`Admin notification email failed — status=${response.status} body=[redacted]`);
+        this.logger.error(
+          `Admin notification email failed — status=${response.status} body=[redacted]`,
+        );
       } else {
-        this.logger.log(`Admin notification sent — subject="${subject}" to=${maskEmailAddress(notificationEmail)}`);
+        this.logger.log(
+          `Admin notification sent — subject="${subject}" to=${maskEmailAddress(notificationEmail)}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Admin notification email threw — ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Admin notification email threw — ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

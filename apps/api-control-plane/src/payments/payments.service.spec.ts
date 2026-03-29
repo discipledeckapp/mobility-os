@@ -25,6 +25,10 @@ describe('PaymentsService', () => {
   const tenantLifecycleService = {
     markPaymentRecovered: jest.fn(),
   };
+  const staffNotificationService = {
+    sendVerificationPaymentReceipt: jest.fn(),
+    notifyVerificationPaymentReceived: jest.fn(),
+  };
   const paymentProvidersService = {
     initializePayment: jest.fn(),
     verifyPayment: jest.fn(),
@@ -47,6 +51,7 @@ describe('PaymentsService', () => {
       paymentProvidersService as never,
       configService as never,
       tenantLifecycleService as never,
+      staffNotificationService as never,
     );
     configService.get.mockReturnValue('https://tenant.example.com/payments/return');
     prisma.cpPaymentAttempt.findFirst.mockResolvedValue(null);
@@ -208,6 +213,8 @@ describe('PaymentsService', () => {
         status: 'checkout_initialized',
         amountMinorUnits: 500000,
         currency: 'NGN',
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
       })
       .mockResolvedValueOnce({
         reference: 'ref_kyc_1',
@@ -217,6 +224,8 @@ describe('PaymentsService', () => {
         status: 'applied',
         amountMinorUnits: 500000,
         currency: 'NGN',
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
       });
     prisma.cpPaymentAttempt.updateMany.mockResolvedValue({ count: 1 });
     paymentProvidersService.verifyPayment.mockResolvedValue({
@@ -225,6 +234,10 @@ describe('PaymentsService', () => {
       status: 'successful',
       amountMinorUnits: 500000,
       currency: 'NGN',
+    });
+    recordsService.issueDocument.mockResolvedValue({
+      id: 'doc_1',
+      fileUrl: 'https://control.mobiris.ng/receipts/doc_1.pdf',
     });
 
     const first = await service.verifyAndApplyPayment({
@@ -246,6 +259,19 @@ describe('PaymentsService', () => {
     expect(first.status).toBe('applied');
     expect(second.status).toBe('already_applied');
     expect(second.driverId).toBe('driver_1');
+    expect(staffNotificationService.sendVerificationPaymentReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'driver@example.com',
+        reference: 'ref_kyc_1',
+      }),
+    );
+    expect(staffNotificationService.notifyVerificationPaymentReceived).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        reference: 'ref_kyc_1',
+      }),
+    );
   });
 
   it('reuses an unfinished identity verification checkout instead of creating a new charge', async () => {

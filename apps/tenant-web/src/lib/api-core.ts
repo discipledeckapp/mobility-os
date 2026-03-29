@@ -236,6 +236,8 @@ export interface DriverRecord {
   selfieImageUrl?: string | null;
   providerImageUrl?: string | null;
   identitySignatureImageUrl?: string | null;
+  selfServiceInviteStatus?: 'sent' | 'skipped' | 'failed' | null;
+  selfServiceInviteReason?: string | null;
   identityProfile?: {
     firstName?: string;
     middleName?: string;

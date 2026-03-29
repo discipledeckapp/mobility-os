@@ -480,6 +480,10 @@ export function SettingsPanel({
                     />
                     Automatically send self-verification links when drivers are added
                   </label>
+                  <Text tone="muted">
+                    When drivers pay the verification fee, Mobiris always sends the self-service
+                    verification link automatically so they can complete payment and onboarding.
+                  </Text>
                   {organisationState.error ? (
                     <Text tone="danger">{organisationState.error}</Text>
                   ) : null}

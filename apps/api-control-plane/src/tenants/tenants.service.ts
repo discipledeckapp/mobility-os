@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { getCountryConfig } from '@mobility-os/domain-config';
+import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { PlatformWalletsService } from '../platform-wallets/platform-wallets.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ApiCoreTenantsClient } from './api-core-tenants.client';
 import type { TenantDetailDto } from './dto/tenant-detail.dto';
@@ -11,17 +16,89 @@ export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly apiCoreTenantsClient: ApiCoreTenantsClient,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly platformWalletsService: PlatformWalletsService,
   ) {}
 
-  async listTenants(): Promise<TenantListItemDto[]> {
-    const [tenants, subscriptions] = await Promise.all([
-      this.apiCoreTenantsClient.listTenants(),
-      this.prisma.cpSubscription.findMany({
-        include: {
-          plan: true,
+  private resolveBootstrapCurrency(countryCode?: string | null): string | undefined {
+    if (!countryCode) {
+      return undefined;
+    }
+
+    try {
+      return getCountryConfig(countryCode).currency;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async ensureTenantGovernanceScaffold(params: {
+    tenantId: string;
+    countryCode?: string | null;
+    tenantStatus?: string | null;
+  }): Promise<void> {
+    const bootstrapCurrency = this.resolveBootstrapCurrency(params.countryCode);
+
+    await this.subscriptionsService
+      .ensureBootstrapSubscription({
+        tenantId: params.tenantId,
+        ...(bootstrapCurrency ? { currency: bootstrapCurrency } : {}),
+      })
+      .catch(() => undefined);
+
+    await this.platformWalletsService
+      .getWalletByTenant(params.tenantId)
+      .catch(async () => {
+        const subscription = await this.subscriptionsService
+          .getTenantSubscriptionSummary(params.tenantId)
+          .catch(() => null);
+
+        if (subscription) {
+          await this.platformWalletsService.getOrCreateWallet(
+            params.tenantId,
+            subscription.currency,
+          );
+        }
+      })
+      .catch(() => undefined);
+
+    const existingLifecycleEvents = await this.prisma.cpTenantLifecycleEvent.count({
+      where: { tenantId: params.tenantId },
+    });
+
+    if (existingLifecycleEvents === 0 && params.tenantStatus) {
+      await this.prisma.cpTenantLifecycleEvent.create({
+        data: {
+          tenantId: params.tenantId,
+          toStatus: params.tenantStatus,
+          triggeredBy: 'system',
+          reason: 'bootstrap_reconciliation',
+          metadata: {
+            source: 'control_plane_reconciliation',
+          },
         },
-      }),
-    ]);
+      });
+    }
+  }
+
+  async listTenants(): Promise<TenantListItemDto[]> {
+    const tenants = await this.apiCoreTenantsClient.listTenants();
+
+    await Promise.all(
+      tenants.map((tenant) =>
+        this.ensureTenantGovernanceScaffold({
+          tenantId: tenant.id,
+          countryCode: tenant.country,
+          tenantStatus: tenant.status,
+        }).catch(() => undefined),
+      ),
+    );
+
+    const subscriptions = await this.prisma.cpSubscription.findMany({
+      include: {
+        plan: true,
+      },
+    });
 
     const subscriptionsByTenantId = new Map(
       subscriptions.map((subscription) => [subscription.tenantId, subscription]),
@@ -44,9 +121,16 @@ export class TenantsService {
   }
 
   async getTenantDetail(tenantId: string): Promise<TenantDetailDto> {
-    const [tenant, subscription, invoices, lifecycleState, lifecycleEvents, overrides, ownerSummary] =
+    const tenant = await this.apiCoreTenantsClient.getTenant(tenantId);
+
+    await this.ensureTenantGovernanceScaffold({
+      tenantId,
+      countryCode: tenant.country,
+      tenantStatus: tenant.status,
+    });
+
+    const [subscription, invoices, lifecycleState, lifecycleEvents, overrides, ownerSummary] =
       await Promise.all([
-        this.apiCoreTenantsClient.getTenant(tenantId),
         this.prisma.cpSubscription.findUnique({
           where: { tenantId },
           include: { plan: true },
@@ -80,10 +164,6 @@ export class TenantsService {
         }),
         this.apiCoreTenantsClient.getTenantOwnerSummary(tenantId).catch(() => null),
       ]);
-
-    if (!tenant) {
-      throw new NotFoundException(`Tenant '${tenantId}' not found`);
-    }
 
     return {
       id: tenant.id,

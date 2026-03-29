@@ -31,6 +31,7 @@ import {
   uploadDriverDocument,
   uploadDriverSelfServiceDocument,
 } from '../../lib/api-core';
+import { readBulkImportFileAsCsv } from '../../lib/bulk-import-spreadsheet';
 
 const MAX_DRIVER_DOCUMENT_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_DRIVER_DOCUMENT_TYPES = new Set([
@@ -186,9 +187,11 @@ export async function createDriverAction(
   if (nationality) payload.nationality = nationality;
 
   let driverId: string;
+  let inviteStatus: 'sent' | 'skipped' | 'failed' | null = null;
   try {
     const driver = await createDriver(payload);
     driverId = driver.id;
+    inviteStatus = driver.selfServiceInviteStatus ?? null;
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to create driver at this time.',
@@ -215,7 +218,7 @@ export async function createDriverAction(
   }
 
   redirect(
-    `/drivers/${driverId}?tab=verification&created=1${walletWarning ? '&walletWarning=1' : ''}`,
+    `/drivers/${driverId}?tab=verification&created=1${inviteStatus ? `&invite=${inviteStatus}` : ''}${walletWarning ? '&walletWarning=1' : ''}`,
   );
 }
 
@@ -260,12 +263,12 @@ function getOptionalBooleanValue(formData: FormData, key: string): boolean {
 async function getCsvFileContents(formData: FormData): Promise<string> {
   const file = formData.get('csvFile');
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error('Choose a CSV file to import.');
+    throw new Error('Choose a CSV or Excel file to import.');
   }
 
-  const content = await file.text();
+  const content = await readBulkImportFileAsCsv(file);
   if (!content.trim()) {
-    throw new Error('The uploaded CSV file is empty.');
+    throw new Error('The uploaded import file is empty.');
   }
 
   return content;

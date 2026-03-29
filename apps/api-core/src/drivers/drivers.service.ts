@@ -5659,7 +5659,12 @@ export class DriversService {
     tenantId: string,
     dto: CreateDriverDto,
     options: { autoSendSelfServiceLink?: boolean } = {},
-  ): Promise<Driver> {
+  ): Promise<
+    Driver & {
+      selfServiceInviteStatus?: 'sent' | 'skipped' | 'failed';
+      selfServiceInviteReason?: string | null;
+    }
+  > {
     const fleet = await this.prisma.fleet.findUnique({
       where: { id: dto.fleetId },
       include: { operatingUnit: { select: { id: true, businessEntityId: true } } },
@@ -5720,20 +5725,38 @@ export class DriversService {
     this.meteringClient.fireEvent(tenantId, 'active_driver');
 
     const settings = await this.getOrganisationSettings(tenantId);
+    const shouldForceSelfServiceLink =
+      settings.operations.requireIdentityVerificationForActivation !== false &&
+      settings.operations.driverPaysKyc;
     const shouldAutoSendSelfServiceLink =
-      options.autoSendSelfServiceLink ?? settings.operations.autoSendDriverSelfServiceLinkOnCreate;
+      shouldForceSelfServiceLink ||
+      options.autoSendSelfServiceLink ||
+      settings.operations.autoSendDriverSelfServiceLinkOnCreate;
 
-    if (shouldAutoSendSelfServiceLink && createdDriver.email) {
+    let selfServiceInviteStatus: 'sent' | 'skipped' | 'failed' = 'skipped';
+    let selfServiceInviteReason: string | null = null;
+
+    if (shouldAutoSendSelfServiceLink && !createdDriver.email) {
+      selfServiceInviteStatus = 'failed';
+      selfServiceInviteReason = 'Driver has no email address.';
+    } else if (shouldAutoSendSelfServiceLink && createdDriver.email) {
       try {
         await this.sendSelfServiceLink(tenantId, createdDriver.id);
+        selfServiceInviteStatus = 'sent';
       } catch (error) {
+        selfServiceInviteStatus = 'failed';
+        selfServiceInviteReason = this.getErrorMessage(error);
         this.logger.warn(
           `Unable to send self-service link for driver '${createdDriver.id}': ${this.getErrorMessage(error)}`,
         );
       }
     }
 
-    return createdDriver;
+    return {
+      ...createdDriver,
+      selfServiceInviteStatus,
+      selfServiceInviteReason,
+    };
   }
 
   async updateStatus(tenantId: string, id: string, newStatus: string): Promise<Driver> {

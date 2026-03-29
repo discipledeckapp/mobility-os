@@ -465,6 +465,113 @@ export interface OperationsOverviewRecord {
   tenants: OperationsTenantSummaryRecord[];
 }
 
+export interface GovernanceTenantPrivacySummaryRecord {
+  tenantId: string;
+  openRequests: number;
+  pendingReviewRequests: number;
+  closedRequests: number;
+  consentEventsLast30Days: number;
+  lastRequestAt: string | null;
+  lastConsentAt: string | null;
+}
+
+export interface GovernancePrivacyRequestRecord {
+  id: string;
+  tenantId: string;
+  userId: string | null;
+  subjectType: string;
+  subjectId: string | null;
+  requestType: string;
+  status: string;
+  contactEmail: string | null;
+  details: string | null;
+  resolutionNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GovernanceConsentRecord {
+  id: string;
+  tenantId: string;
+  userId: string | null;
+  subjectType: string;
+  subjectId: string | null;
+  policyDocument: string;
+  policyVersion: string;
+  consentScope: string;
+  granted: boolean;
+  grantedAt: string;
+}
+
+export interface GovernancePrivacyOverviewRecord {
+  generatedAt: string;
+  totals: {
+    openRequests: number;
+    pendingReviewRequests: number;
+    closedRequests: number;
+    consentEventsLast30Days: number;
+    tenantsWithOpenPrivacyRequests: number;
+  };
+  tenantSummaries: GovernanceTenantPrivacySummaryRecord[];
+  requests: GovernancePrivacyRequestRecord[];
+  consents: GovernanceConsentRecord[];
+  support: {
+    supportEmail: string;
+    supportPhonePrimary: string | null;
+    supportPhoneSecondary: string | null;
+    privacyPolicyVersion: string;
+    termsVersion: string;
+  };
+}
+
+export interface GovernanceTenantNotificationSummaryRecord {
+  tenantId: string;
+  notificationsLast30Days: number;
+  unreadNotifications: number;
+  pushDevices: number;
+  pushEnabledUsers: number;
+  lastNotificationAt: string | null;
+}
+
+export interface GovernanceNotificationRecord {
+  id: string;
+  tenantId: string;
+  userId: string;
+  topic: string;
+  title: string;
+  body: string;
+  actionUrl: string | null;
+  readAt: string | null;
+  createdAt: string;
+  user: {
+    name: string | null;
+    email: string | null;
+  } | null;
+}
+
+export interface GovernanceNotificationsOverviewRecord {
+  generatedAt: string;
+  totals: {
+    notificationsLast30Days: number;
+    unreadNotifications: number;
+    pushDevices: number;
+    pushEnabledUsers: number;
+    tenantsWithUnreadNotifications: number;
+    verificationNotifications: number;
+    remittanceNotifications: number;
+    assignmentNotifications: number;
+    complianceRiskNotifications: number;
+  };
+  tenantSummaries: GovernanceTenantNotificationSummaryRecord[];
+  notifications: GovernanceNotificationRecord[];
+}
+
+export interface GovernanceOverviewRecord {
+  generatedAt: string;
+  privacy: GovernancePrivacyOverviewRecord;
+  notifications: GovernanceNotificationsOverviewRecord;
+}
+
 export async function getPlatformApiToken(explicitToken?: string): Promise<string> {
   if (explicitToken) {
     return explicitToken;
@@ -581,6 +688,24 @@ export async function getTenantOperationalSummary(
 ): Promise<OperationsTenantSummaryRecord> {
   return apiControlPlaneFetch<OperationsTenantSummaryRecord>(
     `/operations/oversight/tenants/${tenantId}`,
+    {
+      token: await getPlatformApiToken(token),
+    },
+  );
+}
+
+export async function getGovernanceOversight(token?: string): Promise<GovernanceOverviewRecord> {
+  return apiControlPlaneFetch<GovernanceOverviewRecord>('/governance/oversight', {
+    token: await getPlatformApiToken(token),
+  });
+}
+
+export async function getTenantGovernanceSummary(
+  tenantId: string,
+  token?: string,
+): Promise<GovernanceOverviewRecord> {
+  return apiControlPlaneFetch<GovernanceOverviewRecord>(
+    `/governance/oversight/tenants/${tenantId}`,
     {
       token: await getPlatformApiToken(token),
     },

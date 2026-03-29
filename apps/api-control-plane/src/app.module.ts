@@ -16,6 +16,7 @@ import { BillingModule } from './billing/billing.module';
 import { controlPlaneEnvConfig } from './config/env.config';
 import { DatabaseModule } from './database/database.module';
 import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
+import { GovernanceModule } from './governance/governance.module';
 import { HealthModule } from './health/health.module';
 import { MeteringModule } from './metering/metering.module';
 import { OperationsModule } from './operations/operations.module';
@@ -145,6 +146,7 @@ function createScheduleImports() {
     OperationsModule,
     TenantLifecycleModule,
     FeatureFlagsModule,
+    GovernanceModule,
     PaymentsModule,
     ProvisioningModule,
     StaffModule,

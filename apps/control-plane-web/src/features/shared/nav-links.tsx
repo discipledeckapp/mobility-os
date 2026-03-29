@@ -8,6 +8,7 @@ const navigationItems = [
   { href: '/', label: 'Dashboard' },
   { href: '/tenants', label: 'Organisations' },
   { href: '/operations', label: 'Operations' },
+  { href: '/governance', label: 'Governance' },
   { href: '/intelligence/review-cases', label: 'Review cases' },
   { href: '/intelligence/persons', label: 'Persons' },
   { href: '/platform-settings', label: 'Platform settings' },

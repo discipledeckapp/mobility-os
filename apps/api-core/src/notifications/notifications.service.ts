@@ -207,6 +207,152 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     return Boolean(existing);
   }
 
+  async getControlPlaneOversight(input: { tenantId?: string } = {}) {
+    const now = new Date();
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [notifications, unreadCount, pushDevices, groupedTopics] = await Promise.all([
+      this.prisma.userNotification.findMany({
+        where: {
+          ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+          createdAt: { gte: last30Days },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 120,
+        select: {
+          id: true,
+          tenantId: true,
+          userId: true,
+          topic: true,
+          title: true,
+          body: true,
+          actionUrl: true,
+          readAt: true,
+          createdAt: true,
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      }),
+      this.prisma.userNotification.count({
+        where: {
+          ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+          readAt: null,
+        },
+      }),
+      this.prisma.userPushDevice.findMany({
+        where: {
+          ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+          disabledAt: null,
+        },
+        select: {
+          tenantId: true,
+          userId: true,
+          platform: true,
+          lastSeenAt: true,
+        },
+      }),
+      this.prisma.userNotification.groupBy({
+        by: ['topic'],
+        where: {
+          ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+          createdAt: { gte: last30Days },
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const tenantSummaries = new Map<
+      string,
+      {
+        notificationsLast30Days: number;
+        unreadNotifications: number;
+        pushDevices: number;
+        pushEnabledUsers: Set<string>;
+        lastNotificationAt: Date | null;
+      }
+    >();
+
+    for (const notification of notifications) {
+      const current = tenantSummaries.get(notification.tenantId) ?? {
+        notificationsLast30Days: 0,
+        unreadNotifications: 0,
+        pushDevices: 0,
+        pushEnabledUsers: new Set<string>(),
+        lastNotificationAt: null,
+      };
+      current.notificationsLast30Days += 1;
+      if (!notification.readAt) {
+        current.unreadNotifications += 1;
+      }
+      if (!current.lastNotificationAt || notification.createdAt > current.lastNotificationAt) {
+        current.lastNotificationAt = notification.createdAt;
+      }
+      tenantSummaries.set(notification.tenantId, current);
+    }
+
+    for (const device of pushDevices) {
+      const current = tenantSummaries.get(device.tenantId) ?? {
+        notificationsLast30Days: 0,
+        unreadNotifications: 0,
+        pushDevices: 0,
+        pushEnabledUsers: new Set<string>(),
+        lastNotificationAt: null,
+      };
+      current.pushDevices += 1;
+      current.pushEnabledUsers.add(device.userId);
+      tenantSummaries.set(device.tenantId, current);
+    }
+
+    const topicCounts = Object.fromEntries(
+      groupedTopics.map((item) => [item.topic, item._count._all]),
+    ) as Record<string, number>;
+
+    return {
+      generatedAt: now.toISOString(),
+      totals: {
+        notificationsLast30Days: notifications.length,
+        unreadNotifications: unreadCount,
+        pushDevices: pushDevices.length,
+        pushEnabledUsers: new Set(pushDevices.map((device) => device.userId)).size,
+        tenantsWithUnreadNotifications: Array.from(tenantSummaries.values()).filter(
+          (summary) => summary.unreadNotifications > 0,
+        ).length,
+        verificationNotifications:
+          (topicCounts.driver_verification_status ?? 0) +
+          (topicCounts.driver_licence_review_pending ?? 0) +
+          (topicCounts.driver_licence_review_resolved ?? 0),
+        remittanceNotifications:
+          (topicCounts.remittance_due ?? 0) +
+          (topicCounts.remittance_overdue ?? 0) +
+          (topicCounts.remittance_reconciled ?? 0) +
+          (topicCounts.late_remittance_risk ?? 0),
+        assignmentNotifications:
+          (topicCounts.assignment_issued ?? 0) +
+          (topicCounts.assignment_accepted ?? 0) +
+          (topicCounts.assignment_changed ?? 0) +
+          (topicCounts.assignment_ended ?? 0),
+        complianceRiskNotifications: topicCounts.compliance_risk ?? 0,
+      },
+      tenantSummaries: Array.from(tenantSummaries.entries()).map(([tenantId, summary]) => ({
+        tenantId,
+        notificationsLast30Days: summary.notificationsLast30Days,
+        unreadNotifications: summary.unreadNotifications,
+        pushDevices: summary.pushDevices,
+        pushEnabledUsers: summary.pushEnabledUsers.size,
+        lastNotificationAt: summary.lastNotificationAt?.toISOString() ?? null,
+      })),
+      notifications: notifications.map((notification) => ({
+        ...notification,
+        createdAt: notification.createdAt.toISOString(),
+        readAt: notification.readAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
   async createNotificationForUser(
     user: NotificationRecipient,
     payload: NotificationPayload,

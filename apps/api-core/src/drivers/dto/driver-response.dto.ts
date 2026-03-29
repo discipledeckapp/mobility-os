@@ -61,6 +61,17 @@ export class DriverResponseDto {
   identitySignatureImageUrl?: string | null;
 
   @ApiPropertyOptional({
+    description:
+      'Result of the automatic self-service invitation attempt when the driver record was created.',
+  })
+  selfServiceInviteStatus?: 'sent' | 'skipped' | 'failed' | null;
+
+  @ApiPropertyOptional({
+    description: 'Additional operator-safe context for the self-service invitation outcome.',
+  })
+  selfServiceInviteReason?: string | null;
+
+  @ApiPropertyOptional({
     type: Object,
     additionalProperties: true,
     description: 'Structured provider-returned identity fields persisted for operator review.',

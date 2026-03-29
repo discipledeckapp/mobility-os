@@ -14,6 +14,7 @@ import {
   updateVehicleStatus,
   upsertVehicleMaintenanceSchedule,
 } from '../../lib/api-core';
+import { readBulkImportFileAsCsv } from '../../lib/bulk-import-spreadsheet';
 import { normalizeVehicleValuationInput } from './valuation-input';
 
 export interface CreateVehicleActionState {
@@ -72,12 +73,12 @@ function parseOptionalInteger(value: string): number | undefined {
 async function getCsvFileContents(formData: FormData): Promise<string> {
   const file = formData.get('csvFile');
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error('Choose a CSV file to import.');
+    throw new Error('Choose a CSV or Excel file to import.');
   }
 
-  const content = await file.text();
+  const content = await readBulkImportFileAsCsv(file);
   if (!content.trim()) {
-    throw new Error('The uploaded CSV file is empty.');
+    throw new Error('The uploaded import file is empty.');
   }
 
   return content;

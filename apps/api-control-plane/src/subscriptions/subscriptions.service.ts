@@ -1,3 +1,4 @@
+import { getCountryConfig } from '@mobility-os/domain-config';
 import {
   BadRequestException,
   ConflictException,
@@ -11,6 +12,8 @@ import type { CpSubscription } from '../generated/prisma';
 import { StaffNotificationService } from '../notifications/staff-notification.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PlansService } from '../plans/plans.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { ApiCoreTenantsClient } from '../tenants/api-core-tenants.client';
 import type { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import type { SubscriptionListItemDto } from './dto/subscription-list-item.dto';
 
@@ -20,9 +23,38 @@ export class SubscriptionsService {
     private readonly prisma: PrismaService,
     private readonly plansService: PlansService,
     private readonly staffNotification: StaffNotificationService,
+    private readonly apiCoreTenantsClient: ApiCoreTenantsClient,
   ) {}
 
+  private resolveBootstrapCurrency(countryCode?: string | null): string | undefined {
+    if (!countryCode) {
+      return undefined;
+    }
+
+    try {
+      return getCountryConfig(countryCode).currency;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async ensureSubscriptionsScaffolded(): Promise<void> {
+    const tenants = await this.apiCoreTenantsClient.listTenants();
+
+    await Promise.all(
+      tenants.map((tenant) => {
+        const bootstrapCurrency = this.resolveBootstrapCurrency(tenant.country);
+        return this.ensureBootstrapSubscription({
+          tenantId: tenant.id,
+          ...(bootstrapCurrency ? { currency: bootstrapCurrency } : {}),
+        }).catch(() => undefined);
+      }),
+    );
+  }
+
   async listSubscriptions(): Promise<SubscriptionListItemDto[]> {
+    await this.ensureSubscriptionsScaffolded();
+
     const subscriptions = await this.prisma.cpSubscription.findMany({
       include: {
         plan: {
@@ -62,6 +94,15 @@ export class SubscriptionsService {
   }
 
   async getTenantSubscriptionSummary(tenantId: string): Promise<SubscriptionListItemDto> {
+    const tenant = await this.apiCoreTenantsClient.getTenant(tenantId).catch(() => null);
+    if (tenant) {
+      const bootstrapCurrency = this.resolveBootstrapCurrency(tenant.country);
+      await this.ensureBootstrapSubscription({
+        tenantId,
+        ...(bootstrapCurrency ? { currency: bootstrapCurrency } : {}),
+      }).catch(() => undefined);
+    }
+
     const subscription = await this.prisma.cpSubscription.findUnique({
       where: { tenantId },
       include: {
@@ -101,6 +142,15 @@ export class SubscriptionsService {
   }
 
   async getByTenant(tenantId: string): Promise<CpSubscription> {
+    const tenant = await this.apiCoreTenantsClient.getTenant(tenantId).catch(() => null);
+    if (tenant) {
+      const bootstrapCurrency = this.resolveBootstrapCurrency(tenant.country);
+      await this.ensureBootstrapSubscription({
+        tenantId,
+        ...(bootstrapCurrency ? { currency: bootstrapCurrency } : {}),
+      }).catch(() => undefined);
+    }
+
     const sub = await this.prisma.cpSubscription.findUnique({
       where: { tenantId },
     });
@@ -167,7 +217,9 @@ export class SubscriptionsService {
       activePlans[0];
 
     if (!plan) {
-      throw new NotFoundException('No active billing plan is available for bootstrap provisioning.');
+      throw new NotFoundException(
+        'No active billing plan is available for bootstrap provisioning.',
+      );
     }
 
     const currentPeriodStart = new Date();
