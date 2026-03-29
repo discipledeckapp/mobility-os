@@ -29,7 +29,7 @@ export interface OrganisationOperationsSettings {
   customDriverDocumentTypes: string[];
   requiredDriverDocumentSlugs: string[];
   requiredVehicleDocumentSlugs: string[];
-  /** When true, drivers are charged ₦5,000 (or currency-equivalent) for their own KYC check. */
+  /** When true, drivers are charged the selected verification tier price for their own KYC check. */
   driverPaysKyc: boolean;
   /**
    * When true, guarantors are required as part of driver onboarding. Defaults false.
@@ -63,6 +63,20 @@ export interface VerificationTierDescriptor {
   label: string;
   description: string;
   components: VerificationComponentKey[];
+}
+
+export interface VerificationTierPrice {
+  tier: VerificationTier;
+  amountMinorUnits: number;
+  currency: string;
+}
+
+export interface ResolvedVerificationPolicy {
+  tier: VerificationTier;
+  label: string;
+  description: string;
+  components: VerificationComponentKey[];
+  price: VerificationTierPrice;
 }
 
 const FRANCOPHONE_COUNTRIES = new Set([
@@ -111,6 +125,13 @@ const FULL_TRUST_VERIFICATION_TIER: VerificationTierDescriptor = {
   label: 'Full Trust Verification',
   description: 'Complete identity, accountability, and legal eligibility verification',
   components: ['identity', 'guarantor', 'drivers_license'],
+};
+const VERIFICATION_TIER_PRICING: Record<string, Record<VerificationTier, number>> = {
+  NGN: {
+    BASIC_IDENTITY: 500_000,
+    VERIFIED_IDENTITY: 1_000_000,
+    FULL_TRUST_VERIFICATION: 1_500_000,
+  },
 };
 
 function getCountryIdentifierDefaults(countryCode?: string | null): {
@@ -227,6 +248,73 @@ export function getVerificationTierDescriptor(
     return VERIFIED_IDENTITY_TIER;
   }
   return BASIC_IDENTITY_TIER;
+}
+
+export function getVerificationTierPrice(
+  tier: VerificationTier,
+  currency = 'NGN',
+): VerificationTierPrice {
+  const normalizedCurrency = currency.trim().toUpperCase() || 'NGN';
+  const pricing =
+    VERIFICATION_TIER_PRICING[normalizedCurrency] ??
+    VERIFICATION_TIER_PRICING.NGN ?? {
+      BASIC_IDENTITY: 500_000,
+      VERIFIED_IDENTITY: 1_000_000,
+      FULL_TRUST_VERIFICATION: 1_500_000,
+    };
+
+  return {
+    tier,
+    currency: normalizedCurrency,
+    amountMinorUnits: pricing[tier],
+  };
+}
+
+export function listVerificationTierPrices(currency = 'NGN'): VerificationTierPrice[] {
+  const normalizedCurrency = currency.trim().toUpperCase() || 'NGN';
+  const pricing =
+    VERIFICATION_TIER_PRICING[normalizedCurrency] ??
+    VERIFICATION_TIER_PRICING.NGN ?? {
+      BASIC_IDENTITY: 500_000,
+      VERIFIED_IDENTITY: 1_000_000,
+      FULL_TRUST_VERIFICATION: 1_500_000,
+    };
+
+  return [
+    {
+      tier: 'BASIC_IDENTITY',
+      currency: normalizedCurrency,
+      amountMinorUnits: pricing.BASIC_IDENTITY,
+    },
+    {
+      tier: 'VERIFIED_IDENTITY',
+      currency: normalizedCurrency,
+      amountMinorUnits: pricing.VERIFIED_IDENTITY,
+    },
+    {
+      tier: 'FULL_TRUST_VERIFICATION',
+      currency: normalizedCurrency,
+      amountMinorUnits: pricing.FULL_TRUST_VERIFICATION,
+    },
+  ];
+}
+
+export function resolveVerificationPolicy(
+  settings: {
+    requireGuarantor?: boolean;
+    requiredDriverDocumentSlugs?: string[];
+  },
+  currency = 'NGN',
+): ResolvedVerificationPolicy {
+  const tier = resolveVerificationTier(settings);
+  const descriptor = getVerificationTierDescriptor(tier);
+  return {
+    tier,
+    label: descriptor.label,
+    description: descriptor.description,
+    components: descriptor.components,
+    price: getVerificationTierPrice(tier, currency),
+  };
 }
 
 export function readOrganisationSettings(

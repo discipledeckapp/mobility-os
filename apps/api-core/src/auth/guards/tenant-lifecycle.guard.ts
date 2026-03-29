@@ -9,6 +9,10 @@ import {
 import { Reflector } from '@nestjs/core';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../../database/prisma.service';
+import {
+  TENANT_LIFECYCLE_FEATURE_KEY,
+  type TenantLifecycleFeature,
+} from '../decorators/tenant-lifecycle-access.decorator';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneLifecycleClient } from '../control-plane-lifecycle.client';
 import { ALLOW_BLOCKED_TENANT_ACCESS_KEY } from '../decorators/allow-blocked-tenant-access.decorator';
@@ -20,9 +24,7 @@ interface TenantContextRequest {
   };
 }
 
-const READ_ONLY_STATUSES = new Set(['past_due', 'grace_period']);
 const BLOCKED_STATUSES = new Set(['suspended', 'terminated', 'archived', 'canceled']);
-const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 @Injectable()
 export class TenantLifecycleGuard implements CanActivate {
@@ -35,6 +37,10 @@ export class TenantLifecycleGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const allowBlockedAccess = this.reflector.getAllAndOverride<boolean>(
       ALLOW_BLOCKED_TENANT_ACCESS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const requiredFeature = this.reflector.getAllAndOverride<TenantLifecycleFeature | undefined>(
+      TENANT_LIFECYCLE_FEATURE_KEY,
       [context.getHandler(), context.getClass()],
     );
 
@@ -51,25 +57,59 @@ export class TenantLifecycleGuard implements CanActivate {
       throw new NotFoundException(`Tenant '${tenantId}' not found`);
     }
 
-    const status = await this.resolveCurrentStatus(tenantId, localTenant.status);
+    const lifecycleState = await this.resolveCurrentStatus(tenantId, localTenant.status);
     if (allowBlockedAccess) {
       return true;
     }
 
-    if (BLOCKED_STATUSES.has(status)) {
-      throw new ForbiddenException(`Tenant access is blocked while account status is '${status}'`);
+    if (BLOCKED_STATUSES.has(lifecycleState.status)) {
+      throw new ForbiddenException(
+        `Tenant access is blocked while account status is '${lifecycleState.status}'`,
+      );
     }
 
-    if (READ_ONLY_STATUSES.has(status) && !READ_ONLY_METHODS.has(request.method)) {
+    if (
+      requiredFeature &&
+      lifecycleState.enforcement.blockedFeatures.includes(requiredFeature)
+    ) {
+      const actionDescription = this.describeFeature(requiredFeature);
+      if (lifecycleState.enforcement.stage === 'grace') {
+        throw new ForbiddenException(
+          `Subscription expired. Renew within ${lifecycleState.enforcement.graceDaysRemaining} day(s) to continue ${actionDescription}.`,
+        );
+      }
       throw new ForbiddenException(
-        `Tenant account is '${status}' and currently restricted to read-only access`,
+        `Subscription expired and grace period ended. Upgrade to continue ${actionDescription}.`,
       );
     }
 
     return true;
   }
 
-  private async resolveCurrentStatus(tenantId: string, fallbackStatus: string): Promise<string> {
+  private describeFeature(feature: TenantLifecycleFeature): string {
+    if (feature === 'assignment_creation') {
+      return 'creating new assignments';
+    }
+    if (feature === 'vehicle_onboarding') {
+      return 'adding new vehicles';
+    }
+    return 'adding new drivers';
+  }
+
+  private async resolveCurrentStatus(
+    tenantId: string,
+    fallbackStatus: string,
+  ): Promise<{
+    status: string;
+    enforcement: {
+      stage: 'active' | 'grace' | 'expired';
+      gracePeriodDays: number;
+      graceEndsAt: string | null;
+      graceDaysRemaining: number;
+      degradedMode: boolean;
+      blockedFeatures: string[];
+    };
+  }> {
     try {
       const remoteState = await this.controlPlaneLifecycleClient.getTenantLifecycleState(tenantId);
       if (remoteState.status !== fallbackStatus) {
@@ -78,9 +118,29 @@ export class TenantLifecycleGuard implements CanActivate {
           data: { status: remoteState.status },
         });
       }
-      return remoteState.status;
+      return remoteState;
     } catch {
-      return fallbackStatus;
+      const expiredFallback = fallbackStatus === 'past_due';
+      return {
+        status: fallbackStatus,
+        enforcement: {
+          stage: expiredFallback
+            ? 'expired'
+            : fallbackStatus === 'grace_period'
+              ? 'grace'
+              : 'active',
+          gracePeriodDays: 5,
+          graceEndsAt: null,
+          graceDaysRemaining: 0,
+          degradedMode: expiredFallback,
+          blockedFeatures:
+            fallbackStatus === 'grace_period'
+              ? ['driver_onboarding', 'vehicle_onboarding']
+              : expiredFallback
+                ? ['driver_onboarding', 'vehicle_onboarding', 'assignment_creation']
+                : [],
+        },
+      };
     }
   }
 }

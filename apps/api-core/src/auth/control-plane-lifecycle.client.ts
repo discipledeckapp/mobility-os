@@ -9,6 +9,14 @@ export interface ControlPlaneTenantLifecycleState {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
+  enforcement: {
+    stage: 'active' | 'grace' | 'expired';
+    gracePeriodDays: number;
+    graceEndsAt: string | null;
+    graceDaysRemaining: number;
+    degradedMode: boolean;
+    blockedFeatures: string[];
+  };
 }
 
 @Injectable()

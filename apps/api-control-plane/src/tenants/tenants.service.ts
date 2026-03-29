@@ -7,6 +7,8 @@ import { PlatformWalletsService } from '../platform-wallets/platform-wallets.ser
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ApiCoreTenantsClient } from './api-core-tenants.client';
 import type { TenantDetailDto } from './dto/tenant-detail.dto';
 import type { TenantListItemDto } from './dto/tenant-list-item.dto';
@@ -18,6 +20,7 @@ export class TenantsService {
     private readonly apiCoreTenantsClient: ApiCoreTenantsClient,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly platformWalletsService: PlatformWalletsService,
+    private readonly tenantLifecycleService: TenantLifecycleService,
   ) {}
 
   private resolveBootstrapCurrency(countryCode?: string | null): string | undefined {
@@ -200,6 +203,7 @@ export class TenantsService {
             currentPeriodStart: lifecycleState.currentPeriodStart,
             currentPeriodEnd: lifecycleState.currentPeriodEnd,
             cancelAtPeriodEnd: lifecycleState.cancelAtPeriodEnd,
+            enforcement: this.tenantLifecycleService.resolveEnforcementState(lifecycleState),
           }
         : null,
       lifecycleEvents,

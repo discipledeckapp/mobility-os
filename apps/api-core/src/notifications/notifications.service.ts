@@ -684,6 +684,219 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private formatDriverName(input: {
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  }) {
+    const fullName = `${input.firstName ?? ''} ${input.lastName ?? ''}`.trim();
+    if (fullName) {
+      return fullName;
+    }
+    return input.email?.trim() || 'Driver';
+  }
+
+  private async getTenantNotificationContext(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, country: true, metadata: true, name: true },
+    });
+
+    if (!tenant) {
+      return null;
+    }
+
+    return {
+      tenant,
+      organisationName:
+        readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
+        tenant.name,
+    };
+  }
+
+  async notifyAssignmentIssued(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    requiresAcceptance: boolean;
+  }): Promise<{ delivered: number; directEmailSent: boolean }> {
+    const [tenantContext, driver, recipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.prisma.driver.findFirst({
+        where: { tenantId: input.tenantId, id: input.driverId },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext || !driver) {
+      return { delivered: 0, directEmailSent: false };
+    }
+
+    const driverName = this.formatDriverName(driver);
+    const title = input.requiresAcceptance
+      ? 'Vehicle assignment awaiting your confirmation'
+      : 'Vehicle assignment issued';
+    const body = input.requiresAcceptance
+      ? `${input.vehicleLabel} has been assigned to you. Review the assignment details and accept the terms to begin operations.`
+      : `${input.vehicleLabel} has been assigned to you and is ready for operations.`;
+    const actionUrl = `/assignments/${input.assignmentId}`;
+
+    let delivered = 0;
+    for (const recipient of recipients.driverUsers) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'assignment_issued',
+          title,
+          body,
+          actionUrl,
+          metadata: {
+            assignmentId: input.assignmentId,
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            fleetId: input.fleetId,
+            status: input.requiresAcceptance ? 'pending_driver_confirmation' : 'active',
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours: 6,
+        },
+      );
+      if (notification) {
+        delivered += 1;
+      }
+    }
+
+    const directEmailSent = recipients.driverUsers.length === 0 && Boolean(driver.email);
+    if (directEmailSent && driver.email) {
+      await this.createDirectDriverEmailNotification({
+        email: driver.email,
+        name: driverName,
+        title,
+        body,
+        organisationName: tenantContext.organisationName,
+        actionUrl,
+      });
+    }
+
+    return { delivered, directEmailSent };
+  }
+
+  async notifyAssignmentAccepted(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+  }): Promise<{ delivered: number }> {
+    const [tenantContext, driverRecipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext) {
+      return { delivered: 0 };
+    }
+
+    const title = 'Assignment accepted by driver';
+    const body = `${input.vehicleLabel} has been accepted by the assigned driver and moved into the active workflow.`;
+    const actionUrl = `/assignments/${input.assignmentId}`;
+    let delivered = 0;
+
+    for (const recipient of driverRecipients.operators) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'assignment_accepted',
+          title,
+          body,
+          actionUrl,
+          metadata: {
+            assignmentId: input.assignmentId,
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            fleetId: input.fleetId,
+            status: 'active',
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours: 6,
+        },
+      );
+      if (notification) {
+        delivered += 1;
+      }
+    }
+
+    return { delivered };
+  }
+
+  async notifyAssignmentEnded(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    status: 'ended' | 'cancelled';
+  }): Promise<{ delivered: number }> {
+    const [tenantContext, driverRecipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext) {
+      return { delivered: 0 };
+    }
+
+    const title =
+      input.status === 'ended' ? 'Assignment closed' : 'Assignment cancelled';
+    const body =
+      input.status === 'ended'
+        ? `${input.vehicleLabel} has been returned and the assignment has been closed.`
+        : `${input.vehicleLabel} assignment has been cancelled and the vehicle is no longer assigned.`;
+    const actionUrl = `/assignments/${input.assignmentId}`;
+    let delivered = 0;
+
+    for (const recipient of [...driverRecipients.operators, ...driverRecipients.driverUsers]) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'assignment_ended',
+          title,
+          body,
+          actionUrl,
+          metadata: {
+            assignmentId: input.assignmentId,
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            fleetId: input.fleetId,
+            status: input.status,
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours: 6,
+        },
+      );
+      if (notification) {
+        delivered += 1;
+      }
+    }
+
+    return { delivered };
+  }
+
   async syncTenantRemittanceReminders(tenantId: string): Promise<{ created: number }> {
     const todayIso = new Date().toISOString().slice(0, 10);
     const tenant = await this.prisma.tenant.findUnique({
@@ -1213,6 +1426,50 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           : {}),
         actionUrl: '/driver-self-service',
       });
+    }
+
+    return { created };
+  }
+
+  async notifyDriverVerificationSetupRequired(input: {
+    tenantId: string;
+    driverId: string;
+    driverName: string;
+    organisationName?: string | null;
+    tenantCountry?: string | null;
+    verificationTierLabel?: string | null;
+    actionUrl: string;
+  }): Promise<{ created: number }> {
+    const recipients = await this.getTenantDriverNotificationRecipients(
+      input.tenantId,
+      input.driverId,
+    );
+    let created = 0;
+
+    for (const recipient of recipients.operators) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'driver_verification_status',
+          title: 'Driver waiting on verification setup',
+          body: `${input.driverName} is ready to continue ${input.verificationTierLabel ?? 'driver verification'} once organisation setup is completed.`,
+          actionUrl: input.actionUrl,
+          metadata: {
+            driverId: input.driverId,
+            decision: 'pending',
+            verificationTierLabel: input.verificationTierLabel ?? null,
+            source: 'driver_self_service',
+          },
+        },
+        {
+          ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),
+          ...(input.organisationName !== undefined
+            ? { organisationName: input.organisationName }
+            : {}),
+          dedupeWithinHours: 6,
+        },
+      );
+      if (notification) created += 1;
     }
 
     return { created };

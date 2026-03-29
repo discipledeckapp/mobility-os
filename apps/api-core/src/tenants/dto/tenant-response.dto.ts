@@ -71,6 +71,22 @@ export class TenantResponseDto {
   verificationTierDescription?: string;
 
   @ApiPropertyOptional()
+  verificationTierPriceMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  verificationTierPriceCurrency?: string;
+
+  @ApiPropertyOptional({
+    type: [Object],
+    additionalProperties: true,
+  })
+  verificationTierPricing?: Array<{
+    tier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+    amountMinorUnits: number;
+    currency: string;
+  }>;
+
+  @ApiPropertyOptional()
   requireGuarantor?: boolean;
 
   @ApiPropertyOptional()

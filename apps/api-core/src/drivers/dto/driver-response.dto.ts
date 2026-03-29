@@ -374,6 +374,9 @@ export class DriverResponseDto {
   verificationCurrency?: string | null;
 
   @ApiPropertyOptional()
+  verificationWalletBalanceMinorUnits?: number;
+
+  @ApiPropertyOptional()
   verificationAvailableSpendMinorUnits?: number;
 
   @ApiPropertyOptional()

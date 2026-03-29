@@ -49,9 +49,10 @@ import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-
 import { VerificationSpendService } from '../tenant-billing/verification-spend.service';
 import {
   getDefaultLanguageForCountry,
-  getVerificationTierDescriptor,
   readOrganisationSettings,
+  resolveVerificationPolicy,
   resolveVerificationTier,
+  getVerificationTierDescriptor,
   type VerificationComponentKey,
   type VerificationTier,
 } from '../tenants/tenant-settings';
@@ -516,7 +517,6 @@ const IDENTIFIER_TYPE_TO_DOCUMENT_SLUG: Record<string, string> = {
   VOTERS_CARD: 'voters-card',
   BANK_ID: 'bank-id',
 };
-const DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS = 500_000;
 const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
   Permission.DriversRead,
   Permission.AssignmentsRead,
@@ -1264,10 +1264,10 @@ export class DriversService {
     private readonly verificationSpendService: VerificationSpendService = {
       getSpendSummary: async () => ({
         currency: 'NGN',
-        walletBalanceMinorUnits: 1_000_000,
+        walletBalanceMinorUnits: 2_000_000,
         creditLimitMinorUnits: 0,
         creditUsedMinorUnits: 0,
-        availableSpendMinorUnits: 1_000_000,
+        availableSpendMinorUnits: 2_000_000,
         starterCreditActive: false,
         starterCreditEligible: false,
         cardCreditActive: false,
@@ -1284,16 +1284,12 @@ export class DriversService {
 
   private readonly selfServicePurpose = 'driver_self_service';
 
-  private getVerificationAmountMinorUnits(
-    currency?: string | null,
-    _tier?: VerificationTier,
-  ): number {
-    switch ((currency ?? '').toUpperCase()) {
-      case 'NGN':
-        return 500_000;
-      default:
-        return DEFAULT_VERIFICATION_AMOUNT_MINOR_UNITS;
-    }
+  private formatCurrencyAmount(amountMinorUnits: number, currency: string): string {
+    return new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amountMinorUnits / 100);
   }
 
   private buildVerificationEntitlementCode(): string {
@@ -1793,6 +1789,7 @@ export class DriversService {
     tenantId: string,
     driver: DriverWithIdentityState,
   ): Promise<{
+    verificationTier: VerificationTier;
     enabledDriverIdentifierTypes: string[];
     requiredDriverIdentifierTypes: string[];
     requiredDriverDocumentSlugs: string[];
@@ -1809,6 +1806,7 @@ export class DriversService {
     verificationPayer: 'driver' | 'organisation';
     verificationAmountMinorUnits: number;
     verificationCurrency: string;
+    verificationWalletBalanceMinorUnits: number;
     verificationAvailableSpendMinorUnits: number;
     verificationCreditLimitMinorUnits: number;
     verificationCreditUsedMinorUnits: number;
@@ -1842,9 +1840,15 @@ export class DriversService {
       countryCode && isCountrySupported(countryCode)
         ? getCountryConfig(countryCode).currency
         : 'NGN';
-    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(
+    const verificationTierPolicy = resolveVerificationPolicy(
+      settings.operations,
       verificationCurrency,
-      verificationTier,
+    );
+    const verificationAmountMinorUnits = verificationTierPolicy.price.amountMinorUnits;
+    const verificationTierLabel = verificationTierPolicy.label;
+    const formattedVerificationAmount = this.formatCurrencyAmount(
+      verificationAmountMinorUnits,
+      verificationCurrency,
     );
     const driverPaysKyc =
       (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
@@ -1903,6 +1907,7 @@ export class DriversService {
     let verificationPaymentMessage: string | null = null;
     let verificationBlockedReason: string | null = null;
     let verificationAvailableSpendMinorUnits = 0;
+    let verificationWalletBalanceMinorUnits = 0;
     let verificationCreditLimitMinorUnits = 0;
     let verificationCreditUsedMinorUnits = 0;
     let verificationStarterCreditActive = false;
@@ -1924,8 +1929,8 @@ export class DriversService {
         verificationPaymentStatus = 'ready';
         verificationPaymentMessage =
           verificationEntitlementState === 'reserved'
-            ? 'Your verification payment has already been received. Continue from where you stopped.'
-            : 'Your verification payment has already been received. You can continue from where you stopped.';
+            ? `Your payment for ${verificationTierLabel} has already been received. Continue from where you stopped.`
+            : `Your payment for ${verificationTierLabel} has already been received. You can continue from where you stopped.`;
       } else if (verificationEntitlementState === 'consumed') {
         // The entitlement was consumed by a prior provider call. Regardless of
         // whether that call succeeded or failed, we do NOT require a new payment —
@@ -1933,22 +1938,23 @@ export class DriversService {
         // verification without paying again.
         verificationPaymentStatus = 'ready';
         verificationPaymentMessage = verificationAlreadySatisfied
-          ? 'Your verification payment has already been used for this completed onboarding flow.'
-          : 'Your verification payment was already received. You can retry verification.';
+          ? `Your payment for ${verificationTierLabel} has already been used for this completed onboarding flow.`
+          : `Your payment for ${verificationTierLabel} was already received. You can retry verification.`;
       } else if (verificationEntitlementState === 'expired') {
         verificationPaymentStatus = 'driver_payment_required';
         verificationPaymentMessage =
-          'Your previous verification payment entitlement expired. A new payment is required before verification can continue.';
+          `Your previous ${verificationTierLabel} payment entitlement expired. A new ${formattedVerificationAmount} payment is required before verification can continue.`;
       } else {
         verificationPaymentStatus = 'driver_payment_required';
         verificationPaymentMessage =
-          'A verification payment is required before live verification can continue.';
+          `You must pay ${formattedVerificationAmount} for ${verificationTierLabel} before live verification can continue.`;
       }
     } else if (settings.operations.requireIdentityVerificationForActivation) {
       const spendSummary = await this.verificationSpendService.getSpendSummary(
         tenantId,
         verificationCurrency,
       );
+      verificationWalletBalanceMinorUnits = spendSummary.walletBalanceMinorUnits;
       verificationAvailableSpendMinorUnits = spendSummary.availableSpendMinorUnits;
       verificationCreditLimitMinorUnits = spendSummary.creditLimitMinorUnits;
       verificationCreditUsedMinorUnits = spendSummary.creditUsedMinorUnits;
@@ -1966,10 +1972,10 @@ export class DriversService {
             : 'wallet_missing';
       verificationPaymentMessage =
         verificationPaymentStatus === 'ready'
-          ? 'Your organisation has enough wallet or credit cover for this verification.'
+          ? `Your organisation has enough wallet or credit cover for ${verificationTierLabel} (${formattedVerificationAmount}).`
           : verificationPaymentStatus === 'wallet_missing'
-            ? 'Your organisation must add a card or fund the verification wallet before this verification can continue.'
-            : 'Your organisation has an active card, but the remaining credit is not enough for this verification tier.';
+            ? `Your organisation can fund the verification wallet, add a card to unlock verification credit, or switch this onboarding flow to driver pay before ${verificationTierLabel} can continue.`
+            : `Your organisation needs more available spend for ${verificationTierLabel} (${formattedVerificationAmount}). They can fund the wallet, add a card for verification credit, or switch this onboarding flow to driver pay if they allow it.`;
     }
 
     if (latestAttempt?.status === 'blocked') {
@@ -1979,6 +1985,7 @@ export class DriversService {
     }
 
     return {
+      verificationTier: verificationTierPolicy.tier,
       enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
@@ -1995,6 +2002,7 @@ export class DriversService {
       verificationPayer: driverPaysKyc ? 'driver' : 'organisation',
       verificationAmountMinorUnits,
       verificationCurrency,
+      verificationWalletBalanceMinorUnits,
       verificationAvailableSpendMinorUnits,
       verificationCreditLimitMinorUnits,
       verificationCreditUsedMinorUnits,
@@ -2002,10 +2010,7 @@ export class DriversService {
       verificationCardCreditActive,
       verificationSavedCard,
       verificationPaymentStatus,
-      verificationPaymentMessage:
-        verificationPaymentMessage
-          ? `${verificationPaymentMessage} This single charge covers the ${getVerificationTierDescriptor(verificationTier).label} tier.`
-          : `This single charge covers the ${getVerificationTierDescriptor(verificationTier).label} tier.`,
+      verificationPaymentMessage,
     };
   }
 
@@ -2469,6 +2474,7 @@ export class DriversService {
         verificationPayer?: 'driver' | 'organisation';
         verificationAmountMinorUnits?: number;
         verificationCurrency?: string;
+        verificationWalletBalanceMinorUnits?: number;
         verificationAvailableSpendMinorUnits?: number;
         verificationCreditLimitMinorUnits?: number;
         verificationCreditUsedMinorUnits?: number;
@@ -2507,10 +2513,9 @@ export class DriversService {
     );
 
     const selfServiceLocalRiskFlags: string[] = [];
-    const verificationTier = resolveVerificationTier(settings.operations);
-    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const verificationTierPolicy = resolveVerificationPolicy(settings.operations);
     if (
-      !verificationTierDescriptor.components.includes('guarantor') &&
+      !verificationTierPolicy.components.includes('guarantor') &&
       !driver.hasGuarantor
     ) {
       selfServiceLocalRiskFlags.push('missing_optional_guarantor');
@@ -2518,10 +2523,10 @@ export class DriversService {
 
     return {
       ...driver,
-      verificationTier,
-      verificationTierLabel: verificationTierDescriptor.label,
-      verificationTierDescription: verificationTierDescriptor.description,
-      verificationTierComponents: verificationTierDescriptor.components,
+      verificationTier: verificationTierPolicy.tier,
+      verificationTierLabel: verificationTierPolicy.label,
+      verificationTierDescription: verificationTierPolicy.description,
+      verificationTierComponents: verificationTierPolicy.components,
       requireIdentityVerificationForActivation:
         settings.operations.requireIdentityVerificationForActivation,
       requireBiometricVerification: settings.operations.requireBiometricVerification,
@@ -2533,7 +2538,7 @@ export class DriversService {
         : {}),
       enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
-      requiredDriverDocumentSlugs: verificationTierDescriptor.components.includes('drivers_license')
+      requiredDriverDocumentSlugs: verificationTierPolicy.components.includes('drivers_license')
         ? [DRIVER_LICENCE_DOCUMENT_TYPE]
         : [],
       driverPaysKyc: verificationPolicy.driverPaysKyc,
@@ -2549,6 +2554,8 @@ export class DriversService {
       verificationPayer: verificationPolicy.verificationPayer,
       verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
       verificationCurrency: verificationPolicy.verificationCurrency,
+      verificationWalletBalanceMinorUnits:
+        verificationPolicy.verificationWalletBalanceMinorUnits,
       verificationAvailableSpendMinorUnits:
         verificationPolicy.verificationAvailableSpendMinorUnits,
       verificationCreditLimitMinorUnits: verificationPolicy.verificationCreditLimitMinorUnits,
@@ -2608,13 +2615,12 @@ export class DriversService {
       this.getOrganisationSettings(payload.tenantId),
     ]);
     const policy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
-    const verificationTier = resolveVerificationTier(settings.operations);
-    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const verificationTierPolicy = resolveVerificationPolicy(settings.operations);
     const onboardingContext = {
-      verificationTier,
-      verificationTierLabel: verificationTierDescriptor.label,
-      verificationTierDescription: verificationTierDescriptor.description,
-      verificationTierComponents: verificationTierDescriptor.components,
+      verificationTier: verificationTierPolicy.tier,
+      verificationTierLabel: verificationTierPolicy.label,
+      verificationTierDescription: verificationTierPolicy.description,
+      verificationTierComponents: verificationTierPolicy.components,
     } as const;
 
     // Step 1: account setup
@@ -2744,7 +2750,7 @@ export class DriversService {
     }
 
     // Step 7: guarantor onboarding when required
-    const requiresGuarantor = verificationTierDescriptor.components.includes('guarantor');
+    const requiresGuarantor = verificationTierPolicy.components.includes('guarantor');
     const guarantorBlocking = requiresGuarantor;
     let guarantorVerified = !requiresGuarantor;
     let guarantorRecord: DriverGuarantorRecord | null = null;
@@ -2782,7 +2788,7 @@ export class DriversService {
     }
 
     // Step 8: driver's licence verification for Full Trust Verification
-    const requiredDocumentSlugs = verificationTierDescriptor.components.includes('drivers_license')
+    const requiredDocumentSlugs = verificationTierPolicy.components.includes('drivers_license')
       ? [DRIVER_LICENCE_DOCUMENT_TYPE]
       : [];
     if (requiredDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
@@ -3474,6 +3480,8 @@ export class DriversService {
       driverId: driver.id,
       provider,
       currency: verificationPolicy.verificationCurrency,
+      verificationTier: verificationPolicy.verificationTier,
+      amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
       customerEmail: driver.email,
       customerName: this.formatDriverName(driver),
       redirectUrl: redirectUrl.toString(),

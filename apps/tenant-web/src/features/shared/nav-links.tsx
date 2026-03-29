@@ -169,6 +169,25 @@ const WalletIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
+const SubscriptionIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <rect height="10" rx="1.5" width="12" x="2" y="3" />
+    <path d="M4.5 6h7M4.5 9h4" />
+  </svg>
+);
+
 const ReportsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -239,7 +258,8 @@ const navigationSections = [
   {
     label: 'Insights',
     items: [
-      { href: '/wallet', label: 'Subscription', Icon: WalletIcon },
+      { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
+      { href: '/wallet', label: 'Wallet', Icon: WalletIcon },
       { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],

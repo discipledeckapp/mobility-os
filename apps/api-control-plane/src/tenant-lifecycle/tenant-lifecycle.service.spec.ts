@@ -29,6 +29,7 @@ describe('TenantLifecycleService', () => {
       id: 'sub_1',
       tenantId: 'tenant_1',
       status: 'active',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
     });
     prisma.cpSubscription.update.mockResolvedValue({
       id: 'sub_1',
@@ -54,11 +55,13 @@ describe('TenantLifecycleService', () => {
         id: 'sub_1',
         tenantId: 'tenant_1',
         status: 'past_due',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
       })
       .mockResolvedValueOnce({
         id: 'sub_1',
         tenantId: 'tenant_1',
         status: 'past_due',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
       });
     prisma.cpSubscription.update.mockResolvedValue({
       id: 'sub_1',
@@ -83,6 +86,7 @@ describe('TenantLifecycleService', () => {
       id: 'sub_1',
       tenantId: 'tenant_1',
       status: 'archived',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
     });
 
     await expect(
@@ -98,5 +102,37 @@ describe('TenantLifecycleService', () => {
     prisma.cpSubscription.findUnique.mockResolvedValue(null);
 
     await expect(service.getCurrentState('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('resolves a subscription into grace before degraded mode begins', () => {
+    const result = service.resolveEnforcementState(
+      {
+        status: 'past_due',
+        currentPeriodEnd: new Date('2026-03-20T00:00:00.000Z'),
+      } as never,
+      new Date('2026-03-23T00:00:00.000Z'),
+    );
+
+    expect(result.stage).toBe('grace');
+    expect(result.graceDaysRemaining).toBe(2);
+    expect(result.blockedFeatures).toEqual(['driver_onboarding', 'vehicle_onboarding']);
+  });
+
+  it('resolves a subscription into degraded mode after grace ends', () => {
+    const result = service.resolveEnforcementState(
+      {
+        status: 'past_due',
+        currentPeriodEnd: new Date('2026-03-20T00:00:00.000Z'),
+      } as never,
+      new Date('2026-03-30T00:00:00.000Z'),
+    );
+
+    expect(result.stage).toBe('expired');
+    expect(result.degradedMode).toBe(true);
+    expect(result.blockedFeatures).toEqual([
+      'driver_onboarding',
+      'vehicle_onboarding',
+      'assignment_creation',
+    ]);
   });
 });

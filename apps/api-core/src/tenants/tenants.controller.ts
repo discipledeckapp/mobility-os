@@ -13,9 +13,9 @@ import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantsService } from './tenants.service';
 import {
-  getVerificationTierDescriptor,
+  listVerificationTierPrices,
   readOrganisationSettings,
-  resolveVerificationTier,
+  resolveVerificationPolicy,
 } from './tenant-settings';
 
 @ApiTags('Tenants')
@@ -35,8 +35,8 @@ export class TenantsController {
   async getMe(@CurrentTenant() ctx: TenantContext): Promise<TenantResponseDto> {
     const tenant = await this.tenantsService.findById(ctx.tenantId);
     const settings = readOrganisationSettings(tenant.metadata, tenant.country);
-    const verificationTier = resolveVerificationTier(settings.operations);
-    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const verificationPolicy = resolveVerificationPolicy(settings.operations, 'NGN');
+    const verificationTierPricing = listVerificationTierPrices('NGN');
 
     return {
       ...tenant,
@@ -61,9 +61,12 @@ export class TenantsController {
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
       driverPaysKyc: settings.operations.driverPaysKyc,
-      verificationTier,
-      verificationTierLabel: verificationTierDescriptor.label,
-      verificationTierDescription: verificationTierDescriptor.description,
+      verificationTier: verificationPolicy.tier,
+      verificationTierLabel: verificationPolicy.label,
+      verificationTierDescription: verificationPolicy.description,
+      verificationTierPriceMinorUnits: verificationPolicy.price.amountMinorUnits,
+      verificationTierPriceCurrency: verificationPolicy.price.currency,
+      verificationTierPricing,
       requireGuarantor: settings.operations.requireGuarantor,
       guarantorBlocking: settings.operations.guarantorBlocking,
       requireGuarantorVerification: settings.operations.requireGuarantorVerification,
@@ -80,8 +83,8 @@ export class TenantsController {
   ): Promise<TenantResponseDto> {
     const tenant = await this.tenantsService.updateSettings(ctx.tenantId, dto);
     const settings = readOrganisationSettings(tenant.metadata, tenant.country);
-    const verificationTier = resolveVerificationTier(settings.operations);
-    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const verificationPolicy = resolveVerificationPolicy(settings.operations, 'NGN');
+    const verificationTierPricing = listVerificationTierPrices('NGN');
 
     return {
       ...tenant,
@@ -106,9 +109,12 @@ export class TenantsController {
       requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: settings.operations.requiredVehicleDocumentSlugs,
       driverPaysKyc: settings.operations.driverPaysKyc,
-      verificationTier,
-      verificationTierLabel: verificationTierDescriptor.label,
-      verificationTierDescription: verificationTierDescriptor.description,
+      verificationTier: verificationPolicy.tier,
+      verificationTierLabel: verificationPolicy.label,
+      verificationTierDescription: verificationPolicy.description,
+      verificationTierPriceMinorUnits: verificationPolicy.price.amountMinorUnits,
+      verificationTierPriceCurrency: verificationPolicy.price.currency,
+      verificationTierPricing,
       requireGuarantor: settings.operations.requireGuarantor,
       guarantorBlocking: settings.operations.guarantorBlocking,
       requireGuarantorVerification: settings.operations.requireGuarantorVerification,

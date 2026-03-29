@@ -23,6 +23,7 @@ import {
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
   loginDriverSelfServiceWithPassword,
+  notifyDriverSelfServiceOrganisation,
   recordDriverSelfServiceVerificationConsent,
   submitDriverSelfServiceGuarantor,
   updateDriverSelfServiceContact,
@@ -805,7 +806,9 @@ function PaymentStep({
   onRefresh: () => Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
+  const [notifyingOrganisation, setNotifyingOrganisation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const paymentResumeStorageKey = `mobiris_driver_kyc_resume_${driver.id}`;
 
   // Do not re-prompt payment if the driver has already paid.
@@ -817,6 +820,7 @@ function PaymentStep({
   async function handleCheckout() {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       // Capture consent before redirecting to payment gateway.
       await recordDriverSelfServiceVerificationConsent(token);
@@ -841,11 +845,22 @@ function PaymentStep({
     driver.verificationAmountMinorUnits ?? 0,
     driver.verificationCurrency,
   );
-  const remainingSpend = formatMinorCurrency(
-    driver.verificationAvailableSpendMinorUnits ?? 0,
-    driver.verificationCurrency,
-  );
   const paymentStatus = onboardingStep.paymentStatus ?? driver.verificationPaymentStatus;
+  const verificationTierLabel = driver.verificationTierLabel ?? 'selected verification tier';
+
+  async function handleNotifyOrganisation() {
+    setNotifyingOrganisation(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await notifyDriverSelfServiceOrganisation(token);
+      setNotice(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to notify your organisation right now.');
+    } finally {
+      setNotifyingOrganisation(false);
+    }
+  }
 
   if (alreadyPaid) {
     return (
@@ -856,7 +871,7 @@ function PaymentStep({
         <CardContent className="space-y-3">
           <Text tone="muted">
             {onboardingStep.paymentMessage ??
-              'Your verification payment has been received. You can continue.'}
+              `Your payment for ${verificationTierLabel} has been received. You can continue.`}
           </Text>
           <Button onClick={() => void onRefresh()} type="button">
             Continue to verification
@@ -878,13 +893,19 @@ function PaymentStep({
           <CardTitle>
             {driver.verificationPayer === 'driver'
               ? 'Verification payment required'
-              : 'Verification waiting on company funding'}
+              : paymentStatus === 'ready' || paymentStatus === 'not_required'
+                ? 'Covered by your organisation'
+                : 'Verification waiting on organisation'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Text tone="muted">
-            {onboardingStep.paymentMessage ??
-              'Verification cannot continue until the payment requirement is resolved.'}
+            {driver.verificationPayer === 'driver'
+              ? onboardingStep.paymentMessage ??
+                'Complete the verification payment to continue.'
+              : paymentStatus === 'ready' || paymentStatus === 'not_required'
+                ? `This ${verificationTierLabel} verification will be covered by your organisation.`
+                : `Verification requires confirmation from your organisation before ${verificationTierLabel} can continue.`}
           </Text>
           {driver.organisationName ? (
             <Text tone="muted">
@@ -893,7 +914,9 @@ function PaymentStep({
           ) : null}
           {paymentStatus === 'driver_payment_required' ? (
             <>
-              <Text>Required amount: {amount}</Text>
+              <Text>
+                Required amount for {verificationTierLabel}: {amount}
+              </Text>
               <Text tone="muted" className="text-xs">
                 By paying you agree to the{' '}
                 <a
@@ -924,22 +947,57 @@ function PaymentStep({
                 </Button>
               </div>
             </>
+          ) : paymentStatus === 'ready' || paymentStatus === 'not_required' ? (
+            <>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-emerald-900">
+                <p className="font-medium">
+                  This verification is covered by your organisation. You can continue.
+                </p>
+              </div>
+              <Button onClick={() => void onRefresh()} type="button">
+                Continue to verification
+              </Button>
+            </>
           ) : (
             <>
               <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-700">
-                <p>Verification tier cost: {amount}</p>
-                <p>Remaining organisation spend: {remainingSpend}</p>
-                <p>
-                  {driver.verificationSavedCard?.active
-                    ? `Active card: ${driver.verificationSavedCard.brand} ending in ${driver.verificationSavedCard.last4}`
-                    : 'No active organisation card is available yet.'}
+                <p className="font-medium text-slate-900">
+                  Verification requires confirmation from your organisation.
+                </p>
+                <p className="mt-1">
+                  Your organisation needs to complete setup for {verificationTierLabel} before you
+                  can continue.
                 </p>
               </div>
-              <Button onClick={() => void onRefresh()} type="button" variant="secondary">
-                Refresh company funding status
-              </Button>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-sm font-semibold text-slate-900">Continue with driver payment</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    If your organisation allows driver-paid verification, they can switch this flow
+                    and you can pay {amount} yourself.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-sm font-semibold text-slate-900">Wait for organisation</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Pause here and check back later. Your progress stays saved on this onboarding flow.
+                  </p>
+                </div>
+                <button
+                  className="rounded-lg border border-slate-200 p-3 text-left transition hover:border-[var(--mobiris-primary)]"
+                  disabled={notifyingOrganisation}
+                  onClick={() => void handleNotifyOrganisation()}
+                  type="button"
+                >
+                  <p className="text-sm font-semibold text-slate-900">Notify organisation</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Send a reminder that you are ready to continue verification.
+                  </p>
+                </button>
+              </div>
             </>
           )}
+          {notice ? <Text tone="muted">{notice}</Text> : null}
           {error ? <Text tone="danger">{error}</Text> : null}
         </CardContent>
       </Card>

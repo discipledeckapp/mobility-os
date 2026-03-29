@@ -622,6 +622,10 @@ describe('Driver onboarding — payment decision logic', () => {
 
     // When org pays and is funded, payment status should be 'ready' (not blocking)
     expect(['ready', 'not_required']).toContain(context.verificationPaymentStatus);
+    expect(context.verificationWalletBalanceMinorUnits).toBeGreaterThan(0);
+    expect(context.verificationAvailableSpendMinorUnits).toBeGreaterThanOrEqual(
+      context.verificationAmountMinorUnits ?? 0,
+    );
   });
 });
 

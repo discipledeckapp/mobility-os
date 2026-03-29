@@ -201,9 +201,13 @@ export async function createDriverAction(
     const orgPaysForVerification =
       (settings.requireIdentityVerificationForActivation ?? true) &&
       !(settings.driverPaysKyc ?? false);
+    const requiredAmountMinorUnits = settings.verificationTierPriceMinorUnits ?? 0;
     if (orgPaysForVerification) {
-      const balanceMinorUnits = billing.verificationWallet.balanceMinorUnits;
-      if (balanceMinorUnits < 100000) {
+      const availableSpendMinorUnits = billing.verificationSpend.availableSpendMinorUnits;
+      if (
+        requiredAmountMinorUnits > 0 &&
+        availableSpendMinorUnits < requiredAmountMinorUnits
+      ) {
         walletWarning = true;
       }
     }

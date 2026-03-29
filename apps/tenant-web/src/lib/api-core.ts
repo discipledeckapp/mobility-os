@@ -117,6 +117,13 @@ export interface TenantRecord {
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
   verificationTierLabel?: string;
   verificationTierDescription?: string;
+  verificationTierPriceMinorUnits?: number;
+  verificationTierPriceCurrency?: string;
+  verificationTierPricing?: Array<{
+    tier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+    amountMinorUnits: number;
+    currency: string;
+  }>;
   requireGuarantor?: boolean;
   guarantorBlocking?: boolean;
   requireGuarantorVerification?: boolean;
@@ -395,6 +402,7 @@ export interface DriverRecord {
   verificationPayer?: 'driver' | 'organisation';
   verificationAmountMinorUnits?: number;
   verificationCurrency?: string | null;
+  verificationWalletBalanceMinorUnits?: number;
   verificationAvailableSpendMinorUnits?: number;
   verificationCreditLimitMinorUnits?: number;
   verificationCreditUsedMinorUnits?: number;
@@ -1354,6 +1362,14 @@ export interface TenantBillingSubscriptionRecord {
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
   trialEndsAt?: string | null;
+  enforcement?: {
+    stage: 'active' | 'grace' | 'expired';
+    gracePeriodDays: number;
+    graceEndsAt: string | null;
+    graceDaysRemaining: number;
+    degradedMode: boolean;
+    blockedFeatures: string[];
+  };
 }
 
 export interface TenantBillingPlanRecord {
@@ -2585,6 +2601,16 @@ export async function initiateDriverKycCheckout(
   return apiCoreFetch<DriverKycCheckoutRecord>('/driver-self-service/kyc-checkout', {
     method: 'POST',
     body: JSON.stringify({ token, provider, ...(returnUrl ? { returnUrl } : {}) }),
+    cache: 'no-store',
+  });
+}
+
+export async function notifyDriverSelfServiceOrganisation(
+  token: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/driver-self-service/notify-organisation', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
     cache: 'no-store',
   });
 }

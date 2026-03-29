@@ -353,6 +353,9 @@ export interface DriverRecord {
   requireGovernmentVerificationLookup?: boolean;
   requiredDriverDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
+  verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+  verificationTierLabel?: string;
+  verificationTierDescription?: string;
   kycPaymentVerified?: boolean;
   verificationPaymentState?: 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
   verificationEntitlementState?:
@@ -379,6 +382,21 @@ export interface DriverRecord {
   verificationPayer?: 'driver' | 'organisation';
   verificationAmountMinorUnits?: number;
   verificationCurrency?: string;
+  verificationWalletBalanceMinorUnits?: number;
+  verificationAvailableSpendMinorUnits?: number;
+  verificationCreditLimitMinorUnits?: number;
+  verificationCreditUsedMinorUnits?: number;
+  verificationStarterCreditActive?: boolean;
+  verificationCardCreditActive?: boolean;
+  verificationSavedCard?: {
+    provider: string;
+    last4: string;
+    brand: string;
+    status: string;
+    active: boolean;
+    createdAt: string;
+    initialReference?: string | null;
+  } | null;
   verificationPaymentStatus?:
     | 'not_required'
     | 'ready'
@@ -766,6 +784,14 @@ export interface TenantBillingSummaryRecord {
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
     trialEndsAt?: string | null;
+    enforcement?: {
+      stage: 'active' | 'grace' | 'expired';
+      gracePeriodDays: number;
+      graceEndsAt: string | null;
+      graceDaysRemaining: number;
+      degradedMode: boolean;
+      blockedFeatures: string[];
+    };
   };
   invoices: TenantBillingInvoiceRecord[];
   outstandingInvoice?: TenantBillingInvoiceRecord | null;
@@ -1743,6 +1769,19 @@ export function initiateDriverKycCheckout(
         provider,
         ...(returnUrl ? { returnUrl } : {}),
       }),
+    },
+    false,
+  );
+}
+
+export function notifyDriverSelfServiceOrganisation(
+  selfServiceToken: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/driver-self-service/notify-organisation',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
     },
     false,
   );

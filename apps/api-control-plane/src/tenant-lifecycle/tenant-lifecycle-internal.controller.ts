@@ -18,6 +18,14 @@ export class TenantLifecycleInternalController {
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
+    enforcement: {
+      stage: 'active' | 'grace' | 'expired';
+      gracePeriodDays: number;
+      graceEndsAt: Date | null;
+      graceDaysRemaining: number;
+      degradedMode: boolean;
+      blockedFeatures: string[];
+    };
   }> {
     const subscription = await this.tenantLifecycleService.getCurrentState(tenantId);
     return {
@@ -27,6 +35,7 @@ export class TenantLifecycleInternalController {
       currentPeriodStart: subscription.currentPeriodStart,
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      enforcement: this.tenantLifecycleService.resolveEnforcementState(subscription),
     };
   }
 }

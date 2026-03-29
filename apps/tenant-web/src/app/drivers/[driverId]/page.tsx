@@ -86,11 +86,22 @@ function getReadinessLabel(status: string): string {
 
 function getVerificationFeeLabel(driver: {
   verificationPayer?: 'driver' | 'organisation';
-  verificationPaymentMessage?: string | null;
+  verificationTierLabel?: string | null;
+  verificationAmountMinorUnits?: number;
+  verificationCurrency?: string | null;
 }) {
+  const tierLabel = driver.verificationTierLabel ?? 'verification';
+  const amount =
+    driver.verificationAmountMinorUnits && driver.verificationCurrency
+      ? ` (${new Intl.NumberFormat(driver.verificationCurrency === 'NGN' ? 'en-NG' : 'en-US', {
+          style: 'currency',
+          currency: driver.verificationCurrency,
+          minimumFractionDigits: 2,
+        }).format(driver.verificationAmountMinorUnits / 100)})`
+      : '';
   return driver.verificationPayer === 'driver'
-    ? 'Driver pays verification fee'
-    : 'Organisation covers verification fee';
+    ? `Driver pays for ${tierLabel}${amount}`
+    : `Organisation covers ${tierLabel}${amount}`;
 }
 
 function getVerificationStepSummary(driver: {
@@ -396,21 +407,40 @@ export default async function DriverDetailsPage({
                 <line x1="12" x2="12.01" y1="17" y2="17" />
               </svg>
               <div className="space-y-1">
+                {(() => {
+                  const tierLabel = tenant?.verificationTierLabel ?? 'Basic Identity';
+                  const amount =
+                    tenant?.verificationTierPriceMinorUnits &&
+                    tenant?.verificationTierPriceCurrency
+                      ? new Intl.NumberFormat(
+                          tenant.verificationTierPriceCurrency === 'NGN' ? 'en-NG' : 'en-US',
+                          {
+                            style: 'currency',
+                            currency: tenant.verificationTierPriceCurrency,
+                            minimumFractionDigits: 2,
+                          },
+                        ).format(tenant.verificationTierPriceMinorUnits / 100)
+                      : null;
+                  return (
+                    <>
                 <p className="text-sm font-semibold text-amber-900">
                   Verification wallet balance is low
                 </p>
                 <p className="text-sm text-amber-800">
-                  Your organisation wallet may not have enough funds to cover identity verification
-                  for this driver.{' '}
-                  <a className="font-semibold underline hover:no-underline" href="/billing">
+                  Your organisation wallet or credit cover may not be enough for {tierLabel}
+                  {amount ? ` (${amount})` : ''} for this driver.{' '}
+                  <a className="font-semibold underline hover:no-underline" href="/wallet">
                     Fund the wallet
                   </a>{' '}
                   before starting verification, or switch to driver-pays mode in{' '}
-                  <a className="font-semibold underline hover:no-underline" href="/settings">
-                    Settings
+                  <a className="font-semibold underline hover:no-underline" href="/settings?section=drivers">
+                    Settings → Drivers
                   </a>
                   .
                 </p>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </CardContent>

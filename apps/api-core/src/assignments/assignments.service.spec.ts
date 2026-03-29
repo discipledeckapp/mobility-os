@@ -17,6 +17,10 @@ describe('AssignmentsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    remittance: {
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
+    },
     tenant: {
       findUnique: jest.fn(),
     },
@@ -38,6 +42,11 @@ describe('AssignmentsService', () => {
   };
   const auditService = {
     recordTenantAction: jest.fn(),
+  };
+  const notificationsService = {
+    notifyAssignmentIssued: jest.fn(),
+    notifyAssignmentAccepted: jest.fn(),
+    notifyAssignmentEnded: jest.fn(),
   };
 
   let service: AssignmentsService;
@@ -67,12 +76,15 @@ describe('AssignmentsService', () => {
       tenantId: 'tenant_1',
       operatingUnit: { id: 'ou_1', businessEntityId: 'be_1' },
     });
+    prisma.remittance.findMany.mockResolvedValue([]);
+    prisma.remittance.updateMany.mockResolvedValue({ count: 0 });
     service = new AssignmentsService(
       prisma as never,
       driversService as never,
       vehicleRiskService as never,
       policyService as never,
       auditService as never,
+      notificationsService as never,
     );
   });
 
@@ -118,6 +130,15 @@ describe('AssignmentsService', () => {
     expect(prisma.vehicle.update).toHaveBeenCalledWith({
       where: { id: 'vehicle_1' },
       data: { status: 'assigned' },
+    });
+    expect(notificationsService.notifyAssignmentIssued).toHaveBeenCalledWith({
+      tenantId: 'tenant_1',
+      assignmentId: 'assignment_1',
+      driverId: 'driver_1',
+      fleetId: 'fleet_1',
+      vehicleId: 'vehicle_1',
+      vehicleLabel: 'vehicle_1',
+      requiresAcceptance: true,
     });
     expect(result.status).toBe('pending_driver_confirmation');
   });
@@ -190,6 +211,54 @@ describe('AssignmentsService', () => {
       data: expect.objectContaining({ status: 'active' }),
     });
     expect(result.status).toBe('active');
+  });
+
+  it('notifies operators when a driver accepts an assignment', async () => {
+    prisma.assignment.findUnique.mockResolvedValue({
+      id: 'assignment_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      vehicleId: 'vehicle_1',
+      fleetId: 'fleet_1',
+      status: 'pending_driver_confirmation',
+      contractStatus: 'pending_acceptance',
+      contractVersion: '2026-03',
+      contractSnapshot: null,
+    });
+    prisma.vehicle.findUnique.mockResolvedValue({
+      id: 'vehicle_1',
+      make: 'Toyota',
+      model: 'Corolla',
+      plate: 'LAG-123AA',
+      tenantVehicleCode: null,
+      systemVehicleCode: null,
+    });
+    prisma.assignment.update.mockResolvedValue({
+      id: 'assignment_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      vehicleId: 'vehicle_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      status: 'active',
+      contractStatus: 'accepted',
+      driverConfirmationMethod: 'app',
+    });
+
+    await service.acceptDriverTerms('tenant_1', 'assignment_1', {
+      acceptedFrom: 'driver_mobile',
+      confirmationMethod: 'app',
+    });
+
+    expect(notificationsService.notifyAssignmentAccepted).toHaveBeenCalledWith({
+      tenantId: 'tenant_1',
+      assignmentId: 'assignment_1',
+      driverId: 'driver_1',
+      fleetId: 'fleet_1',
+      vehicleId: 'vehicle_1',
+      vehicleLabel: 'LAG-123AA',
+    });
   });
 
   it('rejects completion unless the assignment is active', async () => {

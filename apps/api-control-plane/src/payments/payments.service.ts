@@ -31,6 +31,18 @@ type PaymentPurpose =
   | 'card_authorization_setup'
   | 'driver_kyc';
 
+function getVerificationTierLabel(
+  tier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION',
+): string {
+  if (tier === 'FULL_TRUST_VERIFICATION') {
+    return 'Full Trust Verification';
+  }
+  if (tier === 'VERIFIED_IDENTITY') {
+    return 'Verified Identity';
+  }
+  return 'Basic Identity';
+}
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -186,12 +198,6 @@ export class PaymentsService {
     };
   }
 
-  // Fixed KYC verification charge: ₦5,000 = 500,000 kobo for NGN.
-  // Extend if other currencies are needed.
-  private readonly KYC_AMOUNT_BY_CURRENCY: Record<string, number> = {
-    NGN: 500_000,
-  };
-
   private normalizePurpose(purpose: string): PaymentPurpose {
     if (purpose === 'driver_kyc') {
       return 'identity_verification';
@@ -210,6 +216,8 @@ export class PaymentsService {
       subjectId: dto.driverId,
       relatedDriverId: dto.driverId,
       currency: dto.currency,
+      verificationTier: dto.verificationTier,
+      amountMinorUnits: dto.amountMinorUnits,
       customerEmail: dto.customerEmail,
       ...(dto.customerName ? { customerName: dto.customerName } : {}),
       ...(dto.redirectUrl ? { redirectUrl: dto.redirectUrl } : {}),
@@ -220,7 +228,7 @@ export class PaymentsService {
     dto: InitializeIdentityVerificationPaymentDto,
   ): Promise<PaymentCheckoutResponseDto> {
     const currency = dto.currency.toUpperCase();
-    const amountMinorUnits = this.KYC_AMOUNT_BY_CURRENCY[currency] ?? 500_000;
+    const amountMinorUnits = dto.amountMinorUnits;
     const subjectReferenceKey = `${dto.subjectType}_${dto.subjectId}`;
     const reusableAttempt = await this.prisma.cpPaymentAttempt.findFirst({
       where: {
@@ -260,13 +268,14 @@ export class PaymentsService {
       redirectUrl,
       customerEmail: dto.customerEmail,
       ...(dto.customerName ? { customerName: dto.customerName } : {}),
-      description: 'Mobiris identity verification fee',
+      description: `Mobiris ${getVerificationTierLabel(dto.verificationTier)} verification fee`,
       metadata: {
         purpose: 'identity_verification',
         tenantId: dto.tenantId,
         subjectType: dto.subjectType,
         subjectId: dto.subjectId,
         driverId: dto.relatedDriverId ?? (dto.subjectType === 'driver' ? dto.subjectId : null),
+        verificationTier: dto.verificationTier,
       },
     });
 

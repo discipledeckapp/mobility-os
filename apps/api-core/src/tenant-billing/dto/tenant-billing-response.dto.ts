@@ -33,6 +33,19 @@ export class TenantBillingSubscriptionDto {
 
   @ApiPropertyOptional()
   trialEndsAt?: string | null;
+
+  @ApiPropertyOptional({
+    type: Object,
+    additionalProperties: true,
+  })
+  enforcement?: {
+    stage: 'active' | 'grace' | 'expired';
+    gracePeriodDays: number;
+    graceEndsAt: string | null;
+    graceDaysRemaining: number;
+    degradedMode: boolean;
+    blockedFeatures: string[];
+  };
 }
 
 export class TenantBillingPlanDto {

@@ -1,8 +1,9 @@
 'use client';
 
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { isNetworkError, listRemittanceHistory, type RemittanceRecord } from '../../../api';
 import { Badge } from '../../../components/badge';
@@ -32,7 +33,9 @@ import { tokens } from '../../../theme/tokens';
 export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'>) {
   const { session } = useAuth();
   const { showToast } = useToast();
-  const { assignments, loading, refreshing, refreshAssignments } = useAssignments();
+  const { assignments, loading, refreshing, refreshAssignments } = useAssignments(
+    Boolean(session?.linkedDriverId),
+  );
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(
     route.params?.assignmentId ?? '',
   );
@@ -94,6 +97,14 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       setHistoryLoading(false);
     });
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAssignments().catch(() => {
+        // Manual refresh handles visible error messaging.
+      });
+    }, [refreshAssignments]),
+  );
 
   const selectedAssignment = useMemo(
     () => eligibleAssignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null,

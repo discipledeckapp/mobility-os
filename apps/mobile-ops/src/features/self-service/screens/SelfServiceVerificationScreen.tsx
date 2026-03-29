@@ -32,6 +32,7 @@ import {
   createDriverSelfServiceLivenessSession,
   getDriverSelfServiceLivenessReadiness,
   initiateDriverKycCheckout,
+  notifyDriverSelfServiceOrganisation,
   recordDriverSelfServiceVerificationConsent,
   removeDriverSelfServiceDocument,
   resolveDriverSelfServiceIdentity,
@@ -136,6 +137,18 @@ function getTotalSteps(includePayment: boolean): number {
   return includePayment ? 5 : 4;
 }
 
+function formatMoney(amountMinorUnits?: number | null, currency = 'NGN') {
+  if (amountMinorUnits === undefined || amountMinorUnits === null) {
+    return null;
+  }
+
+  return new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinorUnits / 100);
+}
+
 export function SelfServiceVerificationScreen({
   navigation,
 }: ScreenProps<'SelfServiceVerification'>) {
@@ -148,8 +161,21 @@ export function SelfServiceVerificationScreen({
   const hasUsableVerificationEntitlement =
     driver?.verificationEntitlementState === 'paid' ||
     driver?.verificationEntitlementState === 'reserved';
+  const companyFundingBlocked =
+    !driverPaysKyc &&
+    (driver?.verificationPaymentStatus === 'wallet_missing' ||
+      driver?.verificationPaymentStatus === 'insufficient_balance');
+  const companyFundingReady =
+    !driverPaysKyc &&
+    (driver?.verificationPaymentStatus === 'ready' ||
+      driver?.verificationPaymentStatus === 'not_required');
   const needsVerificationPayment =
     driverPaysKyc && driver?.verificationPaymentStatus === 'driver_payment_required';
+  const verificationTierLabel = driver?.verificationTierLabel ?? 'selected verification tier';
+  const verificationAmountLabel = formatMoney(
+    driver?.verificationAmountMinorUnits,
+    driver?.verificationCurrency ?? 'NGN',
+  );
 
   const identityVerificationRequired = driver?.requireIdentityVerificationForActivation ?? true;
   const biometricVerificationRequired = driver?.requireBiometricVerification ?? true;
@@ -176,6 +202,7 @@ export function SelfServiceVerificationScreen({
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [initiatingPayment, setInitiatingPayment] = useState(false);
+  const [notifyingOrganisation, setNotifyingOrganisation] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [recordingConsent, setRecordingConsent] = useState(false);
   const previousCountryCodeRef = useRef(countryCode);
@@ -419,7 +446,7 @@ export function SelfServiceVerificationScreen({
   }, [driver]);
 
   useEffect(() => {
-    if (!driverPaysKyc || needsVerificationPayment) {
+    if (needsVerificationPayment || companyFundingBlocked) {
       return;
     }
 
@@ -434,7 +461,7 @@ export function SelfServiceVerificationScreen({
     }
   }, [
     currentStep,
-    driverPaysKyc,
+    companyFundingBlocked,
     needsVerificationPayment,
     profileComplete,
     verificationLifecycle,
@@ -789,6 +816,22 @@ export function SelfServiceVerificationScreen({
     }
   };
 
+  const onNotifyOrganisation = async () => {
+    if (!token || notifyingOrganisation) return;
+    setNotifyingOrganisation(true);
+    try {
+      const result = await notifyDriverSelfServiceOrganisation(token);
+      showToast(result.message, 'success');
+    } catch (error) {
+      Alert.alert(
+        'Notify organisation',
+        error instanceof Error ? error.message : 'Unable to notify your organisation right now.',
+      );
+    } finally {
+      setNotifyingOrganisation(false);
+    }
+  };
+
   // Auto-refresh when the screen gains focus while payment is pending.
   // This covers the Paystack return path: Paystack redirects to the
   // mobiris://self-service/verify deep link, which focuses this screen.
@@ -1071,10 +1114,17 @@ export function SelfServiceVerificationScreen({
                 face does not match, the verification will fail and the fee is not refundable.
               </Text>
             </View>
+          ) : companyFundingBlocked ? (
+            <View style={styles.paymentNotice}>
+              <Text style={styles.paymentNoticeTitle}>Verification waiting on organisation</Text>
+              <Text style={styles.paymentNoticeBody}>
+                {`Verification requires confirmation from ${organisationName} before ${verificationTierLabel} can continue.`}
+              </Text>
+            </View>
           ) : (
             <View style={styles.orgCoversNotice}>
               <Text style={styles.orgCoversText}>
-                {organisationName} covers the verification cost.
+                This verification will be covered by {organisationName}.
               </Text>
             </View>
           )}
@@ -1147,9 +1197,9 @@ export function SelfServiceVerificationScreen({
               label={profileComplete ? 'Continue to documents' : 'Confirm your details'}
               onPress={() => setCurrentStep(profileComplete ? 'documents' : 'profile')}
             />
-          ) : needsVerificationPayment ? (
+          ) : needsVerificationPayment || companyFundingBlocked ? (
             <Button
-              label="Continue to payment"
+              label={driverPaysKyc ? 'Continue to payment' : 'Review next options'}
               disabled={!consentAccepted}
               onPress={() => void proceedFromOverview('payment')}
             />
@@ -1253,17 +1303,23 @@ export function SelfServiceVerificationScreen({
         {renderProgressBar()}
 
         <Card style={styles.section}>
-          <Text style={styles.kicker}>Identity verification fee</Text>
+          <Text style={styles.kicker}>{verificationTierLabel}</Text>
           <Text style={styles.title}>Pay before verification</Text>
           <Text style={styles.copy}>
-            {driver?.verificationPaymentMessage ??
-              `${organisationName} requires the verification fee before identity checks can begin. This fee is tied to this onboarding flow and will not be charged twice once confirmed.`}
+            {driverPaysKyc
+              ? driver?.verificationPaymentMessage ??
+                `${organisationName} requires payment for ${verificationTierLabel} before identity checks can begin. This charge is tied to this onboarding flow and will not be charged twice once confirmed.`
+              : companyFundingReady
+                ? `This ${verificationTierLabel} verification will be covered by your organisation.`
+                : `Verification requires confirmation from your organisation before ${verificationTierLabel} can continue.`}
           </Text>
 
           <View style={styles.breakdownCard}>
             <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Biometric identity verification</Text>
-              <Text style={styles.breakdownAmount}>Verification fee</Text>
+              <Text style={styles.breakdownLabel}>{verificationTierLabel}</Text>
+              <Text style={styles.breakdownAmount}>
+                {verificationAmountLabel ?? 'Verification charge'}
+              </Text>
             </View>
           </View>
 
@@ -1276,10 +1332,10 @@ export function SelfServiceVerificationScreen({
             </View>
           ) : null}
 
-          {!hasUsableVerificationEntitlement ? (
+          {!hasUsableVerificationEntitlement && driverPaysKyc ? (
             <>
               <Button
-                label="Pay now"
+                label={verificationAmountLabel ? `Pay ${verificationAmountLabel}` : 'Pay now'}
                 loading={initiatingPayment}
                 loadingLabel="Starting payment"
                 onPress={() => void onInitiatePayment()}
@@ -1288,6 +1344,36 @@ export function SelfServiceVerificationScreen({
                 label="I've completed payment"
                 variant="secondary"
                 onPress={() => void onConfirmPayment()}
+              />
+            </>
+          ) : companyFundingBlocked ? (
+            <>
+              <View style={styles.optionCard}>
+                <Text style={styles.optionTitle}>Continue with driver payment</Text>
+                <Text style={styles.optionText}>
+                  If your organisation allows driver-paid verification, they can switch this flow
+                  and you can pay {verificationAmountLabel ?? 'the required amount'} yourself.
+                </Text>
+              </View>
+              <View style={styles.optionCard}>
+                <Text style={styles.optionTitle}>Wait for organisation</Text>
+                <Text style={styles.optionText}>
+                  Your progress is saved. You can return after your organisation completes the
+                  required setup.
+                </Text>
+              </View>
+              <View style={styles.optionCard}>
+                <Text style={styles.optionTitle}>Notify organisation</Text>
+                <Text style={styles.optionText}>
+                  Send a reminder that you are ready to continue verification.
+                </Text>
+              </View>
+              <Button
+                label="Notify organisation"
+                variant="secondary"
+                loading={notifyingOrganisation}
+                loadingLabel="Sending reminder"
+                onPress={() => void onNotifyOrganisation()}
               />
             </>
           ) : (
@@ -2210,9 +2296,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 6,
   },
   breakdownLabel: { color: tokens.colors.ink, fontSize: 14 },
   breakdownAmount: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
+  optionCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#ffffff',
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  optionTitle: { color: tokens.colors.ink, fontSize: 14, fontWeight: '700' },
+  optionText: { color: tokens.colors.inkSoft, fontSize: 13, lineHeight: 18 },
 });
 
 export default SelfServiceVerificationScreen;

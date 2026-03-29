@@ -10,7 +10,12 @@ import {
   Sidebar,
   Text,
 } from '@mobility-os/ui';
-import type { TenantAuthSessionRecord, UserNotificationRecord } from '../../lib/api-core';
+import {
+  getTenantBillingSummary,
+  type TenantAuthSessionRecord,
+  type TenantBillingSummaryRecord,
+  type UserNotificationRecord,
+} from '../../lib/api-core';
 import { NavLinks } from './nav-links';
 import { NotificationCenter } from './notification-center';
 import { LogoutButton } from './logout-button';
@@ -34,6 +39,7 @@ export function TenantShellChrome({
   children,
 }: TenantShellChromeProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [billingSummary, setBillingSummary] = useState<TenantBillingSummaryRecord | null>(null);
 
   useEffect(() => {
     const stored = globalThis.localStorage?.getItem('tenant-shell-collapsed');
@@ -46,8 +52,25 @@ export function TenantShellChrome({
     globalThis.localStorage?.setItem('tenant-shell-collapsed', collapsed ? '1' : '0');
   }, [collapsed]);
 
+  useEffect(() => {
+    let mounted = true;
+    void getTenantBillingSummary()
+      .then((summary) => {
+        if (mounted) {
+          setBillingSummary(summary);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const organisationName =
     session?.organisationDisplayName || session?.tenantName || 'Organisation workspace';
+  const enforcement = billingSummary?.subscription.enforcement;
+  const blockedFeatures = enforcement?.blockedFeatures ?? [];
+  const showLifecycleBanner = enforcement?.stage === 'grace' || enforcement?.stage === 'expired';
 
   return (
     <AppShell>
@@ -110,6 +133,42 @@ export function TenantShellChrome({
               </div>
             </div>
           </Header>
+
+          {showLifecycleBanner ? (
+            <div
+              className={`border-b px-4 py-3 ${
+                enforcement?.stage === 'grace'
+                  ? 'border-amber-200 bg-amber-50 text-amber-900'
+                  : 'border-rose-200 bg-rose-50 text-rose-900'
+              }`}
+            >
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">
+                    {enforcement?.stage === 'grace'
+                      ? `Subscription expired. Renew within ${enforcement.graceDaysRemaining} day(s).`
+                      : 'Subscription expired. Workspace is running in degraded mode.'}
+                  </p>
+                  <p className="text-sm opacity-90">
+                    {enforcement?.stage === 'grace'
+                      ? 'Existing operations continue for now, but new drivers and new vehicles are blocked until renewal.'
+                      : 'Drivers can still log in, view assignments, and log remittance. New drivers, new vehicles, and new assignments are blocked until you upgrade.'}
+                  </p>
+                  {blockedFeatures.length > 0 ? (
+                    <p className="text-xs opacity-80">
+                      Blocked features: {blockedFeatures.join(', ').replaceAll('_', ' ')}
+                    </p>
+                  ) : null}
+                </div>
+                <a
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-current px-4 text-sm font-medium"
+                  href="/subscription"
+                >
+                  Review plan and upgrade
+                </a>
+              </div>
+            </div>
+          ) : null}
 
           <div className="border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
             <div className="mb-3">

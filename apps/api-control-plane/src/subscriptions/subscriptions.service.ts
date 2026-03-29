@@ -14,6 +14,8 @@ import { StaffNotificationService } from '../notifications/staff-notification.se
 import { PlansService } from '../plans/plans.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ApiCoreTenantsClient } from '../tenants/api-core-tenants.client';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
 import type { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import type { SubscriptionListItemDto } from './dto/subscription-list-item.dto';
 
@@ -24,6 +26,7 @@ export class SubscriptionsService {
     private readonly plansService: PlansService,
     private readonly staffNotification: StaffNotificationService,
     private readonly apiCoreTenantsClient: ApiCoreTenantsClient,
+    private readonly tenantLifecycleService: TenantLifecycleService,
   ) {}
 
   private resolveBootstrapCurrency(countryCode?: string | null): string | undefined {
@@ -84,6 +87,7 @@ export class SubscriptionsService {
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       trialEndsAt: subscription.trialEndsAt,
+      enforcement: this.tenantLifecycleService.resolveEnforcementState(subscription),
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
     }));
@@ -136,6 +140,7 @@ export class SubscriptionsService {
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       trialEndsAt: subscription.trialEndsAt,
+      enforcement: this.tenantLifecycleService.resolveEnforcementState(subscription),
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
     };

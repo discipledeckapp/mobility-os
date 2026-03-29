@@ -351,9 +351,18 @@ export function DriverIdentityVerification({
   const identityTone = getDriverIdentityTone(identityStatus);
   const identityLabel = getDriverIdentityLabel(identityStatus);
   const canSendSelfServiceLink = Boolean(driver.email);
+  const verificationTierLabel = driver.verificationTierLabel ?? 'Basic Identity';
+  const formattedVerificationAmount =
+    driver.verificationAmountMinorUnits && driver.verificationCurrency
+      ? new Intl.NumberFormat(driver.verificationCurrency === 'NGN' ? 'en-NG' : 'en-US', {
+          style: 'currency',
+          currency: driver.verificationCurrency,
+          minimumFractionDigits: 2,
+        }).format(driver.verificationAmountMinorUnits / 100)
+      : null;
   const verificationFeeCopy = sendLinkPaysKyc
-    ? 'Driver will pay the verification fee during self-service onboarding.'
-    : 'Your organisation wallet will cover the verification fee for this driver.';
+    ? `Driver will pay ${formattedVerificationAmount ?? 'the selected tier price'} for ${verificationTierLabel} during self-service onboarding.`
+    : `Your organisation wallet or approved credit will cover ${verificationTierLabel}${formattedVerificationAmount ? ` (${formattedVerificationAmount})` : ''} for this driver.`;
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64 || selfieImageUrl);

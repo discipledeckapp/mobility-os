@@ -1,5 +1,4 @@
 'use client';
-
 import {
   Button,
   Card,
@@ -82,6 +81,44 @@ const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy' },
 ];
+
+const VERIFICATION_TIER_OPTIONS = [
+  {
+    key: 'BASIC_IDENTITY' as const,
+    label: 'Basic Identity',
+    description: 'Confirm who the driver is',
+    includes: ['Liveness + biometric check', 'Government ID (NIN) verification'],
+  },
+  {
+    key: 'VERIFIED_IDENTITY' as const,
+    label: 'Verified Identity',
+    description: 'Identity and accountability',
+    includes: [
+      'Liveness + biometric check',
+      'Government ID (NIN) verification',
+      'Guarantor identity verification',
+    ],
+  },
+  {
+    key: 'FULL_TRUST_VERIFICATION' as const,
+    label: 'Full Trust Verification',
+    description: 'Identity, accountability, and legal eligibility',
+    includes: [
+      'Liveness + biometric check',
+      'Government ID (NIN) verification',
+      'Guarantor identity verification',
+      "Driver's licence verification and identity linkage",
+    ],
+  },
+] as const;
+
+function formatMoney(amountMinorUnits: number, currency: string): string {
+  return new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinorUnits / 100);
+}
 
 function EyeIcon() {
   return (
@@ -247,6 +284,7 @@ export function SettingsPanel({
   fleets,
   vehicles,
   canManage,
+  initialSection = 'account',
   dataRequests,
 }: {
   session: TenantAuthSessionRecord;
@@ -258,9 +296,10 @@ export function SettingsPanel({
   fleets: FleetRecord[];
   vehicles: VehicleRecord[];
   canManage: boolean;
+  initialSection?: SettingsSection;
   dataRequests: DataSubjectRequestRecord[];
 }) {
-  const [activeSection, setActiveSection] = useState<SettingsSection>('account');
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
 
   const [profileState, profileAction, profilePending] = useActionState(
     updateProfileAction,
@@ -292,6 +331,23 @@ export function SettingsPanel({
   const [selectedTier, setSelectedTier] = useState<
     'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION'
   >(tenant.verificationTier ?? 'BASIC_IDENTITY');
+  const tierPricing = tenant.verificationTierPricing ?? [];
+  const defaultTierPricing = {
+    tier: 'BASIC_IDENTITY' as const,
+    amountMinorUnits: 500_000,
+    currency: 'NGN',
+  };
+  const selectedTierPricing =
+    tierPricing.find((entry: { tier: string }) => entry.tier === selectedTier) ??
+    tierPricing[0] ??
+    defaultTierPricing;
+  const selectedTierOption =
+    VERIFICATION_TIER_OPTIONS.find((option) => option.key === selectedTier) ??
+    VERIFICATION_TIER_OPTIONS[0];
+  const selectedTierAmount = formatMoney(
+    selectedTierPricing.amountMinorUnits,
+    selectedTierPricing.currency,
+  );
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -466,8 +522,9 @@ export function SettingsPanel({
                     Automatically send self-verification links when drivers are added
                   </label>
                   <Text tone="muted">
-                    When drivers pay the verification fee, Mobiris always sends the self-service
-                    verification link automatically so they can complete payment and onboarding.
+                    When drivers pay, Mobiris always sends the self-service verification link
+                    automatically so they can complete payment for the selected verification tier
+                    and continue onboarding.
                   </Text>
                   {organisationState.error ? (
                     <Text tone="danger">{organisationState.error}</Text>
@@ -545,40 +602,12 @@ export function SettingsPanel({
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Verification tier
                     </p>
-                    {(
-                      [
-                        {
-                          key: 'BASIC_IDENTITY' as const,
-                          label: 'Basic Identity',
-                          description: 'Confirm who the driver is',
-                          includes: [
-                            'Liveness + biometric check',
-                            'Government ID (NIN) verification',
-                          ],
-                        },
-                        {
-                          key: 'VERIFIED_IDENTITY' as const,
-                          label: 'Verified Identity',
-                          description: 'Identity and accountability',
-                          includes: [
-                            'Liveness + biometric check',
-                            'Government ID (NIN) verification',
-                            'Guarantor identity verification',
-                          ],
-                        },
-                        {
-                          key: 'FULL_TRUST_VERIFICATION' as const,
-                          label: 'Full Trust Verification',
-                          description: 'Identity, accountability, and legal eligibility',
-                          includes: [
-                            'Liveness + biometric check',
-                            'Government ID (NIN) verification',
-                            'Guarantor identity verification',
-                            "Driver's licence verification and identity linkage",
-                          ],
-                        },
-                      ] as const
-                    ).map((option) => (
+                    {VERIFICATION_TIER_OPTIONS.map((option) => {
+                      const optionPricing =
+                        tierPricing.find((entry: { tier: string }) => entry.tier === option.key) ??
+                        tierPricing[0] ??
+                        defaultTierPricing;
+                      return (
                       <label
                         className={`flex cursor-pointer items-start gap-3 rounded-[var(--mobiris-radius-card)] border p-4 transition-colors ${
                           selectedTier === option.key
@@ -602,6 +631,9 @@ export function SettingsPanel({
                           <span className="block text-sm text-slate-500">
                             {option.description}
                           </span>
+                          <span className="block text-sm font-medium text-slate-700">
+                            Price: {formatMoney(optionPricing.amountMinorUnits, optionPricing.currency)}
+                          </span>
                           <ul className="mt-2 space-y-0.5">
                             {option.includes.map((item) => (
                               <li
@@ -615,7 +647,8 @@ export function SettingsPanel({
                           </ul>
                         </span>
                       </label>
-                    ))}
+                      );
+                    })}
                     <input
                       name="requireGuarantor"
                       type="hidden"
@@ -651,7 +684,8 @@ export function SettingsPanel({
                           value="false"
                         />
                         <span className="text-slate-700">
-                          Your organisation pays for verification from your wallet
+                          Your organisation pays {selectedTierAmount} for {selectedTierOption.label}{' '}
+                          from your wallet or approved credit line
                         </span>
                       </label>
                       <label className="flex items-start gap-3 text-sm">
@@ -663,13 +697,15 @@ export function SettingsPanel({
                           value="true"
                         />
                         <span className="text-slate-700">
-                          Driver pays ₦5,000 per check
-                          <span className="ml-1 text-xs text-slate-400">
-                            (this does not change the verification tier)
-                          </span>
+                          If driver pays, the driver will pay {selectedTierAmount} for{' '}
+                          {selectedTierOption.label}.
                         </span>
                       </label>
                     </div>
+                    <p className="text-xs text-slate-500">
+                      The selected verification tier determines the required checks and price. The
+                      payment model only determines who pays.
+                    </p>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">

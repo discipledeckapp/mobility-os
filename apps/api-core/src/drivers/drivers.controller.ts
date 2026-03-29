@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import type { Driver, Prisma } from '@prisma/client';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { RequireTenantLifecycleFeature } from '../auth/decorators/tenant-lifecycle-access.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
@@ -52,6 +53,8 @@ import {
   DriverMobileAccessUserDto,
 } from './dto/driver-mobile-access-response.dto';
 import { DriverResponseDto } from './dto/driver-response.dto';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { NotificationsService } from '../notifications/notifications.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { LinkDriverUserDto } from './dto/link-driver-user.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -309,6 +312,7 @@ export class DriversController {
 
   @Post('import')
   @RequirePermissions(Permission.DriversWrite)
+  @RequireTenantLifecycleFeature('driver_onboarding')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: Object })
   importDrivers(
@@ -563,6 +567,7 @@ export class DriversController {
 
   @Post()
   @RequirePermissions(Permission.DriversWrite)
+  @RequireTenantLifecycleFeature('driver_onboarding')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: DriverResponseDto })
   create(
@@ -869,7 +874,10 @@ export class DriversController {
 
 @Controller('driver-self-service')
 export class DriverSelfServiceController {
-  constructor(private readonly service: DriversService) {}
+  constructor(
+    private readonly service: DriversService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   @Post('exchange-otp')
   @ApiCreatedResponse({ type: Object })
@@ -1082,6 +1090,9 @@ export class DriverSelfServiceController {
         (driver as { verificationAmountMinorUnits?: number }).verificationAmountMinorUnits ?? 0,
       verificationCurrency:
         (driver as { verificationCurrency?: string }).verificationCurrency ?? null,
+      verificationWalletBalanceMinorUnits:
+        (driver as { verificationWalletBalanceMinorUnits?: number })
+          .verificationWalletBalanceMinorUnits ?? 0,
       verificationAvailableSpendMinorUnits:
         (driver as { verificationAvailableSpendMinorUnits?: number })
           .verificationAvailableSpendMinorUnits ?? 0,
@@ -1190,6 +1201,30 @@ export class DriverSelfServiceController {
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt,
       locked: false, // self-service context is never subscription-locked
+    };
+  }
+
+  @Post('notify-organisation')
+  @ApiCreatedResponse({ type: Object })
+  async notifyOrganisation(@Body('token') token: string): Promise<{ message: string }> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    const driver = await this.service.getSelfServiceContext(token);
+    await this.notificationsService.notifyDriverVerificationSetupRequired({
+      tenantId: driver.tenantId,
+      driverId: driver.id,
+      driverName: `${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim() || 'Driver',
+      organisationName: (driver as { organisationName?: string | null }).organisationName ?? null,
+      tenantCountry: null,
+      verificationTierLabel:
+        (driver as { verificationTierLabel?: string | null }).verificationTierLabel ?? null,
+      actionUrl: `/drivers/${driver.id}`,
+    });
+
+    return {
+      message: 'Your organisation has been notified that you are ready to continue verification.',
     };
   }
 

@@ -61,7 +61,7 @@ function LockedDriverModal({ driver, onClose }: { driver: DriverRecord; onClose:
           <div className="flex w-full flex-col gap-2">
             <Link
               className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] hover:bg-[var(--mobiris-primary-dark)]"
-              href={"/billing" as never}
+              href={"/subscription" as never}
               onClick={onClose}
             >
               Upgrade plan

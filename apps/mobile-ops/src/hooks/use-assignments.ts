@@ -7,19 +7,31 @@ import {
   groupAssignments,
 } from '../services/assignment-service';
 
-export function useAssignments() {
+export function useAssignments(enabled = true) {
   const [assignments, setAssignments] = useState<AssignmentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<AssignmentFilter>('all');
 
   const loadAssignments = useCallback(async () => {
+    if (!enabled) {
+      setAssignments([]);
+      return [];
+    }
+
     const records = await fetchAssignments();
     setAssignments(records);
-  }, []);
+    return records;
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setAssignments([]);
+      setLoading(false);
+      return;
+    }
+
     loadAssignments()
       .catch(() => {
         // Screen surfaces explicit fetch errors when refreshed or acted on.
@@ -27,16 +39,21 @@ export function useAssignments() {
       .finally(() => {
         setLoading(false);
       });
-  }, [loadAssignments]);
+  }, [enabled, loadAssignments]);
 
   const refreshAssignments = useCallback(async () => {
+    if (!enabled) {
+      setAssignments([]);
+      return [];
+    }
+
     setRefreshing(true);
     try {
-      await loadAssignments();
+      return await loadAssignments();
     } finally {
       setRefreshing(false);
     }
-  }, [loadAssignments]);
+  }, [enabled, loadAssignments]);
 
   const visibleAssignments = useMemo(
     () => filterAssignments(assignments, filter, searchQuery),

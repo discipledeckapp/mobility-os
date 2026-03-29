@@ -1,5 +1,7 @@
 'use client';
 
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useMemo } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '../../../components/badge';
 import { BottomNav } from '../../../components/bottom-nav';
@@ -11,6 +13,7 @@ import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
+import { useAssignments } from '../../../hooks/use-assignments';
 import { useDriverProfile } from '../../../hooks/use-driver-profile';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
@@ -22,12 +25,14 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const { driver, loading, refreshing, refreshDriver } = useDriverProfile(
     Boolean(session?.linkedDriverId),
   );
+  const { assignments, refreshAssignments } = useAssignments(Boolean(session?.linkedDriverId));
   const licenceRequired = session?.requiredDriverDocumentSlugs?.includes('drivers-license') ?? true;
+  const currentAssignment = useMemo(() => pickCurrentAssignment(assignments), [assignments]);
 
   const onRefresh = async () => {
     try {
       await refreshSession();
-      await refreshDriver();
+      await Promise.all([refreshDriver(), refreshAssignments()]);
       showToast('Verification status refreshed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -36,6 +41,14 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       );
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      void Promise.all([refreshDriver(), refreshAssignments()]).catch(() => {
+        // Pull-to-refresh surfaces visible errors when needed.
+      });
+    }, [refreshAssignments, refreshDriver]),
+  );
 
   if (loading) {
     return (
@@ -134,6 +147,40 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           Mobile access: {session.mobileAccessRevoked ? 'Revoked' : 'Active'}
         </Text>
       </Card>
+
+      {currentAssignment ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Current assignment</Text>
+          <View style={styles.statusPanel}>
+            <Badge
+              label={formatIdentityStatus(currentAssignment.status)}
+              tone={assignmentTone(currentAssignment.status)}
+            />
+            <Text style={styles.statusTitle}>
+              {currentAssignment.vehicle
+                ? `${currentAssignment.vehicle.make} ${currentAssignment.vehicle.model}`
+                : 'Assigned vehicle'}
+            </Text>
+            <Text style={styles.meta}>
+              Plate: {currentAssignment.vehicle?.plate ?? 'Not recorded'}
+            </Text>
+            <Text style={styles.muted}>{assignmentGuidance(currentAssignment.status)}</Text>
+            <Button
+              accessibilityHint="Open the assignment details and operational actions"
+              label={
+                currentAssignment.status === 'active'
+                  ? 'Open assignment workspace'
+                  : 'Review assignment'
+              }
+              onPress={() =>
+                navigation.navigate('AssignmentDetail', {
+                  assignmentId: currentAssignment.id,
+                })
+              }
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Eligibility</Text>
@@ -278,6 +325,56 @@ function getVerificationHeadline(identityStatus: string) {
     return 'Verification in progress';
   }
   return 'Verification not started';
+}
+
+function pickCurrentAssignment(
+  assignments: Array<{
+    id: string;
+    status: string;
+    createdAt: string;
+    startedAt?: string | null;
+    driverConfirmedAt?: string | null;
+    vehicle?: {
+      make: string;
+      model: string;
+      plate?: string | null;
+    };
+  }>,
+) {
+  return (
+    assignments
+      .filter((assignment) =>
+        ['active', 'pending_driver_confirmation', 'created'].includes(assignment.status),
+      )
+      .sort(
+        (left, right) =>
+          new Date(right.driverConfirmedAt ?? right.startedAt ?? right.createdAt).getTime() -
+          new Date(left.driverConfirmedAt ?? left.startedAt ?? left.createdAt).getTime(),
+      )[0] ?? null
+  );
+}
+
+function assignmentTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'active') {
+    return 'success';
+  }
+  if (status === 'pending_driver_confirmation' || status === 'created') {
+    return 'warning';
+  }
+  if (status === 'cancelled' || status === 'declined') {
+    return 'danger';
+  }
+  return 'neutral';
+}
+
+function assignmentGuidance(status: string) {
+  if (status === 'active') {
+    return 'Your vehicle is assigned and remittance or return actions are now available from the assignment workspace.';
+  }
+  if (status === 'pending_driver_confirmation' || status === 'created') {
+    return 'A vehicle has been assigned to you. Open the assignment to review the details and accept the terms if required.';
+  }
+  return 'This assignment is no longer active.';
 }
 
 const styles = StyleSheet.create({

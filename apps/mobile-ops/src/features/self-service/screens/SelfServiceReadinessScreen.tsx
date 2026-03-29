@@ -1,7 +1,7 @@
 'use client';
 
 import { Alert, Linking, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { initiateDriverKycCheckout } from '../../../api';
+import { initiateDriverKycCheckout, notifyDriverSelfServiceOrganisation } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -65,6 +65,19 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     navigation.replace('SelfServiceOtp');
   };
 
+  const onNotifyOrganisation = async () => {
+    if (!token) return;
+    try {
+      const result = await notifyDriverSelfServiceOrganisation(token);
+      showToast(result.message, 'success');
+    } catch (error) {
+      Alert.alert(
+        'Notify organisation',
+        error instanceof Error ? error.message : 'Unable to notify your organisation right now.',
+      );
+    }
+  };
+
   if (isLoading || !token || !driver) {
     return (
       <Screen contentContainerStyle={styles.centered}>
@@ -103,6 +116,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     driver.verificationEntitlementState === 'reserved';
   const needsVerificationPayment =
     driver.driverPaysKyc && driver.verificationPaymentStatus === 'driver_payment_required';
+  const companyFundingBlocked =
+    !driver.driverPaysKyc &&
+    (driver.verificationPaymentStatus === 'wallet_missing' ||
+      driver.verificationPaymentStatus === 'insufficient_balance');
   const mobileAccessLabel = formatMobileAccessLabel(driver.mobileAccessStatus);
   const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
 
@@ -220,9 +237,19 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           <Text style={styles.sectionTitle}>Identity verification payment</Text>
           <Text style={styles.copy}>
             {driver.verificationPaymentMessage ??
-              'Your organisation requires you to pay the verification fee before your identity check can proceed.'}
+              `Your organisation requires you to pay for ${driver.verificationTierLabel ?? 'your selected verification tier'} before your identity check can proceed.`}
           </Text>
-          <Button label="Pay verification fee" onPress={() => void onPayKyc()} />
+          <Button
+            label={
+              driver.verificationAmountMinorUnits
+                ? `Pay ${(driver.verificationAmountMinorUnits / 100).toLocaleString('en-NG', {
+                    style: 'currency',
+                    currency: driver.verificationCurrency ?? 'NGN',
+                  })}`
+                : 'Pay verification'
+            }
+            onPress={() => void onPayKyc()}
+          />
           <Text style={styles.kycNote}>
             You will be redirected to a secure payment page. Return here after payment completes.
           </Text>
@@ -240,8 +267,27 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           </View>
           <Text style={styles.copy}>
             {driver.verificationPaymentMessage ??
-              'Your verification payment has already been received. You can continue from where you stopped.'}
+              `Your payment for ${driver.verificationTierLabel ?? 'this verification tier'} has already been received. You can continue from where you stopped.`}
           </Text>
+        </Card>
+      ) : companyFundingBlocked ? (
+        <Card style={[styles.section, styles.kycPaymentCard]}>
+          <Text style={styles.sectionTitle}>Verification waiting on organisation</Text>
+          <Text style={styles.copy}>
+            {`Verification requires confirmation from your organisation before ${driver.verificationTierLabel ?? 'this verification tier'} can continue.`}
+          </Text>
+          <Text style={styles.kycNote}>
+            If your organisation allows driver-paid verification, they can switch this onboarding
+            flow so you can continue payment yourself.
+          </Text>
+          <Text style={styles.kycNote}>
+            You can also wait and return later, or send a reminder that you are ready to continue.
+          </Text>
+          <Button
+            label="Notify organisation"
+            variant="secondary"
+            onPress={() => void onNotifyOrganisation()}
+          />
         </Card>
       ) : null}
 
@@ -457,6 +503,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  fundingMetric: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

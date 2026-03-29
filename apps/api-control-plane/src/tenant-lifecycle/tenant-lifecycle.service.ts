@@ -3,6 +3,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../database/prisma.service';
 import type { CpSubscription, CpTenantLifecycleEvent, Prisma } from '../generated/prisma';
 
+const SUBSCRIPTION_GRACE_PERIOD_DAYS = 5;
+
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   trialing: ['onboarded', 'active', 'past_due', 'canceled'],
   prospect: ['onboarded', 'active', 'canceled'],
@@ -19,6 +21,47 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 @Injectable()
 export class TenantLifecycleService {
   constructor(private readonly prisma: PrismaService) {}
+
+  resolveEnforcementState(
+    subscription: Pick<CpSubscription, 'status' | 'currentPeriodEnd'>,
+    asOf = new Date(),
+  ): {
+    stage: 'active' | 'grace' | 'expired';
+    gracePeriodDays: number;
+    graceEndsAt: Date | null;
+    graceDaysRemaining: number;
+    degradedMode: boolean;
+    blockedFeatures: Array<'driver_onboarding' | 'vehicle_onboarding' | 'assignment_creation'>;
+  } {
+    if (!['past_due', 'grace_period'].includes(subscription.status)) {
+      return {
+        stage: 'active',
+        gracePeriodDays: SUBSCRIPTION_GRACE_PERIOD_DAYS,
+        graceEndsAt: null,
+        graceDaysRemaining: 0,
+        degradedMode: false,
+        blockedFeatures: [],
+      };
+    }
+
+    const graceEndsAt = new Date(subscription.currentPeriodEnd);
+    graceEndsAt.setUTCDate(graceEndsAt.getUTCDate() + SUBSCRIPTION_GRACE_PERIOD_DAYS);
+    const millisecondsRemaining = graceEndsAt.getTime() - asOf.getTime();
+    const graceDaysRemaining =
+      millisecondsRemaining > 0 ? Math.ceil(millisecondsRemaining / (24 * 60 * 60 * 1000)) : 0;
+    const inGrace = graceDaysRemaining > 0;
+
+    return {
+      stage: inGrace ? 'grace' : 'expired',
+      gracePeriodDays: SUBSCRIPTION_GRACE_PERIOD_DAYS,
+      graceEndsAt,
+      graceDaysRemaining,
+      degradedMode: !inGrace,
+      blockedFeatures: inGrace
+        ? ['driver_onboarding', 'vehicle_onboarding']
+        : ['driver_onboarding', 'vehicle_onboarding', 'assignment_creation'],
+    };
+  }
 
   async getCurrentState(tenantId: string): Promise<CpSubscription> {
     const subscription = await this.prisma.cpSubscription.findUnique({

@@ -133,6 +133,25 @@ export function WalletScreen() {
         <Card><LoadingSkeleton height={120} /></Card>
       ) : (
         <>
+          {billingQuery.data.subscription.enforcement?.stage === 'grace' ? (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Grace period</Text>
+              <Text style={styles.meta}>
+                Subscription expired. Renew within{' '}
+                {billingQuery.data.subscription.enforcement.graceDaysRemaining} day(s). New
+                drivers and new vehicles are blocked until renewal.
+              </Text>
+            </Card>
+          ) : null}
+          {billingQuery.data.subscription.enforcement?.stage === 'expired' ? (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Degraded mode</Text>
+              <Text style={styles.meta}>
+                Subscription expired. Drivers can still log remittance and view assignments, but
+                new drivers, new vehicles, and new assignments are blocked until upgrade.
+              </Text>
+            </Card>
+          ) : null}
           <Card style={styles.section}>
             <Text style={styles.balance}>
               {billingQuery.data.verificationWallet.currency}{' '}

@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { RequireTenantLifecycleFeature } from '../auth/decorators/tenant-lifecycle-access.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
@@ -122,6 +123,7 @@ export class VehiclesController {
 
   @Post('import')
   @RequirePermissions(Permission.VehiclesWrite)
+  @RequireTenantLifecycleFeature('vehicle_onboarding')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: Object })
   importVehicles(
@@ -148,6 +150,7 @@ export class VehiclesController {
 
   @Post()
   @RequirePermissions(Permission.VehiclesWrite)
+  @RequireTenantLifecycleFeature('vehicle_onboarding')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: VehicleResponseDto })
   create(

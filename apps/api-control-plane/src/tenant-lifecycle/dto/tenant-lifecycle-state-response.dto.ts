@@ -1,5 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class TenantLifecycleEnforcementDto {
+  @ApiProperty()
+  stage!: 'active' | 'grace' | 'expired';
+
+  @ApiProperty()
+  gracePeriodDays!: number;
+
+  @ApiProperty({ nullable: true })
+  graceEndsAt!: Date | null;
+
+  @ApiProperty()
+  graceDaysRemaining!: number;
+
+  @ApiProperty()
+  degradedMode!: boolean;
+
+  @ApiProperty({ type: [String] })
+  blockedFeatures!: string[];
+}
+
 export class TenantLifecycleStateResponseDto {
   @ApiProperty()
   tenantId!: string;
@@ -18,4 +38,7 @@ export class TenantLifecycleStateResponseDto {
 
   @ApiProperty()
   cancelAtPeriodEnd!: boolean;
+
+  @ApiProperty({ type: TenantLifecycleEnforcementDto })
+  enforcement!: TenantLifecycleEnforcementDto;
 }

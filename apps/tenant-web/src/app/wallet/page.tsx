@@ -15,14 +15,12 @@ import {
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
-  type TenantBillingPlanRecord,
   type TenantBillingSummaryRecord,
   type WalletBalanceRecord,
   type WalletEntryRecord,
   getOperationalWalletBalance,
   getTenantApiContext,
   getTenantBillingSummary,
-  listTenantBillingPlans,
   getTenantMe,
   getTenantSession,
   listOperationalWalletEntries,
@@ -62,7 +60,6 @@ export default async function WalletPage() {
   let balance: WalletBalanceRecord | null = null;
   let entries: WalletEntryRecord[] = [];
   let billingSummary: TenantBillingSummaryRecord | null = null;
-  let plans: TenantBillingPlanRecord[] = [];
   let contextError: string | null = null;
   let balanceError: string | null = null;
   let entriesError: string | null = null;
@@ -81,11 +78,10 @@ export default async function WalletPage() {
       contextError =
         'The current tenant session does not include a business-entity scope for wallet access.';
     } else {
-      const [balanceResult, entriesResult, billingResult, plansResult] = await Promise.allSettled([
+      const [balanceResult, entriesResult, billingResult] = await Promise.allSettled([
         getOperationalWalletBalance(businessEntityId),
         listOperationalWalletEntries(businessEntityId),
         getTenantBillingSummary(),
-        listTenantBillingPlans(),
       ]);
 
       if (balanceResult.status === 'fulfilled') {
@@ -112,11 +108,7 @@ export default async function WalletPage() {
         billingError =
           billingResult.reason instanceof Error
             ? billingResult.reason.message
-            : 'Unable to load subscription and verification wallet context.';
-      }
-
-      if (plansResult.status === 'fulfilled') {
-        plans = plansResult.value;
+            : 'Unable to load verification wallet and credit context.';
       }
     }
   } catch (error) {
@@ -128,73 +120,28 @@ export default async function WalletPage() {
 
   return (
     <TenantAppShell
-      description="Manage plan status, billing exposure, verification credits, and usage caps for your organisation."
-      eyebrow="Subscription"
-      title="Subscription"
+      description="Wallet and credit fund verification. Subscription limits and verification tier live on separate pages."
+      eyebrow="Wallet"
+      title="Wallet and credit"
     >
       <Card>
         <CardHeader>
-          <CardTitle>Subscription overview</CardTitle>
+          <CardTitle>Verification funding</CardTitle>
           <CardDescription>
-            Review your current plan, invoices, usage posture, and the verification wallet used for
-            identity charges.
+            Wallet balance, approved credit, and saved card determine whether the selected driver
+            verification tier can be paid for. They do not change your subscription limits or
+            verification requirements.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {billingError ? (
-            <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-              <p className="font-semibold">Subscription data is loading</p>
-              <p className="mt-1 text-amber-700">
-                Your account is being set up. Usage limits and billing details will appear here once
-                the subscription service is ready. You can continue using all features in the
-                meantime.
-              </p>
-            </div>
+            <Text>{billingError}</Text>
           ) : !billingSummary ? (
-            <Text>Subscription context is not available yet.</Text>
+            <Text>Verification wallet context is not available yet.</Text>
           ) : (
             <>
               <div className="grid gap-4 md:grid-cols-4">
                 <Card className="border-white/70 bg-white/95 shadow-none">
-                  <CardContent className="p-4">
-                    <Text tone="muted">Current plan</Text>
-                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                      {billingSummary.subscription.planName}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {billingSummary.subscription.planTier} ·{' '}
-                      {billingSummary.subscription.currency}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="border-white/70 bg-[var(--mobiris-primary-tint)] shadow-none">
-                  <CardContent className="p-4">
-                    <Text tone="muted">Subscription status</Text>
-                    <div className="mt-2">
-                      <Badge
-                        tone={
-                          billingSummary.subscription.status === 'active'
-                            ? 'success'
-                            : ['past_due', 'grace_period'].includes(
-                                  billingSummary.subscription.status,
-                                )
-                              ? 'warning'
-                              : 'neutral'
-                        }
-                      >
-                        {billingSummary.subscription.status}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500">
-                      {billingSummary.subscription.cancelAtPeriodEnd
-                        ? 'Cancels at period close'
-                        : billingSummary.subscription.trialEndsAt
-                          ? `Trial ends ${formatDate(billingSummary.subscription.trialEndsAt, locale)}`
-                          : `Renews ${formatDate(billingSummary.subscription.currentPeriodEnd, locale)}`}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="border-white/70 bg-[var(--mobiris-primary-tint)] shadow-none">
                   <CardContent className="p-4">
                     <Text tone="muted">Verification wallet</Text>
                     <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
@@ -211,27 +158,6 @@ export default async function WalletPage() {
                 </Card>
                 <Card className="border-white/70 bg-white/95 shadow-none">
                   <CardContent className="p-4">
-                    <Text tone="muted">Open invoices</Text>
-                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                      {billingSummary.usage.openInvoiceCount}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {billingSummary.outstandingInvoice
-                        ? `${formatMoney(
-                            billingSummary.outstandingInvoice.amountDueMinorUnits -
-                              billingSummary.outstandingInvoice.amountPaidMinorUnits,
-                            billingSummary.outstandingInvoice.currency,
-                            locale,
-                          )} currently outstanding`
-                        : 'No overdue subscription invoice right now'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-4">
-                <Card className="border-white/70 bg-white/95 shadow-none">
-                  <CardContent className="p-4">
                     <Text tone="muted">Credit limit</Text>
                     <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
                       {formatMoney(
@@ -246,21 +172,6 @@ export default async function WalletPage() {
                         : billingSummary.verificationSpend.starterCreditActive
                           ? 'Starter credit is active for Basic Identity'
                           : 'No verification credit activated yet'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="border-white/70 bg-white/95 shadow-none">
-                  <CardContent className="p-4">
-                    <Text tone="muted">Credit used</Text>
-                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                      {formatMoney(
-                        billingSummary.verificationSpend.creditUsedMinorUnits,
-                        billingSummary.verificationSpend.currency,
-                        locale,
-                      )}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Charges consumed from starter or card credit
                     </p>
                   </CardContent>
                 </Card>
@@ -298,47 +209,46 @@ export default async function WalletPage() {
 
               <Card className="border-white/70 bg-white/95 shadow-none">
                 <CardHeader>
-                  <CardTitle>Usage and plan capacity</CardTitle>
+                  <CardTitle>Verification funding state</CardTitle>
                   <CardDescription>
-                    Track your current company usage against the limits included in this
-                    subscription.
+                    Funding determines whether verification can be charged. The selected tier and
+                    payer still come from Settings → Drivers.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-                    <Text tone="muted">Drivers</Text>
+                    <Text tone="muted">Credit used</Text>
                     <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                      {billingSummary.usage.driverCount}
+                      {formatMoney(
+                        billingSummary.verificationSpend.creditUsedMinorUnits,
+                        billingSummary.verificationSpend.currency,
+                        locale,
+                      )}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Cap:{' '}
-                      {billingSummary.usage.driverCap == null
-                        ? 'Unlimited'
-                        : billingSummary.usage.driverCap}
+                      Charges consumed from starter or card credit
                     </p>
                   </div>
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-                    <Text tone="muted">Vehicles</Text>
+                    <Text tone="muted">Starter credit</Text>
                     <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                      {billingSummary.usage.vehicleCount}
+                      {billingSummary.verificationSpend.starterCreditActive ? 'Active' : 'Inactive'}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Cap:{' '}
-                      {billingSummary.usage.vehicleCap == null
-                        ? 'Unlimited'
-                        : billingSummary.usage.vehicleCap}
+                      {billingSummary.verificationSpend.starterCreditEligible
+                        ? 'Starter credit is available for qualifying verification tiers'
+                        : 'Starter credit is not available for this account'}
                     </p>
                   </div>
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-                    <Text tone="muted">Operator seats</Text>
+                    <Text tone="muted">Unlocked tiers</Text>
                     <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                      {billingSummary.usage.operatorSeatCount}
+                      {billingSummary.verificationSpend.unlockedTiers.length}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Cap:{' '}
-                      {billingSummary.usage.seatCap == null
-                        ? 'Unlimited'
-                        : billingSummary.usage.seatCap}
+                      {billingSummary.verificationSpend.unlockedTiers.length > 0
+                        ? billingSummary.verificationSpend.unlockedTiers.join(', ').replaceAll('_', ' ')
+                        : 'Fund wallet or activate card credit to unlock higher tiers'}
                     </p>
                   </div>
                 </CardContent>
@@ -346,72 +256,8 @@ export default async function WalletPage() {
 
               <PaymentActionPanel
                 currencyMinorUnit={currencyMinorUnit}
-                plans={plans}
                 summary={billingSummary}
               />
-
-              <Card className="border-white/70 bg-white/95 shadow-none">
-                <CardHeader>
-                  <CardTitle>Subscription invoices</CardTitle>
-                  <CardDescription>
-                    Review billing periods, due dates, and payment status for this organisation.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {billingSummary.invoices.length === 0 ? (
-                    <Text>No subscription invoices have been generated yet.</Text>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Amount due</TableHead>
-                          <TableHead>Amount paid</TableHead>
-                          <TableHead>Period</TableHead>
-                          <TableHead>Due</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {billingSummary.invoices.map((invoice) => (
-                          <TableRow key={invoice.id}>
-                            <TableCell>
-                              <Badge
-                                tone={
-                                  invoice.status === 'paid'
-                                    ? 'success'
-                                    : invoice.status === 'open'
-                                      ? 'warning'
-                                      : 'neutral'
-                                }
-                              >
-                                {invoice.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {formatMoney(invoice.amountDueMinorUnits, invoice.currency, locale)}
-                            </TableCell>
-                            <TableCell>
-                              {formatMoney(invoice.amountPaidMinorUnits, invoice.currency, locale)}
-                            </TableCell>
-                            <TableCell>
-                              {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-                                new Date(invoice.periodStart),
-                              )}{' '}
-                              to{' '}
-                              {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-                                new Date(invoice.periodEnd),
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {invoice.dueAt ? formatDate(invoice.dueAt, locale) : 'Not scheduled'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
 
               <Card className="border-white/70 bg-white/95 shadow-none">
                 <CardHeader>
@@ -503,7 +349,7 @@ export default async function WalletPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ledger entries</CardTitle>
+          <CardTitle>Operational wallet ledger</CardTitle>
           <CardDescription>
             Recent wallet movements for this organisation, including credits, debits, and reversals.
           </CardDescription>

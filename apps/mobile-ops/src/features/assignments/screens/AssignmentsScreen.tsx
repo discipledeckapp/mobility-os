@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '../../../components/badge';
 import { BottomNav } from '../../../components/bottom-nav';
@@ -44,7 +45,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
     setSearchQuery,
     setFilter,
     refreshAssignments,
-  } = useAssignments();
+  } = useAssignments(Boolean(session?.linkedDriverId));
   const { driver } = useDriverProfile(Boolean(session?.linkedDriverId));
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -119,6 +120,17 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
   const currentAssignment = useMemo(
     () => pickCurrentAssignment(assignments),
     [assignments],
+  );
+
+  useFocusEffect(
+    useCallback(
+      () => {
+        void refreshAssignments().catch(() => {
+          // Pull-to-refresh and action handlers surface visible errors.
+        });
+      },
+      [refreshAssignments],
+    ),
   );
 
   return (

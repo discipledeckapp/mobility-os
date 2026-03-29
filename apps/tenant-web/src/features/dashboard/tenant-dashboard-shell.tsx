@@ -505,7 +505,7 @@ export function TenantDashboardShell({
                 <div className="mt-3">
                   <Link href="/wallet">
                     <Button size="sm" variant="secondary">
-                      Open subscription and billing
+                      Open wallet and credit
                     </Button>
                   </Link>
                 </div>

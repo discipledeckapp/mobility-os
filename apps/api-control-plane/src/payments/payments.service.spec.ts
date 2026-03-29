@@ -104,6 +104,8 @@ describe('PaymentsService', () => {
       subjectId: 'guarantor_1',
       relatedDriverId: 'driver_1',
       currency: 'NGN',
+      verificationTier: 'VERIFIED_IDENTITY',
+      amountMinorUnits: 1_000_000,
       customerEmail: 'guarantor@example.com',
       customerName: 'Guarantor One',
     });
@@ -112,10 +114,13 @@ describe('PaymentsService', () => {
     expect(prisma.cpPaymentAttempt.create).toHaveBeenCalled();
     expect(paymentProvidersService.initializePayment).toHaveBeenCalledWith(
       expect.objectContaining({
+        amountMinorUnits: 1_000_000,
+        description: 'Mobiris Verified Identity verification fee',
         metadata: expect.objectContaining({
           subjectType: 'guarantor',
           subjectId: 'guarantor_1',
           driverId: 'driver_1',
+          verificationTier: 'VERIFIED_IDENTITY',
         }),
       }),
     );
@@ -322,6 +327,8 @@ describe('PaymentsService', () => {
       customerEmail: 'driver@example.com',
       customerName: 'Driver One',
       currency: 'NGN',
+      verificationTier: 'FULL_TRUST_VERIFICATION',
+      amountMinorUnits: 1_500_000,
     });
 
     expect(result).toEqual({
@@ -333,5 +340,14 @@ describe('PaymentsService', () => {
     });
     expect(paymentProvidersService.initializePayment).not.toHaveBeenCalled();
     expect(prisma.cpPaymentAttempt.create).not.toHaveBeenCalled();
+    expect(prisma.cpPaymentAttempt.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          reference: {
+            startsWith: 'mos_paystack_identity_verification_driver_driver_1_',
+          },
+        }),
+      }),
+    );
   });
 });

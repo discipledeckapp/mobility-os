@@ -37,7 +37,12 @@ describe('TenantLifecycleGuard', () => {
       controlPlaneLifecycleClient as never,
       reflector,
     );
-    (reflector.getAllAndOverride as jest.Mock).mockReturnValue(false);
+    (reflector.getAllAndOverride as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'allowBlockedTenantAccess') {
+        return false;
+      }
+      return undefined;
+    });
   });
 
   it('allows write access for active tenants and syncs local status', async () => {
@@ -52,6 +57,14 @@ describe('TenantLifecycleGuard', () => {
       currentPeriodStart: '2026-03-01T00:00:00.000Z',
       currentPeriodEnd: '2026-04-01T00:00:00.000Z',
       cancelAtPeriodEnd: false,
+      enforcement: {
+        stage: 'active',
+        gracePeriodDays: 5,
+        graceEndsAt: null,
+        graceDaysRemaining: 0,
+        degradedMode: false,
+        blockedFeatures: [],
+      },
     });
 
     await expect(guard.canActivate(createExecutionContext('POST'))).resolves.toBe(true);
@@ -61,26 +74,65 @@ describe('TenantLifecycleGuard', () => {
     });
   });
 
-  it('blocks writes for past_due tenants', async () => {
+  it('blocks new driver onboarding during grace', async () => {
     prisma.tenant.findUnique.mockResolvedValue({
       id: 'tenant_1',
       status: 'past_due',
     });
-    controlPlaneLifecycleClient.getTenantLifecycleState.mockRejectedValue(new Error('offline'));
+    controlPlaneLifecycleClient.getTenantLifecycleState.mockResolvedValue({
+      tenantId: 'tenant_1',
+      subscriptionId: 'sub_1',
+      status: 'past_due',
+      currentPeriodStart: '2026-03-01T00:00:00.000Z',
+      currentPeriodEnd: '2026-04-01T00:00:00.000Z',
+      cancelAtPeriodEnd: false,
+      enforcement: {
+        stage: 'grace',
+        gracePeriodDays: 5,
+        graceEndsAt: '2026-04-06T00:00:00.000Z',
+        graceDaysRemaining: 3,
+        degradedMode: false,
+        blockedFeatures: ['driver_onboarding', 'vehicle_onboarding'],
+      },
+    });
+    (reflector.getAllAndOverride as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'allowBlockedTenantAccess') return false;
+      if (key === 'tenantLifecycleFeature') return 'driver_onboarding';
+      return undefined;
+    });
 
     await expect(guard.canActivate(createExecutionContext('POST'))).rejects.toBeInstanceOf(
       ForbiddenException,
     );
   });
 
-  it('allows reads for past_due tenants', async () => {
+  it('allows assignment operations in degraded mode', async () => {
     prisma.tenant.findUnique.mockResolvedValue({
       id: 'tenant_1',
       status: 'past_due',
     });
-    controlPlaneLifecycleClient.getTenantLifecycleState.mockRejectedValue(new Error('offline'));
+    controlPlaneLifecycleClient.getTenantLifecycleState.mockResolvedValue({
+      tenantId: 'tenant_1',
+      subscriptionId: 'sub_1',
+      status: 'past_due',
+      currentPeriodStart: '2026-03-01T00:00:00.000Z',
+      currentPeriodEnd: '2026-04-01T00:00:00.000Z',
+      cancelAtPeriodEnd: false,
+      enforcement: {
+        stage: 'expired',
+        gracePeriodDays: 5,
+        graceEndsAt: '2026-04-06T00:00:00.000Z',
+        graceDaysRemaining: 0,
+        degradedMode: true,
+        blockedFeatures: ['driver_onboarding', 'vehicle_onboarding', 'assignment_creation'],
+      },
+    });
+    (reflector.getAllAndOverride as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'allowBlockedTenantAccess') return false;
+      return undefined;
+    });
 
-    await expect(guard.canActivate(createExecutionContext('GET'))).resolves.toBe(true);
+    await expect(guard.canActivate(createExecutionContext('POST'))).resolves.toBe(true);
   });
 
   it('blocks all access for suspended tenants unless bypassed', async () => {

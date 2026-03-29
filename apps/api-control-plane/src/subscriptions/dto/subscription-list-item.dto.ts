@@ -1,5 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+class SubscriptionEnforcementDto {
+  @ApiProperty()
+  stage!: 'active' | 'grace' | 'expired';
+
+  @ApiProperty()
+  gracePeriodDays!: number;
+
+  @ApiPropertyOptional()
+  graceEndsAt?: Date | null;
+
+  @ApiProperty()
+  graceDaysRemaining!: number;
+
+  @ApiProperty()
+  degradedMode!: boolean;
+
+  @ApiProperty({ type: [String] })
+  blockedFeatures!: string[];
+}
+
 export class SubscriptionListItemDto {
   @ApiProperty()
   id!: string;
@@ -39,6 +59,9 @@ export class SubscriptionListItemDto {
 
   @ApiPropertyOptional()
   trialEndsAt?: Date | null;
+
+  @ApiProperty({ type: SubscriptionEnforcementDto })
+  enforcement!: SubscriptionEnforcementDto;
 
   @ApiProperty()
   createdAt!: Date;

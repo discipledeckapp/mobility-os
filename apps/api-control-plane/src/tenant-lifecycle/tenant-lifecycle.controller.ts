@@ -28,6 +28,7 @@ export class TenantLifecycleController {
       currentPeriodStart: subscription.currentPeriodStart,
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      enforcement: this.tenantLifecycleService.resolveEnforcementState(subscription),
     };
   }
 
@@ -57,6 +58,7 @@ export class TenantLifecycleController {
       currentPeriodStart: subscription.currentPeriodStart,
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      enforcement: this.tenantLifecycleService.resolveEnforcementState(subscription),
     };
   }
 }

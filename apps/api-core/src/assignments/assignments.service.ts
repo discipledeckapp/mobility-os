@@ -7,7 +7,7 @@ import {
   toIsoDate,
 } from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, type Assignment } from '@prisma/client';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv, parseCsv } from '../common/csv-utils';
@@ -16,6 +16,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.service';
 import { PolicyService } from '../policy/policy.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
@@ -42,12 +43,15 @@ type AssignmentResourceInput = {
 
 @Injectable()
 export class AssignmentsService {
+  private readonly logger = new Logger(AssignmentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly driversService: DriversService,
     private readonly vehicleRiskService: VehicleRiskService,
     private readonly policyService: PolicyService,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async resolveTenantCurrency(tenantId: string): Promise<string> {
@@ -152,6 +156,82 @@ export class AssignmentsService {
       action,
       ...(metadata !== undefined ? { metadata } : {}),
     });
+  }
+
+  private buildVehicleLabel(input: {
+    vehicleId: string;
+    make?: string | null | undefined;
+    model?: string | null | undefined;
+    plate?: string | null | undefined;
+    tenantVehicleCode?: string | null | undefined;
+    systemVehicleCode?: string | null | undefined;
+  }) {
+    return (
+      input.plate?.trim() ||
+      input.tenantVehicleCode?.trim() ||
+      input.systemVehicleCode?.trim() ||
+      `${input.make ?? ''} ${input.model ?? ''}`.trim() ||
+      input.vehicleId
+    );
+  }
+
+  private async sendAssignmentIssuedNotification(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    requiresAcceptance: boolean;
+  }) {
+    try {
+      await this.notificationsService.notifyAssignmentIssued(input);
+    } catch (error) {
+      this.logger.warn(
+        `Assignment issued notification failed for '${input.assignmentId}': ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
+  }
+
+  private async sendAssignmentAcceptedNotification(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+  }) {
+    try {
+      await this.notificationsService.notifyAssignmentAccepted(input);
+    } catch (error) {
+      this.logger.warn(
+        `Assignment accepted notification failed for '${input.assignmentId}': ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
+  }
+
+  private async sendAssignmentEndedNotification(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    status: 'ended' | 'cancelled';
+  }) {
+    try {
+      await this.notificationsService.notifyAssignmentEnded(input);
+    } catch (error) {
+      this.logger.warn(
+        `Assignment end notification failed for '${input.assignmentId}': ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
   }
 
   async list(
@@ -357,7 +437,7 @@ export class AssignmentsService {
 
   async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment & { financialContract: unknown | null }> {
     const tenantCurrency = await this.resolveTenantCurrency(tenantId);
-    const { driver } = await this.loadAssignmentResources(tenantId, dto, ['available']);
+    const { driver, vehicle } = await this.loadAssignmentResources(tenantId, dto, ['available']);
     await this.ensureNoOverlappingAssignments(dto);
     const { topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, dto);
     const contractSnapshot = {
@@ -398,6 +478,22 @@ export class AssignmentsService {
       vehicleId: assignment.vehicleId,
       status: assignment.status,
       contractVersion: assignment.contractVersion,
+    });
+    await this.sendAssignmentIssuedNotification({
+      tenantId,
+      assignmentId: assignment.id,
+      driverId: assignment.driverId,
+      fleetId: assignment.fleetId,
+      vehicleId: assignment.vehicleId,
+      vehicleLabel: this.buildVehicleLabel({
+        vehicleId: assignment.vehicleId,
+        make: vehicle.make,
+        model: vehicle.model,
+        plate: vehicle.plate,
+        tenantVehicleCode: vehicle.tenantVehicleCode,
+        systemVehicleCode: vehicle.systemVehicleCode,
+      }),
+      requiresAcceptance: assignment.status === 'pending_driver_confirmation',
     });
 
     return this.enrichAssignment(assignment);
@@ -509,6 +605,32 @@ export class AssignmentsService {
     });
     await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_activated', {
       activatedAt: acceptedAt.toISOString(),
+    });
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: updated.vehicleId },
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        plate: true,
+        tenantVehicleCode: true,
+        systemVehicleCode: true,
+      },
+    });
+    await this.sendAssignmentAcceptedNotification({
+      tenantId,
+      assignmentId: updated.id,
+      driverId: updated.driverId,
+      fleetId: updated.fleetId,
+      vehicleId: updated.vehicleId,
+      vehicleLabel: this.buildVehicleLabel({
+        vehicleId: updated.vehicleId,
+        make: vehicle?.make,
+        model: vehicle?.model,
+        plate: vehicle?.plate,
+        tenantVehicleCode: vehicle?.tenantVehicleCode,
+        systemVehicleCode: vehicle?.systemVehicleCode,
+      }),
     });
     return this.enrichAssignment(updated);
   }
@@ -702,6 +824,33 @@ export class AssignmentsService {
         stoppedAt: returnedAt.toISOString(),
         reason: resolution,
       },
+    });
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: assignment.vehicleId },
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        plate: true,
+        tenantVehicleCode: true,
+        systemVehicleCode: true,
+      },
+    });
+    await this.sendAssignmentEndedNotification({
+      tenantId,
+      assignmentId: assignment.id,
+      driverId: assignment.driverId,
+      fleetId: assignment.fleetId,
+      vehicleId: assignment.vehicleId,
+      vehicleLabel: this.buildVehicleLabel({
+        vehicleId: assignment.vehicleId,
+        make: vehicle?.make,
+        model: vehicle?.model,
+        plate: vehicle?.plate,
+        tenantVehicleCode: vehicle?.tenantVehicleCode,
+        systemVehicleCode: vehicle?.systemVehicleCode,
+      }),
+      status: resolution,
     });
     return this.enrichAssignment(updated as Assignment);
   }

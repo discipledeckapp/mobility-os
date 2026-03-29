@@ -13,7 +13,29 @@ import {
 } from '../../lib/api-core';
 import { SettingsPanel } from './settings-panel';
 
-export default async function SettingsPage() {
+interface SettingsPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function getSection(value: string | string[] | undefined) {
+  const first = Array.isArray(value) ? value[0] : value;
+  if (
+    first === 'account' ||
+    first === 'organisation' ||
+    first === 'drivers' ||
+    first === 'fleet' ||
+    first === 'notifications' ||
+    first === 'team' ||
+    first === 'privacy'
+  ) {
+    return first;
+  }
+  return undefined;
+}
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const initialSection = getSection(resolvedSearchParams.section);
   const token = await getTenantApiToken().catch(() => undefined);
   const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, privacySupport, dataRequests] = await Promise.all([
     getTenantMe(token),
@@ -44,6 +66,7 @@ export default async function SettingsPage() {
         privacySupport={privacySupport}
         session={session}
         tenant={tenant}
+        {...(initialSection ? { initialSection } : {})}
         dataRequests={dataRequests}
         vehicles={vehiclesPage.data}
       />

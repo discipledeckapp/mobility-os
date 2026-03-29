@@ -15,6 +15,14 @@ export interface TenantSubscriptionSummary {
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
   trialEndsAt?: string | null;
+  enforcement?: {
+    stage: 'active' | 'grace' | 'expired';
+    gracePeriodDays: number;
+    graceEndsAt: string | null;
+    graceDaysRemaining: number;
+    degradedMode: boolean;
+    blockedFeatures: string[];
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -175,6 +183,8 @@ export class ControlPlaneBillingClient {
     driverId: string;
     provider: string;
     currency: string;
+    verificationTier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+    amountMinorUnits: number;
     customerEmail: string;
     customerName?: string;
     redirectUrl: string;
@@ -192,6 +202,8 @@ export class ControlPlaneBillingClient {
     relatedDriverId?: string;
     provider: string;
     currency: string;
+    verificationTier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+    amountMinorUnits: number;
     customerEmail: string;
     customerName?: string;
     redirectUrl: string;

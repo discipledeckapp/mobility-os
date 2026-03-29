@@ -153,7 +153,9 @@ function getNextStep(
   ) {
     return {
       title: 'Verify your identity',
-      description: 'Complete payment if required, then verify with your ID number and live selfie.',
+      description: driver.driverPaysKyc
+        ? 'Complete payment if required, then verify with your ID number and live selfie.'
+        : 'Review organisation confirmation or continue verification if coverage is already available.',
       cta: 'Continue verification',
       onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
         navigation.navigate('SelfServiceVerification'),

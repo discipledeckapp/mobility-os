@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { RequireTenantLifecycleFeature } from '../auth/decorators/tenant-lifecycle-access.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
@@ -110,6 +111,7 @@ export class AssignmentsController {
 
   @Post('import')
   @RequirePermissions(Permission.AssignmentsWrite)
+  @RequireTenantLifecycleFeature('assignment_creation')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: Object })
   importAssignments(
@@ -138,6 +140,7 @@ export class AssignmentsController {
 
   @Post()
   @RequirePermissions(Permission.AssignmentsWrite)
+  @RequireTenantLifecycleFeature('assignment_creation')
   @UseGuards(PermissionsGuard)
   @ApiCreatedResponse({ type: AssignmentResponseDto })
   create(
