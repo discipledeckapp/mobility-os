@@ -74,6 +74,10 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
     [session?.permissions],
   );
   const currencyCode = session?.defaultCurrency ?? '';
+  const supportsRemittance =
+    !assignment?.paymentModel ||
+    assignment.paymentModel === 'remittance' ||
+    assignment.paymentModel === 'hire_purchase';
 
   const load = useCallback(async () => {
     const nextAssignment = await fetchAssignmentDetail(assignmentId);
@@ -359,13 +363,16 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
           <Text style={styles.meta}>
             Confirmation: {assignment.driverConfirmationMethod ?? 'Not recorded'}
           </Text>
+          <Text style={styles.meta}>
+            Payment model: {(assignment.paymentModel ?? 'remittance').replace(/_/g, ' ')}
+          </Text>
           {assignment.notes ? <Text style={styles.meta}>Notes: {assignment.notes}</Text> : null}
-          {assignment.financialContract ? (
+          {supportsRemittance && assignment.financialContract ? (
             <Text style={styles.meta}>
               Contract: {assignment.financialContract.display.expectedRemittanceTerms}
             </Text>
           ) : null}
-          {assignment.financialContract ? (
+          {supportsRemittance && assignment.financialContract ? (
             <>
               <Text style={styles.meta}>
                 Paid so far:{' '}
@@ -526,12 +533,14 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                       )
                     }
                   />
-                  <Button
-                    accessibilityHint="Open the remittance quick sheet"
-                    label="Record remittance"
-                    variant="secondary"
-                    onPress={() => setShowRemittanceSheet(true)}
-                  />
+                  {supportsRemittance ? (
+                    <Button
+                      accessibilityHint="Open the remittance quick sheet"
+                      label="Record remittance"
+                      variant="secondary"
+                      onPress={() => setShowRemittanceSheet(true)}
+                    />
+                  ) : null}
                   <Button
                     accessibilityHint="Cancel this assignment"
                     label="Cancel assignment"
@@ -566,6 +575,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
         }}
       />
 
+      {supportsRemittance ? (
       <Modal
         animationType="slide"
         presentationStyle="pageSheet"
@@ -628,6 +638,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
           </View>
         </View>
       </Modal>
+      ) : null}
 
       <Modal
         animationType="slide"

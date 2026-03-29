@@ -83,13 +83,13 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   }) {
     const organisationName = input.organisationName?.trim();
     const actionMarkup = input.actionUrl
-      ? `<p style="margin-top:20px;"><a href="${input.actionUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">Open Mobiris</a></p>`
+      ? `<p style="margin-top:20px;"><a href="${input.actionUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">Open Mobiris Fleet OS</a></p>`
       : '';
 
     return `
       <div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:#f8fafc;padding:24px;color:#0f172a;">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:28px;">
-          <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#2563eb;">${organisationName ? `${organisationName} via Mobiris` : 'Mobiris notification'}</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#2563eb;">${organisationName ? `${organisationName} via Mobiris Fleet OS` : 'Mobiris Fleet OS notification'}</div>
           <h1 style="margin:12px 0 0;font-size:24px;line-height:1.2;">${input.title}</h1>
           <p style="margin:16px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hello ${input.recipientName}, ${input.body}</p>
           ${actionMarkup}

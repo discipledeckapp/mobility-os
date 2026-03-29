@@ -3684,6 +3684,68 @@ export class DriversService {
     return { buffer, contentType: doc.contentType, fileName: doc.fileName };
   }
 
+  async getIdentityImage(
+    tenantId: string,
+    driverId: string,
+    kind: 'selfie' | 'provider' | 'signature',
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const driver = await this.findOne(tenantId, driverId);
+    const identityProfile =
+      driver.identityProfile && typeof driver.identityProfile === 'object' && !Array.isArray(driver.identityProfile)
+        ? (driver.identityProfile as Record<string, unknown>)
+        : null;
+
+    const source =
+      kind === 'selfie'
+        ? this.readJsonString(identityProfile, 'selfieImageUrl') ?? driver.selfieImageUrl ?? null
+        : kind === 'provider'
+          ? this.readJsonString(identityProfile, 'providerImageUrl') ?? driver.providerImageUrl ?? null
+          : this.readJsonString(identityProfile, 'signatureImageUrl') ??
+            driver.identitySignatureImageUrl ??
+            null;
+
+    if (!source?.trim()) {
+      throw new NotFoundException('Identity image not found');
+    }
+
+    const trimmedSource = source.trim();
+    const dataUrlMatch = trimmedSource.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      const contentType = dataUrlMatch[1] ?? 'image/jpeg';
+      const payload = dataUrlMatch[2];
+      if (!payload) {
+        throw new NotFoundException('Identity image not found');
+      }
+      return {
+        buffer: Buffer.from(payload, 'base64'),
+        contentType,
+        fileName: `${kind}.${this.getImageExtension(contentType)}`,
+      };
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await this.documentStorageService.readFileByUrl(trimmedSource);
+    } catch {
+      if (/^https?:\/\//i.test(trimmedSource)) {
+        const response = await fetch(trimmedSource);
+        if (!response.ok) {
+          throw new NotFoundException('Identity image not found');
+        }
+        buffer = Buffer.from(await response.arrayBuffer());
+      } else {
+        buffer = Buffer.from(trimmedSource, 'base64');
+      }
+    }
+
+    const contentType = this.inferImageContentType(trimmedSource);
+    return {
+      buffer,
+      contentType,
+      fileName: `${kind}.${this.getImageExtension(contentType)}`,
+    };
+  }
+
   async listDocumentReviewQueue(
     tenantId: string,
     input: {
@@ -6999,6 +7061,14 @@ export class DriversService {
     if (contentType.includes('webp')) return 'webp';
     if (contentType.includes('svg')) return 'svg';
     return 'jpg';
+  }
+
+  private inferImageContentType(source: string): string {
+    const normalized = source.toLowerCase();
+    if (normalized.includes('.png')) return 'image/png';
+    if (normalized.includes('.webp')) return 'image/webp';
+    if (normalized.includes('.svg')) return 'image/svg+xml';
+    return 'image/jpeg';
   }
 
   private formatDriverName(driver: {

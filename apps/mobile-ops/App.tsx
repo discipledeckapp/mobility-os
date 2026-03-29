@@ -3,7 +3,10 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as SystemUI from 'expo-system-ui';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { useEffect } from 'react';
+import { Animated } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { LaunchSplashScreen, createSplashFadeAnimation } from './src/components/launch-splash-screen';
+import { AppEntryProvider, useAppEntry } from './src/contexts/app-entry-context';
 import { ErrorBoundary } from './src/components/error-boundary';
 import { registerPushDevice } from './src/api';
 import { AuthProvider, useAuth } from './src/contexts/auth-context';
@@ -53,7 +56,46 @@ async function registerPushNotificationsForCurrentDevice() {
 
 function AppShell() {
   const { session } = useAuth();
+  const { selectedRole, setSelectedRole } = useAppEntry();
   const { showToast } = useToast();
+  const splashOpacity = useRef(new Animated.Value(1)).current;
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      createSplashFadeAnimation(splashOpacity).start(() => {
+        setShowSplash(false);
+      });
+    }, 650);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [splashOpacity]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const nextRole =
+      session.selfServiceSubjectType === 'guarantor'
+        ? 'guarantor'
+        : session.accessMode === 'driver_mobile' || session.mobileRole === 'driver'
+          ? 'driver'
+          : 'operator';
+
+    if (selectedRole !== nextRole) {
+      void setSelectedRole(nextRole);
+    }
+  }, [
+    selectedRole,
+    session,
+    session?.accessMode,
+    session?.mobileRole,
+    session?.selfServiceSubjectType,
+    setSelectedRole,
+  ]);
 
   useEffect(() => {
     if (!session) {
@@ -120,6 +162,7 @@ function AppShell() {
     <>
       <StatusBar style="dark" />
       <RootNavigator />
+      {showSplash ? <LaunchSplashScreen opacity={splashOpacity} /> : null}
     </>
   );
 }
@@ -141,11 +184,13 @@ export default function App() {
         }}
       >
         <AuthProvider>
-          <SelfServiceProvider>
-            <ToastProvider>
-              <AppShell />
-            </ToastProvider>
-          </SelfServiceProvider>
+          <AppEntryProvider>
+            <SelfServiceProvider>
+              <ToastProvider>
+                <AppShell />
+              </ToastProvider>
+            </SelfServiceProvider>
+          </AppEntryProvider>
         </AuthProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>

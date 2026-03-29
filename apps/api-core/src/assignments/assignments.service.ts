@@ -22,8 +22,10 @@ import { PolicyService } from '../policy/policy.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
 import type { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
 import {
+  assignmentSupportsRemittance,
   normalizeFinancialContract,
   parseFinancialContractSnapshot,
+  resolveAssignmentPaymentModel,
   summarizeFinancialContract,
 } from './financial-contract';
 
@@ -73,7 +75,7 @@ export class AssignmentsService {
 
   private async enrichAssignments<T extends Assignment>(
     assignments: T[],
-  ): Promise<Array<T & { financialContract: unknown | null }>> {
+  ): Promise<Array<T & { financialContract: unknown | null; paymentModel: string }>> {
     if (assignments.length === 0) {
       return [];
     }
@@ -109,13 +111,14 @@ export class AssignmentsService {
       return {
         ...assignment,
         financialContract,
+        paymentModel: resolveAssignmentPaymentModel(assignment),
       };
     });
   }
 
   private async enrichAssignment<T extends Assignment>(
     assignment: T,
-  ): Promise<T & { financialContract: unknown | null }> {
+  ): Promise<T & { financialContract: unknown | null; paymentModel: string }> {
     const [enriched] = await this.enrichAssignments([assignment]);
     if (!enriched) {
       throw new NotFoundException(`Assignment '${assignment.id}' could not be enriched.`);
@@ -435,20 +438,22 @@ export class AssignmentsService {
     }
   }
 
-  async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment & { financialContract: unknown | null }> {
+  async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment & { financialContract: unknown | null; paymentModel: string }> {
     const tenantCurrency = await this.resolveTenantCurrency(tenantId);
     const { driver, vehicle } = await this.loadAssignmentResources(tenantId, dto, ['available']);
     await this.ensureNoOverlappingAssignments(dto);
-    const { topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, dto);
-    const contractSnapshot = {
-      ...snapshot,
-      platformIssuer: {
-        productName: PLATFORM_ISSUER.productName,
-        legalName: PLATFORM_ISSUER.legalName,
-        jurisdiction: PLATFORM_ISSUER.jurisdiction,
-        website: PLATFORM_ISSUER.website,
-      },
-    } as unknown as Prisma.InputJsonValue;
+    const { paymentModel, topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, dto);
+    const contractSnapshot = snapshot
+      ? ({
+          ...snapshot,
+          platformIssuer: {
+            productName: PLATFORM_ISSUER.productName,
+            legalName: PLATFORM_ISSUER.legalName,
+            jurisdiction: PLATFORM_ISSUER.jurisdiction,
+            website: PLATFORM_ISSUER.website,
+          },
+        } as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
     const [assignment] = await this.prisma.$transaction([
       this.prisma.assignment.create({
@@ -478,6 +483,7 @@ export class AssignmentsService {
       vehicleId: assignment.vehicleId,
       status: assignment.status,
       contractVersion: assignment.contractVersion,
+      paymentModel,
     });
     await this.sendAssignmentIssuedNotification({
       tenantId,
@@ -503,11 +509,17 @@ export class AssignmentsService {
     tenantId: string,
     id: string,
     dto: UpdateAssignmentRemittancePlanDto,
-  ): Promise<Assignment & { financialContract: unknown | null }> {
+  ): Promise<Assignment & { financialContract: unknown | null; paymentModel: string }> {
     const assignment = await this.findOne(tenantId, id);
+    if (!assignmentSupportsRemittance(assignment)) {
+      throw new BadRequestException(
+        `Assignment '${id}' does not use a remittance-based payment model.`,
+      );
+    }
     const tenantCurrency = await this.resolveTenantCurrency(tenantId);
 
     const { topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, {
+      paymentModel: resolveAssignmentPaymentModel(assignment),
       contractType: dto.contractType ?? null,
       totalTargetAmountMinorUnits: dto.totalTargetAmountMinorUnits ?? null,
       principalAmountMinorUnits: dto.principalAmountMinorUnits ?? null,
@@ -529,15 +541,17 @@ export class AssignmentsService {
       where: { id },
       data: {
         ...topLevelPlan,
-        contractSnapshot: ({
-          ...snapshot,
-          platformIssuer: {
-            productName: PLATFORM_ISSUER.productName,
-            legalName: PLATFORM_ISSUER.legalName,
-            jurisdiction: PLATFORM_ISSUER.jurisdiction,
-            website: PLATFORM_ISSUER.website,
-          },
-        } as unknown as Prisma.InputJsonValue),
+        contractSnapshot: snapshot
+          ? ({
+              ...snapshot,
+              platformIssuer: {
+                productName: PLATFORM_ISSUER.productName,
+                legalName: PLATFORM_ISSUER.legalName,
+                jurisdiction: PLATFORM_ISSUER.jurisdiction,
+                website: PLATFORM_ISSUER.website,
+              },
+            } as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       },
     });
     return this.enrichAssignment(updated);
@@ -925,16 +939,23 @@ export class AssignmentsService {
           driverId,
           vehicleId,
           ...(row.notes?.trim() ? { notes: row.notes.trim() } : {}),
+          ...(row.paymentModel?.trim()
+            ? { paymentModel: row.paymentModel.trim() }
+            : {}),
           ...(row.contractType?.trim()
             ? { contractType: row.contractType.trim() }
             : {}),
           ...(row.remittanceModel?.trim()
             ? { remittanceModel: row.remittanceModel.trim() }
             : {}),
-          remittanceAmountMinorUnits: Number.parseInt(
-            row.remittanceAmountMinorUnits?.trim() || '',
-            10,
-          ),
+          ...(row.remittanceAmountMinorUnits?.trim()
+            ? {
+                remittanceAmountMinorUnits: Number.parseInt(
+                  row.remittanceAmountMinorUnits.trim(),
+                  10,
+                ),
+              }
+            : {}),
           ...(row.remittanceCurrency?.trim()
             ? { remittanceCurrency: row.remittanceCurrency.trim() }
             : {}),
@@ -1013,6 +1034,7 @@ export class AssignmentsService {
         'vehicleCode',
         'vehiclePlate',
         'status',
+        'paymentModel',
         'contractType',
         'remittanceModel',
         'remittanceAmountMinorUnits',
@@ -1035,6 +1057,7 @@ export class AssignmentsService {
         assignment.vehicle.tenantVehicleCode,
         assignment.vehicle.plate ?? '',
         assignment.status,
+        resolveAssignmentPaymentModel(assignment),
         assignment.remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'regular_hire',
         assignment.remittanceModel ?? '',
         assignment.remittanceAmountMinorUnits ?? '',

@@ -34,7 +34,13 @@ function formatMajorUnits(amountMinorUnits?: number): string {
   return (amountMinorUnits / 100).toFixed(2);
 }
 
-export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
+export function EditVehicleForm({
+  vehicle,
+  compact = false,
+}: {
+  vehicle: VehicleDetailRecord;
+  compact?: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(updateVehicleAction, initialState);
   const acquisition = findValuation(vehicle.valuations, 'acquisition');
   const estimate = findValuation(vehicle.valuations, 'estimate');
@@ -46,15 +52,17 @@ export function EditVehicleForm({ vehicle }: { vehicle: VehicleDetailRecord }) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Edit vehicle</CardTitle>
-        <CardDescription>
-          Update the operator-facing code and secondary identification fields without changing the
-          immutable system vehicle code.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className={compact ? 'border-slate-200 bg-slate-50/40 shadow-none' : undefined}>
+      {!compact ? (
+        <CardHeader>
+          <CardTitle>Edit vehicle</CardTitle>
+          <CardDescription>
+            Update the operator-facing code and secondary identification fields without changing the
+            immutable system vehicle code.
+          </CardDescription>
+        </CardHeader>
+      ) : null}
+      <CardContent className={compact ? 'pt-0' : undefined}>
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
           <input name="vehicleId" type="hidden" value={vehicle.id} />
 

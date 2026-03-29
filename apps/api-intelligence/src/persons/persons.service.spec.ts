@@ -8,18 +8,28 @@ describe('PersonsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    intelIdentityChangeEvent: {
+      create: jest.fn(),
+    },
     intelPersonTenantPresence: {
+      findFirst: jest.fn(),
       upsert: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
   const linkageEventsService = {
     listByPerson: jest.fn(),
+    record: jest.fn(),
   };
 
   let service: PersonsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.intelPersonTenantPresence.findFirst.mockResolvedValue(null);
+    prisma.intelPersonTenantPresence.updateMany.mockResolvedValue({ count: 0 });
+    prisma.intelIdentityChangeEvent.create.mockResolvedValue({ id: 'change_1' });
+    linkageEventsService.record.mockResolvedValue({ id: 'event_1' });
     service = new PersonsService(prisma as never, linkageEventsService as never);
   });
 

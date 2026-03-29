@@ -482,6 +482,25 @@ export class DriversController {
     return new StreamableFile(portrait.buffer);
   }
 
+  @Get(':id/identity-image/:kind')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  async getIdentityImage(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('kind') kind: 'selfie' | 'provider' | 'signature',
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!['selfie', 'provider', 'signature'].includes(kind)) {
+      throw new BadRequestException("kind must be one of 'selfie', 'provider', or 'signature'");
+    }
+
+    const image = await this.service.getIdentityImage(ctx.tenantId, id, kind);
+    response.setHeader('content-type', image.contentType);
+    response.setHeader('content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
+  }
+
   @Get(':id/identity-summary')
   @RequirePermissions(Permission.DriversRead)
   @UseGuards(PermissionsGuard)

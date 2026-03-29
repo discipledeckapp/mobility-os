@@ -22,13 +22,23 @@ export class CreateAssignmentDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({
+    description: 'Driver compensation model for this assignment.',
+    example: 'remittance',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['remittance', 'salary', 'commission', 'hire_purchase'])
+  paymentModel?: string;
+
   @ApiProperty({
     description: 'Expected remittance amount per collection cycle in minor currency units.',
     example: 250000,
   })
+  @IsOptional()
   @IsInt()
   @Min(1)
-  remittanceAmountMinorUnits!: number;
+  remittanceAmountMinorUnits?: number;
 
   @ApiPropertyOptional({
     description: 'Canonical financial contract type for this assignment.',

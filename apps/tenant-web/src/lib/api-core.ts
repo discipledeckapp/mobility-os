@@ -981,6 +981,15 @@ export interface VehicleDetailRecord extends VehicleRecord {
     latestAssignmentId?: string | null;
     latestAssignmentStatus?: string | null;
     latestAssignmentStartedAt?: string | null;
+    assignedDriverId?: string | null;
+    assignedDriverName?: string | null;
+  };
+  remittanceSummary: {
+    latestRecordedAt?: string | null;
+    latestAmountMinorUnits?: number | null;
+    nextDueAt?: string | null;
+    nextDueAmountMinorUnits?: number | null;
+    currency?: string | null;
   };
   maintenanceSummary: string;
   maintenanceDue: {
@@ -1025,6 +1034,7 @@ export interface AssignmentRecord {
   startedAt?: string | null;
   endedAt?: string | null;
   notes?: string | null;
+  paymentModel?: 'remittance' | 'salary' | 'commission' | 'hire_purchase' | null;
   remittanceModel?: string | null;
   remittanceFrequency?: string | null;
   remittanceAmountMinorUnits?: number | null;
@@ -1111,9 +1121,10 @@ export interface CreateAssignmentInput {
   driverId: string;
   vehicleId: string;
   notes?: string;
+  paymentModel?: 'remittance' | 'salary' | 'commission' | 'hire_purchase';
   contractType?: 'regular_hire' | 'hire_purchase';
   remittanceModel?: 'fixed' | 'hire_purchase';
-  remittanceAmountMinorUnits: number;
+  remittanceAmountMinorUnits?: number;
   remittanceFrequency?: 'daily' | 'weekly' | 'monthly';
   remittanceCurrency?: string;
   remittanceStartDate?: string;

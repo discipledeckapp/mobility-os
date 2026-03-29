@@ -2,11 +2,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet } from 'react-native';
 import { ProcessingScreen } from '../components/processing-state';
+import { useAppEntry } from '../contexts/app-entry-context';
 import { useAuth } from '../contexts/auth-context';
 import { useSelfService } from '../contexts/self-service-context';
 import { AssignmentDetailScreen } from '../features/assignments/screens/AssignmentDetailScreen';
 import { AssignmentsScreen } from '../features/assignments/screens/AssignmentsScreen';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { RoleSelectionScreen } from '../features/auth/screens/RoleSelectionScreen';
 import { ForgotPasswordScreen } from '../features/auth/screens/ForgotPasswordScreen';
 import { LegalDocumentScreen } from '../features/auth/screens/LegalDocumentScreen';
 import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScreen';
@@ -51,6 +53,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { session, isLoading } = useAuth();
+  const { selectedRole, isLoading: isEntryLoading } = useAppEntry();
   const {
     token: selfServiceToken,
     driver: selfServiceDriver,
@@ -79,7 +82,7 @@ export function RootNavigator() {
           )),
     );
 
-  if (isLoading || isSelfServiceLoading) {
+  if (isLoading || isSelfServiceLoading || isEntryLoading) {
     return (
       <ProcessingScreen
         activeStep={1}
@@ -364,6 +367,13 @@ export function RootNavigator() {
               component={LegalDocumentScreen}
               options={{ title: 'Legal document' }}
             />
+            {!selectedRole ? (
+              <Stack.Screen
+                name="RoleSelection"
+                component={RoleSelectionScreen}
+                options={{ headerShown: false }}
+              />
+            ) : null}
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Create organisation' }} />
             <Stack.Screen

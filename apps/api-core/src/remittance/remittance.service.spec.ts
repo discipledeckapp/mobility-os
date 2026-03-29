@@ -22,6 +22,7 @@ describe('RemittanceService', () => {
     },
     assignment: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
   };
   const operationalWalletsService = {
@@ -43,6 +44,8 @@ describe('RemittanceService', () => {
       callback(prisma as never),
     );
     prisma.remittance.findFirst.mockResolvedValue(null);
+    prisma.remittance.findMany.mockResolvedValue([]);
+    prisma.assignment.findMany.mockResolvedValue([]);
     policyService.evaluateDriverPolicies.mockResolvedValue([]);
     service = new RemittanceService(
       prisma as never,

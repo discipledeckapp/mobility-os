@@ -12,6 +12,7 @@ import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { buildDriverOnboardingSteps } from '../verification-flow';
 
 export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServiceReadiness'>) {
   const { showToast } = useToast();
@@ -104,9 +105,14 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
 
   const requiresIdentity =
     driver.identityStatus !== 'verified' && driver.identityStatus !== 'review_needed';
+  const requiresLicenceStep =
+    (driver.verificationTierComponents ?? []).includes('drivers_license') ||
+    driver.verificationComponents?.some(
+      (component) => component.key === 'drivers_license' && component.required,
+    ) === true;
   const requiresManualReview = driver.identityStatus === 'review_needed';
   const hasDocumentBlockers =
-    !driver.hasApprovedLicence ||
+    (requiresLicenceStep && !driver.hasApprovedLicence) ||
     driver.pendingDocumentCount > 0 ||
     driver.rejectedDocumentCount > 0 ||
     driver.expiredDocumentCount > 0;
@@ -122,15 +128,15 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
       driver.verificationPaymentStatus === 'insufficient_balance');
   const mobileAccessLabel = formatMobileAccessLabel(driver.mobileAccessStatus);
   const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
+  const onboardingSteps = buildDriverOnboardingSteps(driver).filter((step) => step.key !== 'account');
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <Card style={styles.section}>
-        <Text style={styles.kicker}>Driver readiness</Text>
-        <Text style={styles.title}>Access and operations checklist</Text>
+        <Text style={styles.kicker}>Mobiris Fleet OS</Text>
+        <Text style={styles.title}>Driver onboarding checklist</Text>
         <Text style={styles.copy}>
-          Track your sign-in access separately from activation, assignment eligibility, and
-          remittance readiness.
+          Follow the steps required for {driver.verificationTierLabel ?? 'your organisation’s verification level'}.
         </Text>
         <View style={styles.badgeRow}>
           <Badge
@@ -150,6 +156,52 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
           />
         </View>
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {driver.verificationTierLabel ?? 'Verification level'}
+        </Text>
+        <Text style={styles.copy}>
+          {driver.verificationTierDescription ??
+            'Your organisation decides which checks must be completed before you can operate.'}
+        </Text>
+        {onboardingSteps.map((step) => (
+          <View key={step.key} style={styles.reasonRow}>
+            <View
+              style={[
+                styles.reasonDot,
+                step.status === 'completed'
+                  ? styles.reasonDotSuccess
+                  : step.status === 'not_required'
+                    ? styles.reasonDotMuted
+                    : null,
+              ]}
+            />
+            <View style={styles.stepCopy}>
+              <View style={styles.row}>
+                <Text style={styles.label}>{step.label}</Text>
+                <Badge
+                  label={
+                    step.status === 'completed'
+                      ? 'Done'
+                      : step.status === 'not_required'
+                        ? 'Not required'
+                        : 'Pending'
+                  }
+                  tone={
+                    step.status === 'completed'
+                      ? 'success'
+                      : step.status === 'not_required'
+                        ? 'neutral'
+                        : 'warning'
+                  }
+                />
+              </View>
+              <Text style={styles.reason}>{step.message}</Text>
+            </View>
+          </View>
+        ))}
       </Card>
 
       <Card style={styles.section}>
@@ -175,8 +227,20 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         <View style={styles.row}>
           <Text style={styles.label}>Approved licence</Text>
           <Badge
-            label={driver.hasApprovedLicence ? 'Available' : 'Missing'}
-            tone={driver.hasApprovedLicence ? 'success' : 'warning'}
+            label={
+              requiresLicenceStep
+                ? driver.hasApprovedLicence
+                  ? 'Available'
+                  : 'Missing'
+                : 'Not required'
+            }
+            tone={
+              requiresLicenceStep
+                ? driver.hasApprovedLicence
+                  ? 'success'
+                  : 'warning'
+                : 'neutral'
+            }
           />
         </View>
         <View style={styles.row}>
@@ -536,6 +600,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: tokens.colors.primary,
     marginTop: 7,
+  },
+  reasonDotSuccess: {
+    backgroundColor: tokens.colors.success,
+  },
+  reasonDotMuted: {
+    backgroundColor: '#CBD5E1',
+  },
+  stepCopy: {
+    flex: 1,
+    gap: 4,
   },
   reason: {
     color: tokens.colors.ink,

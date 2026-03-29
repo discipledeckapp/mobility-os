@@ -9,6 +9,11 @@ const SUCCESSFUL_REMITTANCE_STATUSES = new Set(['completed', 'partially_settled'
 const NON_CANCELLED_REMITTANCE_STATUSES = new Set(['pending', 'completed', 'partially_settled', 'disputed']);
 
 export type AssignmentContractType = 'regular_hire' | 'hire_purchase';
+export type AssignmentPaymentModel =
+  | 'remittance'
+  | 'salary'
+  | 'commission'
+  | 'hire_purchase';
 
 export interface AssignmentContractSchedule {
   frequency: RemittanceFrequency;
@@ -27,6 +32,7 @@ export interface AssignmentContractInstallmentPlan {
 export interface AssignmentFinancialContractSnapshot {
   version: string;
   contractType: AssignmentContractType;
+  paymentModel: AssignmentPaymentModel;
   currency: string;
   schedule: AssignmentContractSchedule;
   display: {
@@ -88,6 +94,7 @@ type RemittanceLike = {
 };
 
 interface FinancialContractInput {
+  paymentModel?: string | null;
   contractType?: string | null;
   remittanceModel?: string | null;
   remittanceFrequency?: string | null;
@@ -103,15 +110,16 @@ interface FinancialContractInput {
 }
 
 interface FinancialContractNormalizationResult {
+  paymentModel: AssignmentPaymentModel;
   topLevelPlan: {
-    remittanceModel: 'fixed' | 'hire_purchase';
-    remittanceFrequency: RemittanceFrequency;
-    remittanceAmountMinorUnits: number;
-    remittanceCurrency: string;
-    remittanceStartDate: string;
+    remittanceModel: 'fixed' | 'hire_purchase' | null;
+    remittanceFrequency: RemittanceFrequency | null;
+    remittanceAmountMinorUnits: number | null;
+    remittanceCurrency: string | null;
+    remittanceStartDate: string | null;
     remittanceCollectionDay: number | null;
   };
-  snapshot: AssignmentFinancialContractSnapshot;
+  snapshot: AssignmentFinancialContractSnapshot | null;
 }
 
 interface ScheduledPeriod {
@@ -300,10 +308,63 @@ function getContractType(input: FinancialContractInput): AssignmentContractType 
   return 'regular_hire';
 }
 
+export function resolveAssignmentPaymentModel(input: {
+  paymentModel?: string | null;
+  contractType?: string | null;
+  remittanceModel?: string | null;
+}): AssignmentPaymentModel {
+  const normalizedPaymentModel = input.paymentModel?.trim().toLowerCase() ?? null;
+  if (normalizedPaymentModel === 'salary') {
+    return 'salary';
+  }
+  if (normalizedPaymentModel === 'commission') {
+    return 'commission';
+  }
+  if (normalizedPaymentModel === 'hire_purchase') {
+    return 'hire_purchase';
+  }
+  if (normalizedPaymentModel === 'remittance') {
+    return 'remittance';
+  }
+
+  if (input.contractType?.trim().toLowerCase() === 'hire_purchase') {
+    return 'hire_purchase';
+  }
+  if (input.remittanceModel?.trim().toLowerCase() === 'hire_purchase') {
+    return 'hire_purchase';
+  }
+  return 'remittance';
+}
+
+export function assignmentSupportsRemittance(input: {
+  paymentModel?: string | null;
+  contractType?: string | null;
+  remittanceModel?: string | null;
+}): boolean {
+  const paymentModel = resolveAssignmentPaymentModel(input);
+  return paymentModel === 'remittance' || paymentModel === 'hire_purchase';
+}
+
 export function normalizeFinancialContract(
   tenantCurrency: string,
   input: FinancialContractInput,
 ): FinancialContractNormalizationResult {
+  const paymentModel = resolveAssignmentPaymentModel(input);
+  if (paymentModel === 'salary' || paymentModel === 'commission') {
+    return {
+      paymentModel,
+      topLevelPlan: {
+        remittanceModel: null,
+        remittanceFrequency: null,
+        remittanceAmountMinorUnits: null,
+        remittanceCurrency: null,
+        remittanceStartDate: null,
+        remittanceCollectionDay: null,
+      },
+      snapshot: null,
+    };
+  }
+
   const contractType = getContractType(input);
   const frequency = normalizeRemittanceFrequency(input.remittanceFrequency ?? 'daily');
   if (!frequency) {
@@ -361,6 +422,7 @@ export function normalizeFinancialContract(
     const snapshot: AssignmentFinancialContractSnapshot = {
       version: '2026-03-29',
       contractType,
+      paymentModel,
       currency: remittanceCurrency,
       schedule: {
         frequency,
@@ -387,6 +449,7 @@ export function normalizeFinancialContract(
     snapshot.display.expectedRemittanceTerms = buildExpectedTermsLabel(snapshot);
 
     return {
+      paymentModel,
       topLevelPlan: {
         remittanceModel: 'hire_purchase',
         remittanceFrequency: frequency,
@@ -406,6 +469,7 @@ export function normalizeFinancialContract(
   const snapshot: AssignmentFinancialContractSnapshot = {
     version: '2026-03-29',
     contractType,
+    paymentModel,
     currency: remittanceCurrency,
     schedule: {
       frequency,
@@ -429,6 +493,7 @@ export function normalizeFinancialContract(
   snapshot.display.expectedRemittanceTerms = buildExpectedTermsLabel(snapshot);
 
   return {
+    paymentModel,
     topLevelPlan: {
       remittanceModel: 'fixed',
       remittanceFrequency: frequency,
@@ -444,6 +509,7 @@ export function normalizeFinancialContract(
 export function parseFinancialContractSnapshot(
   rawSnapshot: unknown,
   fallback: {
+    paymentModel?: string | null;
     remittanceModel?: string | null;
     remittanceFrequency?: string | null;
     remittanceAmountMinorUnits?: number | null;
@@ -461,6 +527,10 @@ export function parseFinancialContractSnapshot(
     return rawSnapshot as AssignmentFinancialContractSnapshot;
   }
 
+  if (!assignmentSupportsRemittance(fallback)) {
+    return null;
+  }
+
   const frequency = normalizeRemittanceFrequency(fallback.remittanceFrequency ?? null);
   const remittanceAmountMinorUnits = fallback.remittanceAmountMinorUnits ?? null;
   const remittanceCurrency = fallback.remittanceCurrency ?? null;
@@ -470,6 +540,7 @@ export function parseFinancialContractSnapshot(
   }
 
   return normalizeFinancialContract(remittanceCurrency, {
+    paymentModel: fallback.paymentModel ?? null,
     remittanceModel: fallback.remittanceModel ?? 'fixed',
     remittanceFrequency: frequency,
     remittanceAmountMinorUnits,

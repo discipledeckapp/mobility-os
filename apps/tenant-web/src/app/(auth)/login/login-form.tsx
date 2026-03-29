@@ -104,7 +104,7 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-slate-500">
-        New to Mobiris?{' '}
+        New to Mobiris Fleet OS?{' '}
         <Link
           className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
           href="/signup"

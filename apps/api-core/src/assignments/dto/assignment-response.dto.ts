@@ -38,6 +38,9 @@ export class AssignmentResponseDto {
   notes?: string | null;
 
   @ApiPropertyOptional()
+  paymentModel?: string | null;
+
+  @ApiPropertyOptional()
   remittanceModel?: string | null;
 
   @ApiPropertyOptional()

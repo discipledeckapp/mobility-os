@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Text } from '@mobility-os/ui';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Text } from '@mobility-os/ui';
 import { useActionState, useEffect } from 'react';
 import type { TenantBillingPlanRecord, TenantBillingSummaryRecord } from '../../lib/api-core';
 import {
@@ -19,6 +19,68 @@ function formatMajorAmount(amountMinorUnits: number): string {
   });
 }
 
+function getPlanNumericFeature(
+  plan: TenantBillingPlanRecord,
+  key: string,
+): number | null {
+  const value = plan.features[key];
+  return typeof value === 'number' ? value : null;
+}
+
+function getPlanBooleanFeature(
+  plan: TenantBillingPlanRecord,
+  key: string,
+): boolean {
+  return plan.features[key] === true;
+}
+
+function getPlanStringFeature(
+  plan: TenantBillingPlanRecord,
+  key: string,
+): string | null {
+  const value = plan.features[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function formatCap(value: number | null, suffix: string): string {
+  return value === null ? `Unlimited ${suffix}` : `${value} ${suffix}`;
+}
+
+function getPlanHighlights(plan: TenantBillingPlanRecord): string[] {
+  const highlights = [
+    formatCap(getPlanNumericFeature(plan, 'driverCap'), 'drivers'),
+    formatCap(getPlanNumericFeature(plan, 'vehicleCap'), 'vehicles'),
+    formatCap(getPlanNumericFeature(plan, 'seatLimit'), 'seats'),
+  ];
+
+  const assignmentsCap = getPlanNumericFeature(plan, 'assignmentCap');
+  highlights.push(assignmentsCap === null ? 'Assignments included' : `${assignmentsCap} assignments`);
+
+  if (getPlanBooleanFeature(plan, 'verificationEnabled')) {
+    const included = getPlanNumericFeature(plan, 'verificationsIncluded');
+    highlights.push(
+      included === null
+        ? 'Verification available'
+        : `${included} verifications included`,
+    );
+  } else {
+    highlights.push('Verification setup on upgrade');
+  }
+
+  highlights.push(
+    getPlanBooleanFeature(plan, 'intelligenceEnabled')
+      ? 'Analytics and operational insights'
+      : 'Core fleet operations only',
+  );
+
+  const supportTier = getPlanStringFeature(plan, 'supportTier');
+  if (supportTier) {
+    highlights.push(`Support: ${supportTier.replaceAll('_', ' / ')}`);
+  }
+
+  return highlights;
+}
+
 export function SubscriptionManagementPanel({
   summary,
   plans,
@@ -32,6 +94,9 @@ export function SubscriptionManagementPanel({
   );
   const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
   const enforcement = summary.subscription.enforcement;
+  const currentPlanPrice = plans.find((plan) => plan.id === summary.subscription.planId)?.basePriceMinorUnits;
+  const currentPlan = plans.find((plan) => plan.id === summary.subscription.planId) ?? null;
+  const availablePlans = [...plans].sort((left, right) => left.basePriceMinorUnits - right.basePriceMinorUnits);
 
   useEffect(() => {
     if (invoiceState.checkoutUrl) {
@@ -41,7 +106,7 @@ export function SubscriptionManagementPanel({
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <Card className="border-slate-200/80">
+      <Card className="overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.28)]">
         <CardHeader>
           <CardTitle>Plan management</CardTitle>
           <CardDescription>
@@ -69,16 +134,46 @@ export function SubscriptionManagementPanel({
             </div>
           ) : null}
 
-          <div className="rounded-[var(--mobiris-radius-card)] border border-blue-200/80 bg-blue-50/60 p-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
-              <p className="text-sm font-semibold text-slate-900">{summary.subscription.planName}</p>
-              <span className="ml-auto rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                Active plan
-              </span>
+          <div className="rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-primary-light)] bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(219,234,254,0.72))] p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="neutral">Current plan</Badge>
+              <p className="text-lg font-semibold tracking-[-0.03em] text-slate-950">
+                {summary.subscription.planName}
+              </p>
+              <p className="ml-auto text-sm text-slate-600">
+                {currentPlan
+                  ? `${currentPlan.currency} ${formatMajorAmount(currentPlan.basePriceMinorUnits)} / ${currentPlan.billingInterval}`
+                  : summary.subscription.currency}
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] bg-white/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Drivers
+                </p>
+                <p className="mt-1 text-base font-semibold text-slate-950">
+                  {summary.usage.driverCap == null ? 'Unlimited' : summary.usage.driverCap}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] bg-white/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Vehicles
+                </p>
+                <p className="mt-1 text-base font-semibold text-slate-950">
+                  {summary.usage.vehicleCap == null ? 'Unlimited' : summary.usage.vehicleCap}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] bg-white/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Operator seats
+                </p>
+                <p className="mt-1 text-base font-semibold text-slate-950">
+                  {summary.usage.seatCap == null ? 'Unlimited' : summary.usage.seatCap}
+                </p>
+              </div>
             </div>
             {summary.subscription.trialEndsAt ? (
-              <p className="mt-2 text-xs text-amber-700">
+              <p className="mt-4 text-xs text-amber-700">
                 Free trial ends{' '}
                 {new Date(summary.subscription.trialEndsAt).toLocaleDateString('en-NG', {
                   day: 'numeric',
@@ -90,58 +185,70 @@ export function SubscriptionManagementPanel({
             ) : null}
           </div>
 
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Available plans
-          </p>
-          <div className="space-y-2">
-            {plans.map((plan) => {
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Available plans
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Choose the right scale for your fleet. Verification pricing stays separate.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3">
+            {availablePlans.map((plan) => {
               const isCurrent = plan.id === summary.subscription.planId;
-              const features = plan.features;
-              const maxVehicles =
-                typeof features.vehicleCap === 'number' ? features.vehicleCap : null;
-              const maxDrivers =
-                typeof features.driverCap === 'number' ? features.driverCap : null;
-              const maxSeats =
-                typeof features.seatLimit === 'number' ? features.seatLimit : null;
               const price = formatMajorAmount(plan.basePriceMinorUnits);
+              const planHighlights = getPlanHighlights(plan);
+              const isUpgrade =
+                currentPlanPrice != null && plan.basePriceMinorUnits > currentPlanPrice;
+              const actionLabel = isCurrent ? 'Current plan' : isUpgrade ? 'Upgrade' : 'Switch plan';
 
               return (
                 <form
                   action={planAction}
-                  className={`rounded-[var(--mobiris-radius-card)] border p-4 transition-colors ${
+                  className={`rounded-[var(--mobiris-radius-card)] border p-4 transition-all ${
                     isCurrent
-                      ? 'border-blue-200 bg-blue-50/50'
-                      : 'border-slate-200/80 bg-white hover:border-blue-200 hover:bg-blue-50/30'
+                      ? 'border-[var(--mobiris-primary-light)] bg-[linear-gradient(180deg,rgba(239,246,255,0.95),rgba(255,255,255,0.98))] shadow-[0_18px_36px_-28px_rgba(37,99,235,0.65)]'
+                      : 'border-slate-200/80 bg-white hover:border-[var(--mobiris-primary-light)] hover:bg-blue-50/30 hover:shadow-[0_18px_36px_-28px_rgba(37,99,235,0.35)]'
                   }`}
                   key={plan.id}
                 >
                   <input name="planId" type="hidden" value={plan.id} />
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{plan.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {plan.currency} {price} / {plan.billingInterval}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                          {maxDrivers === null ? 'Unlimited' : maxDrivers} drivers
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                          {maxVehicles === null ? 'Unlimited' : maxVehicles} vehicles
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                          {maxSeats === null ? 'Unlimited' : maxSeats} seats
-                        </span>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-base font-semibold tracking-[-0.03em] text-slate-950">
+                            {plan.name}
+                          </p>
+                          <Badge tone={isCurrent || !isUpgrade ? 'neutral' : 'success'}>
+                            {isCurrent ? 'Active' : isUpgrade ? 'Upgrade option' : 'Alternative'}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {plan.currency} {price} / {plan.billingInterval}
+                        </p>
                       </div>
+                      <Button
+                        className="shrink-0"
+                        disabled={planPending || isCurrent}
+                        type="submit"
+                        variant={isCurrent ? 'secondary' : isUpgrade ? 'primary' : 'secondary'}
+                      >
+                        {actionLabel}
+                      </Button>
                     </div>
-                    <Button
-                      className="shrink-0"
-                      disabled={planPending || isCurrent}
-                      type="submit"
-                      variant={isCurrent ? 'secondary' : 'primary'}
-                    >
-                      {isCurrent ? 'Current' : 'Change plan'}
-                    </Button>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {planHighlights.map((highlight) => (
+                        <div
+                          className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] border border-slate-200/80 bg-slate-50/75 px-3 py-2 text-sm text-slate-700"
+                          key={`${plan.id}-${highlight}`}
+                        >
+                          {highlight}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </form>
               );
@@ -152,7 +259,7 @@ export function SubscriptionManagementPanel({
         </CardContent>
       </Card>
 
-      <Card className="border-slate-200/80">
+      <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
         <CardHeader>
           <CardTitle>Subscription invoice</CardTitle>
           <CardDescription>

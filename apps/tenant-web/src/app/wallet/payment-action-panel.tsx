@@ -54,7 +54,15 @@ export function PaymentActionPanel({
   }, [cardState.checkoutUrl]);
 
   const factor = 10 ** currencyMinorUnit;
-  const amountMinorUnits = amountInput ? Math.round(Number(amountInput) * factor) : 0;
+  const normalizedAmount = amountInput.replace(/,/g, '').trim();
+  const enteredAmount = normalizedAmount ? Number(normalizedAmount) : Number.NaN;
+  const amountMinorUnits = Number.isFinite(enteredAmount)
+    ? Math.round(enteredAmount * factor)
+    : 0;
+  const amountInvalid =
+    amountInput.length > 0 && (!Number.isFinite(enteredAmount) || amountMinorUnits <= 0);
+  const walletSubmitDisabled =
+    walletPending || Boolean(walletState.checkoutUrl) || amountMinorUnits <= 0 || amountInvalid;
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
@@ -124,23 +132,25 @@ export function PaymentActionPanel({
               <Input
                 id="wallet-amount"
                 inputMode="decimal"
-                min="0"
+                min={factor === 1 ? '1' : '0.01'}
+                name="amount"
                 onChange={(event) => setAmountInput(event.target.value)}
                 placeholder="0.00"
                 step="0.01"
                 type="number"
                 value={amountInput}
               />
-              <input
-                name="amountMinorUnits"
-                type="hidden"
-                value={amountMinorUnits > 0 ? String(amountMinorUnits) : ''}
-              />
+              <input name="currencyMinorUnit" type="hidden" value={String(currencyMinorUnit)} />
               <Text className="text-xs text-slate-500">
-                The amount is converted to minor units before checkout.
+                Enter the amount you want to fund. Checkout will use this exact amount.
               </Text>
+              {amountInvalid ? (
+                <Text className="text-xs text-rose-700">
+                  Enter an amount greater than zero before starting payment.
+                </Text>
+              ) : null}
             </div>
-            <Button disabled={walletPending || Boolean(walletState.checkoutUrl)} type="submit">
+            <Button disabled={walletSubmitDisabled} type="submit">
               {walletPending || walletState.checkoutUrl ? 'Redirecting to payment...' : 'Fund wallet'}
             </Button>
             {walletState.error ? <Text className="text-rose-700">{walletState.error}</Text> : null}

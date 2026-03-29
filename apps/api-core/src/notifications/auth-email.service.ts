@@ -54,8 +54,8 @@ function renderAuthEmailShell(
               <tr>
                 <td style="padding-right:12px;vertical-align:middle;">${LOGO_MARK_SVG}</td>
                 <td style="vertical-align:middle;">
-                  <div style="font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1;">Mobiris</div>
-                  <div style="font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.6);margin-top:2px;">Fleet Console</div>
+                  <div style="font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1;">Mobiris Fleet OS</div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.6);margin-top:2px;">Fleet & Driver Operations Platform</div>
                 </td>
               </tr>
             </table>
@@ -85,7 +85,7 @@ function renderAuthEmailShell(
             <div style="border-top:1px solid #e2e8f0;padding-top:20px;font-size:12px;line-height:1.8;color:#94a3b8;">
               <div>Need help? <a href="mailto:${brand.supportEmail}" style="color:#2563eb;text-decoration:none;font-weight:600;">${brand.supportEmail}</a> · ${brand.supportPhonePrimary}</div>
               <div style="margin-top:4px;"><a href="${brand.websiteUrl}" style="color:#64748b;text-decoration:none;">${brand.websiteUrl}</a> &nbsp;·&nbsp; ${brand.socialHandle}</div>
-              <div style="margin-top:12px;font-size:11px;color:#cbd5e1;">You received this email because an action was taken on your Mobiris account. If you did not initiate this, contact support immediately.</div>
+              <div style="margin-top:12px;font-size:11px;color:#cbd5e1;">You received this email because an action was taken on your Mobiris Fleet OS account. If you did not initiate this, contact support immediately.</div>
             </div>
           </td>
         </tr>
@@ -123,7 +123,7 @@ export class AuthEmailService {
   }): Promise<void> {
     const brand = this.getBrandContext();
     const html = renderAuthEmailShell(
-      'Welcome to Mobiris',
+      'Welcome to Mobiris Fleet OS',
       'Tenant Access',
       'Your tenant account is ready. Use the verification code below to validate the account and continue securely.',
       `
@@ -141,7 +141,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: 'Welcome to Mobiris',
+      subject: 'Welcome to Mobiris Fleet OS',
       htmlBody: html,
     });
   }
@@ -154,7 +154,7 @@ export class AuthEmailService {
   }): Promise<void> {
     const brand = this.getBrandContext();
     const html = renderAuthEmailShell(
-      'Reset your Mobiris password',
+      'Reset your Mobiris Fleet OS password',
       'Account Security',
       'We received a request to reset your password. Use the secure link below or the reset token if you are completing the flow manually.',
       `
@@ -172,7 +172,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: 'Reset your Mobiris password',
+      subject: 'Reset your Mobiris Fleet OS password',
       htmlBody: html,
     });
   }
@@ -184,7 +184,7 @@ export class AuthEmailService {
   }): Promise<void> {
     const brand = this.getBrandContext();
     const html = renderAuthEmailShell(
-      'Verify your Mobiris account',
+      'Verify your Mobiris Fleet OS account',
       'Account Verification',
       'Use the verification code below to confirm that this email address belongs to you.',
       `
@@ -202,7 +202,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: 'Verify your Mobiris account',
+      subject: 'Verify your Mobiris Fleet OS account',
       htmlBody: html,
     });
   }
@@ -217,14 +217,14 @@ export class AuthEmailService {
     const html = renderAuthEmailShell(
       'Verify your email address',
       'Organisation Registration',
-      `You're almost set up on Mobiris. Enter the verification code below to confirm your email and activate your fleet account.`,
+      `You're almost set up on Mobiris Fleet OS. Enter the verification code below to confirm your email and activate your fleet account.`,
       `
         <div style="border-radius:16px;background:linear-gradient(180deg,#eff6ff,#dbeafe 100%);border:1px solid #bfdbfe;padding:24px;">
           <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.12em;">One-time passcode</div>
           <div style="margin-top:12px;font-size:40px;font-weight:800;letter-spacing:0.3em;color:#0f172a;font-variant-numeric:tabular-nums;">${input.code}</div>
           <div style="margin-top:12px;font-size:13px;line-height:1.6;color:#475569;">Valid for <strong>15 minutes</strong>. Do not share this code with anyone.</div>
         </div>
-        <p style="margin:24px 0 0;font-size:14px;line-height:1.7;color:#334155;">Hi ${input.name}, you are registering <strong>${input.orgName}</strong> on Mobiris. Once verified you can start adding drivers, vehicles, and assignments straight away.</p>
+        <p style="margin:24px 0 0;font-size:14px;line-height:1.7;color:#334155;">Hi ${input.name}, you are registering <strong>${input.orgName}</strong> on Mobiris Fleet OS. Once verified you can start adding drivers, vehicles, and assignments straight away.</p>
       `,
       null,
       null,
@@ -233,7 +233,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: `${input.code} is your Mobiris verification code`,
+      subject: `${input.code} is your Mobiris Fleet OS verification code`,
       htmlBody: html,
     });
   }
@@ -246,9 +246,9 @@ export class AuthEmailService {
   }): Promise<void> {
     const brand = this.getBrandContext();
     const html = renderAuthEmailShell(
-      `Welcome to Mobiris, ${input.orgName}`,
+      `Welcome to Mobiris Fleet OS, ${input.orgName}`,
       "You're all set",
-      'Your organisation account is active. Sign in to the Mobiris fleet console to get started.',
+      'Your organisation account is active. Sign in to Mobiris Fleet OS to get started.',
       `
         <div style="border-radius:16px;border:1px solid #e2e8f0;background:#f8fbff;padding:20px 24px;">
           <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Your organisation</div>
@@ -289,7 +289,7 @@ export class AuthEmailService {
 
     await this.mailer.sendEmail({
       to: [{ address: input.email, name: input.name }],
-      subject: `Your Mobiris account is ready — ${input.orgName}`,
+      subject: `Your Mobiris Fleet OS account is ready — ${input.orgName}`,
       htmlBody: html,
     });
   }
@@ -307,7 +307,7 @@ export class AuthEmailService {
     const otpBlock = input.otpCode
       ? `
         <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
-          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in the Mobiris app</div>
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in Mobiris Fleet OS</div>
           <div style="margin-top:10px;font-size:36px;font-weight:700;letter-spacing:0.2em;color:#0f172a;font-family:'Courier New',Courier,monospace;">${input.otpCode}</div>
           <div style="margin-top:6px;font-size:12px;color:#94a3b8;">Code expires in 48 hours</div>
         </div>`
@@ -353,7 +353,7 @@ export class AuthEmailService {
     const otpBlock = input.otpCode
       ? `
         <div style="margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;background:#f8fafc;text-align:center;">
-          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in the Mobiris app</div>
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;">Or enter this code in Mobiris Fleet OS</div>
           <div style="margin-top:10px;font-size:36px;font-weight:700;letter-spacing:0.2em;color:#0f172a;font-family:'Courier New',Courier,monospace;">${input.otpCode}</div>
           <div style="margin-top:6px;font-size:12px;color:#94a3b8;">Code expires in 48 hours</div>
         </div>`

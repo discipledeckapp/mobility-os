@@ -81,12 +81,20 @@ export async function createAssignmentAction(
   _prevState: CreateAssignmentActionState,
   formData: FormData,
 ): Promise<CreateAssignmentActionState> {
+  const paymentModel = getTrimmedValue(
+    formData,
+    'paymentModel' as keyof CreateAssignmentInput,
+  );
+  const usesRemittance =
+    paymentModel === 'hire_purchase' ||
+    paymentModel === 'remittance' ||
+    paymentModel === '';
   const remittanceAmount = getTrimmedValue(
     formData,
     'remittanceAmountMinorUnits' as keyof CreateAssignmentInput,
   );
   const parsedAmount = Number(remittanceAmount);
-  if (!Number.isFinite(parsedAmount) || parsedAmount < 1) {
+  if (usesRemittance && (!Number.isFinite(parsedAmount) || parsedAmount < 1)) {
     return {
       error: 'Expected remittance amount must be greater than 0.',
     };
@@ -96,7 +104,19 @@ export async function createAssignmentAction(
     fleetId: getTrimmedValue(formData, 'fleetId'),
     driverId: getTrimmedValue(formData, 'driverId'),
     vehicleId: getTrimmedValue(formData, 'vehicleId'),
-    remittanceAmountMinorUnits: Math.round(parsedAmount),
+    ...(paymentModel
+      ? {
+          paymentModel:
+            paymentModel === 'salary'
+              ? 'salary'
+              : paymentModel === 'commission'
+                ? 'commission'
+                : paymentModel === 'hire_purchase'
+                  ? 'hire_purchase'
+                  : 'remittance',
+        }
+      : {}),
+    ...(usesRemittance ? { remittanceAmountMinorUnits: Math.round(parsedAmount) } : {}),
   };
 
   const notes = getTrimmedValue(formData, 'notes');
@@ -151,41 +171,43 @@ export async function createAssignmentAction(
     };
   }
 
-  payload.contractType =
-    contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire';
-  payload.remittanceFrequency =
-    remittanceFrequency === 'weekly'
-      ? 'weekly'
-      : remittanceFrequency === 'monthly'
-        ? 'monthly'
-        : 'daily';
-  payload.remittanceModel =
-    remittanceModel === 'hire_purchase' || payload.contractType === 'hire_purchase'
-      ? 'hire_purchase'
-      : 'fixed';
-  if (remittanceCurrency) {
-    payload.remittanceCurrency = remittanceCurrency.toUpperCase();
-  }
-  if (remittanceStartDate) {
-    payload.remittanceStartDate = remittanceStartDate;
-  }
-  if (remittanceCollectionDay) {
-    payload.remittanceCollectionDay = Number(remittanceCollectionDay);
-  }
-  if (principalAmount) {
-    payload.principalAmountMinorUnits = Number(principalAmount);
-  }
-  if (totalTargetAmount) {
-    payload.totalTargetAmountMinorUnits = Number(totalTargetAmount);
-  }
-  if (depositAmount) {
-    payload.depositAmountMinorUnits = Number(depositAmount);
-  }
-  if (contractDurationPeriods) {
-    payload.contractDurationPeriods = Number(contractDurationPeriods);
-  }
-  if (contractEndDate) {
-    payload.contractEndDate = contractEndDate;
+  if (usesRemittance) {
+    payload.contractType =
+      contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire';
+    payload.remittanceFrequency =
+      remittanceFrequency === 'weekly'
+        ? 'weekly'
+        : remittanceFrequency === 'monthly'
+          ? 'monthly'
+          : 'daily';
+    payload.remittanceModel =
+      remittanceModel === 'hire_purchase' || payload.contractType === 'hire_purchase'
+        ? 'hire_purchase'
+        : 'fixed';
+    if (remittanceCurrency) {
+      payload.remittanceCurrency = remittanceCurrency.toUpperCase();
+    }
+    if (remittanceStartDate) {
+      payload.remittanceStartDate = remittanceStartDate;
+    }
+    if (remittanceCollectionDay) {
+      payload.remittanceCollectionDay = Number(remittanceCollectionDay);
+    }
+    if (principalAmount) {
+      payload.principalAmountMinorUnits = Number(principalAmount);
+    }
+    if (totalTargetAmount) {
+      payload.totalTargetAmountMinorUnits = Number(totalTargetAmount);
+    }
+    if (depositAmount) {
+      payload.depositAmountMinorUnits = Number(depositAmount);
+    }
+    if (contractDurationPeriods) {
+      payload.contractDurationPeriods = Number(contractDurationPeriods);
+    }
+    if (contractEndDate) {
+      payload.contractEndDate = contractEndDate;
+    }
   }
 
   if (notes) {

@@ -15,9 +15,9 @@ export function AuthSplitShell({ children, eyebrow, title, subtitle }: AuthSplit
             <span className="text-sm font-bold tracking-tight text-white">M</span>
           </div>
           <div>
-            <p className="text-base font-bold tracking-tight text-white">Mobiris</p>
+            <p className="text-base font-bold tracking-tight text-white">Mobiris Fleet OS</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-200/50">
-              Fleet Console
+              Fleet & Driver Operations Platform
             </p>
           </div>
         </div>
@@ -28,8 +28,8 @@ export function AuthSplitShell({ children, eyebrow, title, subtitle }: AuthSplit
             operations, <span className="text-blue-200">simplified.</span>
           </h1>
           <p className="text-base leading-relaxed text-blue-100/70">
-            Manage drivers, vehicles, assignments, and daily remittance from a single console built
-            for transport operators.
+            Manage drivers, vehicles, assignments, and driver verification from one platform built
+            for fleet operations.
           </p>
         </div>
         <p className="text-xs text-blue-200/40">
@@ -44,7 +44,7 @@ export function AuthSplitShell({ children, eyebrow, title, subtitle }: AuthSplit
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <span className="text-base font-bold tracking-tight text-[var(--mobiris-ink)]">
-            Mobiris
+            Mobiris Fleet OS
           </span>
         </div>
         <div className="w-full max-w-[400px]">

@@ -12,6 +12,7 @@ import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { buildDriverOnboardingSteps, resolveNextDriverAction } from '../verification-flow';
 
 export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'SelfServiceResume'>) {
   const { showToast } = useToast();
@@ -83,17 +84,19 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
     );
   }
 
-  const nextStep = getNextStep(driver, documents.length);
+  const nextStep = resolveNextDriverAction(driver, documents.length);
+  const onboardingSteps = buildDriverOnboardingSteps(driver);
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <Card style={styles.heroCard}>
-        <Text style={styles.kicker}>Welcome to {driver.organisationName ?? 'your organisation'}</Text>
+        <Text style={styles.kicker}>Mobiris Fleet OS</Text>
         <Text style={styles.title}>
           {driver.firstName ? `Hi ${driver.firstName}` : 'Your onboarding is ready'}
         </Text>
         <Text style={styles.copy}>
-          We saved your progress. Finish the next step and keep moving.
+          {driver.organisationName ?? 'Your organisation'} invited you to continue onboarding.
+          Finish the next required step and keep moving.
         </Text>
         <View style={styles.badgeRow}>
           <Badge label={formatIdentityStatus(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
@@ -102,8 +105,19 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {driver.verificationTierLabel ?? 'Verification level'}
+        </Text>
+        <Text style={styles.copy}>
+          {driver.verificationTierDescription ??
+            'Your onboarding steps follow the verification level selected by your organisation.'}
+        </Text>
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Current status</Text>
         <View style={styles.metricRow}>
+          <Metric label="Account" value={driver.hasMobileAccess ? 'Ready' : 'Pending'} />
           <Metric label="Identity" value={formatIdentityStatus(driver.identityStatus)} />
           <Metric label="Documents" value={String(documents.length)} />
           <Metric label="Sign in" value={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')} />
@@ -111,10 +125,50 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Your onboarding steps</Text>
+        {onboardingSteps.map((step) => (
+          <View key={step.key} style={styles.stepRow}>
+            <View
+              style={[
+                styles.stepDot,
+                step.status === 'completed'
+                  ? styles.stepDotComplete
+                  : step.status === 'not_required'
+                    ? styles.stepDotOptional
+                    : styles.stepDotPending,
+              ]}
+            />
+            <View style={styles.stepCopy}>
+              <View style={styles.stepHeader}>
+                <Text style={styles.stepTitle}>{step.label}</Text>
+                <Badge
+                  label={
+                    step.status === 'completed'
+                      ? 'Done'
+                      : step.status === 'not_required'
+                        ? 'Not required'
+                        : 'Pending'
+                  }
+                  tone={
+                    step.status === 'completed'
+                      ? 'success'
+                      : step.status === 'not_required'
+                        ? 'neutral'
+                        : 'warning'
+                  }
+                />
+              </View>
+              <Text style={styles.stepMessage}>{step.message}</Text>
+            </View>
+          </View>
+        ))}
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Next step</Text>
         <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
         <Text style={styles.copy}>{nextStep.description}</Text>
-        <Button label={nextStep.cta} onPress={nextStep.onPress.bind(null, navigation)} />
+        <Button label={nextStep.cta} onPress={() => navigation.navigate(nextStep.target)} />
         <Button label="Refresh" variant="secondary" onPress={() => void onRefresh()} />
         <Button label="Use another invite" variant="secondary" onPress={() => void onClear()} />
       </Card>
@@ -129,59 +183,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
-}
-
-function getNextStep(
-  driver: NonNullable<ReturnType<typeof useSelfService>['driver']>,
-  uploadedDocuments: number,
-) {
-  if (!driver.hasMobileAccess) {
-    return {
-      title: 'Create your account',
-      description: 'Use your email and password so you can resume onboarding anytime.',
-      cta: 'Create account',
-      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
-        navigation.navigate('DriverAccountSetup'),
-    };
-  }
-
-  if (
-    driver.verificationPaymentStatus === 'driver_payment_required' ||
-    driver.verificationPaymentStatus === 'wallet_missing' ||
-    driver.verificationPaymentStatus === 'insufficient_balance' ||
-    driver.identityStatus === 'unverified'
-  ) {
-    return {
-      title: 'Verify your identity',
-      description: driver.driverPaysKyc
-        ? 'Complete payment if required, then verify with your ID number and live selfie.'
-        : 'Review organisation confirmation or continue verification if coverage is already available.',
-      cta: 'Continue verification',
-      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
-        navigation.navigate('SelfServiceVerification'),
-    };
-  }
-
-  if (!driver.hasGuarantor) {
-    return {
-      title: 'Add your guarantor',
-      description: 'Your organisation needs a guarantor before readiness can be completed.',
-      cta: 'Add guarantor',
-      onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
-        navigation.navigate('DriverGuarantor'),
-    };
-  }
-
-  return {
-    title: uploadedDocuments > 0 ? 'Check readiness' : 'Upload your documents',
-    description:
-      uploadedDocuments > 0
-        ? 'Your main onboarding steps are saved. Check what the operator still needs.'
-        : 'Upload the required documents and finish onboarding.',
-    cta: uploadedDocuments > 0 ? 'Open checklist' : 'Continue onboarding',
-    onPress: (navigation: ScreenProps<'SelfServiceResume'>['navigation']) =>
-      navigation.navigate(uploadedDocuments > 0 ? 'SelfServiceReadiness' : 'SelfServiceVerification'),
-  };
 }
 
 function formatIdentityStatus(status: string) {
@@ -271,6 +272,46 @@ const styles = StyleSheet.create({
     color: tokens.colors.ink,
     fontSize: 15,
     fontWeight: '700',
+  },
+  stepRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.sm,
+    alignItems: 'flex-start',
+  },
+  stepDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  stepDotComplete: {
+    backgroundColor: tokens.colors.success,
+  },
+  stepDotOptional: {
+    backgroundColor: '#CBD5E1',
+  },
+  stepDotPending: {
+    backgroundColor: '#F59E0B',
+  },
+  stepCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  stepTitle: {
+    color: tokens.colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  stepMessage: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
   nextStepTitle: {
     color: tokens.colors.ink,

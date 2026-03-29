@@ -13,6 +13,7 @@ import { TenantAppShell } from '../../../../features/shared/tenant-app-shell';
 import { getDriver, getTenantMe } from '../../../../lib/api-core';
 import { getDriverIdentityLabel, getDriverIdentityTone } from '../../../../lib/driver-identity';
 import { getFormattingLocale } from '../../../../lib/locale';
+import { DriverEvidenceImage } from '../../driver-evidence-image';
 
 function formatDate(value?: string | null, locale = 'en-US'): string {
   if (!value) return 'Not recorded';
@@ -23,6 +24,14 @@ function formatDate(value?: string | null, locale = 'en-US'): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
   }).format(date);
+}
+
+function getDriverIdentityImageProxyUrl(
+  driverId: string,
+  kind: 'selfie' | 'provider' | 'signature',
+  source?: string | null,
+): string | null {
+  return source ? `/api/drivers/${driverId}/identity-image/${kind}` : null;
 }
 
 export default async function DriverReviewPage({
@@ -39,6 +48,12 @@ export default async function DriverReviewPage({
   const identityTone = getDriverIdentityTone(driver.identityStatus);
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
   const licenceVerification = driver.driverLicenceVerification ?? null;
+  const selfieImageSrc = getDriverIdentityImageProxyUrl(driver.id, 'selfie', driver.selfieImageUrl);
+  const providerImageSrc = getDriverIdentityImageProxyUrl(
+    driver.id,
+    'provider',
+    driver.providerImageUrl,
+  );
 
   return (
     <TenantAppShell
@@ -181,10 +196,11 @@ export default async function DriverReviewPage({
                   <div className="space-y-2">
                     <Text tone="strong">Live selfie</Text>
                     {driver.selfieImageUrl ? (
-                      <img
+                      <DriverEvidenceImage
                         alt="Driver live selfie"
                         className="h-48 w-full rounded-xl object-cover"
-                        src={driver.selfieImageUrl}
+                        fallback={<Text tone="muted">Not returned</Text>}
+                        src={selfieImageSrc}
                       />
                     ) : (
                       <Text tone="muted">Not returned</Text>
@@ -193,10 +209,11 @@ export default async function DriverReviewPage({
                   <div className="space-y-2">
                     <Text tone="strong">NIN portrait</Text>
                     {driver.providerImageUrl ? (
-                      <img
+                      <DriverEvidenceImage
                         alt="Driver NIN portrait"
                         className="h-48 w-full rounded-xl object-cover"
-                        src={driver.providerImageUrl}
+                        fallback={<Text tone="muted">Not returned</Text>}
+                        src={providerImageSrc}
                       />
                     ) : (
                       <Text tone="muted">Not returned</Text>

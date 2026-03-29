@@ -7,6 +7,7 @@ import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { Screen } from '../../../components/screen';
+import { useAppEntry } from '../../../contexts/app-entry-context';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import type { ScreenProps } from '../../../navigation/types';
@@ -15,7 +16,7 @@ import { formatStatusLabel } from '../../../utils/formatting';
 import { identityTone, readinessTone } from '../../../utils/status';
 
 type EntryAction = {
-  id: 'organisation' | 'driver' | 'guarantor' | 'invite' | 'login';
+  id: 'organisation' | 'driver' | 'guarantor' | 'invite' | 'login' | 'setup';
   title: string;
   subtitle: string;
   symbol: string;
@@ -31,6 +32,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
     isOfflineSession,
   } = useAuth();
   const { token, driver } = useSelfService();
+  const { selectedRole, setSelectedRole } = useAppEntry();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -75,43 +77,64 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
     }
   };
 
-  const entryActions: EntryAction[] = [
-    {
-      id: 'organisation',
-      title: 'Create Organisation',
-      subtitle: 'Start your company workspace',
-      symbol: '◧',
-      onPress: () => navigation.navigate('Signup'),
-    },
-    {
-      id: 'driver',
-      title: 'Join as Driver',
-      subtitle: 'Use your invite to start onboarding',
-      symbol: '◎',
-      onPress: () => navigation.navigate('SelfServiceOtp'),
-    },
-    {
-      id: 'guarantor',
-      title: 'Join as Guarantor',
-      subtitle: 'Confirm a driver invite',
-      symbol: '◇',
-      onPress: () => navigation.navigate('GuarantorSelfServiceOtp'),
-    },
-    {
-      id: 'invite',
-      title: 'Enter Invitation Code',
-      subtitle: 'Open an existing invite quickly',
-      symbol: '⌁',
-      onPress: () => navigation.navigate('SelfServiceOtp'),
-    },
-    {
-      id: 'login',
-      title: 'Login',
-      subtitle: 'Open your existing account',
-      symbol: '→',
-      onPress: () => setShowLoginForm(true),
-    },
-  ];
+  const roleLabel =
+    selectedRole === 'operator'
+      ? 'Fleet Manager / Operator'
+      : selectedRole === 'guarantor'
+        ? 'Guarantor'
+        : 'Driver';
+
+  const entryActions: EntryAction[] =
+    selectedRole === 'operator'
+      ? [
+          {
+            id: 'organisation',
+            title: 'Create organisation',
+            subtitle: 'Start your fleet workspace',
+            symbol: '◧',
+            onPress: () => navigation.navigate('Signup'),
+          },
+          {
+            id: 'login',
+            title: 'Sign in',
+            subtitle: 'Open your existing operator account',
+            symbol: '→',
+            onPress: () => setShowLoginForm(true),
+          },
+        ]
+      : selectedRole === 'guarantor'
+        ? [
+            {
+              id: 'guarantor',
+              title: 'Use invitation code',
+              subtitle: 'Open guarantor verification',
+              symbol: '◇',
+              onPress: () => navigation.navigate('GuarantorSelfServiceOtp'),
+            },
+            {
+              id: 'login',
+              title: 'Sign in',
+              subtitle: 'Continue an existing guarantor account',
+              symbol: '→',
+              onPress: () => setShowLoginForm(true),
+            },
+          ]
+        : [
+            {
+              id: 'invite',
+              title: 'Use invitation code',
+              subtitle: 'Start or resume driver onboarding',
+              symbol: '◎',
+              onPress: () => navigation.navigate('SelfServiceOtp'),
+            },
+            {
+              id: 'login',
+              title: 'Sign in',
+              subtitle: 'Continue your driver account',
+              symbol: '→',
+              onPress: () => setShowLoginForm(true),
+            },
+          ];
 
   return (
     <Screen contentContainerStyle={styles.content}>
@@ -132,18 +155,31 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
         <View style={styles.logoCore}>
           <Text style={styles.wordmark}>M</Text>
         </View>
-        <Text style={styles.productName}>Mobiris</Text>
-        <Text style={styles.title}>Choose how you want to enter Mobiris</Text>
+        <Text style={styles.productName}>Mobiris Fleet OS</Text>
+        <Text style={styles.title}>
+          {selectedRole === 'operator'
+            ? 'Run fleet operations with less friction'
+            : selectedRole === 'guarantor'
+              ? 'Complete guarantor verification'
+              : 'Continue driver onboarding'}
+        </Text>
         <Text style={styles.subtitle}>
-          Invitation-first onboarding for drivers and guarantors, with fast access for operators.
+          {selectedRole === 'operator'
+            ? 'Create your organisation, add vehicles, add drivers, and keep operations moving.'
+            : selectedRole === 'guarantor'
+              ? 'Use your invitation, confirm your role, and complete verification in a few guided steps.'
+              : 'Use your invitation, verify your details, and finish the next required step quickly.'}
         </Text>
       </View>
 
       <Card style={styles.entryRuleCard}>
-        <Text style={styles.entryRuleTitle}>Start with an invite if you have one</Text>
+        <Text style={styles.entryRuleTitle}>{roleLabel}</Text>
         <Text style={styles.entryRuleCopy}>
-          Drivers and guarantors should use their organisation invite first. Login is for existing
-          accounts, and organisation setup starts with work email.
+          {selectedRole === 'operator'
+            ? 'The operator flow starts with organisation setup, then moves into adding a vehicle, adding a driver, and verifying the driver.'
+            : selectedRole === 'guarantor'
+              ? 'Guarantor access usually starts from an organisation invite. Sign in only if you already created an account before.'
+              : 'Driver access usually starts from an organisation invite. Sign in only if you already created your account before.'}
         </Text>
       </Card>
 
@@ -181,6 +217,25 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
         </Card>
       ) : null}
 
+      {selectedRole === 'driver' ? (
+        <Card style={styles.pathCard}>
+          <Text style={styles.pathTitle}>Driver path</Text>
+          <Text style={styles.pathCopy}>
+            Your steps are driven by your organisation&apos;s verification level. Identity, guarantor,
+            and licence only appear when required for your onboarding.
+          </Text>
+        </Card>
+      ) : null}
+
+      {selectedRole === 'operator' ? (
+        <Card style={styles.pathCard}>
+          <Text style={styles.pathTitle}>Operator path</Text>
+          <Text style={styles.pathCopy}>
+            Start with organisation setup, then add a vehicle, add a driver, and verify the driver.
+          </Text>
+        </Card>
+      ) : null}
+
       <View style={styles.optionsGrid}>
         {entryActions.map((action) => (
           <Pressable key={action.id} onPress={action.onPress} style={styles.optionCard}>
@@ -198,7 +253,11 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
       {showLoginForm ? (
         <Card style={styles.loginCard}>
           <View style={styles.loginHeader}>
-            <Text style={styles.loginTitle}>Login</Text>
+            <Text style={styles.loginTitle}>
+              {selectedRole === 'operator'
+                ? 'Sign in to Mobiris Fleet OS'
+                : 'Sign in to continue'}
+            </Text>
             <Pressable onPress={() => setShowLoginForm(false)}>
               <Text style={styles.closeText}>Close</Text>
             </Pressable>
@@ -219,7 +278,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
             secureTextEntry
             value={password}
           />
-          <Button label="Login" loading={submitting} onPress={onSubmit} />
+          <Button label="Sign in" loading={submitting} onPress={onSubmit} />
           {biometricAvailable && biometricEnabled ? (
             <Button
               label="Use biometric login"
@@ -250,6 +309,14 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           Offline mode is active. Your last trusted session is available until connectivity returns.
         </Text>
       ) : null}
+
+      <Pressable
+        onPress={() => {
+          navigation.replace('RoleSelection');
+        }}
+      >
+        <Text style={styles.switchRoleLink}>Change role</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -389,6 +456,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  pathCard: {
+    gap: tokens.spacing.sm,
+    backgroundColor: '#F8FAFC',
+  },
+  pathTitle: {
+    color: tokens.colors.ink,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  pathCopy: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   optionsGrid: {
     gap: tokens.spacing.sm,
   },
@@ -462,6 +543,12 @@ const styles = StyleSheet.create({
     color: tokens.colors.inkSoft,
     fontSize: 13,
     lineHeight: 18,
+    textAlign: 'center',
+  },
+  switchRoleLink: {
+    color: tokens.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

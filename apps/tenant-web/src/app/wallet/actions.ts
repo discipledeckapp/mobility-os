@@ -18,19 +18,56 @@ function getTrimmedValue(formData: FormData, key: string): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function parseAmountToMinorUnits(amountRaw: string, currencyMinorUnitRaw: string): number | null {
+  const normalized = amountRaw.replace(/,/g, '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(normalized)) {
+    return null;
+  }
+
+  const currencyMinorUnit = Number.parseInt(currencyMinorUnitRaw, 10);
+  if (!Number.isFinite(currencyMinorUnit) || currencyMinorUnit < 0 || currencyMinorUnit > 6) {
+    return null;
+  }
+
+  const [wholePart, fractionalPart = ''] = normalized.split('.');
+  if (fractionalPart.length > currencyMinorUnit) {
+    return null;
+  }
+
+  const whole = Number.parseInt(wholePart ?? '0', 10);
+  if (!Number.isFinite(whole)) {
+    return null;
+  }
+
+  const paddedFraction = `${fractionalPart}${'0'.repeat(currencyMinorUnit)}`.slice(
+    0,
+    currencyMinorUnit,
+  );
+  const fraction = paddedFraction ? Number.parseInt(paddedFraction, 10) : 0;
+  const factor = 10 ** currencyMinorUnit;
+  const amountMinorUnits = whole * factor + fraction;
+
+  return Number.isFinite(amountMinorUnits) ? amountMinorUnits : null;
+}
+
 export async function initializeVerificationWalletTopUpAction(
   _prevState: WalletCheckoutActionState,
   formData: FormData,
 ): Promise<WalletCheckoutActionState> {
   const provider = getTrimmedValue(formData, 'provider');
-  const amountRaw = getTrimmedValue(formData, 'amountMinorUnits');
+  const amountRaw = getTrimmedValue(formData, 'amount');
+  const currencyMinorUnitRaw = getTrimmedValue(formData, 'currencyMinorUnit');
 
   if (!provider || !amountRaw) {
     return { error: 'Payment provider and amount are required.' };
   }
 
-  const amountMinorUnits = Number.parseInt(amountRaw, 10);
-  if (Number.isNaN(amountMinorUnits) || amountMinorUnits <= 0) {
+  const amountMinorUnits = parseAmountToMinorUnits(amountRaw, currencyMinorUnitRaw);
+  if (!amountMinorUnits || amountMinorUnits <= 0) {
     return { error: 'Enter a valid amount to fund the verification wallet.' };
   }
 

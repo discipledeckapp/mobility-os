@@ -40,6 +40,15 @@ type VehicleDetail = Vehicle & {
     latestAssignmentId?: string | null;
     latestAssignmentStatus?: string | null;
     latestAssignmentStartedAt?: Date | null;
+    assignedDriverId?: string | null;
+    assignedDriverName?: string | null;
+  };
+  remittanceSummary: {
+    latestRecordedAt?: string | null;
+    latestAmountMinorUnits?: number | null;
+    nextDueAt?: string | null;
+    nextDueAmountMinorUnits?: number | null;
+    currency?: string | null;
   };
   maintenanceSummary: string;
   maintenanceDue: {
@@ -198,6 +207,7 @@ export class VehiclesService {
     const [
       valuations,
       latestAssignment,
+      currentAssignment,
       totalAssignments,
       activeAssignments,
       latestVinDecode,
@@ -206,6 +216,8 @@ export class VehiclesService {
       maintenanceEvents,
       incidents,
       confirmedRemittanceAggregate,
+      latestRemittance,
+      nextDueRemittance,
     ] = await Promise.all([
       this.prisma.vehicleValuation.findMany({
         where: { vehicleId: vehicle.id },
@@ -215,6 +227,19 @@ export class VehiclesService {
         where: { tenantId, vehicleId: vehicle.id },
         orderBy: { startedAt: 'desc' },
         select: { id: true, status: true, startedAt: true },
+      }),
+      this.prisma.assignment.findFirst({
+        where: {
+          tenantId,
+          vehicleId: vehicle.id,
+          status: { in: ['pending_driver_confirmation', 'active'] },
+        },
+        orderBy: { startedAt: 'desc' },
+        select: {
+          id: true,
+          driverId: true,
+          status: true,
+        },
       }),
       this.prisma.assignment.count({
         where: { tenantId, vehicleId: vehicle.id },
@@ -263,11 +288,43 @@ export class VehiclesService {
         where: { tenantId, vehicleId: vehicle.id, status: 'confirmed' },
         _sum: { amountMinorUnits: true },
       }),
+      this.prisma.remittance.findFirst({
+        where: { tenantId, vehicleId: vehicle.id },
+        orderBy: [{ createdAt: 'desc' }],
+        select: {
+          createdAt: true,
+          amountMinorUnits: true,
+          currency: true,
+        },
+      }),
+      this.prisma.remittance.findFirst({
+        where: {
+          tenantId,
+          vehicleId: vehicle.id,
+          status: { in: ['pending', 'partial', 'overdue'] },
+        },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          dueDate: true,
+          amountMinorUnits: true,
+          currency: true,
+        },
+      }),
     ]);
 
     const acquisition = valuations.find(
       (valuation) => valuation.valuationKind === 'acquisition' && valuation.isCurrent,
     );
+    const currentDriver = currentAssignment?.driverId
+      ? await this.prisma.driver.findUnique({
+          where: { id: currentAssignment.driverId },
+          select: {
+            firstName: true,
+            lastName: true,
+            phone: true,
+          },
+        })
+      : null;
     const estimate = valuations.find(
       (valuation) => valuation.valuationKind === 'estimate' && valuation.isCurrent,
     );
@@ -341,6 +398,26 @@ export class VehiclesService {
         latestAssignmentId: latestAssignment?.id ?? null,
         latestAssignmentStatus: latestAssignment?.status ?? null,
         latestAssignmentStartedAt: latestAssignment?.startedAt ?? null,
+        assignedDriverId: currentAssignment?.driverId ?? null,
+        assignedDriverName:
+          currentDriver
+            ? `${currentDriver.firstName ?? ''} ${currentDriver.lastName ?? ''}`.trim() ||
+              currentDriver.phone ||
+              currentAssignment?.driverId ||
+              null
+            : null,
+      },
+      remittanceSummary: {
+        latestRecordedAt: latestRemittance?.createdAt.toISOString() ?? null,
+        latestAmountMinorUnits: latestRemittance?.amountMinorUnits ?? null,
+        nextDueAt: nextDueRemittance?.dueDate ?? null,
+        nextDueAmountMinorUnits: nextDueRemittance?.amountMinorUnits ?? null,
+        currency:
+          nextDueRemittance?.currency ??
+          latestRemittance?.currency ??
+          estimate?.currency ??
+          acquisition?.currency ??
+          null,
       },
       maintenanceSummary,
       maintenanceDue: {

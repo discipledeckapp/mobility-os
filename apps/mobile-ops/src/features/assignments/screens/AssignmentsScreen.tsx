@@ -121,6 +121,17 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
     () => pickCurrentAssignment(assignments),
     [assignments],
   );
+  const canRecordAnyRemittance = assignments.some(
+    (assignment) =>
+      assignment.status === 'active' &&
+      (!assignment.paymentModel ||
+        assignment.paymentModel === 'remittance' ||
+        assignment.paymentModel === 'hire_purchase'),
+  );
+  const currentAssignmentSupportsRemittance =
+    !currentAssignment?.paymentModel ||
+    currentAssignment.paymentModel === 'remittance' ||
+    currentAssignment.paymentModel === 'hire_purchase';
 
   useFocusEffect(
     useCallback(
@@ -142,10 +153,10 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         <Card style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroCopy}>
-              <Text style={styles.kicker}>{session?.tenantName ?? 'Mobility OS'}</Text>
+              <Text style={styles.kicker}>Driver home</Text>
               <Text style={styles.title}>{session?.name ?? 'Field operator'}</Text>
               <Text style={styles.muted}>
-                Review current assignments, record remittance, and check verification readiness.
+                Check your assignment status, vehicle details, and the next action for today.
               </Text>
             </View>
             <Badge label={session?.role.replace(/_/g, ' ') ?? 'SIGNED IN'} tone="neutral" />
@@ -157,11 +168,13 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
               variant="secondary"
               onPress={() => navigation.navigate('Profile')}
             />
-            <Button
-              accessibilityHint="Open the remittance recording form"
-              label="Record remittance"
-              onPress={() => navigation.navigate('Remittance', {})}
-            />
+            {canRecordAnyRemittance ? (
+              <Button
+                accessibilityHint="Open the remittance recording form"
+                label="Record remittance"
+                onPress={() => navigation.navigate('Remittance', {})}
+              />
+            ) : null}
           </View>
           <Button
             accessibilityHint="Sign out of the mobile operations app"
@@ -172,7 +185,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Operational readiness</Text>
+          <Text style={styles.sectionTitle}>Ready to operate</Text>
           {driver ? (
             <>
               <View style={styles.readinessRow}>
@@ -250,15 +263,17 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                     })
                   }
                 />
-                <Button
-                  label="Record remittance"
-                  variant="secondary"
-                  onPress={() =>
-                    navigation.navigate('Remittance', {
-                      assignmentId: currentAssignment.id,
-                    })
-                  }
-                />
+                {currentAssignmentSupportsRemittance ? (
+                  <Button
+                    label="Record remittance"
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate('Remittance', {
+                        assignmentId: currentAssignment.id,
+                      })
+                    }
+                  />
+                ) : null}
               </View>
             </>
           ) : (

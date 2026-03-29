@@ -50,6 +50,15 @@ function formatMoney(amountMinorUnits?: number | null, currency = 'NGN'): string
   }).format(amountMinorUnits / 100);
 }
 
+function formatPaymentModel(value?: string | null): string {
+  if (!value) return 'Remittance';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function supportsRemittance(paymentModel?: string | null): boolean {
+  return !paymentModel || paymentModel === 'remittance' || paymentModel === 'hire_purchase';
+}
+
 export default async function AssignmentDetailPage({
   params,
 }: {
@@ -66,6 +75,7 @@ export default async function AssignmentDetailPage({
   const driver = drivers.find((record) => record.id === assignment.driverId);
   const vehicle = vehicles.find((record) => record.id === assignment.vehicleId);
   const fleet = fleets.find((record) => record.id === assignment.fleetId);
+  const showRemittance = supportsRemittance(assignment.paymentModel);
 
   return (
     <TenantAppShell
@@ -129,12 +139,17 @@ export default async function AssignmentDetailPage({
                 <Text>{fleet?.name ?? assignment.fleetId}</Text>
               </div>
               <div className="space-y-1">
+                <Text tone="muted">Payment model</Text>
+                <Text>{formatPaymentModel(assignment.paymentModel)}</Text>
+              </div>
+              <div className="space-y-1">
                 <Text tone="muted">Recorded notes</Text>
                 <Text>{assignment.notes ?? 'No operator note recorded.'}</Text>
               </div>
             </CardContent>
           </Card>
 
+          {showRemittance ? (
           <Card>
             <CardHeader>
               <CardTitle>Remittance plan</CardTitle>
@@ -195,13 +210,25 @@ export default async function AssignmentDetailPage({
               />
             </CardContent>
           </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment model</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Text tone="muted">
+                  This assignment uses the {formatPaymentModel(assignment.paymentModel).toLowerCase()} payment model, so transport remittance scheduling is not part of this workflow.
+                </Text>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
               <CardTitle>Assignment contract</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {assignment.financialContract ? (
+              {showRemittance && assignment.financialContract ? (
                 <div className="grid gap-4 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/60 p-4 md:grid-cols-3">
                   <div className="space-y-1">
                     <Text tone="muted">Contract type</Text>
@@ -274,12 +301,14 @@ export default async function AssignmentDetailPage({
               <div className="space-y-1">
                 <Text tone="muted">Expected terms</Text>
                 <Text>
-                  {assignment.financialContract?.display.expectedRemittanceTerms ??
-                    assignment.contractSnapshot?.expectedRemittanceTerms ??
-                    'Contract terms will be generated from the current remittance plan.'}
+                  {showRemittance
+                    ? assignment.financialContract?.display.expectedRemittanceTerms ??
+                      assignment.contractSnapshot?.expectedRemittanceTerms ??
+                      'Contract terms will be generated from the current remittance plan.'
+                    : `${formatPaymentModel(assignment.paymentModel)} terms apply for this assignment. Remittance-specific contract tracking is disabled.`}
                 </Text>
               </div>
-              {assignment.financialContract?.hirePurchase ? (
+              {showRemittance && assignment.financialContract?.hirePurchase ? (
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-1">
                     <Text tone="muted">Total target</Text>
@@ -310,7 +339,7 @@ export default async function AssignmentDetailPage({
                   </div>
                 </div>
               ) : null}
-              {assignment.financialContract?.summary.riskSignals.length ? (
+              {showRemittance && assignment.financialContract?.summary.riskSignals.length ? (
                 <div className="space-y-1">
                   <Text tone="muted">Performance signals</Text>
                   <Text>{assignment.financialContract.summary.riskSignals.join(' • ')}</Text>
@@ -323,7 +352,7 @@ export default async function AssignmentDetailPage({
                 </div>
               ) : (
                 <Text tone="muted">
-                  The driver must accept these terms before remittance can begin.
+                  The driver must accept these terms before the assignment can proceed.
                 </Text>
               )}
               <div className="space-y-1">

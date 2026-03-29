@@ -20,10 +20,6 @@ import {
   type SearchableSelectOption,
 } from '@mobility-os/ui';
 import type { DriverRecord, FleetRecord } from '../../lib/api-core';
-import {
-  getDriverIdentityLabel,
-  getDriverIdentityTone,
-} from '../../lib/driver-identity';
 import { DriverStatusActions } from './driver-status-actions';
 
 function LockIcon() {
@@ -108,20 +104,6 @@ function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neut
   return 'neutral';
 }
 
-function getGuarantorTone(status: string | null | undefined): 'success' | 'warning' | 'danger' {
-  if (status === 'active') return 'success';
-  if (status === 'disconnected') return 'warning';
-  return 'danger';
-}
-
-function getMobileAccessTone(
-  status: string | null | undefined,
-): 'success' | 'warning' | 'danger' {
-  if (status === 'linked') return 'success';
-  if (status === 'inactive') return 'warning';
-  return 'danger';
-}
-
 function getReadinessTone(
   status: string,
 ): 'success' | 'warning' | 'danger' {
@@ -134,6 +116,122 @@ function getReadinessLabel(status: string): string {
   if (status === 'ready') return 'Ready';
   if (status === 'partially_ready') return 'Partially ready';
   return 'Not ready';
+}
+
+function getVerificationComponentLabel(
+  driver: DriverRecord,
+  key: 'identity' | 'guarantor' | 'drivers_license',
+): { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' } {
+  const component = driver.verificationComponents?.find((item) => item.key === key);
+  const baseLabel =
+    key === 'identity' ? 'Identity' : key === 'guarantor' ? 'Guarantor' : 'Licence';
+
+  if (component) {
+    if (!component.required || component.status === 'not_required') {
+      return { label: `${baseLabel}: Not required`, tone: 'neutral' };
+    }
+    if (component.status === 'completed') {
+      return { label: `${baseLabel}: Complete`, tone: 'success' };
+    }
+    return { label: `${baseLabel}: Needed`, tone: 'warning' };
+  }
+
+  if (key === 'identity') {
+    return driver.identityStatus === 'verified'
+      ? { label: 'Identity: Complete', tone: 'success' }
+      : { label: 'Identity: Needed', tone: 'warning' };
+  }
+
+  if (key === 'guarantor') {
+    if (!driver.hasGuarantor && !driver.guarantorStatus) {
+      return { label: 'Guarantor: Not required', tone: 'neutral' };
+    }
+
+    if (driver.guarantorStatus === 'active') {
+      return { label: 'Guarantor: Complete', tone: 'success' };
+    }
+
+    if (driver.guarantorStatus === 'disconnected') {
+      return { label: 'Guarantor: Reconnect', tone: 'warning' };
+    }
+
+    return { label: 'Guarantor: Needed', tone: 'warning' };
+  }
+
+  return driver.hasApprovedLicence
+    ? { label: 'Licence: Complete', tone: 'success' }
+    : { label: 'Licence: Not required', tone: 'neutral' };
+}
+
+function getRiskBadge(driver: DriverRecord): {
+  label: string;
+  tone: 'success' | 'warning' | 'danger' | 'neutral';
+  hint?: string;
+} {
+  if (driver.riskBand) {
+    if (driver.riskBand === 'critical') {
+      return { label: 'High risk', tone: 'danger', hint: 'Requires immediate review' };
+    }
+    if (
+      driver.riskBand === 'high' ||
+      driver.riskBand === 'medium' ||
+      driver.isWatchlisted
+    ) {
+      const riskResult: {
+        label: string;
+        tone: 'warning';
+        hint?: string;
+      } = {
+        label: driver.riskBand === 'high' ? 'High risk' : 'Medium risk',
+        tone: 'warning',
+      };
+      if (driver.isWatchlisted) {
+        riskResult.hint = 'Watchlist match found';
+      }
+      return riskResult;
+    }
+    return { label: 'Low risk', tone: 'success' };
+  }
+
+  if (driver.hasResolvedIdentity) {
+    return { label: 'No signal', tone: 'neutral' };
+  }
+
+  return { label: 'Unverified', tone: 'neutral' };
+}
+
+function getStatusSummary(driver: DriverRecord): Array<{
+  label: string;
+  tone: 'success' | 'warning' | 'danger' | 'neutral';
+}> {
+  return [
+    {
+      label:
+        driver.locked
+          ? 'Locked'
+          : driver.status === 'active'
+            ? 'Active'
+            : driver.status === 'inactive'
+              ? 'Inactive'
+              : driver.status === 'suspended'
+                ? 'Suspended'
+                : 'Terminated',
+      tone: driver.locked ? 'neutral' : getStatusTone(driver.status),
+    },
+    {
+      label: getReadinessLabel(driver.activationReadiness),
+      tone: getReadinessTone(driver.activationReadiness),
+    },
+  ];
+}
+
+function needsVerificationAttention(driver: DriverRecord): boolean {
+  return (
+    driver.verificationComponents?.some(
+      (component) => component.required && component.status !== 'completed',
+    ) ??
+    driver.identityStatus !== 'verified'
+  );
 }
 
 function getDriverDisplayName(driver: DriverRecord): string {
@@ -155,6 +253,8 @@ export function DriverRecordsPanel({
   initialPageSize,
   initialSearchQuery,
   initialStatus,
+  showDocuments,
+  tenantVerificationTierLabel,
   totalDrivers,
 }: {
   drivers: DriverRecord[];
@@ -167,6 +267,8 @@ export function DriverRecordsPanel({
   initialPageSize: number;
   initialSearchQuery: string;
   initialStatus: string;
+  showDocuments: boolean;
+  tenantVerificationTierLabel: string;
   totalDrivers: number;
 }) {
   const router = useRouter();
@@ -186,13 +288,11 @@ export function DriverRecordsPanel({
   );
   const fleetOptions = useMemo(() => toFleetOptions(fleets), [fleets]);
   const verifiedActiveDrivers = useMemo(
-    () =>
-      drivers.filter((driver) => driver.status === 'active' && driver.identityStatus === 'verified')
-        .length,
+    () => drivers.filter((driver) => driver.status === 'active' && driver.activationReadiness === 'ready').length,
     [drivers],
   );
   const unverifiedDrivers = useMemo(
-    () => drivers.filter((driver) => driver.identityStatus !== 'verified').length,
+    () => drivers.filter((driver) => needsVerificationAttention(driver)).length,
     [drivers],
   );
 
@@ -231,7 +331,7 @@ export function DriverRecordsPanel({
             </Link>
           </div>
         }
-        description="Search, filter, and open driver records by name, phone, fleet, or identity status."
+        description={`See who can operate now, who still needs ${tenantVerificationTierLabel}, and where operator follow-up is required.`}
         emptyState={
           <div className="space-y-3">
             <Text tone="muted">
@@ -269,7 +369,7 @@ export function DriverRecordsPanel({
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-emerald-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Verified active drivers</Text>
+                <Text tone="muted">Ready to operate</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
                   {verifiedActiveDrivers}
                 </p>
@@ -279,21 +379,25 @@ export function DriverRecordsPanel({
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-violet-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-violet-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Unverified drivers</Text>
+                <Text tone="muted">Need verification</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
                   {unverifiedDrivers}
                 </p>
-                <Text tone="muted">Onboarding pool</Text>
+                <Text tone="muted">{tenantVerificationTierLabel}</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-sky-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
               <div className="h-0.5 bg-sky-400" />
               <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Guarantors linked</Text>
+                <Text tone="muted">Guarantor complete</Text>
                 <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.filter((driver) => driver.guarantorStatus === 'active').length}
+                  {
+                    drivers.filter((driver) =>
+                      getVerificationComponentLabel(driver, 'guarantor').tone === 'success',
+                    ).length
+                  }
                 </p>
-                <Text tone="muted">On this page</Text>
+                <Text tone="muted">Required drivers only</Text>
               </div>
             </div>
             <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
@@ -312,8 +416,8 @@ export function DriverRecordsPanel({
         toolbar={
           <form action={pathname ?? '/drivers'} className="flex flex-col gap-4 xl:flex-row xl:items-end">
             <div className="min-w-0 flex-[1.5] space-y-2">
-              <Text tone="muted">Search drivers</Text>
-              <Input
+            <Text tone="muted">Search</Text>
+            <Input
                 name="q"
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search by name, phone, email, or fleet"
@@ -322,9 +426,9 @@ export function DriverRecordsPanel({
             </div>
             <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SearchableSelect
-                helperText="Filter the registry to a single fleet."
+                helperText="Show one fleet at a time."
                 inputId="driverFleetFilter"
-                label="Fleet filter"
+                label="Fleet"
                 name="fleetId"
                 onChange={setFleetId}
                 options={fleetOptions}
@@ -332,9 +436,9 @@ export function DriverRecordsPanel({
                 value={fleetId}
               />
               <SearchableSelect
-                helperText="Filter by driver lifecycle status."
+                helperText="Show one driver status."
                 inputId="driverStatusFilter"
-                label="Status filter"
+                label="Status"
                 name="status"
                 onChange={setStatus}
                 options={STATUS_OPTIONS}
@@ -342,9 +446,9 @@ export function DriverRecordsPanel({
                 value={status}
               />
               <SearchableSelect
-                helperText="Filter by identity workflow state."
+                helperText="Show one identity state."
                 inputId="driverIdentityFilter"
-                label="Identity filter"
+                label="Identity"
                 name="identityStatus"
                 onChange={setIdentityStatus}
                 options={IDENTITY_OPTIONS}
@@ -377,14 +481,9 @@ export function DriverRecordsPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Fleet</TableHead>
+              <TableHead>Driver</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Identity</TableHead>
-              <TableHead>Guarantor</TableHead>
-              <TableHead>Mobile access</TableHead>
-              <TableHead>Readiness</TableHead>
+              <TableHead>Verification</TableHead>
               <TableHead>Risk</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -396,7 +495,7 @@ export function DriverRecordsPanel({
                 key={driver.id}
               >
                 <TableCell>
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     {driver.locked ? (
                       <button
                         className="flex items-center gap-1.5 font-semibold text-slate-400 hover:text-slate-600"
@@ -415,74 +514,23 @@ export function DriverRecordsPanel({
                       </Link>
                     )}
                     <p className="text-xs text-slate-400">{driver.email ?? driver.phone}</p>
+                    <p className="text-xs text-slate-500">
+                      {fleetLabels.get(driver.fleetId) ?? driver.fleetId}
+                    </p>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <p className={`text-sm ${driver.locked ? 'text-slate-400' : 'text-[var(--mobiris-ink)]'}`}>{driver.phone}</p>
-                </TableCell>
-                <TableCell>
-                  <p className="text-sm text-slate-600">{fleetLabels.get(driver.fleetId) ?? driver.fleetId}</p>
-                </TableCell>
-                <TableCell>
-                  {driver.locked ? (
-                    <Badge tone="neutral">locked</Badge>
-                  ) : (
-                    <Badge tone={getStatusTone(driver.status)}>{driver.status}</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
                   {driver.locked ? (
                     <span className="text-slate-300">—</span>
                   ) : (
-                    <div className="space-y-1.5">
-                      <Badge tone={getDriverIdentityTone(driver.identityStatus)}>
-                        {getDriverIdentityLabel(driver.identityStatus)}
-                      </Badge>
-                      {driver.identityReviewCaseId ? (
-                        <Link
-                          className="block text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                          href={`/drivers/${driver.id}/review`}
-                        >
-                          Review open →
-                        </Link>
-                      ) : null}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {driver.locked ? (
-                    <span className="text-slate-300">—</span>
-                  ) : (
-                    <Badge tone={getGuarantorTone(driver.guarantorStatus)}>
-                      {driver.guarantorStatus === 'active'
-                        ? 'Linked'
-                        : driver.guarantorStatus === 'disconnected'
-                          ? 'Disconnected'
-                          : 'Missing'}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {driver.locked ? (
-                    <span className="text-slate-300">—</span>
-                  ) : (
-                    <Badge tone={getMobileAccessTone(driver.mobileAccessStatus)}>
-                      {driver.mobileAccessStatus === 'linked'
-                        ? 'Linked'
-                        : driver.mobileAccessStatus === 'inactive'
-                          ? 'Inactive account'
-                          : 'Missing'}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {driver.locked ? (
-                    <span className="text-slate-300">—</span>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <Badge tone={getReadinessTone(driver.activationReadiness)}>
-                        {getReadinessLabel(driver.activationReadiness)}
-                      </Badge>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {getStatusSummary(driver).map((item) => (
+                          <Badge key={item.label} tone={item.tone}>
+                            {item.label}
+                          </Badge>
+                        ))}
+                      </div>
                       {driver.activationReadinessReasons[0] ? (
                         <p className="text-xs text-slate-500">{driver.activationReadinessReasons[0]}</p>
                       ) : null}
@@ -492,24 +540,37 @@ export function DriverRecordsPanel({
                 <TableCell>
                   {driver.locked ? (
                     <span className="text-slate-300">—</span>
-                  ) : driver.riskBand ? (
-                    <Badge
-                      tone={
-                        driver.riskBand === 'critical'
-                          ? 'danger'
-                          : driver.riskBand === 'high' ||
-                              driver.riskBand === 'medium' ||
-                              driver.isWatchlisted
-                            ? 'warning'
-                            : 'success'
-                      }
-                    >
-                      {driver.isWatchlisted ? `${driver.riskBand} · watchlist` : driver.riskBand}
-                    </Badge>
-                  ) : driver.hasResolvedIdentity ? (
-                    <Badge tone="neutral">no signal</Badge>
                   ) : (
-                    <Badge tone="neutral">unverified</Badge>
+                    <div className="flex flex-wrap gap-2">
+                      {(['identity', 'guarantor', 'drivers_license'] as const).map((key) => {
+                        const component = getVerificationComponentLabel(driver, key);
+                        return (
+                          <Badge key={component.label} tone={component.tone}>
+                            {component.label}
+                          </Badge>
+                        );
+                      })}
+                      {driver.identityReviewCaseId ? (
+                        <Link
+                          className="inline-flex items-center text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                          href={`/drivers/${driver.id}/review`}
+                        >
+                          Review open
+                        </Link>
+                      ) : null}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {driver.locked ? (
+                    <span className="text-slate-300">—</span>
+                  ) : (
+                    <div className="space-y-1">
+                      <Badge tone={getRiskBadge(driver).tone}>{getRiskBadge(driver).label}</Badge>
+                      {getRiskBadge(driver).hint ? (
+                        <p className="text-xs text-slate-500">{getRiskBadge(driver).hint}</p>
+                      ) : null}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -523,18 +584,22 @@ export function DriverRecordsPanel({
                     </button>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      <Link
-                        className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                        href={`/drivers/${driver.id}?tab=verification`}
-                      >
-                        Request verification
-                      </Link>
-                      <Link
-                        className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                        href={`/drivers/${driver.id}?tab=documents`}
-                      >
-                        Documents
-                      </Link>
+                      {needsVerificationAttention(driver) ? (
+                        <Link
+                          className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                          href={`/drivers/${driver.id}?tab=verification`}
+                        >
+                          Request verification
+                        </Link>
+                      ) : null}
+                      {showDocuments ? (
+                        <Link
+                          className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                          href={`/drivers/${driver.id}?tab=documents`}
+                        >
+                          Documents
+                        </Link>
+                      ) : null}
                       <DriverStatusActions driver={driver} />
                     </div>
                   )}

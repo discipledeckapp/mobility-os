@@ -4,6 +4,7 @@ import {
   type ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 
 interface HttpRequestLike {
@@ -93,27 +94,33 @@ function getStatusCode(exception: unknown): number {
 }
 
 function sanitizePrismaMessage(exception: unknown): string {
-  // Replace raw Prisma error detail with a migration-actionable message.
+  // Replace raw Prisma error detail with a product-facing service message.
   if (isPrismaMissingTableError(exception)) {
-    return (
-      'A required database table is missing. ' +
-      'The service requires a pending migration to be applied. ' +
-      'Run: pnpm --filter api-core db:migrate'
-    );
+    return 'This service is temporarily unavailable. Please try again shortly.';
   }
   return '';
 }
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<HttpReplyLike>();
     const request = ctx.getRequest<HttpRequestLike>();
     const statusCode = getStatusCode(exception);
 
-    // Override the message for missing-table Prisma errors so callers and operators
-    // get an actionable message rather than raw Prisma internals.
+    if (isPrismaMissingTableError(exception)) {
+      this.logger.error(
+        `Pending migration or missing database object for request '${request.url ?? 'unknown'}': ${
+          exception instanceof Error ? exception.message : 'unknown error'
+        }`,
+      );
+    }
+
+    // Override the message for missing-table Prisma errors so callers get a
+    // product-safe message while operators still have the server logs.
     const prismaMessage = sanitizePrismaMessage(exception);
     const { message, error } = prismaMessage
       ? { message: prismaMessage, error: 'MigrationRequired' }

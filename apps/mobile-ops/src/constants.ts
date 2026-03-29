@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   queryCache: 'mobility_os.mobile_ops.query_cache',
   pushDeviceToken: 'mobility_os.mobile_ops.push_device_token',
   guarantorSelfServiceToken: 'mobility_os.mobile_ops.guarantor_self_service_token',
+  appEntryRole: 'mobility_os.mobile_ops.app_entry_role',
 } as const;
 
 export const OFFLINE_ACTION_TYPE = {

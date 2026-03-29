@@ -282,7 +282,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock Mobiris',
+      promptMessage: 'Unlock Mobiris Fleet OS',
       cancelLabel: 'Cancel',
       fallbackLabel: 'Use device passcode',
     });

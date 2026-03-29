@@ -147,7 +147,9 @@ export function CreateAssignmentForm({
   const [fleetId, setFleetId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
-  const [contractType, setContractType] = useState<'regular_hire' | 'hire_purchase'>('regular_hire');
+  const [paymentModel, setPaymentModel] = useState<
+    'remittance' | 'salary' | 'commission' | 'hire_purchase'
+  >('remittance');
   const [remittanceFrequency, setRemittanceFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [hirePurchaseTargetDisplay, setHirePurchaseTargetDisplay] = useState('');
   const [hirePurchaseDurationPeriods, setHirePurchaseDurationPeriods] = useState('20');
@@ -219,6 +221,7 @@ export function CreateAssignmentForm({
       }),
     [durationPeriods, totalTargetMinorUnits],
   );
+  const usesRemittance = paymentModel === 'remittance' || paymentModel === 'hire_purchase';
 
   return (
     <Card>
@@ -332,26 +335,39 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contractType">Financial model</Label>
+            <Label htmlFor="paymentModel">Payment model</Label>
             <select
               className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
-              id="contractType"
-              name="contractType"
+              id="paymentModel"
+              name="paymentModel"
               onChange={(event) =>
-                setContractType(event.target.value === 'hire_purchase' ? 'hire_purchase' : 'regular_hire')
+                setPaymentModel(
+                  event.target.value === 'salary'
+                    ? 'salary'
+                    : event.target.value === 'commission'
+                      ? 'commission'
+                      : event.target.value === 'hire_purchase'
+                        ? 'hire_purchase'
+                        : 'remittance',
+                )
               }
-              value={contractType}
+              value={paymentModel}
             >
-              <option value="regular_hire">Regular hire</option>
+              <option value="remittance">Remittance</option>
+              <option value="salary">Salary</option>
+              <option value="commission">Commission</option>
               <option value="hire_purchase">Hire purchase</option>
             </select>
-            <input
-              name="remittanceModel"
-              type="hidden"
-              value={contractType === 'hire_purchase' ? 'hire_purchase' : 'fixed'}
-            />
+            <input name="contractType" type="hidden" value={paymentModel === 'hire_purchase' ? 'hire_purchase' : 'regular_hire'} />
+            <input name="remittanceModel" type="hidden" value={paymentModel === 'hire_purchase' ? 'hire_purchase' : 'fixed'} />
             <Text tone="muted">
-              Regular hire tracks recurring remittance performance. Hire purchase tracks contract payoff, balance, and ownership progress.
+              {paymentModel === 'salary'
+                ? 'Salary assignments keep driver and vehicle pairing active without showing remittance collection workflows.'
+                : paymentModel === 'commission'
+                  ? 'Commission assignments track operational pairing without transport remittance collection.'
+                  : paymentModel === 'hire_purchase'
+                    ? 'Hire purchase tracks payoff progress, balance, and ownership milestones.'
+                    : 'Remittance tracks recurring collections for transport-style operations.'}
             </Text>
           </div>
 
@@ -360,12 +376,12 @@ export function CreateAssignmentForm({
             <Input id="notes" name="notes" placeholder="Morning dispatch rotation" />
           </div>
 
-          {contractType === 'regular_hire' ? (
+          {paymentModel === 'remittance' ? (
             <div className="space-y-2">
               <Label htmlFor="remittanceAmountDisplay">Expected remittance amount <span aria-hidden="true" className="text-red-500">*</span></Label>
               <RemittanceAmountField currency="NGN" />
             </div>
-          ) : (
+          ) : paymentModel === 'hire_purchase' ? (
             <>
               <div className="space-y-2">
                 <Label htmlFor="totalTargetAmountMinorUnitsDisplay">Total target amount <span aria-hidden="true" className="text-red-500">*</span></Label>
@@ -404,52 +420,65 @@ export function CreateAssignmentForm({
                 <Text tone="muted">Use the number of daily, weekly, or monthly periods the driver should repay across.</Text>
               </div>
             </>
+          ) : (
+            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 px-4 py-3 md:col-span-2">
+              <Text tone="strong">
+                {paymentModel === 'salary' ? 'Salary assignment' : 'Commission assignment'}
+              </Text>
+              <Text tone="muted">
+                This assignment will support onboarding, verification, and fleet operations without requiring remittance terms or collection tracking.
+              </Text>
+            </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="remittanceCurrency">Remittance currency <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <Input
-              defaultValue="NGN"
-              id="remittanceCurrency"
-              maxLength={3}
-              name="remittanceCurrency"
-              placeholder="NGN"
-              required
-            />
-          </div>
+          {usesRemittance ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="remittanceCurrency">Remittance currency <span aria-hidden="true" className="text-red-500">*</span></Label>
+                <Input
+                  defaultValue="NGN"
+                  id="remittanceCurrency"
+                  maxLength={3}
+                  name="remittanceCurrency"
+                  placeholder="NGN"
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="remittanceFrequency">Remittance schedule</Label>
-            <select
-              className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
-              id="remittanceFrequency"
-              name="remittanceFrequency"
-              onChange={(event) =>
-                setRemittanceFrequency(
-                  event.target.value === 'weekly'
-                    ? 'weekly'
-                    : event.target.value === 'monthly'
-                      ? 'monthly'
-                      : 'daily',
-                )
-              }
-              value={remittanceFrequency}
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-            <Text tone="muted">
-              {describeRemittanceSchedule({ remittanceFrequency, remittanceCollectionDay: 1 })}
-            </Text>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="remittanceFrequency">Remittance schedule</Label>
+                <select
+                  className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  id="remittanceFrequency"
+                  name="remittanceFrequency"
+                  onChange={(event) =>
+                    setRemittanceFrequency(
+                      event.target.value === 'weekly'
+                        ? 'weekly'
+                        : event.target.value === 'monthly'
+                          ? 'monthly'
+                          : 'daily',
+                    )
+                  }
+                  value={remittanceFrequency}
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                <Text tone="muted">
+                  {describeRemittanceSchedule({ remittanceFrequency, remittanceCollectionDay: 1 })}
+                </Text>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="remittanceStartDate">First remittance due date <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <Input id="remittanceStartDate" name="remittanceStartDate" required type="date" />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="remittanceStartDate">First remittance due date <span aria-hidden="true" className="text-red-500">*</span></Label>
+                <Input id="remittanceStartDate" name="remittanceStartDate" required type="date" />
+              </div>
+            </>
+          ) : null}
 
-          {contractType === 'hire_purchase' ? (
+          {paymentModel === 'hire_purchase' ? (
             <>
               <MoneyMinorInputField
                 currency="NGN"
@@ -489,7 +518,7 @@ export function CreateAssignmentForm({
             </>
           ) : null}
 
-          {remittanceFrequency === 'weekly' ? (
+          {usesRemittance && remittanceFrequency === 'weekly' ? (
             <div className="space-y-2">
               <Label htmlFor="remittanceCollectionDay">Weekly collection day</Label>
               <select

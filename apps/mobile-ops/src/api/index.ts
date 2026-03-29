@@ -189,6 +189,7 @@ export interface AssignmentRecord {
   startedAt?: string | null;
   endedAt?: string | null;
   notes?: string | null;
+  paymentModel?: 'remittance' | 'salary' | 'commission' | 'hire_purchase' | null;
   remittanceModel?: string | null;
   remittanceFrequency?: string | null;
   remittanceAmountMinorUnits?: number | null;
@@ -356,6 +357,14 @@ export interface DriverRecord {
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
   verificationTierLabel?: string;
   verificationTierDescription?: string;
+  verificationTierComponents?: Array<'identity' | 'guarantor' | 'drivers_license'>;
+  verificationComponents?: Array<{
+    key: 'identity' | 'guarantor' | 'drivers_license';
+    label: string;
+    required: boolean;
+    status: 'completed' | 'pending' | 'not_required';
+    message: string;
+  }>;
   kycPaymentVerified?: boolean;
   verificationPaymentState?: 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
   verificationEntitlementState?:
@@ -1009,8 +1018,9 @@ export interface CreateAssignmentInput {
   vehicleId: string;
   fleetId?: string;
   notes?: string;
+  paymentModel?: 'remittance' | 'salary' | 'commission' | 'hire_purchase';
   remittanceModel?: 'fixed' | 'hire_purchase';
-  remittanceAmountMinorUnits: number;
+  remittanceAmountMinorUnits?: number;
   remittanceFrequency?: 'daily' | 'weekly';
   remittanceCurrency?: string;
   remittanceStartDate?: string;

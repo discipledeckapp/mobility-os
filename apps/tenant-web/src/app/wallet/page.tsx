@@ -56,6 +56,26 @@ function getEntryTone(type: string): 'success' | 'warning' | 'danger' | 'neutral
   }
 }
 
+function getLedgerSummary(entries: TenantBillingSummaryRecord['verificationWallet']['entries']) {
+  return entries.reduce(
+    (summary, entry) => {
+      if (entry.type === 'credit') {
+        summary.fundsAddedMinorUnits += entry.amountMinorUnits;
+      }
+
+      if (entry.type === 'debit') {
+        summary.verificationChargesMinorUnits += Math.abs(entry.amountMinorUnits);
+      }
+
+      return summary;
+    },
+    {
+      fundsAddedMinorUnits: 0,
+      verificationChargesMinorUnits: 0,
+    },
+  );
+}
+
 export default async function WalletPage() {
   let balance: WalletBalanceRecord | null = null;
   let entries: WalletEntryRecord[] = [];
@@ -120,13 +140,13 @@ export default async function WalletPage() {
 
   return (
     <TenantAppShell
-      description="Wallet and credit fund verification. Subscription limits and verification tier live on separate pages."
-      eyebrow="Wallet"
-      title="Wallet and credit"
+      description="Verification Wallet funding sits separately from subscription scale and verification tier settings."
+      eyebrow="Verification Wallet"
+      title="Verification wallet"
     >
       <Card>
         <CardHeader>
-          <CardTitle>Verification funding</CardTitle>
+          <CardTitle>Verification Wallet</CardTitle>
           <CardDescription>
             Wallet balance, approved credit, and saved card determine whether the selected driver
             verification tier can be paid for. They do not change your subscription limits or
@@ -140,6 +160,67 @@ export default async function WalletPage() {
             <Text>Verification wallet context is not available yet.</Text>
           ) : (
             <>
+              {(() => {
+                const ledgerSummary = getLedgerSummary(billingSummary.verificationWallet.entries);
+
+                return (
+                  <section className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)+0.25rem)] border border-[var(--mobiris-primary-light)] bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(239,246,255,0.98)_48%,rgba(219,234,254,0.82))] p-5 shadow-[0_28px_60px_-42px_rgba(37,99,235,0.5)]">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="max-w-2xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
+                          Verification funding
+                        </p>
+                        <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">
+                          Keep identity checks moving with a clear wallet balance and simple funding history.
+                        </h2>
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
+                          This page covers only verification funding: wallet balance, funding top-ups,
+                          verification charges, and saved-card setup.
+                        </p>
+                      </div>
+                      <div className="grid w-full max-w-md gap-3 sm:grid-cols-3 lg:w-[26rem]">
+                        <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            Balance
+                          </p>
+                          <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                            {formatMoney(
+                              billingSummary.verificationWallet.balanceMinorUnits,
+                              billingSummary.verificationWallet.currency,
+                              locale,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            Funds added
+                          </p>
+                          <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">
+                            {formatMoney(
+                              ledgerSummary.fundsAddedMinorUnits,
+                              billingSummary.verificationWallet.currency,
+                              locale,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-slate-950 p-4 text-white">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-100/70">
+                            Charges deducted
+                          </p>
+                          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
+                            {formatMoney(
+                              ledgerSummary.verificationChargesMinorUnits,
+                              billingSummary.verificationWallet.currency,
+                              locale,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
+
               <div className="grid gap-4 md:grid-cols-4">
                 <Card className="border-white/70 bg-white/95 shadow-none">
                   <CardContent className="p-4">
@@ -263,37 +344,36 @@ export default async function WalletPage() {
                 <CardHeader>
                   <CardTitle>Verification wallet ledger</CardTitle>
                   <CardDescription>
-                    Recent platform wallet movements used for verification charges and recovery.
+                    A simple record of funds added and verification charges deducted.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {billingSummary.verificationWallet.entries.length === 0 ? (
                     <Text>No verification wallet entries have been recorded yet.</Text>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Created</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {billingSummary.verificationWallet.entries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell>
+                    <div className="space-y-3">
+                      {billingSummary.verificationWallet.entries.map((entry) => (
+                        <div
+                          className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 p-4"
+                          key={entry.id}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <Badge tone={getEntryTone(entry.type)}>{entry.type}</Badge>
-                            </TableCell>
-                            <TableCell>
+                              <p className="text-sm font-semibold text-slate-950">
+                                {entry.description ?? 'Wallet movement'}
+                              </p>
+                            </div>
+                            <p className="text-sm font-semibold text-slate-950">
                               {formatMoney(entry.amountMinorUnits, entry.currency, locale)}
-                            </TableCell>
-                            <TableCell>{entry.description ?? 'No description'}</TableCell>
-                            <TableCell>{formatDate(entry.createdAt, locale)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </p>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {formatDate(entry.createdAt, locale)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>

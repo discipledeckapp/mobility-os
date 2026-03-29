@@ -4,8 +4,16 @@ import { mobirisBrand } from '@mobility-os/ui';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Mobiris',
-  description: 'Mobiris operations console.',
+  title: 'Mobiris Fleet OS',
+  description: 'Mobiris Fleet OS is a fleet and driver operations platform for operators on the web.',
+  applicationName: 'Mobiris Fleet OS',
+  appleWebApp: {
+    title: 'Mobiris Fleet OS',
+  },
+  openGraph: {
+    title: 'Mobiris Fleet OS',
+    description: 'Fleet and driver operations platform by Mobiris.',
+  },
 };
 
 export default function RootLayout({

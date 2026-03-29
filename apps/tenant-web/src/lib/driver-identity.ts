@@ -46,3 +46,28 @@ export function getDriverIdentityLabel(status: string): string {
       return 'Unverified';
   }
 }
+
+export function getIdentityAuthorityLabel(input: {
+  verificationProvider?: string | null;
+  verificationCountryCode?: string | null;
+  identityProfile?: Record<string, unknown> | null;
+}): string | null {
+  const ninIdNumber =
+    input.identityProfile && typeof input.identityProfile === 'object' && !Array.isArray(input.identityProfile)
+      ? input.identityProfile.ninIdNumber
+      : null;
+
+  if (
+    input.verificationCountryCode?.toUpperCase() === 'NG' &&
+    typeof ninIdNumber === 'string' &&
+    ninIdNumber.trim().length > 0
+  ) {
+    return 'NIMC';
+  }
+
+  if (!input.verificationProvider?.trim()) {
+    return null;
+  }
+
+  return input.verificationProvider;
+}

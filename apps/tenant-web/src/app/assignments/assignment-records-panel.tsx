@@ -37,6 +37,11 @@ const STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+function formatPaymentModel(value?: string | null): string {
+  if (!value) return 'Remittance';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function toFleetOptions(fleets: FleetRecord[]): SearchableSelectOption[] {
   return [...fleets]
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -65,13 +70,11 @@ export function AssignmentRecordsPanel({
   drivers,
   vehicles,
   fleets,
-  errorMessage,
 }: {
   assignments: AssignmentRecord[];
   drivers: DriverRecord[];
   vehicles: VehicleRecord[];
   fleets: FleetRecord[];
-  errorMessage?: string | null;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [fleetId, setFleetId] = useState('');
@@ -142,22 +145,31 @@ export function AssignmentRecordsPanel({
       description="Search, filter, and open assignment records by driver, vehicle, fleet, or lifecycle state."
       emptyState={
         <div className="space-y-3">
-          <Text tone="muted">
-            {assignments.length === 0
-              ? 'No assignments have been created for this organisation yet.'
-              : 'No assignments match the current search or filters.'}
-          </Text>
           {assignments.length === 0 ? (
-            <Link
-              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-              href="/assignments/new"
-            >
-              Create the first assignment
-            </Link>
-          ) : null}
+            <>
+              <Text tone="muted">
+                No assignments have been created yet. Start with a single assignment or import a prepared list.
+              </Text>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+                  href="/assignments/new"
+                >
+                  Create the first assignment
+                </Link>
+                <a
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4.5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-primary-dark)]"
+                  href="#bulk-import"
+                >
+                  Import assignments in bulk
+                </a>
+              </div>
+            </>
+          ) : (
+            <Text tone="muted">No assignments match the current search or filters.</Text>
+          )}
         </div>
       }
-      errorMessage={errorMessage}
       filteredItems={filteredAssignments.length}
       onPageChange={setPage}
       onPageSizeChange={(nextPageSize) => {
@@ -167,38 +179,40 @@ export function AssignmentRecordsPanel({
       page={page}
       pageSize={pageSize}
       summary={
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardContent className="space-y-1 py-5">
-              <Text tone="muted">Total assignments</Text>
-              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                {assignments.length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="space-y-1 py-5">
-              <Text tone="muted">Active assignments</Text>
-              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                {assignments.filter((assignment) => assignment.status === 'active').length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="space-y-1 py-5">
-              <Text tone="muted">Matching current filters</Text>
-              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                {filteredAssignments.length}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        assignments.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="space-y-1 py-5">
+                <Text tone="muted">Total assignments</Text>
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                  {assignments.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-1 py-5">
+                <Text tone="muted">Active assignments</Text>
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                  {assignments.filter((assignment) => assignment.status === 'active').length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-1 py-5">
+                <Text tone="muted">Matching current filters</Text>
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                  {filteredAssignments.length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null
       }
       title="Assignment registry"
       toolbar={
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-          <div className="min-w-0 flex-[1.5] space-y-2">
-            <Text tone="muted">Search assignments</Text>
+          <div className="min-w-0 flex-[1.4] space-y-2">
+            <Text tone="muted">Search</Text>
             <Input
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search by assignment, driver, vehicle, fleet, or note"
@@ -207,18 +221,18 @@ export function AssignmentRecordsPanel({
           </div>
           <div className="grid flex-1 gap-4 sm:grid-cols-2">
             <SearchableSelect
-              helperText="Filter the registry to a single fleet."
+              helperText="Show one fleet at a time."
               inputId="assignmentFleetFilter"
-              label="Fleet filter"
+              label="Fleet"
               onChange={setFleetId}
               options={fleetOptions}
               placeholder="All fleets"
               value={fleetId}
             />
             <SearchableSelect
-              helperText="Filter by assignment lifecycle status."
+              helperText="Show one lifecycle state."
               inputId="assignmentStatusFilter"
-              label="Status filter"
+              label="Status"
               onChange={setStatus}
               options={STATUS_OPTIONS}
               placeholder="All statuses"
@@ -246,6 +260,7 @@ export function AssignmentRecordsPanel({
         <TableHeader>
           <TableRow>
             <TableHead>Assignment</TableHead>
+            <TableHead>Payment model</TableHead>
             <TableHead>Driver</TableHead>
             <TableHead>Vehicle</TableHead>
             <TableHead>Fleet</TableHead>
@@ -255,9 +270,9 @@ export function AssignmentRecordsPanel({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedAssignments.map((assignment) => (
-            <TableRow key={assignment.id}>
-              <TableCell>
+            {paginatedAssignments.map((assignment) => (
+              <TableRow key={assignment.id}>
+                <TableCell>
                 <div className="space-y-1">
                   <Link
                     className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
@@ -267,8 +282,13 @@ export function AssignmentRecordsPanel({
                   </Link>
                   <Text tone="muted">{assignment.notes ?? 'No note added'}</Text>
                 </div>
-              </TableCell>
-              <TableCell>{driverLabels.get(assignment.driverId) ?? assignment.driverId}</TableCell>
+                </TableCell>
+                <TableCell>
+                  <Badge tone={assignment.paymentModel === 'salary' || assignment.paymentModel === 'commission' ? 'neutral' : 'warning'}>
+                    {formatPaymentModel(assignment.paymentModel)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{driverLabels.get(assignment.driverId) ?? assignment.driverId}</TableCell>
               <TableCell>{vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}</TableCell>
               <TableCell>{fleetLabels.get(assignment.fleetId) ?? assignment.fleetId}</TableCell>
               <TableCell>

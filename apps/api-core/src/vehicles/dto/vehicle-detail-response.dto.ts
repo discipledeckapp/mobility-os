@@ -36,6 +36,29 @@ class VehicleAssignmentSummaryDto {
 
   @ApiPropertyOptional()
   latestAssignmentStartedAt?: Date | null;
+
+  @ApiPropertyOptional()
+  assignedDriverId?: string | null;
+
+  @ApiPropertyOptional()
+  assignedDriverName?: string | null;
+}
+
+class VehicleRemittanceSummaryDto {
+  @ApiPropertyOptional()
+  latestRecordedAt?: string | null;
+
+  @ApiPropertyOptional()
+  latestAmountMinorUnits?: number | null;
+
+  @ApiPropertyOptional()
+  nextDueAt?: string | null;
+
+  @ApiPropertyOptional()
+  nextDueAmountMinorUnits?: number | null;
+
+  @ApiPropertyOptional()
+  currency?: string | null;
 }
 
 class VehicleVinDecodeSummaryDto {
@@ -205,6 +228,9 @@ export class VehicleDetailResponseDto extends VehicleResponseDto {
 
   @ApiProperty({ type: VehicleAssignmentSummaryDto })
   assignmentSummary!: VehicleAssignmentSummaryDto;
+
+  @ApiProperty({ type: VehicleRemittanceSummaryDto })
+  remittanceSummary!: VehicleRemittanceSummaryDto;
 
   @ApiProperty()
   maintenanceSummary!: string;

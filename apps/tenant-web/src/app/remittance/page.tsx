@@ -18,18 +18,18 @@ import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
   getTenantApiToken,
   getTenantMe,
-  listFleets,
-  listDrivers,
   listAssignments,
+  listDrivers,
+  listFleets,
   listOperationalDisputes,
   listOperationalDocuments,
   listRemittances,
   listVehicles,
   type AssignmentRecord,
   type DriverRecord,
+  type FleetRecord,
   type RecordDisputeRecord,
   type RecordDocumentRecord,
-  type FleetRecord,
   type RemittanceRecord,
   type VehicleRecord,
 } from '../../lib/api-core';
@@ -55,6 +55,27 @@ function getDisputeTone(status: string): 'danger' | 'warning' | 'success' | 'neu
   if (status === 'resolved') return 'success';
   if (status === 'rejected') return 'danger';
   return 'neutral';
+}
+
+function getFriendlyRemittanceErrorMessage(message: string | null): string | null {
+  if (!message) {
+    return null;
+  }
+
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('required database table') ||
+    normalized.includes('migration') ||
+    normalized.includes('prisma')
+  ) {
+    return 'We could not load remittance records right now. Please try again shortly.';
+  }
+
+  return message;
+}
+
+function supportsRemittance(paymentModel?: string | null): boolean {
+  return !paymentModel || paymentModel === 'remittance' || paymentModel === 'hire_purchase';
 }
 
 export default async function RemittancePage() {
@@ -134,11 +155,23 @@ export default async function RemittancePage() {
         : 'Live fleet data could not be loaded.';
   }
 
-  const expectedTodayMinorUnits = assignments
-    .filter((assignment) => assignment.status === 'active')
-    .reduce((sum, assignment) => sum + (assignment.remittanceAmountMinorUnits ?? 0), 0);
+  const activeAssignments = assignments.filter(
+    (assignment) => assignment.status === 'active' && supportsRemittance(assignment.paymentModel),
+  );
+  const assignmentContextUnavailable = assignmentsResult instanceof Error;
+  const remittanceLoadError = getFriendlyRemittanceErrorMessage(errorMessage);
+  const showSummaryCards =
+    !remittanceLoadError && activeAssignments.length > 0;
+  const showExportCard = remittances.length > 0;
+  const showSecondarySections =
+    disputes.length > 0 || documents.length > 0;
+
+  const expectedTodayMinorUnits = activeAssignments.reduce(
+    (sum, assignment) => sum + (assignment.remittanceAmountMinorUnits ?? 0),
+    0,
+  );
   const operatingCurrency =
-    assignments.find((assignment) => assignment.remittanceCurrency)?.remittanceCurrency ??
+    activeAssignments.find((assignment) => assignment.remittanceCurrency)?.remittanceCurrency ??
     remittances[0]?.currency ??
     'NGN';
   const receivedMinorUnits = remittances
@@ -146,10 +179,17 @@ export default async function RemittancePage() {
     .reduce((sum, remittance) => sum + remittance.amountMinorUnits, 0);
   const typicalMinorUnits =
     remittances.length > 0
-      ? Math.round(remittances.reduce((sum, remittance) => sum + remittance.amountMinorUnits, 0) / remittances.length)
+      ? Math.round(
+          remittances.reduce(
+            (sum, remittance) => sum + remittance.amountMinorUnits,
+            0,
+          ) / remittances.length,
+        )
       : 0;
   const leakageMinorUnits = Math.max(0, expectedTodayMinorUnits - receivedMinorUnits);
-  const flaggedDrivers = drivers.filter((driver) => driver.enforcementStatus && driver.enforcementStatus !== 'clear').length;
+  const flaggedDrivers = drivers.filter(
+    (driver) => driver.enforcementStatus && driver.enforcementStatus !== 'clear',
+  ).length;
   const recentDisputes = disputes.slice(0, 6);
   const recentDocuments = documents.slice(0, 6);
 
@@ -159,63 +199,111 @@ export default async function RemittancePage() {
       eyebrow="Collections"
       title="Remittance"
     >
-      <Card className="mb-6">
-        <CardContent className="flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <Text tone="strong">Export remittance history</Text>
+      {showExportCard ? (
+        <Card className="mb-6">
+          <CardContent className="flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <Text tone="strong">Export remittance history</Text>
+              <Text tone="muted">
+                Download the current remittance ledger as CSV for reconciliation, finance review, or external reporting.
+              </Text>
+            </div>
+            <a
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+              href="/api/download/remittance-export"
+            >
+              Export remittance CSV
+            </a>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {assignmentContextUnavailable ? (
+        <Card className="mb-6 border-amber-200 bg-amber-50/70">
+          <CardContent className="space-y-3 py-5">
+            <Text tone="strong">Assignment context is temporarily unavailable</Text>
             <Text tone="muted">
-              Download the current remittance ledger as CSV for reconciliation, finance review, or external reporting.
+              We could not load the active assignments needed to record remittance right now. Please try again shortly or open Assignments to confirm the current assignment status.
             </Text>
-          </div>
-          <a
-            className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-            href="/api/download/remittance-export"
-          >
-            Export remittance CSV
-          </a>
-        </CardContent>
-      </Card>
+            <div className="flex flex-wrap gap-3">
+              <a
+                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+                href="/assignments"
+              >
+                Go to Assignments
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <CreateRemittanceForm
-        fleetError={fleetError}
-        fleets={fleets}
-        activeAssignments={assignments.filter(
-          (assignment) => assignment.status === 'active',
-        )}
-        drivers={drivers}
-        vehicles={vehicles}
-        helperNote={helperNote}
-      />
+      {!assignmentContextUnavailable ? (
+        <CreateRemittanceForm
+          activeAssignments={activeAssignments}
+          drivers={drivers}
+          fleetError={fleetError}
+          fleets={fleets}
+          helperNote={helperNote}
+          vehicles={vehicles}
+        />
+      ) : null}
 
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        {[
-          { label: 'Total expected', value: formatAmount(expectedTodayMinorUnits, operatingCurrency, locale), note: 'Live target from current assignment terms' },
-          { label: 'Total received', value: formatAmount(receivedMinorUnits, operatingCurrency, locale), note: 'Completed collections so far' },
-          { label: 'Leakage', value: formatAmount(leakageMinorUnits, operatingCurrency, locale), note: 'Gap between target and settled cash' },
-          { label: 'Flagged drivers', value: String(flaggedDrivers), note: `Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}` },
-        ].map((item) => (
-          <Card key={item.label}>
-            <CardContent className="space-y-1 py-5">
-              <Text tone="muted">{item.label}</Text>
-              <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">{item.value}</p>
-              <Text tone="muted">{item.note}</Text>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {showSummaryCards ? (
+        <div className="mb-6 grid gap-4 md:grid-cols-4">
+          {[
+            {
+              label: 'Total expected',
+              note: 'Live target from active assignment terms',
+              value: formatAmount(expectedTodayMinorUnits, operatingCurrency, locale),
+            },
+            {
+              label: 'Total received',
+              note: 'Completed collections so far',
+              value: formatAmount(receivedMinorUnits, operatingCurrency, locale),
+            },
+            {
+              label: 'Leakage',
+              note: 'Gap between target and settled cash',
+              value: formatAmount(leakageMinorUnits, operatingCurrency, locale),
+            },
+            {
+              label: 'Flagged drivers',
+              note: `Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}`,
+              value: String(flaggedDrivers),
+            },
+          ].map((item) => (
+            <Card key={item.label}>
+              <CardContent className="space-y-1 py-5">
+                <Text tone="muted">{item.label}</Text>
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                  {item.value}
+                </p>
+                <Text tone="muted">{item.note}</Text>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Remittance records</CardTitle>
           <CardDescription>
-            All remittance records for this tenant.
+            Collections that have already been recorded against assignment-linked remittance schedules.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {errorMessage ? (
-            <Text>{errorMessage}</Text>
+          {remittanceLoadError ? (
+            <Text>{remittanceLoadError}</Text>
           ) : remittances.length === 0 ? (
-            <Text>No remittance records found for this tenant yet.</Text>
+            <div className="space-y-2">
+              <Text tone="strong">No remittance records yet</Text>
+              <Text tone="muted">
+                {activeAssignments.length > 0
+                  ? 'Select an active assignment above to record the first remittance for this period.'
+                  : 'Records will appear here after a remittance is logged against an active assignment.'}
+              </Text>
+            </div>
           ) : (
             <RemittanceRecordsPanel
               assignments={assignments}
@@ -228,104 +316,102 @@ export default async function RemittancePage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Dispute registry</CardTitle>
-            <CardDescription>
-              Formal remittance disputes, with status and timeline-backed claim references.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentDisputes.length === 0 ? (
-              <Text>No remittance disputes have been opened yet.</Text>
-            ) : (
-              <TableViewport>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dispute</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Updated</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentDisputes.map((dispute) => (
-                      <TableRow key={dispute.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium text-[var(--mobiris-ink)]">{dispute.title}</p>
-                            <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">{dispute.reasonCode}</TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          {formatTimestamp(dispute.updatedAt, locale)}
-                        </TableCell>
+      {showSecondarySections ? (
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          {recentDisputes.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Dispute registry</CardTitle>
+                <CardDescription>
+                  Formal remittance disputes, with status and timeline-backed claim references.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TableViewport>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Dispute</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Updated</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableViewport>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {recentDisputes.map((dispute) => (
+                        <TableRow key={dispute.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium text-[var(--mobiris-ink)]">{dispute.title}</p>
+                              <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">{dispute.reasonCode}</TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {formatTimestamp(dispute.updatedAt, locale)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableViewport>
+              </CardContent>
+            </Card>
+          ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Receipts and documents</CardTitle>
-            <CardDescription>
-              Fingerprinted remittance receipts and dispute outputs linked back to source records.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentDocuments.length === 0 ? (
-              <Text>No remittance documents have been issued yet.</Text>
-            ) : (
-              <TableViewport>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Document</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Fingerprint</TableHead>
-                      <TableHead>Download</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentDocuments.map((document) => (
-                      <TableRow key={document.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium text-[var(--mobiris-ink)]">{document.documentNumber}</p>
-                            <p className="text-xs text-slate-500">{formatTimestamp(document.createdAt, locale)}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">{document.documentType}</TableCell>
-                        <TableCell className="font-mono text-xs text-slate-500">
-                          {document.fingerprint.slice(0, 16)}...
-                        </TableCell>
-                        <TableCell>
-                          <a
-                            className="text-sm font-medium text-[var(--mobiris-primary-dark)] hover:underline"
-                            href={`/api/records/documents/${document.id}/content`}
-                          >
-                            Download
-                          </a>
-                        </TableCell>
+          {recentDocuments.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Receipts and documents</CardTitle>
+                <CardDescription>
+                  Fingerprinted remittance receipts and dispute outputs linked back to source records.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TableViewport>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Fingerprint</TableHead>
+                        <TableHead>Download</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableViewport>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    </TableHeader>
+                    <TableBody>
+                      {recentDocuments.map((document) => (
+                        <TableRow key={document.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium text-[var(--mobiris-ink)]">{document.documentNumber}</p>
+                              <p className="text-xs text-slate-500">{formatTimestamp(document.createdAt, locale)}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">{document.documentType}</TableCell>
+                          <TableCell className="font-mono text-xs text-slate-500">
+                            {document.fingerprint.slice(0, 16)}...
+                          </TableCell>
+                          <TableCell>
+                            <a
+                              className="text-sm font-medium text-[var(--mobiris-primary-dark)] hover:underline"
+                              href={`/api/records/documents/${document.id}/content`}
+                            >
+                              Download
+                            </a>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableViewport>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
     </TenantAppShell>
   );
 }

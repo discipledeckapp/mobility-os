@@ -11,9 +11,9 @@ export default function LoginPage() {
             <span className="text-sm font-bold tracking-tight text-white">M</span>
           </div>
           <div>
-            <p className="text-base font-bold tracking-tight text-white">Mobiris</p>
+            <p className="text-base font-bold tracking-tight text-white">Mobiris Fleet OS</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-200/50">
-              Operations Console
+              Fleet & Driver Operations Platform
             </p>
           </div>
         </div>
@@ -22,13 +22,12 @@ export default function LoginPage() {
         <div className="space-y-6">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold leading-tight tracking-[-0.03em] text-white">
-              Verify drivers.
+              Run your fleet.
               <br />
-              Enforce accountability. <span className="text-blue-200">Reduce risk.</span>
+              Verify drivers. <span className="text-blue-200">Keep operations moving.</span>
             </h1>
             <p className="text-base leading-relaxed text-blue-100/70">
-              Verify your drivers, enforce daily remittance, and control fleet assignments from a
-              single console built for transport operators.
+              Add vehicles, onboard drivers, manage assignments, and track daily operations from one mobile-friendly workspace.
             </p>
           </div>
 
@@ -64,7 +63,7 @@ export default function LoginPage() {
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <span className="text-base font-bold tracking-tight text-[var(--mobiris-ink)]">
-            Mobiris
+            Mobiris Fleet OS
           </span>
         </div>
 
@@ -74,10 +73,10 @@ export default function LoginPage() {
               Organisation access
             </p>
             <h2 className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--mobiris-ink)]">
-              Sign in to your console
+              Sign in to your workspace
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Enter your email and password to continue.
+              Enter your email and password to continue with Mobiris Fleet OS.
             </p>
           </div>
 

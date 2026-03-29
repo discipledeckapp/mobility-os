@@ -27,6 +27,14 @@ import {
 
 const initialState: RecordRemittanceActionState = {};
 
+function formatAmount(amountMinorUnits: number, currency: string): string {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinorUnits / 100);
+}
+
 export function CreateRemittanceForm({
   fleets,
   fleetError,
@@ -48,6 +56,7 @@ export function CreateRemittanceForm({
   );
   const [fleetId, setFleetId] = useState('');
   const [assignmentId, setAssignmentId] = useState('');
+  const hasActiveAssignments = activeAssignments.length > 0;
   const selectableFleets = useMemo(
     () => fleets.filter((fleet) => fleet.status !== 'inactive'),
     [fleets],
@@ -130,10 +139,35 @@ export function CreateRemittanceForm({
       <CardHeader>
         <CardTitle>Record remittance</CardTitle>
         <CardDescription>
-          Record a scheduled remittance or installment against an active assignment.
+          {hasActiveAssignments
+            ? 'Choose an active assignment, review its collection context, then record the remittance.'
+            : 'Remittance becomes available once a driver has an active assignment.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!hasActiveAssignments ? (
+          <div className="space-y-4">
+            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 px-4 py-4">
+              <Text tone="strong">No active assignments found</Text>
+              <Text className="mt-2" tone="muted">
+                Remittance must be recorded against an active assignment that uses the remittance or hire purchase payment model. Create or activate a remittance-enabled assignment first, then return here to log collections.
+              </Text>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <a
+                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+                href="/assignments"
+              >
+                Go to Assignments
+              </a>
+            </div>
+
+            {helperNote ? (
+              <Text tone="muted">{helperNote}</Text>
+            ) : null}
+          </div>
+        ) : (
         <form action={formAction} className="grid gap-4 md:grid-cols-2">
           <FleetSelectField
             fleetError={fleetError}
@@ -186,10 +220,61 @@ export function CreateRemittanceForm({
             )}
           </div>
 
+          {selectedAssignment ? (
+            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 px-4 py-4 md:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-1">
+                  <Text tone="muted">Driver</Text>
+                  <Text tone="strong">
+                    {driverLabels.get(selectedAssignment.driverId) ?? selectedAssignment.driverId}
+                  </Text>
+                </div>
+                <div className="space-y-1">
+                  <Text tone="muted">Vehicle</Text>
+                  <Text tone="strong">
+                    {vehicleLabels.get(selectedAssignment.vehicleId) ?? selectedAssignment.vehicleId}
+                  </Text>
+                </div>
+                <div className="space-y-1">
+                  <Text tone="muted">Expected remittance</Text>
+                  <Text tone="strong">
+                    {selectedAssignment.financialContract?.summary.nextDueAmountMinorUnits
+                      ? formatAmount(
+                          selectedAssignment.financialContract.summary.nextDueAmountMinorUnits,
+                          selectedAssignment.financialContract.currency,
+                        )
+                      : selectedAssignment.remittanceAmountMinorUnits &&
+                          selectedAssignment.remittanceCurrency
+                        ? formatAmount(
+                            selectedAssignment.remittanceAmountMinorUnits,
+                            selectedAssignment.remittanceCurrency,
+                          )
+                        : 'Set on assignment'}
+                  </Text>
+                </div>
+                <div className="space-y-1">
+                  <Text tone="muted">Due date</Text>
+                  <Text tone="strong">
+                    {selectedAssignment.financialContract?.summary.nextDueDate ??
+                      suggestedDueDate ??
+                      'Set on assignment'}
+                  </Text>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-dashed border-slate-300 bg-white px-4 py-4 md:col-span-2">
+              <Text tone="muted">
+                Select an active assignment to load the driver, vehicle, expected remittance, and due date before recording a collection.
+              </Text>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
             <Input
               key={`${assignmentId || 'none'}-amount`}
+              disabled={!selectedAssignment}
               id="amount"
               min="0.01"
               name="amount"
@@ -213,6 +298,7 @@ export function CreateRemittanceForm({
             <Label htmlFor="currency">Currency</Label>
             <Input
               key={`${assignmentId || 'none'}-currency`}
+              disabled={!selectedAssignment}
               id="currency"
               maxLength={3}
               name="currency"
@@ -232,6 +318,7 @@ export function CreateRemittanceForm({
             <Label htmlFor="dueDate">Due date</Label>
             <Input
               key={`${assignmentId || 'none'}-dueDate`}
+              disabled={!selectedAssignment}
               id="dueDate"
               name="dueDate"
               required
@@ -271,7 +358,12 @@ export function CreateRemittanceForm({
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="notes">Notes</Label>
-            <Input id="notes" name="notes" placeholder="End-of-day collections pending" />
+            <Input
+              disabled={!selectedAssignment}
+              id="notes"
+              name="notes"
+              placeholder="End-of-day collections pending"
+            />
           </div>
 
           <div className="flex items-end">
@@ -287,6 +379,7 @@ export function CreateRemittanceForm({
             />
           </div>
         </form>
+        )}
 
         {isPending ? (
           <div className="mt-4">

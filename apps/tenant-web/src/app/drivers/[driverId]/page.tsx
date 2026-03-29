@@ -32,9 +32,14 @@ import {
   listRemittances,
   listVehicles,
 } from '../../../lib/api-core';
-import { getDriverIdentityLabel, getDriverIdentityTone } from '../../../lib/driver-identity';
+import {
+  getDriverIdentityLabel,
+  getDriverIdentityTone,
+  getIdentityAuthorityLabel,
+} from '../../../lib/driver-identity';
 import { getFormattingLocale } from '../../../lib/locale';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
+import { DriverEvidenceImage } from '../driver-evidence-image';
 import { DriverAdminOverridePanel } from '../driver-admin-override-panel';
 import { DriverDocumentsPanel } from '../driver-documents-panel';
 import { DriverGuarantorPanel } from '../driver-guarantor-panel';
@@ -224,6 +229,14 @@ function getDriverIdentityProfile(driver: {
   };
 }
 
+function getDriverIdentityImageProxyUrl(
+  driverId: string,
+  kind: 'selfie' | 'provider' | 'signature',
+  source?: string | null,
+): string | null {
+  return source ? `/api/drivers/${driverId}/identity-image/${kind}` : null;
+}
+
 function getDriverOperationalProfile(driver: {
   operationalProfile?: Record<string, unknown> | null;
   phone?: string | null;
@@ -314,6 +327,31 @@ export default async function DriverDetailsPage({
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
   const driverDisplayName = getDriverDisplayName(driver);
   const identityProfile = getDriverIdentityProfile(driver);
+  const selfieImageSrc = getDriverIdentityImageProxyUrl(
+    driver.id,
+    'selfie',
+    identityProfile.selfieImageUrl ?? driver.photoUrl,
+  );
+  const providerImageSrc = getDriverIdentityImageProxyUrl(
+    driver.id,
+    'provider',
+    identityProfile.providerImageUrl,
+  );
+  const signatureImageSrc = getDriverIdentityImageProxyUrl(
+    driver.id,
+    'signature',
+    identityProfile.signatureImageUrl,
+  );
+  const avatarImageSrc =
+    providerImageSrc ?? selfieImageSrc ?? (driver.photoUrl ? `/api/drivers/${driver.id}/portrait` : null);
+  const verificationProviderValue = driver.verificationProvider ?? null;
+  const verificationCountryValue = driver.verificationCountryCode ?? null;
+  const identityAuthorityLabel =
+    getIdentityAuthorityLabel({
+      verificationProvider: verificationProviderValue,
+      verificationCountryCode: verificationCountryValue,
+      identityProfile: driver.identityProfile ?? null,
+    }) ?? 'Not returned yet';
   const operationalProfile = getDriverOperationalProfile(driver);
   const driverLicenceVerification = driver.driverLicenceVerification ?? null;
   const isUnverifiedDriver = driver.identityStatus !== 'verified';
@@ -454,11 +492,17 @@ export default async function DriverDetailsPage({
             <div className="flex items-start gap-4">
               {/* Avatar */}
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--mobiris-primary)]/10 ring-2 ring-white shadow-sm">
-                {(driver.providerImageUrl ?? driver.selfieImageUrl ?? driver.photoUrl) ? (
-                  <img
+                {avatarImageSrc ? (
+                  <DriverEvidenceImage
                     alt={driverDisplayName}
                     className="h-14 w-14 rounded-full object-cover"
-                    src={driver.providerImageUrl ?? driver.selfieImageUrl ?? driver.photoUrl ?? ''}
+                    fallback={
+                      <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">
+                        {(driver.firstName ?? 'D')[0]}
+                        {(driver.lastName ?? 'R')[0]}
+                      </span>
+                    }
+                    src={avatarImageSrc}
                   />
                 ) : (
                   <span className="text-lg font-bold tracking-tight text-[var(--mobiris-primary)]">
@@ -1021,10 +1065,31 @@ export default async function DriverDetailsPage({
                     <Text tone="muted">Live Selfie</Text>
                     <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
                       {(identityProfile.selfieImageUrl ?? driver.photoUrl) ? (
-                        <img
+                        <DriverEvidenceImage
                           alt={`${driver.firstName} ${driver.lastName} live selfie`}
                           className="aspect-[4/3] w-full object-cover"
-                          src={identityProfile.selfieImageUrl ?? driver.photoUrl ?? ''}
+                          fallback={
+                            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
+                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                                <svg
+                                  aria-hidden="true"
+                                  fill="none"
+                                  height="28"
+                                  stroke="currentColor"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="1.8"
+                                  viewBox="0 0 24 24"
+                                  width="28"
+                                >
+                                  <path d="M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                  <path d="M4 18a8 8 0 0 1 16 0" />
+                                </svg>
+                              </div>
+                              <Text tone="muted">No live selfie captured yet.</Text>
+                            </div>
+                          }
+                          src={selfieImageSrc}
                         />
                       ) : (
                         <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
@@ -1053,10 +1118,31 @@ export default async function DriverDetailsPage({
                     <Text tone="muted">Government record image</Text>
                     <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
                       {identityProfile.providerImageUrl ? (
-                        <img
+                        <DriverEvidenceImage
                           alt={`${driver.firstName} ${driver.lastName} government record`}
                           className="aspect-[4/3] w-full object-cover"
-                          src={identityProfile.providerImageUrl}
+                          fallback={
+                            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
+                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                                <svg
+                                  aria-hidden="true"
+                                  fill="none"
+                                  height="28"
+                                  stroke="currentColor"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="1.8"
+                                  viewBox="0 0 24 24"
+                                  width="28"
+                                >
+                                  <rect height="14" rx="2" width="18" x="3" y="5" />
+                                  <path d="M7 9h10M7 13h6" />
+                                </svg>
+                              </div>
+                              <Text tone="muted">No reference identity image is stored yet.</Text>
+                            </div>
+                          }
+                          src={providerImageSrc}
                         />
                       ) : (
                         <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
@@ -1085,10 +1171,15 @@ export default async function DriverDetailsPage({
                     <Text tone="muted">Signature image</Text>
                     <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
                       {identityProfile.signatureImageUrl ? (
-                        <img
+                        <DriverEvidenceImage
                           alt={`${driver.firstName} ${driver.lastName} signature`}
                           className="aspect-[4/3] w-full object-contain bg-white"
-                          src={identityProfile.signatureImageUrl}
+                          fallback={
+                            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
+                              <Text tone="muted">Not returned.</Text>
+                            </div>
+                          }
+                          src={signatureImageSrc}
                         />
                       ) : (
                         <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-6 text-center">
@@ -1267,10 +1358,15 @@ export default async function DriverDetailsPage({
                           <Text tone="muted">Live selfie</Text>
                           <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
                             {identityProfile.selfieImageUrl ? (
-                              <img
+                              <DriverEvidenceImage
                                 alt={`${driverDisplayName} live selfie`}
                                 className="aspect-[4/3] w-full object-cover"
-                                src={identityProfile.selfieImageUrl}
+                                fallback={
+                                  <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                                    <Text tone="muted">Not returned.</Text>
+                                  </div>
+                                }
+                                src={selfieImageSrc}
                               />
                             ) : (
                               <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
@@ -1283,10 +1379,15 @@ export default async function DriverDetailsPage({
                           <Text tone="muted">NIN portrait</Text>
                           <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
                             {identityProfile.providerImageUrl ? (
-                              <img
+                              <DriverEvidenceImage
                                 alt={`${driverDisplayName} NIN portrait`}
                                 className="aspect-[4/3] w-full object-cover"
-                                src={identityProfile.providerImageUrl}
+                                fallback={
+                                  <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
+                                    <Text tone="muted">Not returned.</Text>
+                                  </div>
+                                }
+                                src={providerImageSrc}
                               />
                             ) : (
                               <div className="flex aspect-[4/3] items-center justify-center p-6 text-center">
@@ -1494,7 +1595,7 @@ export default async function DriverDetailsPage({
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Verification provider</Text>
-                    <Text>{driver.verificationProvider ?? 'Not returned yet'}</Text>
+                    <Text>{identityAuthorityLabel}</Text>
                   </div>
                   <div className="space-y-1">
                     <Text tone="muted">Verification country</Text>

@@ -52,7 +52,14 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
   const [queuedRemittanceCount, setQueuedRemittanceCount] = useState(0);
 
   const eligibleAssignments = useMemo(
-    () => assignments.filter((assignment) => assignment.status === 'active'),
+    () =>
+      assignments.filter(
+        (assignment) =>
+          assignment.status === 'active' &&
+          (!assignment.paymentModel ||
+            assignment.paymentModel === 'remittance' ||
+            assignment.paymentModel === 'hire_purchase'),
+      ),
     [assignments],
   );
   const filteredAssignments = useMemo(() => {
@@ -342,7 +349,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
             actionLabel="Refresh assignments"
             message={
               eligibleAssignments.length === 0
-                ? 'No active assignments are ready for remittance recording yet.'
+                ? 'No active remittance-enabled assignments are ready for collection recording yet.'
                 : 'No assignments match your current search.'
             }
             title="No assignments available"

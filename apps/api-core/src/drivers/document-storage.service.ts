@@ -111,6 +111,15 @@ export class DocumentStorageService {
     }
   }
 
+  async readFileByUrl(storageUrl?: string | null): Promise<Buffer> {
+    const storageKey = this.resolveStorageKeyFromUrl(storageUrl);
+    if (!storageKey) {
+      throw new NotFoundException('Document content is no longer available.');
+    }
+
+    return this.readFile(storageKey);
+  }
+
   async deleteFile(storageKey?: string | null): Promise<void> {
     if (!storageKey) return;
 

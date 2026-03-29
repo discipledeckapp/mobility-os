@@ -259,7 +259,7 @@ const navigationSections = [
     label: 'Insights',
     items: [
       { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
-      { href: '/wallet', label: 'Wallet', Icon: WalletIcon },
+      { href: '/wallet', label: 'Verification Wallet', Icon: WalletIcon },
       { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],
