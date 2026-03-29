@@ -83,6 +83,7 @@ function isSuccessfulVerificationMessage(status?: string): boolean {
 
   const normalized = status.trim().toLowerCase().replace(/\s+/g, '_');
   return (
+    normalized === 'success' ||
     normalized === 'successful_match' ||
     normalized === 'verified' ||
     normalized === 'match_found' ||

@@ -297,7 +297,7 @@ describe('MatchingService', () => {
       verification: {
         status: 'verified',
         providerName: 'youverify',
-        verificationStatus: 'verified',
+        verificationStatus: 'success',
         matchedIdentifierType: 'NATIONAL_ID',
         enrichment: {
           fullName: 'Ada Okafor',
@@ -309,12 +309,22 @@ describe('MatchingService', () => {
       },
     });
 
-    await service.resolveEnrollment({
+    const result = await service.resolveEnrollment({
       tenantId: 'tenant_1',
       countryCode: 'NG',
       livenessPassed: true,
       identifiers: [{ type: 'NATIONAL_ID', value: '12345678901' }],
     });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        decision: ResolutionDecision.NewPerson,
+        personId: 'person_new',
+        providerLookupStatus: 'verified',
+        providerVerificationStatus: 'success',
+        isVerifiedMatch: true,
+      }),
+    );
 
     expect(personsService.applyIdentityEnrichment).toHaveBeenCalledWith({
       personId: 'person_new',
@@ -326,7 +336,7 @@ describe('MatchingService', () => {
       gender: 'female',
       photoUrl: 'https://example.com/photo.jpg',
       providerImageUrl: 'https://example.com/photo.jpg',
-      verificationStatus: 'verified',
+      verificationStatus: 'success',
       verificationProvider: 'youverify',
       verificationCountryCode: 'NG',
       verificationConfidence: 0.95,
