@@ -646,41 +646,9 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       selfieImageUrl?: string;
     },
   ): Promise<Record<string, unknown>> {
-    const selfieImage = await this.resolveSelfieImage(providerVerification);
-
     return {
       id: identifier.value,
-      isSubjectConsent: true,
-      ...(providerVerification?.validationData
-        ? {
-            validation: {
-              data: {
-                ...(providerVerification.validationData.firstName
-                  ? { firstName: providerVerification.validationData.firstName }
-                  : {}),
-                ...(providerVerification.validationData.middleName
-                  ? { middleName: providerVerification.validationData.middleName }
-                  : {}),
-                ...(providerVerification.validationData.lastName
-                  ? { lastName: providerVerification.validationData.lastName }
-                  : {}),
-                ...(providerVerification.validationData.dateOfBirth
-                  ? { dateOfBirth: providerVerification.validationData.dateOfBirth }
-                  : {}),
-                ...(providerVerification.validationData.gender
-                  ? { gender: providerVerification.validationData.gender }
-                  : {}),
-              },
-            },
-          }
-        : {}),
-      ...(selfieImage
-        ? {
-            selfie: {
-              image: selfieImage,
-            },
-          }
-        : {}),
+      isSubjectConsent: providerVerification?.subjectConsent ?? true,
     };
   }
 
