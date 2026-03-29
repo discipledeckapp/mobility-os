@@ -280,7 +280,9 @@ export function CreateAssignmentForm({
                   : 'Select a fleet to see active drivers.'}
               </Text>
             )}
-            {selectedDriver && !selectedDriver.hasApprovedLicence ? (
+            {selectedDriver &&
+            selectedDriver.verificationTierComponents?.includes('drivers_license') &&
+            !selectedDriver.hasApprovedLicence ? (
               <Text tone="danger">
                 This driver cannot be assigned yet because no approved driver licence is on file.
               </Text>
@@ -517,7 +519,11 @@ export function CreateAssignmentForm({
                 !fleetId ||
                 !driverId ||
                 !vehicleId ||
-                Boolean(selectedDriver && !selectedDriver.hasApprovedLicence)
+                Boolean(
+                selectedDriver &&
+                  selectedDriver.verificationTierComponents?.includes('drivers_license') &&
+                  !selectedDriver.hasApprovedLicence,
+              )
                   ? 'pointer-events-none opacity-55'
                   : undefined
               }
