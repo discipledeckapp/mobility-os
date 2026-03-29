@@ -215,6 +215,39 @@ describe('IdentityVerificationService', () => {
     );
   });
 
+  it('does not fail verification when billing recording errors after a successful provider result', async () => {
+    controlPlaneSettingsClient.getVerificationBillingPolicyForCountry.mockResolvedValue({
+      countryCode: 'NG',
+      enabled: true,
+      meterEventType: 'identity_verification',
+      defaultFeeMinorUnits: 15000,
+      billOnStatuses: ['verified', 'no_match', 'provider_error'],
+      providers: [{ name: 'smile_identity', enabled: true, feeMinorUnits: 15000 }],
+    });
+    controlPlaneMeteringClient.recordUsageEvent.mockRejectedValue(
+      new Error('metering unavailable'),
+    );
+
+    const result = await service.verifyForEnrollment({
+      tenantId: 'tenant_1',
+      countryCode: 'NG',
+      livenessPassed: true,
+      identifiers: [{ type: 'NATIONAL_ID', value: '12345678901' }],
+      providerVerification: { subjectConsent: true },
+    });
+
+    expect(result).toEqual({
+      attempted: true,
+      verification: expect.objectContaining({
+        status: 'verified',
+        providerName: 'smile_identity',
+      }),
+      fallbackChain: ['youverify:provider_unavailable', 'smile_identity:verified'],
+    });
+    expect(controlPlaneMeteringClient.recordUsageEvent).toHaveBeenCalled();
+    expect(controlPlaneBillingClient.recordVerificationCharge).not.toHaveBeenCalled();
+  });
+
   it('falls through recoverable provider routing failures without billing them', async () => {
     controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry.mockResolvedValue({
       countryCode: 'NG',

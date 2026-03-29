@@ -227,7 +227,11 @@ export class IdentityVerificationService {
 
       fallbackChain.push(`${provider.name}:${result.status}`);
       if (!recoverableProviderFailure) {
-        await this.recordVerificationChargeIfBillable(workingInput, provider.name, result.status);
+        await this.recordVerificationChargeIfBillableSafely(
+          workingInput,
+          provider.name,
+          result.status,
+        );
       }
 
       if (result.status === 'verified' || result.status === 'no_match') {
@@ -451,5 +455,26 @@ export class IdentityVerificationService {
       referenceId,
       description: `Identity verification provider charge for ${providerName}`,
     });
+  }
+
+  private async recordVerificationChargeIfBillableSafely(
+    input: VerifyEnrollmentIdentityInput,
+    providerName: string,
+    status: IdentityVerificationResult['status'],
+  ): Promise<void> {
+    try {
+      await this.recordVerificationChargeIfBillable(input, providerName, status);
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'identity_verification_billing_failed',
+          tenantId: input.tenantId,
+          countryCode: input.countryCode ?? null,
+          provider: providerName,
+          status,
+          error: error instanceof Error ? error.message : 'unknown_error',
+        }),
+      );
+    }
   }
 }
