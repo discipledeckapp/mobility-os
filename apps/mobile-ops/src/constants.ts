@@ -31,6 +31,8 @@ export const ROLES = {
 export const ASSIGNMENT_STATUS = {
   created: 'created',
   pendingDriverConfirmation: 'pending_driver_confirmation',
+  driverActionRequired: 'driver_action_required',
+  accepted: 'accepted',
   active: 'active',
   declined: 'declined',
   ended: 'ended',

@@ -48,6 +48,16 @@ export const ASSIGNMENT_STATUS_CODES = {
     label: 'Pending Driver Confirmation',
     terminal: false,
   },
+  driver_action_required: {
+    code: 'driver_action_required',
+    label: 'Driver Action Required',
+    terminal: false,
+  },
+  accepted: {
+    code: 'accepted',
+    label: 'Accepted',
+    terminal: false,
+  },
   active: { code: 'active', label: 'Active', terminal: false },
   declined: { code: 'declined', label: 'Declined', terminal: true },
   ended: { code: 'ended', label: 'Ended', terminal: true },

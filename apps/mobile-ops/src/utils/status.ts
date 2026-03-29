@@ -27,7 +27,13 @@ export function assignmentStatusTone(status: string): StatusTone {
   if (status === 'ended' || status === 'active') {
     return 'success';
   }
-  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'pending') {
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'accepted' ||
+    status === 'created' ||
+    status === 'pending'
+  ) {
     return 'warning';
   }
   if (status === 'cancelled' || status === 'declined' || status === 'disputed' || status === 'waived') {

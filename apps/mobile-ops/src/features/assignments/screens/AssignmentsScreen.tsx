@@ -25,7 +25,8 @@ import { tokens } from '../../../theme/tokens';
 
 const FILTER_OPTIONS: Array<{ label: string; value: AssignmentFilter }> = [
   { label: 'All', value: 'all' },
-  { label: 'Pending confirmation', value: ASSIGNMENT_STATUS.pendingDriverConfirmation },
+  { label: 'Driver action required', value: ASSIGNMENT_STATUS.driverActionRequired },
+  { label: 'Accepted', value: ASSIGNMENT_STATUS.accepted },
   { label: 'Active', value: ASSIGNMENT_STATUS.active },
   { label: 'Ended', value: ASSIGNMENT_STATUS.ended },
   { label: 'Cancelled', value: ASSIGNMENT_STATUS.cancelled },
@@ -50,8 +51,8 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const canWriteAssignments = useMemo(
-    () => session?.permissions.includes('assignments:write') ?? false,
-    [session?.permissions],
+    () => Boolean(session?.linkedDriverId) || session?.permissions.includes('assignments:write') || false,
+    [session?.linkedDriverId, session?.permissions],
   );
 
   const onRefresh = async () => {
@@ -156,7 +157,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
               <Text style={styles.kicker}>Driver home</Text>
               <Text style={styles.title}>{session?.name ?? 'Field operator'}</Text>
               <Text style={styles.muted}>
-                Check your assignment status, vehicle details, and the next action for today.
+                Check your assignment, review vehicle details, and take the next action needed today.
               </Text>
             </View>
             <Badge label={session?.role.replace(/_/g, ' ') ?? 'SIGNED IN'} tone="neutral" />
@@ -235,7 +236,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                   Assignment {currentAssignment.id.slice(-6).toUpperCase()}
                 </Text>
                 <Badge
-                  label={currentAssignment.status.toUpperCase()}
+                  label={formatStatusLabel(currentAssignment.status)}
                   tone={statusTone(currentAssignment.status)}
                 />
               </View>
@@ -263,6 +264,18 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                     })
                   }
                 />
+                {currentAssignment.status === 'driver_action_required' ||
+                currentAssignment.status === 'pending_driver_confirmation' ? (
+                  <Button
+                    label="Accept or reject"
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate('AssignmentDetail', {
+                        assignmentId: currentAssignment.id,
+                      })
+                    }
+                  />
+                ) : null}
                 {currentAssignmentSupportsRemittance ? (
                   <Button
                     label="Record remittance"
@@ -341,7 +354,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                             Assignment {assignment.id.slice(-6).toUpperCase()}
                           </Text>
                           <Badge
-                            label={assignment.status.toUpperCase()}
+                            label={formatStatusLabel(assignment.status)}
                             tone={statusTone(assignment.status)}
                           />
                         </View>
@@ -395,7 +408,13 @@ function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger
   if (status === 'cancelled' || status === 'declined') {
     return 'danger';
   }
-  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'active') {
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'accepted' ||
+    status === 'created' ||
+    status === 'active'
+  ) {
     return 'warning';
   }
   return 'neutral';
@@ -476,7 +495,9 @@ function readinessSummary(driver: DriverRecord) {
 function pickCurrentAssignment(assignments: AssignmentRecord[]): AssignmentRecord | null {
   const prioritized = assignments
     .filter((assignment) =>
-      ['active', 'pending_driver_confirmation', 'created'].includes(assignment.status),
+      ['active', 'accepted', 'driver_action_required', 'pending_driver_confirmation', 'created'].includes(
+        assignment.status,
+      ),
     )
     .sort(
       (left, right) =>

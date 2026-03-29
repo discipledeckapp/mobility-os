@@ -1389,8 +1389,8 @@ function ManualReviewStep({
             : 'Your submission is being processed. This can take a short while. Check back if the status has not updated.'}
         </Text>
         <Text tone="muted" className="text-xs">
-          You do not need to do anything else right now. Your organisation will contact you with
-          next steps once the review is complete.
+          You do not need to do anything else right now. Once review is complete, any vehicle
+          assignment waiting for you will appear in your assignment workspace for action.
         </Text>
       </CardContent>
     </Card>
@@ -1537,7 +1537,7 @@ function CompletionStep({
           </Text>
           <Text tone="muted">
             {driver.identityStatus === 'verified'
-              ? `Your ${onboardingStep.verificationTierLabel} requirements are complete. Your organisation will contact you about your vehicle assignment.`
+              ? `Your ${onboardingStep.verificationTierLabel} requirements are complete. If a vehicle has been assigned to you, open Assignments to review and accept it.`
               : driver.identityStatus === 'review_needed'
                 ? `Your ${onboardingStep.verificationTierLabel} verification has been submitted and is under review. You will be contacted once a decision is made.`
                 : driver.identityStatus === 'failed'

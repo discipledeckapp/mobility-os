@@ -24,7 +24,13 @@ import { AssignmentRemittancePlanForm } from '../assignment-remittance-plan-form
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
-  if (status === 'pending_driver_confirmation' || status === 'created') return 'warning';
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'created'
+  )
+    return 'warning';
+  if (status === 'accepted') return 'neutral';
   if (status === 'cancelled' || status === 'declined') return 'danger';
   return 'neutral';
 }
@@ -52,6 +58,10 @@ function formatMoney(amountMinorUnits?: number | null, currency = 'NGN'): string
 
 function formatPaymentModel(value?: string | null): string {
   if (!value) return 'Remittance';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatStatusLabel(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -87,12 +97,14 @@ export default async function AssignmentDetailPage({
         <div className="space-y-6">
           <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]">
             <CardHeader>
-              <CardTitle>{assignment.id}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-3">
+            <CardTitle>{assignment.id}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1">
                 <Text tone="muted">Current status</Text>
-                <Badge tone={getStatusTone(assignment.status)}>{assignment.status}</Badge>
+                <Badge tone={getStatusTone(assignment.status)}>
+                  {formatStatusLabel(assignment.status)}
+                </Badge>
               </div>
               <div className="space-y-1">
                 <Text tone="muted">Started</Text>
@@ -101,6 +113,21 @@ export default async function AssignmentDetailPage({
               <div className="space-y-1">
                 <Text tone="muted">Ended</Text>
                 <Text>{formatDateTime(assignment.endedAt)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Next action</Text>
+                <Text>
+                  {assignment.status === 'driver_action_required' ||
+                  assignment.status === 'pending_driver_confirmation'
+                    ? 'Waiting for the driver to accept or reject the assignment.'
+                    : assignment.status === 'accepted'
+                      ? 'The driver has accepted. Begin the assignment when operations should start.'
+                      : assignment.status === 'active'
+                        ? 'The vehicle is in active duty.'
+                        : assignment.status === 'declined'
+                          ? 'The driver rejected this assignment. Reassign another driver or vehicle.'
+                          : 'No further action is required.'}
+                </Text>
               </div>
             </CardContent>
           </Card>
@@ -393,8 +420,12 @@ export default async function AssignmentDetailPage({
                 <Heading size="h3">
                   {assignment.status === 'active'
                     ? 'Trip is in progress'
-                    : assignment.status === 'pending_driver_confirmation' || assignment.status === 'created'
-                      ? 'Waiting for driver confirmation'
+                    : assignment.status === 'accepted'
+                      ? 'Accepted and ready to begin'
+                      : assignment.status === 'pending_driver_confirmation' ||
+                          assignment.status === 'driver_action_required' ||
+                          assignment.status === 'created'
+                        ? 'Waiting for driver action'
                       : 'Lifecycle complete'}
                 </Heading>
               </div>

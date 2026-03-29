@@ -242,9 +242,9 @@ function getDashboardFeatureCards(): DashboardFeatureCard[] {
       description: 'Record collections and monitor outstanding remittance items.',
     },
     {
-      href: '/reports/readiness',
-      title: 'Reports',
-      description: 'Review driver readiness, licence expiry, and vehicle maintenance posture.',
+      href: '/reports',
+      title: 'Insights',
+      description: 'Review remittance health, readiness blockers, utilization gaps, and fleet risk.',
     },
   ];
 }
@@ -397,7 +397,10 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
   ).length;
   const assignedAssignments = assignments.filter(
     (assignment) =>
-      assignment.status === 'pending_driver_confirmation' || assignment.status === 'created',
+      assignment.status === 'pending_driver_confirmation' ||
+      assignment.status === 'driver_action_required' ||
+      assignment.status === 'accepted' ||
+      assignment.status === 'created',
   ).length;
   const completedAssignments = assignments.filter(
     (assignment) => assignment.status === 'ended',

@@ -29,7 +29,13 @@ import {
   summarizeFinancialContract,
 } from './financial-contract';
 
-const OPEN_ASSIGNMENT_STATUSES = ['created', 'pending_driver_confirmation', 'active'] as const;
+const OPEN_ASSIGNMENT_STATUSES = [
+  'created',
+  'pending_driver_confirmation',
+  'driver_action_required',
+  'accepted',
+  'active',
+] as const;
 const PLATFORM_ISSUER = {
   productName: 'Mobiris',
   legalName: 'Growth Figures Limited',
@@ -464,7 +470,7 @@ export class AssignmentsService {
           businessEntityId: driver.businessEntityId,
           driverId: dto.driverId,
           vehicleId: dto.vehicleId,
-          status: 'pending_driver_confirmation',
+          status: 'driver_action_required',
           notes: dto.notes ?? null,
           ...topLevelPlan,
           contractVersion: LEGAL_DOCUMENT_VERSIONS.terms,
@@ -499,7 +505,9 @@ export class AssignmentsService {
         tenantVehicleCode: vehicle.tenantVehicleCode,
         systemVehicleCode: vehicle.systemVehicleCode,
       }),
-      requiresAcceptance: assignment.status === 'pending_driver_confirmation',
+      requiresAcceptance:
+        assignment.status === 'pending_driver_confirmation' ||
+        assignment.status === 'driver_action_required',
     });
 
     return this.enrichAssignment(assignment);
@@ -569,7 +577,11 @@ export class AssignmentsService {
     },
   ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
-    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
+    if (
+      !['created', 'pending_driver_confirmation', 'driver_action_required'].includes(
+        assignment.status,
+      )
+    ) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be accepted from status '${assignment.status}'.`,
       );
@@ -601,8 +613,7 @@ export class AssignmentsService {
     const updated = await this.prisma.assignment.update({
       where: { id },
       data: {
-        status: 'active',
-        startedAt: acceptedAt,
+        status: 'accepted',
         contractStatus: 'accepted',
         driverAcceptedTermsAt: acceptedAt,
         driverConfirmedAt: acceptedAt,
@@ -616,9 +627,6 @@ export class AssignmentsService {
       acceptedAt: acceptedAt.toISOString(),
       confirmationMethod: updated.driverConfirmationMethod,
       assignmentSnapshotHash: acceptanceSnapshotHash,
-    });
-    await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_activated', {
-      activatedAt: acceptedAt.toISOString(),
     });
     const vehicle = await this.prisma.vehicle.findUnique({
       where: { id: updated.vehicleId },
@@ -655,7 +663,11 @@ export class AssignmentsService {
     input: { declinedFrom: string; note?: string },
   ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
-    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
+    if (
+      !['created', 'pending_driver_confirmation', 'driver_action_required'].includes(
+        assignment.status,
+      )
+    ) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be declined from status '${assignment.status}'.`,
       );
@@ -689,7 +701,11 @@ export class AssignmentsService {
       return assignment;
     }
 
-    if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
+    if (
+      !['created', 'pending_driver_confirmation', 'driver_action_required', 'accepted'].includes(
+        assignment.status,
+      )
+    ) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be started from status '${assignment.status}'`,
       );

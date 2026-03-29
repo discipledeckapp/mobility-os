@@ -79,6 +79,8 @@ export function filterAssignments(
 export function groupAssignments(assignments: AssignmentRecord[]) {
   const statusOrder: AssignmentStatus[] = [
     ASSIGNMENT_STATUS.active,
+    ASSIGNMENT_STATUS.accepted,
+    ASSIGNMENT_STATUS.driverActionRequired,
     ASSIGNMENT_STATUS.pendingDriverConfirmation,
     ASSIGNMENT_STATUS.created,
     ASSIGNMENT_STATUS.ended,

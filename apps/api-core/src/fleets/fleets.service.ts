@@ -11,7 +11,13 @@ import type { UpdateFleetDto } from './dto/update-fleet.dto';
 export class FleetsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private readonly openAssignmentStatuses = ['created', 'pending_driver_confirmation', 'active'] as const;
+  private readonly openAssignmentStatuses = [
+    'created',
+    'pending_driver_confirmation',
+    'driver_action_required',
+    'accepted',
+    'active',
+  ] as const;
 
   private async syncFleetHierarchy(
     prisma: PrismaService,

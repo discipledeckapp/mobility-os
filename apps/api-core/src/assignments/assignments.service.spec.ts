@@ -88,7 +88,7 @@ describe('AssignmentsService', () => {
     );
   });
 
-  it('creates an assignment in pending confirmation status and reserves the vehicle', async () => {
+  it('creates an assignment in driver action required status and reserves the vehicle', async () => {
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
       tenantId: 'tenant_1',
@@ -109,7 +109,7 @@ describe('AssignmentsService', () => {
         fleetId: 'fleet_1',
         operatingUnitId: 'ou_1',
         businessEntityId: 'be_1',
-        status: 'pending_driver_confirmation',
+        status: 'driver_action_required',
       },
     ]);
 
@@ -122,7 +122,7 @@ describe('AssignmentsService', () => {
 
     expect(prisma.assignment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        status: 'pending_driver_confirmation',
+        status: 'driver_action_required',
         driverId: 'driver_1',
         vehicleId: 'vehicle_1',
       }),
@@ -140,7 +140,7 @@ describe('AssignmentsService', () => {
       vehicleLabel: 'vehicle_1',
       requiresAcceptance: true,
     });
-    expect(result.status).toBe('pending_driver_confirmation');
+    expect(result.status).toBe('driver_action_required');
   });
 
   it('blocks create when the driver is not assignment-ready', async () => {
@@ -241,7 +241,7 @@ describe('AssignmentsService', () => {
       fleetId: 'fleet_1',
       operatingUnitId: 'ou_1',
       businessEntityId: 'be_1',
-      status: 'active',
+      status: 'accepted',
       contractStatus: 'accepted',
       driverConfirmationMethod: 'app',
     });

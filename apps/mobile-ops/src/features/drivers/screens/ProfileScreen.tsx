@@ -344,7 +344,9 @@ function pickCurrentAssignment(
   return (
     assignments
       .filter((assignment) =>
-        ['active', 'pending_driver_confirmation', 'created'].includes(assignment.status),
+        ['active', 'accepted', 'driver_action_required', 'pending_driver_confirmation', 'created'].includes(
+          assignment.status,
+        ),
       )
       .sort(
         (left, right) =>
@@ -358,8 +360,15 @@ function assignmentTone(status: string): 'neutral' | 'success' | 'warning' | 'da
   if (status === 'active') {
     return 'success';
   }
-  if (status === 'pending_driver_confirmation' || status === 'created') {
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'created'
+  ) {
     return 'warning';
+  }
+  if (status === 'accepted') {
+    return 'neutral';
   }
   if (status === 'cancelled' || status === 'declined') {
     return 'danger';
@@ -371,8 +380,15 @@ function assignmentGuidance(status: string) {
   if (status === 'active') {
     return 'Your vehicle is assigned and remittance or return actions are now available from the assignment workspace.';
   }
-  if (status === 'pending_driver_confirmation' || status === 'created') {
-    return 'A vehicle has been assigned to you. Open the assignment to review the details and accept the terms if required.';
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'created'
+  ) {
+    return 'You have been assigned a vehicle. Please open the assignment and accept to begin.';
+  }
+  if (status === 'accepted') {
+    return 'Your assignment has been accepted and is ready to begin.';
   }
   return 'This assignment is no longer active.';
 }

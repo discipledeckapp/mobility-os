@@ -30,7 +30,9 @@ import { AssignmentRowActions } from './assignment-row-actions';
 
 const STATUS_OPTIONS: SearchableSelectOption[] = [
   { value: 'created', label: 'Created' },
-  { value: 'pending_driver_confirmation', label: 'Pending driver confirmation' },
+  { value: 'driver_action_required', label: 'Driver action required' },
+  { value: 'pending_driver_confirmation', label: 'Pending driver confirmation (legacy)' },
+  { value: 'accepted', label: 'Accepted' },
   { value: 'active', label: 'Active' },
   { value: 'declined', label: 'Declined' },
   { value: 'ended', label: 'Ended' },
@@ -50,9 +52,19 @@ function toFleetOptions(fleets: FleetRecord[]): SearchableSelectOption[] {
 
 function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
-  if (status === 'pending_driver_confirmation' || status === 'created') return 'warning';
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'created'
+  )
+    return 'warning';
+  if (status === 'accepted') return 'neutral';
   if (status === 'cancelled' || status === 'declined') return 'danger';
   return 'neutral';
+}
+
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatDateTime(value?: string | null): string {
@@ -292,7 +304,9 @@ export function AssignmentRecordsPanel({
               <TableCell>{vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}</TableCell>
               <TableCell>{fleetLabels.get(assignment.fleetId) ?? assignment.fleetId}</TableCell>
               <TableCell>
-                <Badge tone={getStatusTone(assignment.status)}>{assignment.status}</Badge>
+                <Badge tone={getStatusTone(assignment.status)}>
+                  {formatStatusLabel(assignment.status)}
+                </Badge>
               </TableCell>
               <TableCell>{formatDateTime(assignment.startedAt)}</TableCell>
               <TableCell>

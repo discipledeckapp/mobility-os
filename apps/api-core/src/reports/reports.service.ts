@@ -65,10 +65,20 @@ export class ReportsService {
       };
     }
 
-    if (input.assignmentStatus === 'pending_driver_confirmation') {
+    if (
+      input.assignmentStatus === 'pending_driver_confirmation' ||
+      input.assignmentStatus === 'driver_action_required'
+    ) {
       return {
         status: 'at_risk',
         reason: 'The driver must accept the assignment before remittance can begin.',
+      };
+    }
+
+    if (input.assignmentStatus === 'accepted') {
+      return {
+        status: 'at_risk',
+        reason: 'The assignment has been accepted but has not started yet.',
       };
     }
 
@@ -170,7 +180,7 @@ export class ReportsService {
           tenantId,
           ...fleetScope,
           ...assignmentVehicleScope,
-          status: { in: ['pending_driver_confirmation', 'active'] },
+          status: { in: ['pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'] },
           remittanceAmountMinorUnits: { not: null },
           remittanceCurrency: { not: null },
           remittanceFrequency: { not: null },
@@ -681,7 +691,7 @@ export class ReportsService {
             tenantId,
             ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
             ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
-            status: { in: ['pending_driver_confirmation', 'active'] },
+            status: { in: ['pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'] },
           },
           orderBy: { startedAt: 'desc' },
         }),

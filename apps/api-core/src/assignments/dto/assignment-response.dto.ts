@@ -24,7 +24,7 @@ export class AssignmentResponseDto {
 
   @ApiProperty({
     description:
-      'AssignmentStatus: created | pending_driver_confirmation | active | declined | ended | cancelled',
+      'AssignmentStatus: created | pending_driver_confirmation | driver_action_required | accepted | active | declined | ended | cancelled',
   })
   status!: string;
 

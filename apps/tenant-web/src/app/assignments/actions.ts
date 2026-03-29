@@ -228,7 +228,7 @@ export async function createAssignmentAction(
   revalidatePath('/assignments');
   revalidatePath('/');
   return {
-    success: 'Assignment created and sent for driver confirmation.',
+    success: 'Assignment created and sent to the driver for action.',
   };
 }
 
@@ -404,7 +404,7 @@ export async function acceptAssignmentTermsAction(
   revalidatePath('/remittance');
   revalidatePath('/');
   return {
-    success: 'Assignment accepted and activated.',
+    success: 'Assignment accepted.',
   };
 }
 

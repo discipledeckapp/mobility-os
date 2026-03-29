@@ -70,8 +70,8 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
       : 'Applying the assignment change and refreshing the latest driver context.';
 
   const canWriteAssignments = useMemo(
-    () => session?.permissions.includes('assignments:write') ?? false,
-    [session?.permissions],
+    () => Boolean(session?.linkedDriverId) || session?.permissions.includes('assignments:write') || false,
+    [session?.linkedDriverId, session?.permissions],
   );
   const currencyCode = session?.defaultCurrency ?? '';
   const supportsRemittance =
@@ -335,7 +335,7 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
         <Card style={styles.section}>
           <View style={styles.rowBetween}>
             <Text style={styles.title}>Assignment {assignment.id.slice(-6).toUpperCase()}</Text>
-            <Badge label={assignment.status.toUpperCase()} tone={statusTone(assignment.status)} />
+            <Badge label={formatStatusLabel(assignment.status)} tone={statusTone(assignment.status)} />
           </View>
           <Text style={styles.muted}>
             Vehicle: {`${assignment.vehicle.make} ${assignment.vehicle.model}`}
@@ -452,15 +452,15 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
             <View style={styles.actions}>
               {assignment.contractStatus !== 'accepted' ? (
                 <Button
-                  accessibilityHint="Accept the assignment terms before the assignment starts"
-                  label="Accept assignment terms"
+                  accessibilityHint="Accept this assignment and confirm that you are ready to begin"
+                  label="Accept assignment"
                   loading={submitting}
-                  loadingLabel="Accepting terms"
+                  loadingLabel="Accepting assignment"
                   variant="secondary"
                   onPress={() =>
                     void runAction(
                       () => acceptDriverAssignmentTerms(assignment.id),
-                      'Assignment terms accepted.',
+                      'Assignment accepted.',
                       {
                         type: OFFLINE_ACTION_TYPE.assignmentAccept,
                         payload: { assignmentId: assignment.id },
@@ -471,17 +471,17 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                   }
                 />
               ) : null}
-              {assignment.status === 'pending_driver_confirmation' ? (
+              {['pending_driver_confirmation', 'driver_action_required'].includes(assignment.status) ? (
                 <Button
-                  accessibilityHint="Decline this pending assignment"
-                  label="Decline assignment"
+                  accessibilityHint="Reject this assignment"
+                  label="Reject assignment"
                   loading={submitting}
-                  loadingLabel="Declining assignment"
+                  loadingLabel="Rejecting assignment"
                   variant="secondary"
                   onPress={() =>
                     void runAction(
                       () => declineDriverAssignment(assignment.id),
-                      'Assignment declined.',
+                      'Assignment rejected.',
                       {
                         type: OFFLINE_ACTION_TYPE.assignmentDecline,
                         payload: { assignmentId: assignment.id },
@@ -492,17 +492,17 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
                   }
                 />
               ) : null}
-              {['created', 'pending_driver_confirmation'].includes(assignment.status) ? (
+              {['created', 'accepted'].includes(assignment.status) ? (
                 <Button
-                  accessibilityHint="Mark this assignment as started"
-                  label="Start assignment"
+                  accessibilityHint="Begin this assignment"
+                  label="Begin assignment"
                   loading={submitting}
                   disabled={assignment.contractStatus !== 'accepted'}
-                  loadingLabel="Starting assignment"
+                  loadingLabel="Beginning assignment"
                   onPress={() =>
                     void runAction(
                       () => startDriverAssignment(assignment.id),
-                      'Assignment has been started.',
+                      'Assignment is now active.',
                       {
                         type: OFFLINE_ACTION_TYPE.assignmentStart,
                         payload: { assignmentId: assignment.id },
@@ -779,7 +779,13 @@ function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger
   if (status === 'cancelled' || status === 'declined') {
     return 'danger';
   }
-  if (status === 'pending_driver_confirmation' || status === 'created' || status === 'active') {
+  if (
+    status === 'pending_driver_confirmation' ||
+    status === 'driver_action_required' ||
+    status === 'accepted' ||
+    status === 'created' ||
+    status === 'active'
+  ) {
     return 'warning';
   }
   return 'neutral';

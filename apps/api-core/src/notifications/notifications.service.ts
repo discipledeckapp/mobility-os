@@ -759,7 +759,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
             driverId: input.driverId,
             vehicleId: input.vehicleId,
             fleetId: input.fleetId,
-            status: input.requiresAcceptance ? 'pending_driver_confirmation' : 'active',
+            status: input.requiresAcceptance ? 'driver_action_required' : 'active',
           },
         },
         {
@@ -806,7 +806,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     }
 
     const title = 'Assignment accepted by driver';
-    const body = `${input.vehicleLabel} has been accepted by the assigned driver and moved into the active workflow.`;
+    const body = `${input.vehicleLabel} has been accepted by the assigned driver and is ready to begin.`;
     const actionUrl = `/assignments/${input.assignmentId}`;
     let delivered = 0;
 
@@ -823,7 +823,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
             driverId: input.driverId,
             vehicleId: input.vehicleId,
             fleetId: input.fleetId,
-            status: 'active',
+            status: 'accepted',
           },
         },
         {
@@ -1061,7 +1061,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           where: {
             tenantId,
             vehicleId: { in: vehicleIds },
-            status: { in: ['pending_driver_confirmation', 'active'] },
+            status: { in: ['pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'] },
           },
           orderBy: { startedAt: 'desc' },
           select: {

@@ -232,7 +232,7 @@ export class VehiclesService {
         where: {
           tenantId,
           vehicleId: vehicle.id,
-          status: { in: ['pending_driver_confirmation', 'active'] },
+          status: { in: ['pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'] },
         },
         orderBy: { startedAt: 'desc' },
         select: {
@@ -248,7 +248,7 @@ export class VehiclesService {
         where: {
           tenantId,
           vehicleId: vehicle.id,
-          status: { in: ['pending_driver_confirmation', 'active'] },
+          status: { in: ['pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'] },
         },
       }),
       vehicle.vin
