@@ -307,6 +307,30 @@ export class DriverResponseDto {
   driverPaysKyc?: boolean;
 
   @ApiPropertyOptional()
+  verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+
+  @ApiPropertyOptional()
+  verificationTierLabel?: string;
+
+  @ApiPropertyOptional()
+  verificationTierDescription?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  verificationTierComponents?: Array<'identity' | 'guarantor' | 'drivers_license'>;
+
+  @ApiPropertyOptional({
+    type: [Object],
+    description: 'Tier-aware verification component requirements and completion state.',
+  })
+  verificationComponents?: Array<{
+    key: 'identity' | 'guarantor' | 'drivers_license';
+    label: string;
+    required: boolean;
+    status: 'completed' | 'pending' | 'not_required';
+    message: string;
+  }>;
+
+  @ApiPropertyOptional()
   kycPaymentVerified?: boolean;
 
   @ApiPropertyOptional()
@@ -350,6 +374,35 @@ export class DriverResponseDto {
   verificationCurrency?: string | null;
 
   @ApiPropertyOptional()
+  verificationAvailableSpendMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  verificationCreditLimitMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  verificationCreditUsedMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  verificationStarterCreditActive?: boolean;
+
+  @ApiPropertyOptional()
+  verificationCardCreditActive?: boolean;
+
+  @ApiPropertyOptional({
+    type: Object,
+    description: 'Masked active card details used for organisation verification credit.',
+  })
+  verificationSavedCard?: {
+    provider: string;
+    last4: string;
+    brand: string;
+    status: string;
+    active: boolean;
+    createdAt: string;
+    initialReference?: string | null;
+  } | null;
+
+  @ApiPropertyOptional()
   verificationPaymentStatus?:
     | 'not_required'
     | 'ready'
@@ -359,6 +412,32 @@ export class DriverResponseDto {
 
   @ApiPropertyOptional()
   verificationPaymentMessage?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  localRiskFlags?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Full Trust-only canonical identity and graph signals for operator review.',
+    type: Object,
+  })
+  canonicalInsights?: {
+    driverIdentity: {
+      personId: string | null;
+      tenantCount: number | null;
+      hasMultiTenantPresence: boolean;
+      hasMultiRolePresence: boolean;
+      linkedRoles: string[];
+    };
+    guarantorIdentity: {
+      personId: string | null;
+      tenantCount: number | null;
+      hasMultiTenantPresence: boolean;
+      hasMultiRolePresence: boolean;
+      linkedRoles: string[];
+      reuseCount: number | null;
+    } | null;
+    fraudIndicators: string[];
+  } | null;
 
   @ApiProperty()
   pendingDocumentCount!: number;

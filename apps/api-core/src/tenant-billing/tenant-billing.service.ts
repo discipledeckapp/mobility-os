@@ -6,6 +6,7 @@ import { getCountryConfig } from '@mobility-os/domain-config';
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
+import type { InitializeCardSetupCheckoutDto } from './dto/initialize-card-setup-checkout.dto';
 import type { InitializeTenantInvoicePaymentDto } from './dto/initialize-tenant-invoice-payment.dto';
 import type { InitializeTenantWalletTopUpDto } from './dto/initialize-tenant-wallet-top-up.dto';
 import type {
@@ -15,6 +16,7 @@ import type {
 } from './dto/tenant-billing-response.dto';
 import type { VerifyTenantPaymentDto } from './dto/verify-tenant-payment.dto';
 import type { TenantBillingPlanDto } from './dto/tenant-billing-response.dto';
+import { VerificationSpendService } from './verification-spend.service';
 
 function readNumericFeature(features: Record<string, unknown>, key: string): number | null {
   const value = features[key];
@@ -38,6 +40,7 @@ export class TenantBillingService {
     private readonly prisma: PrismaService,
     private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
     private readonly configService: ConfigService,
+    private readonly verificationSpendService: VerificationSpendService,
   ) {}
 
   async getSummary(tenantId: string, userId: string): Promise<TenantBillingSummaryDto> {
@@ -123,6 +126,7 @@ export class TenantBillingService {
           openInvoiceCount: 0,
           verificationLedgerEntryCount: 0,
         },
+        verificationSpend: await this.verificationSpendService.getSpendSummary(tenantId, currency),
         customerEmail: user.email,
         customerName: user.name,
       };
@@ -137,6 +141,10 @@ export class TenantBillingService {
       readNumericFeature(subscription.features, 'fleetCap');
     const seatCap = readNumericFeature(subscription.features, 'seatLimit');
     const walletCurrency = balance?.currency ?? subscription.currency;
+    const verificationSpend = await this.verificationSpendService.getSpendSummary(
+      tenantId,
+      walletCurrency,
+    );
 
     return {
       subscription: {
@@ -203,6 +211,7 @@ export class TenantBillingService {
         openInvoiceCount: invoices.filter((invoice) => invoice.status === 'open').length,
         verificationLedgerEntryCount: entries.length,
       },
+      verificationSpend,
       customerEmail: user.email,
       customerName: user.name,
     };
@@ -220,6 +229,27 @@ export class TenantBillingService {
       tenantId,
       provider: dto.provider,
       amountMinorUnits: dto.amountMinorUnits,
+      currency: summary.verificationWallet.currency,
+      customerEmail: summary.customerEmail,
+      customerName: summary.customerName,
+      redirectUrl,
+    });
+  }
+
+  async initializeCardSetupCheckout(
+    tenantId: string,
+    userId: string,
+    dto: InitializeCardSetupCheckoutDto,
+  ): Promise<TenantPaymentCheckoutDto> {
+    const summary = await this.getSummary(tenantId, userId);
+    const provider = dto.provider ?? 'paystack';
+    const amountMinorUnits = dto.amountMinorUnits ?? 10_000;
+    const redirectUrl = this.buildReturnUrl(provider, 'card_authorization_setup');
+
+    return this.controlPlaneBillingClient.initializeCardAuthorizationSetup({
+      tenantId,
+      provider,
+      amountMinorUnits,
       currency: summary.verificationWallet.currency,
       customerEmail: summary.customerEmail,
       customerName: summary.customerName,
@@ -259,8 +289,32 @@ export class TenantBillingService {
       reference: dto.reference,
       purpose: dto.purpose,
       ...(dto.invoiceId ? { invoiceId: dto.invoiceId } : {}),
-      ...(dto.purpose === 'platform_wallet_topup' ? { tenantId } : {}),
+      ...(dto.purpose === 'platform_wallet_topup' || dto.purpose === 'card_authorization_setup'
+        ? { tenantId }
+        : {}),
     });
+
+    if (
+      dto.purpose === 'card_authorization_setup' &&
+      result.paymentMethod?.authorizationCode &&
+      result.paymentMethod?.customerCode &&
+      result.paymentMethod?.last4 &&
+      result.paymentMethod?.brand
+    ) {
+      await this.verificationSpendService.saveAuthorizedCard({
+        tenantId,
+        provider: result.provider,
+        authorizationCode: result.paymentMethod.authorizationCode,
+        customerCode: result.paymentMethod.customerCode,
+        last4: result.paymentMethod.last4,
+        brand: result.paymentMethod.brand,
+        initialReference: result.reference,
+        currency: result.currency,
+        metadata: {
+          setupPurpose: 'card_authorization_setup',
+        },
+      });
+    }
 
     return {
       provider: result.provider,
@@ -270,6 +324,8 @@ export class TenantBillingService {
       amountMinorUnits: result.amountMinorUnits,
       currency: result.currency,
       ...(result.invoiceId ? { invoiceId: result.invoiceId } : {}),
+      ...(result.tenantId ? { tenantId: result.tenantId } : {}),
+      ...(result.paymentMethod ? { paymentMethod: result.paymentMethod } : {}),
     };
   }
 
@@ -293,7 +349,7 @@ export class TenantBillingService {
 
   private buildReturnUrl(
     provider: string,
-    purpose: 'invoice_settlement' | 'platform_wallet_topup',
+    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'card_authorization_setup',
     invoiceId?: string,
   ): string {
     const tenantWebUrl = this.configService.getOrThrow<string>('TENANT_WEB_URL');

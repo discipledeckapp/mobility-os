@@ -358,6 +358,62 @@ model VerificationAttempt {
   @@map("verification_attempts")
 }
 
+model VerificationBillingProfile {
+  id                          String   @id
+  tenantId                    String   @unique
+  currency                    String
+  starterCreditGrantedAt      DateTime?
+  starterCreditAmountMinorUnits Int    @default(0)
+  cardCreditLimitMinorUnits   Int      @default(0)
+  cardActivatedAt             DateTime?
+  metadata                    Json?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("verification_billing_profiles")
+}
+
+model TenantSavedCard {
+  id                          String   @id
+  tenantId                    String   @unique
+  provider                    String
+  authorizationCodeCiphertext String
+  customerCodeCiphertext      String
+  last4                       String
+  brand                       String
+  status                      String   @default("active")
+  initialReference            String?
+  metadata                    Json?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@map("tenant_saved_cards")
+}
+
+model VerificationChargeAudit {
+  id               String   @id
+  tenantId         String
+  subjectType      String
+  subjectId        String
+  verificationTier String
+  amountMinorUnits Int
+  currency         String
+  fundingSource    String
+  status           String   @default("applied")
+  paymentReference String?
+  consentedByUserId String?
+  consentedAt      DateTime?
+  description      String?
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, subjectType, subjectId, verificationTier, status])
+  @@index([tenantId, createdAt])
+  @@map("verification_charge_audits")
+}
+
 model DriverGuarantor {
   id           String @id @default(cuid())
   tenantId     String

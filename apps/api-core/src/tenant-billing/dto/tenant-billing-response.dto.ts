@@ -159,6 +159,61 @@ export class TenantBillingUsageDto {
   verificationLedgerEntryCount!: number;
 }
 
+export class TenantSavedCardDto {
+  @ApiProperty()
+  provider!: string;
+
+  @ApiProperty()
+  last4!: string;
+
+  @ApiProperty()
+  brand!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  active!: boolean;
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiPropertyOptional()
+  initialReference?: string | null;
+}
+
+export class TenantVerificationSpendDto {
+  @ApiProperty()
+  currency!: string;
+
+  @ApiProperty()
+  walletBalanceMinorUnits!: number;
+
+  @ApiProperty()
+  creditLimitMinorUnits!: number;
+
+  @ApiProperty()
+  creditUsedMinorUnits!: number;
+
+  @ApiProperty()
+  availableSpendMinorUnits!: number;
+
+  @ApiProperty()
+  starterCreditActive!: boolean;
+
+  @ApiProperty()
+  starterCreditEligible!: boolean;
+
+  @ApiProperty()
+  cardCreditActive!: boolean;
+
+  @ApiProperty({ type: [String] })
+  unlockedTiers!: string[];
+
+  @ApiPropertyOptional({ type: TenantSavedCardDto })
+  savedCard?: TenantSavedCardDto | null;
+}
+
 export class TenantBillingSummaryDto {
   @ApiProperty({ type: TenantBillingSubscriptionDto })
   subscription!: TenantBillingSubscriptionDto;
@@ -174,6 +229,9 @@ export class TenantBillingSummaryDto {
 
   @ApiProperty({ type: TenantBillingUsageDto })
   usage!: TenantBillingUsageDto;
+
+  @ApiProperty({ type: TenantVerificationSpendDto })
+  verificationSpend!: TenantVerificationSpendDto;
 
   @ApiProperty()
   customerEmail!: string;
@@ -220,4 +278,15 @@ export class TenantPaymentApplicationDto {
 
   @ApiPropertyOptional()
   invoiceId?: string;
+
+  @ApiPropertyOptional()
+  tenantId?: string;
+
+  @ApiPropertyOptional()
+  paymentMethod?: {
+    authorizationCode?: string | null;
+    customerCode?: string | null;
+    last4?: string | null;
+    brand?: string | null;
+  };
 }

@@ -1,0 +1,57 @@
+def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.youverifyliveness'
+version = '0.0.0'
+
+android {
+  compileSdkVersion safeExtGet("compileSdkVersion", 34)
+  namespace "expo.modules.youverifyliveness"
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    targetSdkVersion safeExtGet("targetSdkVersion", 34)
+    versionCode 1
+    versionName "0.0.0"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_17.majorVersion
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    url 'https://pkgs.dev.azure.com/msface/SDK/_packaging/AzureAIVision/maven/v1'
+    def azureMavenUsername =
+      (findProperty('AZURE_MAVEN_USERNAME') ?: System.getenv('AZURE_MAVEN_USERNAME'))
+    def azureMavenPassword =
+      (findProperty('AZURE_MAVEN_PASSWORD') ?: System.getenv('AZURE_MAVEN_PASSWORD'))
+    if (azureMavenUsername && azureMavenPassword) {
+      credentials {
+        username azureMavenUsername
+        password azureMavenPassword
+      }
+    }
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+
+  // Azure AI Vision Face Liveness Detection SDK.
+  // Authoritative source: https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/tutorials/liveness
+  // Version: use the latest stable from the Azure Maven feed above.
+  implementation 'com.azure.android:azure-ai-vision-face-ui:0.19.0-beta.1'
+}

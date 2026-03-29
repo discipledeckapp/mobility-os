@@ -7,21 +7,13 @@ import {
   createGuarantorSelfServiceAccount,
   exchangeGuarantorSelfServiceOtp,
   getGuarantorSelfServiceContext,
-  initiateGuarantorKycCheckout,
   recordGuarantorSelfServiceVerificationConsent,
   updateGuarantorSelfServiceProfile,
 } from '../../lib/api-core';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 
 type GuarantorContext = Awaited<ReturnType<typeof getGuarantorSelfServiceContext>>;
-type GuarantorFlowStep = 'account' | 'agreement' | 'payment' | 'verification' | 'complete';
-
-function formatMinorCurrency(amountMinorUnits: number, currency?: string | null): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: currency ?? 'NGN',
-  }).format(amountMinorUnits / 100);
-}
+type GuarantorFlowStep = 'account' | 'agreement' | 'verification' | 'complete';
 
 function GuarantorOtpEntryForm() {
   const [code, setCode] = useState('');
@@ -411,102 +403,6 @@ function GuarantorCompletionCard({ context }: { context: GuarantorContext }) {
   );
 }
 
-function GuarantorPaymentCard({
-  token,
-  context,
-  onRefresh,
-}: {
-  token: string;
-  context: GuarantorContext;
-  onRefresh: () => Promise<void>;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const paymentResumeStorageKey = `mobiris_guarantor_kyc_resume_${context.driverId}`;
-
-  const alreadyPaid = context.verificationPaymentStatus === 'ready';
-  const amount = formatMinorCurrency(
-    context.verificationAmountMinorUnits,
-    context.verificationCurrency,
-  );
-
-  async function handleCheckout() {
-    setLoading(true);
-    setError(null);
-    try {
-      const fallbackReturnUrl = `${window.location.origin}/guarantor-self-service?token=${encodeURIComponent(token)}`;
-      window.sessionStorage.setItem(
-        paymentResumeStorageKey,
-        JSON.stringify({
-          token,
-          returnUrl: fallbackReturnUrl,
-          driverId: context.driverId,
-        }),
-      );
-      const checkout = await initiateGuarantorKycCheckout(token, 'paystack', fallbackReturnUrl);
-      window.location.href = checkout.checkoutUrl;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start payment right now.');
-      setLoading(false);
-    }
-  }
-
-  if (alreadyPaid) {
-    return (
-      <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
-        <CardHeader className="space-y-2">
-          <CardTitle>Payment received</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Text tone="muted">
-            {context.verificationPaymentMessage ??
-              'Your guarantor verification payment has been received. Continue to verification.'}
-          </Text>
-          <Button onClick={() => void onRefresh()} type="button">
-            Continue to verification
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
-      <CardHeader className="space-y-2">
-        <CardTitle>
-          {context.verificationPayer === 'guarantor'
-            ? 'Verification payment required'
-            : 'Verification waiting on company funding'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Text tone="muted">
-          {context.verificationPaymentMessage ??
-            'Verification cannot continue until the payment requirement is resolved.'}
-        </Text>
-        {context.verificationPaymentStatus === 'driver_payment_required' ? (
-          <>
-            <Text>Required amount: {amount}</Text>
-            <div className="flex flex-wrap gap-3">
-              <Button disabled={loading} onClick={() => void handleCheckout()} type="button">
-                {loading ? 'Opening payment…' : 'Pay now'}
-              </Button>
-              <Button onClick={() => void onRefresh()} type="button" variant="secondary">
-                I&apos;ve completed payment
-              </Button>
-            </div>
-          </>
-        ) : (
-          <Button onClick={() => void onRefresh()} type="button" variant="secondary">
-            Refresh company funding status
-          </Button>
-        )}
-        {error ? <Text tone="danger">{error}</Text> : null}
-      </CardContent>
-    </Card>
-  );
-}
-
 function getFlowStep(context: GuarantorContext): GuarantorFlowStep {
   if (!context.hasSelfServiceAccess) {
     return 'account';
@@ -516,13 +412,6 @@ function getFlowStep(context: GuarantorContext): GuarantorFlowStep {
   }
   if (!context.guarantorResponsibilityAcceptedAt) {
     return 'agreement';
-  }
-  if (
-    context.verificationPaymentStatus === 'driver_payment_required' ||
-    context.verificationPaymentStatus === 'wallet_missing' ||
-    context.verificationPaymentStatus === 'insufficient_balance'
-  ) {
-    return 'payment';
   }
   return 'verification';
 }
@@ -608,8 +497,13 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
           </Text>
           <Heading size="h1">{context.guarantorName}</Heading>
           <Text tone="muted">
-            {context.organisationName ?? 'An operator'} has requested you to act as guarantor for{' '}
-            <span className="font-semibold text-slate-700">{context.driverName}</span>.
+            You&apos;ve been added as a guarantor for{' '}
+            <span className="font-semibold text-slate-700">{context.driverName}</span> by{' '}
+            {context.organisationName ?? 'an operator'}.
+          </Text>
+          <Text tone="muted">
+            You will be asked to review the guarantor agreement, give consent, complete liveness,
+            and verify your identity. There is no payment required in this flow.
           </Text>
         </section>
 
@@ -625,10 +519,6 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
               await refreshContext();
             }}
           />
-        ) : null}
-
-        {currentStep === 'payment' ? (
-          <GuarantorPaymentCard token={token} context={context} onRefresh={refreshContext} />
         ) : null}
 
         {currentStep === 'verification' ? (

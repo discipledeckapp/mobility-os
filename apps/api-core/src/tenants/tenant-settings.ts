@@ -6,6 +6,11 @@ import {
 } from '@mobility-os/domain-config';
 
 export type SupportedLanguage = 'en' | 'fr';
+export type VerificationTier =
+  | 'BASIC_IDENTITY'
+  | 'VERIFIED_IDENTITY'
+  | 'FULL_TRUST_VERIFICATION';
+export type VerificationComponentKey = 'identity' | 'guarantor' | 'drivers_license';
 
 export interface OrganisationBrandingSettings {
   displayName?: string | null;
@@ -53,6 +58,13 @@ export interface OrganisationSettings {
   operations: OrganisationOperationsSettings;
 }
 
+export interface VerificationTierDescriptor {
+  key: VerificationTier;
+  label: string;
+  description: string;
+  components: VerificationComponentKey[];
+}
+
 const FRANCOPHONE_COUNTRIES = new Set([
   'BJ',
   'BF',
@@ -82,6 +94,24 @@ const DRIVER_DOCUMENT_SLUGS = new Set(['drivers-license']);
 const VEHICLE_DOCUMENT_SLUGS = new Set(
   getDocumentTypesByScope(DocumentScope.Vehicle).map((document) => document.slug),
 );
+const BASIC_IDENTITY_TIER: VerificationTierDescriptor = {
+  key: 'BASIC_IDENTITY',
+  label: 'Basic Identity',
+  description: 'Confirm who the driver is',
+  components: ['identity'],
+};
+const VERIFIED_IDENTITY_TIER: VerificationTierDescriptor = {
+  key: 'VERIFIED_IDENTITY',
+  label: 'Verified Identity',
+  description: 'Confirm identity and accountability with guarantor',
+  components: ['identity', 'guarantor'],
+};
+const FULL_TRUST_VERIFICATION_TIER: VerificationTierDescriptor = {
+  key: 'FULL_TRUST_VERIFICATION',
+  label: 'Full Trust Verification',
+  description: 'Complete identity, accountability, and legal eligibility verification',
+  components: ['identity', 'guarantor', 'drivers_license'],
+};
 
 function getCountryIdentifierDefaults(countryCode?: string | null): {
   enabledDriverIdentifierTypes: string[];
@@ -169,6 +199,34 @@ function normalizeIdentifierTypeList(
 
 export function getDefaultLanguageForCountry(countryCode?: string | null): SupportedLanguage {
   return FRANCOPHONE_COUNTRIES.has((countryCode ?? '').toUpperCase()) ? 'fr' : 'en';
+}
+
+export function resolveVerificationTier(settings: {
+  requireGuarantor?: boolean;
+  requiredDriverDocumentSlugs?: string[];
+}): VerificationTier {
+  const requiresDriversLicense = (settings.requiredDriverDocumentSlugs ?? []).includes(
+    'drivers-license',
+  );
+  if (requiresDriversLicense) {
+    return 'FULL_TRUST_VERIFICATION';
+  }
+  if (settings.requireGuarantor) {
+    return 'VERIFIED_IDENTITY';
+  }
+  return 'BASIC_IDENTITY';
+}
+
+export function getVerificationTierDescriptor(
+  tier: VerificationTier,
+): VerificationTierDescriptor {
+  if (tier === 'FULL_TRUST_VERIFICATION') {
+    return FULL_TRUST_VERIFICATION_TIER;
+  }
+  if (tier === 'VERIFIED_IDENTITY') {
+    return VERIFIED_IDENTITY_TIER;
+  }
+  return BASIC_IDENTITY_TIER;
 }
 
 export function readOrganisationSettings(

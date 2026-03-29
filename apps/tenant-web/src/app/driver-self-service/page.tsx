@@ -466,19 +466,30 @@ function formatMinorCurrency(amountMinorUnits: number, currency?: string | null)
   }).format(amountMinorUnits / divisor);
 }
 
-function StepProgress({ currentStep }: { currentStep: FlowStep }) {
+function StepProgress({
+  currentStep,
+  verificationTierComponents,
+}: {
+  currentStep: FlowStep;
+  verificationTierComponents: Array<'identity' | 'guarantor' | 'drivers_license'>;
+}) {
   const steps: Array<{ key: FlowStep; label: string }> = [
     { key: 'account', label: 'Sign-in' },
     { key: 'consent', label: 'Consent' },
     { key: 'payment', label: 'Payment' },
-    { key: 'identity_verification', label: 'Verification' },
-    { key: 'document_verification', label: 'Documents' },
-    { key: 'guarantor', label: 'Guarantor' },
+    { key: 'identity_verification', label: 'Identity' },
+    ...(verificationTierComponents.includes('guarantor')
+      ? [{ key: 'guarantor' as const, label: 'Guarantor' }]
+      : []),
+    ...(verificationTierComponents.includes('drivers_license')
+      ? [{ key: 'document_verification' as const, label: "Driver's licence" }]
+      : []),
     { key: 'manual_review', label: 'Review' },
+    { key: 'profile', label: 'Profile' },
     { key: 'complete', label: 'Complete' },
   ];
   // Map 'profile' step to 'consent' for progress display (profile is auto-populated from NIN)
-  const displayStep = currentStep === 'profile' ? 'consent' : currentStep;
+  const displayStep = currentStep;
   const currentIndex = steps.findIndex((step) => step.key === displayStep);
 
   const pct = steps.length > 1 ? Math.round((currentIndex / (steps.length - 1)) * 100) : 0;
@@ -830,6 +841,10 @@ function PaymentStep({
     driver.verificationAmountMinorUnits ?? 0,
     driver.verificationCurrency,
   );
+  const remainingSpend = formatMinorCurrency(
+    driver.verificationAvailableSpendMinorUnits ?? 0,
+    driver.verificationCurrency,
+  );
   const paymentStatus = onboardingStep.paymentStatus ?? driver.verificationPaymentStatus;
 
   if (alreadyPaid) {
@@ -910,10 +925,20 @@ function PaymentStep({
               </div>
             </>
           ) : (
-            // wallet_missing or insufficient_balance — org pays but wallet not ready
-            <Button onClick={() => void onRefresh()} type="button" variant="secondary">
-              Refresh company funding status
-            </Button>
+            <>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-700">
+                <p>Verification tier cost: {amount}</p>
+                <p>Remaining organisation spend: {remainingSpend}</p>
+                <p>
+                  {driver.verificationSavedCard?.active
+                    ? `Active card: ${driver.verificationSavedCard.brand} ending in ${driver.verificationSavedCard.last4}`
+                    : 'No active organisation card is available yet.'}
+                </p>
+              </div>
+              <Button onClick={() => void onRefresh()} type="button" variant="secondary">
+                Refresh company funding status
+              </Button>
+            </>
           )}
           {error ? <Text tone="danger">{error}</Text> : null}
         </CardContent>
@@ -1450,10 +1475,13 @@ function CompletionStep({
         </CardHeader>
         <CardContent className="space-y-3">
           <Text tone="muted">
+            Verification tier: {onboardingStep.verificationTierLabel}
+          </Text>
+          <Text tone="muted">
             {driver.identityStatus === 'verified'
-              ? 'Your identity verification and required onboarding steps are complete. Your organisation will contact you about your vehicle assignment.'
+              ? `Your ${onboardingStep.verificationTierLabel} requirements are complete. Your organisation will contact you about your vehicle assignment.`
               : driver.identityStatus === 'review_needed'
-                ? 'Your verification has been submitted and is under review. You will be contacted once a decision is made.'
+                ? `Your ${onboardingStep.verificationTierLabel} verification has been submitted and is under review. You will be contacted once a decision is made.`
                 : driver.identityStatus === 'failed'
                   ? 'We could not complete verification yet. Review the required steps and try again.'
                   : 'Your verification is complete.'}
@@ -1773,6 +1801,20 @@ function DriverVerificationFlow({ token }: { token: string }) {
       ? `${driver.firstName} ${driver.lastName}`
       : (driver.email ?? 'Welcome');
   const organisationName = driver.organisationName ?? 'your organisation';
+  const tierComponents = onboardingStep.verificationTierComponents ?? ['identity'];
+  const tierIncludes = [
+    'identity verification',
+    ...(tierComponents.includes('guarantor') ? ['guarantor verification'] : []),
+    ...(tierComponents.includes('drivers_license') ? ["driver's licence verification"] : []),
+  ];
+  const tierRequires = [
+    'consent',
+    ...(driver.verificationPaymentState !== 'not_required' ? ['payment when applicable'] : []),
+    'liveness and NIN verification',
+    ...(tierComponents.includes('guarantor') ? ['a verified guarantor'] : []),
+    ...(tierComponents.includes('drivers_license') ? ["a verified driver's licence"] : []),
+    'contact and operational details',
+  ];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
@@ -1788,6 +1830,14 @@ function DriverVerificationFlow({ token }: { token: string }) {
                 Complete the remaining onboarding steps for {organisationName}. Your progress is
                 saved as you go.
               </Text>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+                <Text className="font-semibold text-[var(--mobiris-ink)]">
+                  You are being verified using {onboardingStep.verificationTierLabel}
+                </Text>
+                <Text tone="muted">{onboardingStep.verificationTierDescription}</Text>
+                <Text tone="muted">Included: {tierIncludes.join(', ')}.</Text>
+                <Text tone="muted">Required: {tierRequires.join(', ')}.</Text>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <a
@@ -1851,7 +1901,10 @@ function DriverVerificationFlow({ token }: { token: string }) {
           </Card>
         ) : null}
 
-        <StepProgress currentStep={currentStep} />
+        <StepProgress
+          currentStep={currentStep}
+          verificationTierComponents={onboardingStep.verificationTierComponents}
+        />
 
         {currentStep === 'account' ? (
           <AccountSetupStep driver={driver} onComplete={refreshContext} token={token} />

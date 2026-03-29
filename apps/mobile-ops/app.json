@@ -13,6 +13,9 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "autolinking": {
+      "nativeModulesDir": "./modules"
+    },
     "plugins": [
       "expo-secure-store",
       [

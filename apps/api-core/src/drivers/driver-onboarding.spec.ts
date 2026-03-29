@@ -124,6 +124,7 @@ function makePrisma() {
     },
     driverGuarantor: {
       findUnique: jest.fn().mockResolvedValue(null),
+      findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn(),
       update: jest.fn(),
@@ -921,6 +922,8 @@ describe('Driver onboarding — onboarding step state machine', () => {
 
     const step = await service.getOnboardingStep(VALID_TOKEN);
     expect(step.step).toBe('account');
+    expect(step.verificationTier).toBe('BASIC_IDENTITY');
+    expect(step.verificationTierLabel).toBe('Basic Identity');
   });
 
   it('returns identity_verification when name or DOB is missing because profile is provider-filled', async () => {
@@ -1137,6 +1140,18 @@ describe('Driver onboarding — onboarding step state machine', () => {
       updatedAt: new Date(),
     });
     prisma.verificationAttempt.count.mockResolvedValue(0);
+    prisma.driverGuarantor.findFirst.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: 'person_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'verified',
+      disconnectedAt: null,
+      relationship: 'Sibling',
+    });
     prisma.driverDocumentVerification.findMany.mockResolvedValue([
       {
         id: 'licence_ver_1',
@@ -1167,6 +1182,50 @@ describe('Driver onboarding — onboarding step state machine', () => {
     const step = await service.getOnboardingStep(VALID_TOKEN);
     expect(step.step).toBe('document_verification');
     expect(step.documentVerificationStatus).toBe('failed');
+    expect(step.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+    expect(step.verificationTierLabel).toBe('Full Trust Verification');
+  });
+
+  it('returns guarantor before driver licence when full trust verification is required', async () => {
+    setup({
+      operations: {
+        driverPaysKyc: false,
+        requireGuarantor: true,
+        requiredDriverDocumentSlugs: ['drivers-license'],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+        operationalProfile: {
+          phoneNumber: '+2348012345678',
+          address: '12 Marina Road',
+          town: 'Lagos',
+          localGovernmentArea: 'Eti-Osa',
+          state: 'Lagos',
+          nextOfKinName: 'Ngozi Okonkwo',
+          nextOfKinPhone: '+2348099999999',
+          emergencyContactName: 'Emeka Okonkwo',
+          emergencyContactPhone: '+2348088888888',
+        },
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+    prisma.driverGuarantor.findFirst = jest.fn().mockResolvedValue(null);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.step).toBe('guarantor');
+    expect(step.verificationTier).toBe('FULL_TRUST_VERIFICATION');
   });
 });
 

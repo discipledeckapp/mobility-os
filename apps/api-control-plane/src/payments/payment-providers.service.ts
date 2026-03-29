@@ -34,6 +34,12 @@ export interface VerifiedProviderPayment {
   currency: string;
   paidAt?: string;
   providerPayload?: unknown;
+  paymentMethod?: {
+    authorizationCode?: string | null;
+    customerCode?: string | null;
+    last4?: string | null;
+    brand?: string | null;
+  };
 }
 
 @Injectable()
@@ -201,6 +207,14 @@ export class PaymentProvidersService {
         amount?: number;
         currency?: string;
         paid_at?: string;
+        card?: {
+          token?: string;
+          last_4digits?: string;
+          type?: string;
+        };
+        customer?: {
+          id?: number | string;
+        };
       };
     };
     const data = payload.data;
@@ -221,6 +235,25 @@ export class PaymentProvidersService {
       currency: data.currency,
       ...(data.paid_at ? { paidAt: data.paid_at } : {}),
       providerPayload: payload,
+      paymentMethod: {
+        authorizationCode:
+          this.asRecord(data.card)?.token && typeof this.asRecord(data.card)?.token === 'string'
+            ? (this.asRecord(data.card)?.token as string)
+            : null,
+        customerCode:
+          typeof this.asRecord(data.customer)?.id === 'number' ||
+          typeof this.asRecord(data.customer)?.id === 'string'
+            ? String(this.asRecord(data.customer)?.id)
+            : null,
+        last4:
+          typeof this.asRecord(data.card)?.last_4digits === 'string'
+            ? (this.asRecord(data.card)?.last_4digits as string)
+            : null,
+        brand:
+          typeof this.asRecord(data.card)?.type === 'string'
+            ? (this.asRecord(data.card)?.type as string)
+            : null,
+      },
     };
   }
 
@@ -313,6 +346,14 @@ export class PaymentProvidersService {
         amount?: number;
         currency?: string;
         paid_at?: string;
+        authorization?: {
+          authorization_code?: string;
+          last4?: string;
+          brand?: string;
+        };
+        customer?: {
+          customer_code?: string;
+        };
       };
     };
     const data = payload.data;
@@ -329,6 +370,12 @@ export class PaymentProvidersService {
       currency: data.currency,
       ...(data.paid_at ? { paidAt: data.paid_at } : {}),
       providerPayload: payload,
+      paymentMethod: {
+        authorizationCode: data.authorization?.authorization_code ?? null,
+        customerCode: data.customer?.customer_code ?? null,
+        last4: data.authorization?.last4 ?? null,
+        brand: data.authorization?.brand ?? null,
+      },
     };
   }
 

@@ -84,6 +84,12 @@ export interface TenantPaymentApplication {
   invoiceId?: string;
   tenantId?: string;
   driverId?: string;
+  paymentMethod?: {
+    authorizationCode?: string | null;
+    customerCode?: string | null;
+    last4?: string | null;
+    brand?: string | null;
+  };
 }
 
 @Injectable()
@@ -196,6 +202,21 @@ export class ControlPlaneBillingClient {
     });
   }
 
+  async initializeCardAuthorizationSetup(input: {
+    tenantId: string;
+    provider: string;
+    amountMinorUnits: number;
+    currency: string;
+    customerEmail: string;
+    customerName?: string;
+    redirectUrl: string;
+  }): Promise<TenantPaymentCheckout> {
+    return this.request('/internal/payments/card-authorization-setups', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   async verifyAndApplyPayment(input: {
     provider: string;
     reference: string;
@@ -205,6 +226,28 @@ export class ControlPlaneBillingClient {
     driverId?: string;
   }): Promise<TenantPaymentApplication> {
     return this.request('/internal/payments/verify-and-apply', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async recordVerificationCharge(input: {
+    tenantId: string;
+    amountMinorUnits: number;
+    referenceId: string;
+    description?: string;
+  }): Promise<{
+    id: string;
+    walletId: string;
+    type: string;
+    amountMinorUnits: number;
+    currency: string;
+    referenceId?: string | null;
+    referenceType?: string | null;
+    description?: string | null;
+    createdAt: string;
+  }> {
+    return this.request('/internal/platform-wallets/verification-charges', {
       method: 'POST',
       body: JSON.stringify(input),
     });

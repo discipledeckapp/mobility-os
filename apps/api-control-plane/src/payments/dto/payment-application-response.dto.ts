@@ -27,4 +27,12 @@ export class PaymentApplicationResponseDto {
 
   @ApiPropertyOptional()
   driverId?: string;
+
+  @ApiPropertyOptional()
+  paymentMethod?: {
+    authorizationCode?: string | null;
+    customerCode?: string | null;
+    last4?: string | null;
+    brand?: string | null;
+  };
 }

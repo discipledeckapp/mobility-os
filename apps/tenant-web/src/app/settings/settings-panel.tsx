@@ -1,6 +1,5 @@
 'use client';
 
-import { DocumentScope, getDocumentTypesByScope } from '@mobility-os/domain-config';
 import {
   Button,
   Card,
@@ -42,9 +41,9 @@ const initialState: SettingsActionState = {};
 
 const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> = {
   verification_payment_receipt: 'Verification payment receipts',
-  driver_verification_status: 'Driver verification updates',
-  driver_licence_review_pending: 'Licence review pending alerts',
-  driver_licence_review_resolved: 'Licence review decisions',
+  driver_verification_status: 'Verification tier progress updates',
+  driver_licence_review_pending: 'Driver licence verification issue alerts',
+  driver_licence_review_resolved: 'Driver licence verification result alerts',
   guarantor_status: 'Guarantor status updates',
   assignment_issued: 'Assignment issued alerts',
   assignment_accepted: 'Assignment accepted alerts',
@@ -83,8 +82,6 @@ const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy' },
 ];
-
-const DRIVER_DOCUMENT_OPTIONS = getDocumentTypesByScope(DocumentScope.Driver);
 
 function EyeIcon() {
   return (
@@ -292,13 +289,20 @@ export function SettingsPanel({
     initialState,
   );
 
-  const [requiresIdentityVerification, setRequiresIdentityVerification] = useState(
-    tenant.requireIdentityVerificationForActivation ?? true,
-  );
   const [requiresGuarantor, setRequiresGuarantor] = useState(tenant.requireGuarantor ?? false);
   const [requiresDriverLicence, setRequiresDriverLicence] = useState(
     (tenant.requiredDriverDocumentSlugs ?? []).includes('drivers-license'),
   );
+  const resolvedTierLabel = requiresDriverLicence
+    ? 'Full Trust Verification'
+    : requiresGuarantor
+      ? 'Verified Identity'
+      : 'Basic Identity';
+  const resolvedTierDescription = requiresDriverLicence
+    ? 'Complete identity, accountability, and legal eligibility verification'
+    : requiresGuarantor
+      ? 'Confirm identity and accountability with guarantor'
+      : 'Confirm who the driver is';
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -540,95 +544,32 @@ export function SettingsPanel({
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Identity verification</CardTitle>
+                <CardTitle>Verification tier</CardTitle>
                 <CardDescription>
-                  Configure what verification steps drivers must complete before activation,
-                  including biometrics, government ID lookup, and who covers the cost.
+                  Organisation settings resolve into a verification tier. The tier decides which
+                  onboarding steps are required; payment only decides who is charged.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form action={organisationAction} className="space-y-5">
-                  {/* Require identity verification toggle */}
                   <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Driver identity verification
+                      Resolved tier
                     </p>
-                    <label className="flex items-center gap-3 text-sm">
-                      <input
-                        checked={requiresIdentityVerification}
-                        name="requireIdentityVerificationForActivation"
-                        onChange={(e) => setRequiresIdentityVerification(e.target.checked)}
-                        type="checkbox"
-                      />
-                      <span className="font-medium text-slate-800">
-                        Require identity verification before driver activation
-                      </span>
-                    </label>
-
-                    <div
-                      className={`space-y-3 border-l-2 border-slate-200 pl-6 ${requiresIdentityVerification ? '' : 'opacity-50'}`}
-                    >
-                      <label className="flex items-center gap-3 text-sm">
-                        <input
-                          defaultChecked={tenant.requireBiometricVerification ?? true}
-                          disabled={!requiresIdentityVerification}
-                          name="requireBiometricVerification"
-                          type="checkbox"
-                        />
-                        <span className="text-slate-700">Require biometric selfie capture</span>
-                      </label>
-                      <label className="flex items-center gap-3 text-sm">
-                        <input
-                          defaultChecked={tenant.requireGovernmentVerificationLookup ?? true}
-                          disabled={!requiresIdentityVerification}
-                          name="requireGovernmentVerificationLookup"
-                          type="checkbox"
-                        />
-                        <span className="text-slate-700">
-                          Require government ID lookup when available
-                        </span>
-                      </label>
-
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-slate-700">
-                          Who covers the verification cost?
-                        </p>
-                        <label className="flex items-center gap-3 text-sm">
-                          <input
-                            defaultChecked={!(tenant.driverPaysKyc ?? true)}
-                            disabled={!requiresIdentityVerification}
-                            name="driverPaysKyc"
-                            type="radio"
-                            value="false"
-                          />
-                          <span className="text-slate-700">
-                            Organisation&apos;s verification wallet
-                          </span>
-                        </label>
-                        <label className="flex items-start gap-3 text-sm">
-                          <input
-                            className="mt-0.5"
-                            defaultChecked={tenant.driverPaysKyc ?? true}
-                            disabled={!requiresIdentityVerification}
-                            name="driverPaysKyc"
-                            type="radio"
-                            value="true"
-                          />
-                          <span className="text-slate-700">
-                            Driver pays ₦5,000 per check
-                            <span className="ml-1 text-xs text-slate-400">
-                              (driver is prompted in the mobile app)
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
+                    <p className="text-lg font-semibold text-[var(--mobiris-ink)]">
+                      {resolvedTierLabel}
+                    </p>
+                    <Text tone="muted">{resolvedTierDescription}</Text>
+                    <Text tone="muted">
+                      Basic Identity includes liveness and NIN verification. Verified Identity adds
+                      guarantor verification. Full Trust Verification adds driver&apos;s licence
+                      verification and identity linkage.
+                    </Text>
                   </div>
 
-                  {/* Guarantor requirements */}
                   <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Guarantor requirements
+                      Tier controls
                     </p>
                     <label className="flex items-center gap-3 text-sm">
                       <input
@@ -638,79 +579,72 @@ export function SettingsPanel({
                         type="checkbox"
                       />
                       <span className="font-medium text-slate-800">
-                        Require guarantors for drivers
+                        Require guarantor verification
                       </span>
                     </label>
-                    <div
-                      className={`space-y-3 border-l-2 border-slate-200 pl-6 ${requiresGuarantor ? '' : 'opacity-50'}`}
-                    >
-                      <label className="flex items-center gap-3 text-sm">
-                        <input
-                          defaultChecked={tenant.guarantorBlocking ?? false}
-                          disabled={!requiresGuarantor}
-                          name="guarantorBlocking"
-                          type="checkbox"
-                        />
-                        <span className="text-slate-700">
-                          Block driver readiness until guarantor is added
-                          <span className="ml-1 text-slate-500 font-normal">
-                            (off = driver is ready, missing guarantor shown as a risk flag)
-                          </span>
+                    <label className="flex items-start gap-3 text-sm">
+                      <input
+                        checked={requiresDriverLicence}
+                        name="requiredDriverDocumentSlugs"
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setRequiresDriverLicence(checked);
+                          if (checked) {
+                            setRequiresGuarantor(true);
+                          }
+                        }}
+                        type="checkbox"
+                        value="drivers-license"
+                      />
+                      <span className="space-y-0.5">
+                        <span className="block font-medium text-slate-800">
+                          Require driver&apos;s licence verification
                         </span>
-                      </label>
+                        <span className="block text-slate-500">
+                          Enabling this moves the organisation to Full Trust Verification, which
+                          also includes guarantor verification.
+                        </span>
+                      </span>
+                    </label>
+                    <input name="requireIdentityVerificationForActivation" type="hidden" value="true" />
+                  </div>
+
+                  <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Payment model
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-slate-700">
+                        Who covers the verification cost?
+                      </p>
                       <label className="flex items-center gap-3 text-sm">
                         <input
-                          defaultChecked={tenant.requireGuarantorVerification ?? false}
-                          disabled={!requiresGuarantor}
-                          name="requireGuarantorVerification"
-                          type="checkbox"
+                          defaultChecked={!(tenant.driverPaysKyc ?? true)}
+                          name="driverPaysKyc"
+                          type="radio"
+                          value="false"
+                        />
+                        <span className="text-slate-700">Organisation&apos;s verification wallet</span>
+                      </label>
+                      <label className="flex items-start gap-3 text-sm">
+                        <input
+                          className="mt-0.5"
+                          defaultChecked={tenant.driverPaysKyc ?? true}
+                          name="driverPaysKyc"
+                          type="radio"
+                          value="true"
                         />
                         <span className="text-slate-700">
-                          Require guarantor identity verification
+                          Driver pays ₦5,000 per check
+                          <span className="ml-1 text-xs text-slate-400">
+                            (this does not change the verification tier)
+                          </span>
                         </span>
                       </label>
                     </div>
                   </div>
 
-                  {/* Driver document and guarantor capacity fields */}
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-3 md:col-span-2">
-                      <Label htmlFor="requiredDriverDocumentSlugs">Required driver documents</Label>
-                      <div className="grid gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50/60 p-4 md:grid-cols-2">
-                        {DRIVER_DOCUMENT_OPTIONS.map((document) =>
-                          document.slug === 'drivers-license' ? (
-                          <label className="flex items-start gap-3 text-sm" key={document.slug}>
-                            <input
-                              checked={requiresDriverLicence}
-                              name="requiredDriverDocumentSlugs"
-                              onChange={(e) => setRequiresDriverLicence(e.target.checked)}
-                              type="checkbox"
-                              value={document.slug}
-                            />
-                            <span className="space-y-0.5">
-                              <span className="block font-medium text-slate-800">
-                                {document.name}
-                              </span>
-                              <span className="block text-slate-500">
-                                {document.hasExpiry
-                                  ? 'Track expiry during onboarding.'
-                                  : 'Collect once during onboarding.'}
-                              </span>
-                            </span>
-                          </label>
-                          ) : null
-                        )}
-                      </div>
-                      <Text tone="muted">
-                        Only Driver&apos;s Licence is supported as an additional driver document.
-                        It stays optional unless you enable it here.
-                      </Text>
-                      <Text tone="muted">
-                        Driver&apos;s licence is verified directly with the provider. When you mark
-                        it as required, readiness waits for a verified result. When you leave it
-                        off, assignment readiness is not blocked by licence verification.
-                      </Text>
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="guarantorMaxActiveDrivers">
                         Max active drivers per guarantor

@@ -2,7 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 
 const PAYMENT_PROVIDERS = ['paystack', 'flutterwave'] as const;
-const PAYMENT_PURPOSES = ['invoice_settlement', 'platform_wallet_topup'] as const;
+const PAYMENT_PURPOSES = [
+  'invoice_settlement',
+  'platform_wallet_topup',
+  'card_authorization_setup',
+] as const;
 
 export class VerifyTenantPaymentDto {
   @ApiProperty({ enum: PAYMENT_PROVIDERS })

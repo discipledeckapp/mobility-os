@@ -62,6 +62,15 @@ export class TenantResponseDto {
   driverPaysKyc?: boolean;
 
   @ApiPropertyOptional()
+  verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+
+  @ApiPropertyOptional()
+  verificationTierLabel?: string;
+
+  @ApiPropertyOptional()
+  verificationTierDescription?: string;
+
+  @ApiPropertyOptional()
   requireGuarantor?: boolean;
 
   @ApiPropertyOptional()

@@ -22,6 +22,9 @@ const REQUIRED_TABLES = [
   'data_subject_requests',
   'verification_entitlements',
   'verification_attempts',
+  'verification_billing_profiles',
+  'tenant_saved_cards',
+  'verification_charge_audits',
   'driver_document_verifications',
   'self_service_otps',
 ];

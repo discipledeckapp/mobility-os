@@ -644,6 +644,15 @@ function PreferenceRow({
 
 function notificationTopicLabel(topic: string) {
   const labels: Record<string, string> = {
+    verification_payment_receipt: 'Verification payment receipts',
+    driver_verification_status: 'Driver verification updates',
+    driver_licence_review_pending: 'Licence review pending alerts',
+    driver_licence_review_resolved: 'Licence review decisions',
+    guarantor_status: 'Guarantor status updates',
+    assignment_issued: 'Assignment issued alerts',
+    assignment_accepted: 'Assignment accepted alerts',
+    assignment_changed: 'Assignment changed alerts',
+    assignment_ended: 'Assignment ended alerts',
     remittance_due: 'Remittance due reminders',
     remittance_overdue: 'Overdue remittance follow-up',
     remittance_reconciled: 'Reconciled remittance updates',

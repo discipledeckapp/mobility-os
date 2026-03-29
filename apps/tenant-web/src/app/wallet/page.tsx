@@ -229,6 +229,73 @@ export default async function WalletPage() {
                 </Card>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card className="border-white/70 bg-white/95 shadow-none">
+                  <CardContent className="p-4">
+                    <Text tone="muted">Credit limit</Text>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                      {formatMoney(
+                        billingSummary.verificationSpend.creditLimitMinorUnits,
+                        billingSummary.verificationSpend.currency,
+                        locale,
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {billingSummary.verificationSpend.cardCreditActive
+                        ? 'Card-backed verification credit is active'
+                        : billingSummary.verificationSpend.starterCreditActive
+                          ? 'Starter credit is active for Basic Identity'
+                          : 'No verification credit activated yet'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-white/70 bg-white/95 shadow-none">
+                  <CardContent className="p-4">
+                    <Text tone="muted">Credit used</Text>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                      {formatMoney(
+                        billingSummary.verificationSpend.creditUsedMinorUnits,
+                        billingSummary.verificationSpend.currency,
+                        locale,
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Charges consumed from starter or card credit
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-white/70 bg-[var(--mobiris-primary-tint)] shadow-none">
+                  <CardContent className="p-4">
+                    <Text tone="muted">Available spend</Text>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                      {formatMoney(
+                        billingSummary.verificationSpend.availableSpendMinorUnits,
+                        billingSummary.verificationSpend.currency,
+                        locale,
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Wallet plus remaining verification credit
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-white/70 bg-white/95 shadow-none">
+                  <CardContent className="p-4">
+                    <Text tone="muted">Saved card</Text>
+                    <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                      {billingSummary.verificationSpend.savedCard
+                        ? `${billingSummary.verificationSpend.savedCard.brand} •••• ${billingSummary.verificationSpend.savedCard.last4}`
+                        : 'No active card'}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {billingSummary.verificationSpend.savedCard
+                        ? `${billingSummary.verificationSpend.savedCard.provider} · ${billingSummary.verificationSpend.savedCard.status}`
+                        : 'Add a card to unlock higher verification tiers'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
               <Card className="border-white/70 bg-white/95 shadow-none">
                 <CardHeader>
                   <CardTitle>Usage and plan capacity</CardTitle>

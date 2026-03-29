@@ -46,7 +46,15 @@ import { ControlPlaneBillingClient } from '../tenant-billing/control-plane-billi
 import { ControlPlaneMeteringClient } from '../tenant-billing/control-plane-metering.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
-import { getDefaultLanguageForCountry, readOrganisationSettings } from '../tenants/tenant-settings';
+import { VerificationSpendService } from '../tenant-billing/verification-spend.service';
+import {
+  getDefaultLanguageForCountry,
+  getVerificationTierDescriptor,
+  readOrganisationSettings,
+  resolveVerificationTier,
+  type VerificationComponentKey,
+  type VerificationTier,
+} from '../tenants/tenant-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DocumentStorageService } from './document-storage.service';
 import type { CreateDriverDocumentDto } from './dto/create-driver-document.dto';
@@ -162,6 +170,16 @@ type DriverMobileAccessSummary = {
 };
 
 type DriverReadinessSummary = {
+  verificationTier?: VerificationTier;
+  verificationTierLabel?: string;
+  verificationTierDescription?: string;
+  verificationComponents?: Array<{
+    key: VerificationComponentKey;
+    label: string;
+    required: boolean;
+    status: 'completed' | 'pending' | 'not_required';
+    message: string;
+  }>;
   authenticationAccess: 'ready' | 'not_ready';
   authenticationAccessReasons: string[];
   activationReadiness: 'ready' | 'partially_ready' | 'not_ready';
@@ -188,6 +206,33 @@ type DriverOperationalProfile = {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelationship?: string;
+};
+
+type DriverCanonicalInsights = {
+  driverIdentity: {
+    personId: string | null;
+    tenantCount: number | null;
+    hasMultiTenantPresence: boolean;
+    hasMultiRolePresence: boolean;
+    linkedRoles: string[];
+  };
+  guarantorIdentity: {
+    personId: string | null;
+    tenantCount: number | null;
+    hasMultiTenantPresence: boolean;
+    hasMultiRolePresence: boolean;
+    linkedRoles: string[];
+    reuseCount: number | null;
+  } | null;
+  fraudIndicators: string[];
+};
+
+type VerificationComponentSummary = {
+  key: VerificationComponentKey;
+  label: string;
+  required: boolean;
+  status: 'completed' | 'pending' | 'not_required';
+  message: string;
 };
 
 type VerificationPaymentState = 'not_required' | 'required' | 'pending' | 'paid' | 'reconciled';
@@ -1216,11 +1261,33 @@ export class DriversService {
     private readonly policyService: PolicyService,
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
+    private readonly verificationSpendService: VerificationSpendService = {
+      getSpendSummary: async () => ({
+        currency: 'NGN',
+        walletBalanceMinorUnits: 1_000_000,
+        creditLimitMinorUnits: 0,
+        creditUsedMinorUnits: 0,
+        availableSpendMinorUnits: 1_000_000,
+        starterCreditActive: false,
+        starterCreditEligible: false,
+        cardCreditActive: false,
+        unlockedTiers: ['BASIC_IDENTITY', 'VERIFIED_IDENTITY', 'FULL_TRUST_VERIFICATION'],
+        savedCard: null,
+      }),
+      saveAuthorizedCard: async () => undefined,
+      ensureVerificationSpendApplied: async () => ({
+        status: 'applied',
+        fundingSource: 'wallet' as const,
+      }),
+    } as unknown as VerificationSpendService,
   ) {}
 
   private readonly selfServicePurpose = 'driver_self_service';
 
-  private getVerificationAmountMinorUnits(currency?: string | null): number {
+  private getVerificationAmountMinorUnits(
+    currency?: string | null,
+    _tier?: VerificationTier,
+  ): number {
     switch ((currency ?? '').toUpperCase()) {
       case 'NGN':
         return 500_000;
@@ -1722,41 +1789,6 @@ export class DriversService {
     return 'in_progress';
   }
 
-  private async getOperationalWalletFundingStatus(
-    _tenantId: string,
-    businessEntityId: string,
-    amountMinorUnits: number,
-  ): Promise<'ready' | 'wallet_missing' | 'insufficient_balance'> {
-    const wallet = await this.prisma.operationalWallet.findUnique({
-      where: { businessEntityId },
-      select: { id: true },
-    });
-
-    if (!wallet) {
-      return 'wallet_missing';
-    }
-
-    const groupedEntries = await this.prisma.operationalWalletEntry.groupBy({
-      by: ['type'],
-      where: { walletId: wallet.id },
-      _sum: { amountMinorUnits: true },
-    });
-
-    let credits = 0;
-    let debits = 0;
-    for (const entry of groupedEntries) {
-      const amount = entry._sum.amountMinorUnits ?? 0;
-      if (entry.type === 'credit') {
-        credits = amount;
-      } else {
-        debits += amount;
-      }
-    }
-
-    const balanceMinorUnits = credits - debits;
-    return balanceMinorUnits >= amountMinorUnits ? 'ready' : 'insufficient_balance';
-  }
-
   private async getSelfServiceVerificationPolicy(
     tenantId: string,
     driver: DriverWithIdentityState,
@@ -1777,6 +1809,20 @@ export class DriversService {
     verificationPayer: 'driver' | 'organisation';
     verificationAmountMinorUnits: number;
     verificationCurrency: string;
+    verificationAvailableSpendMinorUnits: number;
+    verificationCreditLimitMinorUnits: number;
+    verificationCreditUsedMinorUnits: number;
+    verificationStarterCreditActive: boolean;
+    verificationCardCreditActive: boolean;
+    verificationSavedCard?: {
+      provider: string;
+      last4: string;
+      brand: string;
+      status: string;
+      active: boolean;
+      createdAt: string;
+      initialReference: string | null;
+    } | null;
     verificationPaymentStatus:
       | 'not_required'
       | 'ready'
@@ -1790,12 +1836,16 @@ export class DriversService {
       select: { country: true, metadata: true },
     });
     const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const verificationTier = resolveVerificationTier(settings.operations);
     const countryCode = driver.nationality ?? tenant?.country ?? null;
     const verificationCurrency =
       countryCode && isCountrySupported(countryCode)
         ? getCountryConfig(countryCode).currency
         : 'NGN';
-    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(verificationCurrency);
+    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(
+      verificationCurrency,
+      verificationTier,
+    );
     const driverPaysKyc =
       (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
       settings.operations.driverPaysKyc;
@@ -1852,6 +1902,22 @@ export class DriversService {
       | 'insufficient_balance' = 'not_required';
     let verificationPaymentMessage: string | null = null;
     let verificationBlockedReason: string | null = null;
+    let verificationAvailableSpendMinorUnits = 0;
+    let verificationCreditLimitMinorUnits = 0;
+    let verificationCreditUsedMinorUnits = 0;
+    let verificationStarterCreditActive = false;
+    let verificationCardCreditActive = false;
+    let verificationSavedCard:
+      | {
+          provider: string;
+          last4: string;
+          brand: string;
+          status: string;
+          active: boolean;
+          createdAt: string;
+          initialReference: string | null;
+        }
+      | null = null;
 
     if (driverPaysKyc) {
       if (verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved') {
@@ -1879,17 +1945,31 @@ export class DriversService {
           'A verification payment is required before live verification can continue.';
       }
     } else if (settings.operations.requireIdentityVerificationForActivation) {
-      verificationPaymentStatus = await this.getOperationalWalletFundingStatus(
+      const spendSummary = await this.verificationSpendService.getSpendSummary(
         tenantId,
-        driver.businessEntityId,
-        verificationAmountMinorUnits,
+        verificationCurrency,
       );
+      verificationAvailableSpendMinorUnits = spendSummary.availableSpendMinorUnits;
+      verificationCreditLimitMinorUnits = spendSummary.creditLimitMinorUnits;
+      verificationCreditUsedMinorUnits = spendSummary.creditUsedMinorUnits;
+      verificationStarterCreditActive = spendSummary.starterCreditActive;
+      verificationCardCreditActive = spendSummary.cardCreditActive;
+      verificationSavedCard = spendSummary.savedCard;
+      const unlockedByCredit =
+        spendSummary.unlockedTiers.includes(verificationTier) ||
+        spendSummary.walletBalanceMinorUnits >= verificationAmountMinorUnits;
+      verificationPaymentStatus =
+        spendSummary.availableSpendMinorUnits >= verificationAmountMinorUnits && unlockedByCredit
+          ? 'ready'
+          : spendSummary.savedCard
+            ? 'insufficient_balance'
+            : 'wallet_missing';
       verificationPaymentMessage =
         verificationPaymentStatus === 'ready'
-          ? 'Your company has enabled verification for this onboarding flow.'
+          ? 'Your organisation has enough wallet or credit cover for this verification.'
           : verificationPaymentStatus === 'wallet_missing'
-            ? 'Your company must set up an operations wallet before verification can continue.'
-            : 'Your company wallet needs funding before verification can continue.';
+            ? 'Your organisation must add a card or fund the verification wallet before this verification can continue.'
+            : 'Your organisation has an active card, but the remaining credit is not enough for this verification tier.';
     }
 
     if (latestAttempt?.status === 'blocked') {
@@ -1915,8 +1995,17 @@ export class DriversService {
       verificationPayer: driverPaysKyc ? 'driver' : 'organisation',
       verificationAmountMinorUnits,
       verificationCurrency,
+      verificationAvailableSpendMinorUnits,
+      verificationCreditLimitMinorUnits,
+      verificationCreditUsedMinorUnits,
+      verificationStarterCreditActive,
+      verificationCardCreditActive,
+      verificationSavedCard,
       verificationPaymentStatus,
-      verificationPaymentMessage,
+      verificationPaymentMessage:
+        verificationPaymentMessage
+          ? `${verificationPaymentMessage} This single charge covers the ${getVerificationTierDescriptor(verificationTier).label} tier.`
+          : `This single charge covers the ${getVerificationTierDescriptor(verificationTier).label} tier.`,
     };
   }
 
@@ -1925,139 +2014,6 @@ export class DriversService {
     driver: DriverWithIdentityState,
   ): Promise<void> {
     const policy = await this.getSelfServiceVerificationPolicy(tenantId, driver);
-    if (
-      policy.verificationPaymentStatus === 'driver_payment_required' ||
-      policy.verificationPaymentStatus === 'wallet_missing' ||
-      policy.verificationPaymentStatus === 'insufficient_balance'
-    ) {
-      throw new BadRequestException(
-        policy.verificationPaymentMessage ?? 'Verification cannot continue yet.',
-      );
-    }
-  }
-
-  private async getGuarantorSelfServiceVerificationPolicy(
-    tenantId: string,
-    driver: DriverWithIdentityState,
-    guarantor: DriverGuarantorRecord,
-  ): Promise<{
-    guarantorPaysKyc: boolean;
-    verificationPaymentState: VerificationPaymentState;
-    verificationEntitlementState: VerificationEntitlementState;
-    verificationAmountMinorUnits: number;
-    verificationCurrency: string;
-    verificationPaymentStatus:
-      | 'not_required'
-      | 'ready'
-      | 'driver_payment_required'
-      | 'wallet_missing'
-      | 'insufficient_balance';
-    verificationPaymentMessage: string | null;
-    verificationPayer: 'guarantor' | 'organisation';
-  }> {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { country: true, metadata: true },
-    });
-    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-
-    if (settings.operations.requireGuarantorVerification !== true) {
-      return {
-        guarantorPaysKyc: false,
-        verificationPaymentState: 'not_required',
-        verificationEntitlementState: 'none',
-        verificationAmountMinorUnits: 0,
-        verificationCurrency: 'NGN',
-        verificationPaymentStatus: 'not_required',
-        verificationPaymentMessage: null,
-        verificationPayer: 'organisation',
-      };
-    }
-
-    const countryCode = guarantor.countryCode ?? driver.nationality ?? tenant?.country ?? null;
-    const verificationCurrency =
-      countryCode && isCountrySupported(countryCode)
-        ? getCountryConfig(countryCode).currency
-        : 'NGN';
-    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(verificationCurrency);
-    const guarantorPaysKyc = settings.operations.driverPaysKyc === true;
-    const entitlement = await this.ensureLegacyVerificationEntitlement({
-      tenantId,
-      subjectType: 'guarantor',
-      subjectId: guarantor.id,
-      amountMinorUnits: verificationAmountMinorUnits,
-      currency: verificationCurrency,
-      payerType: guarantorPaysKyc ? 'guarantor' : 'tenant',
-    });
-    const verificationEntitlementState = this.mapEntitlementState(entitlement);
-    const verificationAlreadySatisfied = guarantor.status === 'verified' && Boolean(guarantor.personId);
-    const verificationPaymentState: VerificationPaymentState = guarantorPaysKyc
-      ? verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved'
-        ? 'paid'
-        : verificationEntitlementState === 'consumed'
-          ? 'reconciled'
-          : 'required'
-      : 'not_required';
-
-    let verificationPaymentStatus:
-      | 'not_required'
-      | 'ready'
-      | 'driver_payment_required'
-      | 'wallet_missing'
-      | 'insufficient_balance' = 'not_required';
-    let verificationPaymentMessage: string | null = null;
-
-    if (guarantorPaysKyc) {
-      if (verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved') {
-        verificationPaymentStatus = 'ready';
-        verificationPaymentMessage =
-          'Your guarantor verification payment has already been received. Continue to verification.';
-      } else if (verificationEntitlementState === 'consumed') {
-        verificationPaymentStatus = 'ready';
-        verificationPaymentMessage = verificationAlreadySatisfied
-          ? 'Your guarantor verification payment has already been used for this completed onboarding flow.'
-          : 'Your guarantor verification payment was already received. You can retry verification.';
-      } else if (verificationEntitlementState === 'expired') {
-        verificationPaymentStatus = 'driver_payment_required';
-        verificationPaymentMessage =
-          'Your previous guarantor verification payment expired. A new payment is required before verification can continue.';
-      } else {
-        verificationPaymentStatus = 'driver_payment_required';
-        verificationPaymentMessage =
-          'A guarantor verification payment is required before live verification can continue.';
-      }
-    } else {
-      verificationPaymentStatus = await this.getOperationalWalletFundingStatus(
-        tenantId,
-        driver.businessEntityId,
-        verificationAmountMinorUnits,
-      );
-      verificationPaymentMessage =
-        verificationPaymentStatus === 'ready'
-          ? 'The organisation has enabled guarantor verification for this onboarding flow.'
-          : verificationPaymentStatus === 'wallet_missing'
-            ? 'The organisation must set up an operations wallet before guarantor verification can continue.'
-            : 'The organisation wallet needs funding before guarantor verification can continue.';
-    }
-
-    return {
-      guarantorPaysKyc,
-      verificationPaymentState,
-      verificationEntitlementState,
-      verificationAmountMinorUnits,
-      verificationCurrency,
-      verificationPaymentStatus,
-      verificationPaymentMessage,
-      verificationPayer: guarantorPaysKyc ? 'guarantor' : 'organisation',
-    };
-  }
-
-  private async assertGuarantorSelfServiceVerificationPaymentReady(
-    tenantId: string,
-    driver: DriverWithIdentityState,
-    guarantor: DriverGuarantorRecord,
-  ): Promise<void> {
-    const policy = await this.getGuarantorSelfServiceVerificationPolicy(tenantId, driver, guarantor);
     if (
       policy.verificationPaymentStatus === 'driver_payment_required' ||
       policy.verificationPaymentStatus === 'wallet_missing' ||
@@ -2400,7 +2356,9 @@ export class DriversService {
       DriverGuarantorSummary &
       DriverDocumentSummary &
       DriverMobileAccessSummary &
-      DriverReadinessSummary
+      DriverReadinessSummary & {
+        canonicalInsights?: DriverCanonicalInsights;
+      }
   > {
     const driver = (await this.prisma.driver.findUnique({
       where: { id },
@@ -2452,8 +2410,17 @@ export class DriversService {
         approvedDocumentTypes: [],
       },
     ]);
+    const canonicalInsights = driverWithReadiness
+      ? await this.buildDriverCanonicalInsights(tenantId, driverWithReadiness)
+      : undefined;
+    const driverWithCanonicalInsights = driverWithReadiness
+      ? {
+          ...driverWithReadiness,
+          ...(canonicalInsights ? { canonicalInsights } : {}),
+        }
+      : null;
     return (
-      driverWithReadiness ?? {
+      driverWithCanonicalInsights ?? {
         ...enrichedDriver,
         hasGuarantor: false,
         guarantorStatus: null,
@@ -2502,6 +2469,20 @@ export class DriversService {
         verificationPayer?: 'driver' | 'organisation';
         verificationAmountMinorUnits?: number;
         verificationCurrency?: string;
+        verificationAvailableSpendMinorUnits?: number;
+        verificationCreditLimitMinorUnits?: number;
+        verificationCreditUsedMinorUnits?: number;
+        verificationStarterCreditActive?: boolean;
+        verificationCardCreditActive?: boolean;
+        verificationSavedCard?: {
+          provider: string;
+          last4: string;
+          brand: string;
+          status: string;
+          active: boolean;
+          createdAt: string;
+          initialReference: string | null;
+        } | null;
         verificationPaymentStatus?:
           | 'not_required'
           | 'ready'
@@ -2509,6 +2490,10 @@ export class DriversService {
           | 'wallet_missing'
           | 'insufficient_balance';
         verificationPaymentMessage?: string | null;
+        verificationTier?: VerificationTier;
+        verificationTierLabel?: string;
+        verificationTierDescription?: string;
+        verificationTierComponents?: VerificationComponentKey[];
       }
   > {
     const payload = await this.verifySelfServiceToken(token);
@@ -2522,16 +2507,21 @@ export class DriversService {
     );
 
     const selfServiceLocalRiskFlags: string[] = [];
+    const verificationTier = resolveVerificationTier(settings.operations);
+    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
     if (
-      settings.operations.requireGuarantor &&
-      !settings.operations.guarantorBlocking &&
+      !verificationTierDescriptor.components.includes('guarantor') &&
       !driver.hasGuarantor
     ) {
-      selfServiceLocalRiskFlags.push('missing_guarantor');
+      selfServiceLocalRiskFlags.push('missing_optional_guarantor');
     }
 
     return {
       ...driver,
+      verificationTier,
+      verificationTierLabel: verificationTierDescriptor.label,
+      verificationTierDescription: verificationTierDescriptor.description,
+      verificationTierComponents: verificationTierDescriptor.components,
       requireIdentityVerificationForActivation:
         settings.operations.requireIdentityVerificationForActivation,
       requireBiometricVerification: settings.operations.requireBiometricVerification,
@@ -2543,7 +2533,9 @@ export class DriversService {
         : {}),
       enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
-      requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
+      requiredDriverDocumentSlugs: verificationTierDescriptor.components.includes('drivers_license')
+        ? [DRIVER_LICENCE_DOCUMENT_TYPE]
+        : [],
       driverPaysKyc: verificationPolicy.driverPaysKyc,
       kycPaymentVerified: verificationPolicy.kycPaymentVerified,
       verificationPaymentState: verificationPolicy.verificationPaymentState,
@@ -2557,6 +2549,13 @@ export class DriversService {
       verificationPayer: verificationPolicy.verificationPayer,
       verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
       verificationCurrency: verificationPolicy.verificationCurrency,
+      verificationAvailableSpendMinorUnits:
+        verificationPolicy.verificationAvailableSpendMinorUnits,
+      verificationCreditLimitMinorUnits: verificationPolicy.verificationCreditLimitMinorUnits,
+      verificationCreditUsedMinorUnits: verificationPolicy.verificationCreditUsedMinorUnits,
+      verificationStarterCreditActive: verificationPolicy.verificationStarterCreditActive,
+      verificationCardCreditActive: verificationPolicy.verificationCardCreditActive,
+      verificationSavedCard: verificationPolicy.verificationSavedCard ?? null,
       verificationPaymentStatus: verificationPolicy.verificationPaymentStatus,
       verificationPaymentMessage: verificationPolicy.verificationPaymentMessage,
     };
@@ -2578,6 +2577,10 @@ export class DriversService {
       | 'manual_review'
       | 'complete';
     reason: string;
+    verificationTier: VerificationTier;
+    verificationTierLabel: string;
+    verificationTierDescription: string;
+    verificationTierComponents: VerificationComponentKey[];
     // Contextual fields the frontend needs to render the step.
     paymentStatus?: string;
     paymentMessage?: string | null;
@@ -2605,6 +2608,14 @@ export class DriversService {
       this.getOrganisationSettings(payload.tenantId),
     ]);
     const policy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
+    const verificationTier = resolveVerificationTier(settings.operations);
+    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const onboardingContext = {
+      verificationTier,
+      verificationTierLabel: verificationTierDescriptor.label,
+      verificationTierDescription: verificationTierDescriptor.description,
+      verificationTierComponents: verificationTierDescriptor.components,
+    } as const;
 
     // Step 1: account setup
     const linkedUser = await this.prisma.user.findFirst({
@@ -2613,7 +2624,11 @@ export class DriversService {
     });
 
     if (!linkedUser) {
-      return { step: 'account', reason: 'Driver needs to create a sign-in account.' };
+      return {
+        step: 'account',
+        reason: 'Driver needs to create a sign-in account.',
+        ...onboardingContext,
+      };
     }
 
     // Step 3: verification consent
@@ -2640,6 +2655,7 @@ export class DriversService {
       return {
         step: 'payment',
         reason: 'Verification payment is required.',
+        ...onboardingContext,
         paymentStatus: policy.verificationPaymentStatus,
         paymentMessage: policy.verificationPaymentMessage,
         hasConsentOnFile: false,
@@ -2651,6 +2667,7 @@ export class DriversService {
       return {
         step: 'consent',
         reason: 'Driver has not yet provided verification consent.',
+        ...onboardingContext,
         hasConsentOnFile: false,
       };
     }
@@ -2659,6 +2676,7 @@ export class DriversService {
       return {
         step: 'payment',
         reason: 'Verification payment is required.',
+        ...onboardingContext,
         paymentStatus: policy.verificationPaymentStatus,
         paymentMessage: policy.verificationPaymentMessage,
         hasConsentOnFile: true,
@@ -2666,8 +2684,6 @@ export class DriversService {
     }
 
     // Step 5: identity verification (liveness + biometric)
-    const requireIdentityVerification =
-      settings.operations.requireIdentityVerificationForActivation !== false;
     const verificationState = policy.verificationState;
     const verificationCompleted =
       driver.identityStatus === 'verified' && verificationState === 'success';
@@ -2676,20 +2692,22 @@ export class DriversService {
       (driver.identityStatus === 'pending_verification' &&
         (verificationState === 'in_progress' || verificationState === 'provider_called'));
 
-    if (requireIdentityVerification && verificationState === 'failed') {
+    if (verificationState === 'failed') {
       return {
         step: 'identity_verification',
         reason: 'Identity verification failed. Review the details and try again.',
+        ...onboardingContext,
         identityStatus: driver.identityStatus,
         verificationState,
         verificationPaymentStatus: policy.verificationPaymentStatus,
       };
     }
 
-    if (requireIdentityVerification && !verificationCompleted && !verificationAwaitingReview) {
+    if (!verificationCompleted && !verificationAwaitingReview) {
       return {
         step: 'identity_verification',
         reason: 'Identity verification has not been completed yet.',
+        ...onboardingContext,
         identityStatus: driver.identityStatus,
         verificationState,
         verificationPaymentStatus: policy.verificationPaymentStatus,
@@ -2704,6 +2722,7 @@ export class DriversService {
           verificationState === 'provider_called'
             ? 'Verification was submitted and is waiting for a manual decision.'
             : 'Your verification submission is still being processed.',
+        ...onboardingContext,
         identityStatus: driver.identityStatus,
         verificationState,
       };
@@ -2719,12 +2738,53 @@ export class DriversService {
       return {
         step: 'profile',
         reason: 'Complete your contact and operational details before continuing.',
+        ...onboardingContext,
         missingOperationalFields,
       };
     }
 
-    // Step 7: document verification (zero-trust ID number)
-    const requiredDocumentSlugs = policy.requiredDriverDocumentSlugs ?? [];
+    // Step 7: guarantor onboarding when required
+    const requiresGuarantor = verificationTierDescriptor.components.includes('guarantor');
+    const guarantorBlocking = requiresGuarantor;
+    let guarantorVerified = !requiresGuarantor;
+    let guarantorRecord: DriverGuarantorRecord | null = null;
+    if (requiresGuarantor) {
+      guarantorRecord = await this.prisma.driverGuarantor.findFirst({
+        where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
+      });
+      const needsGuarantorVerification = true;
+      if (guarantorRecord) {
+        guarantorVerified = needsGuarantorVerification
+          ? guarantorRecord.status === 'verified'
+          : true;
+      } else {
+        guarantorVerified = false;
+      }
+
+      if (!guarantorVerified) {
+        return {
+          step: 'guarantor',
+          reason: needsGuarantorVerification
+            ? 'A guarantor must be added and verified before onboarding is complete.'
+            : 'A guarantor must be added before onboarding is complete.',
+          ...onboardingContext,
+          verificationState,
+          requiresGuarantor,
+          guarantorBlocking,
+          guarantorVerified,
+          guarantorName: guarantorRecord?.name ?? null,
+          guarantorPhone: guarantorRecord?.phone ?? null,
+          guarantorEmail: guarantorRecord?.email ?? null,
+          guarantorCountryCode: guarantorRecord?.countryCode ?? null,
+          guarantorRelationship: guarantorRecord?.relationship ?? null,
+        };
+      }
+    }
+
+    // Step 8: driver's licence verification for Full Trust Verification
+    const requiredDocumentSlugs = verificationTierDescriptor.components.includes('drivers_license')
+      ? [DRIVER_LICENCE_DOCUMENT_TYPE]
+      : [];
     if (requiredDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
       const driverLicenceVerifications = await this.driverDocumentVerifications.findMany({
         where: {
@@ -2743,6 +2803,7 @@ export class DriversService {
         return {
           step: 'document_verification',
           reason: "Driver's licence verification is required before onboarding can continue.",
+          ...onboardingContext,
           verificationState,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
@@ -2755,6 +2816,7 @@ export class DriversService {
           reason:
             latestDriverLicenceVerification.failureReason ??
             "Driver's licence verification did not complete successfully.",
+          ...onboardingContext,
           verificationState,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
@@ -2771,6 +2833,7 @@ export class DriversService {
           reason:
             latestDriverLicenceVerification.failureReason ??
             "Driver's licence verification is temporarily unavailable. Please try again.",
+          ...onboardingContext,
           verificationState,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
@@ -2782,46 +2845,10 @@ export class DriversService {
       }
     }
 
-    // Step 8: guarantor onboarding when required
-    const requiresGuarantor = settings.operations.requireGuarantor !== false;
-    const guarantorBlocking = settings.operations.guarantorBlocking === true;
-    let guarantorVerified = !requiresGuarantor;
-    let guarantorRecord: DriverGuarantorRecord | null = null;
-    if (requiresGuarantor) {
-      guarantorRecord = await this.prisma.driverGuarantor.findFirst({
-        where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
-      });
-      const needsGuarantorVerification = settings.operations.requireGuarantorVerification === true;
-      if (guarantorRecord) {
-        guarantorVerified = needsGuarantorVerification
-          ? guarantorRecord.status === 'verified'
-          : true;
-      } else {
-        guarantorVerified = false;
-      }
-
-      if (!guarantorVerified) {
-        return {
-          step: 'guarantor',
-          reason: needsGuarantorVerification
-            ? 'A guarantor must be added and verified before onboarding is complete.'
-            : 'A guarantor must be added before onboarding is complete.',
-          verificationState,
-          requiresGuarantor,
-          guarantorBlocking,
-          guarantorVerified,
-          guarantorName: guarantorRecord?.name ?? null,
-          guarantorPhone: guarantorRecord?.phone ?? null,
-          guarantorEmail: guarantorRecord?.email ?? null,
-          guarantorCountryCode: guarantorRecord?.countryCode ?? null,
-          guarantorRelationship: guarantorRecord?.relationship ?? null,
-        };
-      }
-    }
-
     return {
       step: 'complete',
       reason: 'All onboarding requirements are met.',
+      ...onboardingContext,
       identityStatus: driver.identityStatus,
       verificationState,
       requiresGuarantor,
@@ -3268,16 +3295,6 @@ export class DriversService {
     tenantId: string;
     organisationName: string | null;
     hasSelfServiceAccess: boolean;
-    verificationPaymentStatus:
-      | 'not_required'
-      | 'ready'
-      | 'driver_payment_required'
-      | 'wallet_missing'
-      | 'insufficient_balance';
-    verificationPaymentMessage: string | null;
-    verificationPayer: 'guarantor' | 'organisation';
-    verificationAmountMinorUnits: number;
-    verificationCurrency: string;
   }> {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
     const [driver, tenant] = await Promise.all([
@@ -3299,12 +3316,6 @@ export class DriversService {
       ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
         tenant.name)
       : null;
-    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
-      payload.tenantId,
-      driver,
-      guarantor,
-    );
-
     return {
       guarantorName: guarantor.name,
       guarantorPhone: guarantor.phone,
@@ -3325,11 +3336,6 @@ export class DriversService {
       hasSelfServiceAccess: Boolean(
         await this.findGuarantorSelfServiceUser(driver.tenantId, driver.id),
       ),
-      verificationPaymentStatus: verificationPolicy.verificationPaymentStatus,
-      verificationPaymentMessage: verificationPolicy.verificationPaymentMessage,
-      verificationPayer: verificationPolicy.verificationPayer,
-      verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
-      verificationCurrency: verificationPolicy.verificationCurrency,
     };
   }
 
@@ -3600,166 +3606,10 @@ export class DriversService {
       throw new NotFoundException('No guarantor is linked to this driver.');
     }
 
-    await this.assertGuarantorSelfServiceVerificationPaymentReady(
-      payload.tenantId,
-      driver,
-      guarantor,
-    );
-
     return this.intelligenceClient.initializeLivenessSession({
       tenantId: payload.tenantId,
       countryCode: resolvedCountryCode,
     });
-  }
-
-  async initiateGuarantorKycCheckoutFromSelfService(
-    token: string,
-    provider: 'paystack' | 'flutterwave',
-    returnUrl?: string,
-  ): Promise<{
-    status: 'checkout_required' | 'already_paid';
-    checkoutUrl?: string;
-    amountMinorUnits: number;
-    currency: string;
-    entitlementState?: VerificationEntitlementState;
-  }> {
-    const payload = await this.verifyGuarantorSelfServiceToken(token);
-    const [driver, guarantor] = await Promise.all([
-      this.findOne(payload.tenantId, payload.driverId),
-      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
-    ]);
-
-    if (!guarantor) {
-      throw new NotFoundException('No guarantor is linked to this driver.');
-    }
-
-    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
-      payload.tenantId,
-      driver,
-      guarantor,
-    );
-
-    if (!verificationPolicy.guarantorPaysKyc) {
-      throw new BadRequestException(
-        'This organisation does not require guarantors to pay for their own KYC verification.',
-      );
-    }
-
-    if (!guarantor.email) {
-      throw new BadRequestException(
-        'A guarantor email address is required to initiate a KYC payment checkout.',
-      );
-    }
-
-    if (
-      verificationPolicy.verificationEntitlementState === 'paid' ||
-      verificationPolicy.verificationEntitlementState === 'reserved'
-    ) {
-      return {
-        status: 'already_paid',
-        amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
-        currency: verificationPolicy.verificationCurrency,
-        entitlementState: verificationPolicy.verificationEntitlementState,
-      };
-    }
-
-    const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
-    const redirectUrl = new URL('/guarantor-kyc/payment-return', tenantWebUrl);
-    redirectUrl.searchParams.set('provider', provider);
-    redirectUrl.searchParams.set('token', token);
-    const safeReturnUrl = this.sanitizeSelfServiceReturnUrl(returnUrl);
-    if (safeReturnUrl) {
-      redirectUrl.searchParams.set('returnUrl', safeReturnUrl);
-    }
-
-    const checkout = await this.controlPlaneBillingClient.initializeIdentityVerificationCheckout({
-      tenantId: payload.tenantId,
-      subjectType: 'guarantor',
-      subjectId: guarantor.id,
-      relatedDriverId: driver.id,
-      provider,
-      currency: verificationPolicy.verificationCurrency,
-      customerEmail: guarantor.email,
-      customerName: guarantor.name,
-      redirectUrl: redirectUrl.toString(),
-    });
-
-    return {
-      status: 'checkout_required',
-      checkoutUrl: checkout.checkoutUrl,
-      amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
-      currency: verificationPolicy.verificationCurrency,
-      entitlementState: verificationPolicy.verificationEntitlementState,
-    };
-  }
-
-  async verifyGuarantorKycPaymentFromSelfService(
-    token: string,
-    provider: string,
-    reference: string,
-  ): Promise<{ status: string }> {
-    const payload = await this.verifyGuarantorSelfServiceToken(token);
-    const [driver, guarantor] = await Promise.all([
-      this.findOne(payload.tenantId, payload.driverId),
-      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
-    ]);
-
-    if (!guarantor) {
-      throw new NotFoundException('No guarantor is linked to this driver.');
-    }
-
-    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
-      payload.tenantId,
-      driver,
-      guarantor,
-    );
-    const normalizedReference = reference.trim();
-    const existingEntitlement = await this.getLatestVerificationEntitlement(
-      payload.tenantId,
-      'guarantor',
-      guarantor.id,
-    );
-    const existingEntitlementState = this.mapEntitlementState(existingEntitlement);
-
-    if (
-      existingEntitlement &&
-      existingEntitlement.paymentReference === normalizedReference &&
-      ['paid', 'reserved', 'consumed'].includes(existingEntitlementState)
-    ) {
-      return { status: 'already_applied' };
-    }
-
-    const applied = await this.controlPlaneBillingClient.verifyAndApplyPayment({
-      provider,
-      reference: normalizedReference,
-      purpose: 'identity_verification',
-      tenantId: payload.tenantId,
-      driverId: driver.id,
-    });
-
-    if (existingEntitlement) {
-      await this.updateVerificationEntitlement(existingEntitlement.id, {
-        status: existingEntitlement.status === 'consumed' ? existingEntitlement.status : 'paid',
-        paymentReference: normalizedReference,
-        paymentProvider: provider,
-        paidAt: new Date(),
-      });
-    } else {
-      await this.createVerificationEntitlement({
-        subjectType: 'guarantor',
-        subjectId: guarantor.id,
-        tenantId: payload.tenantId,
-        payerType: verificationPolicy.guarantorPaysKyc ? 'guarantor' : 'tenant',
-        paymentReference: normalizedReference,
-        paymentProvider: provider,
-        amountMinorUnits: applied.amountMinorUnits,
-        currency: applied.currency,
-        status: 'paid',
-        paidAt: new Date(),
-      });
-    }
-
-    return { status: applied.status === 'already_applied' ? 'already_applied' : 'verified' };
   }
 
   async resolveGuarantorIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
@@ -3772,12 +3622,6 @@ export class DriversService {
     if (!guarantor) {
       throw new NotFoundException('No guarantor is linked to this driver.');
     }
-
-    await this.assertGuarantorSelfServiceVerificationPaymentReady(
-      payload.tenantId,
-      driver,
-      guarantor,
-    );
 
     const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
     return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, {
@@ -4946,16 +4790,20 @@ export class DriversService {
 
     if (isDriverLicenceVerification) {
       const notificationContext = await this.getTenantNotificationContext(payload.tenantId);
+      const settings = await this.getOrganisationSettings(payload.tenantId);
+      const verificationTier = resolveVerificationTier(settings.operations);
+      const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
       await this.notificationsService.notifyDriverVerificationStatus({
         tenantId: payload.tenantId,
         driverId: driver.id,
         driverName: this.formatDriverName(driver),
         ...(driver.email ? { driverEmail: driver.email } : {}),
         ...notificationContext,
+        verificationTierLabel: verificationTierDescriptor.label,
         decision: status === 'verified' ? 'verified' : status === 'failed' ? 'failed' : 'pending',
         detail:
           status === 'verified'
-            ? "Driver's licence verification passed."
+            ? `${verificationTierDescriptor.label}: driver's licence verification passed.`
             : (failureReason ?? "Driver's licence verification could not be completed."),
         actionUrl: `/drivers/${driver.id}`,
       });
@@ -5491,6 +5339,28 @@ export class DriversService {
         status: 'reserved',
         reservedAt: new Date(),
       });
+    }
+
+    if (!verificationPolicy.driverPaysKyc) {
+      const settings = await this.getOrganisationSettings(payload.tenantId);
+      const verificationTier = resolveVerificationTier(settings.operations);
+      const spendApplication = await this.verificationSpendService.ensureVerificationSpendApplied({
+        tenantId: payload.tenantId,
+        subjectType: 'driver',
+        subjectId: payload.driverId,
+        verificationTier,
+        amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+        currency: verificationPolicy.verificationCurrency,
+        description: `${getVerificationTierDescriptor(verificationTier).label} verification charge`,
+        metadata: {
+          attemptId: attempt.id,
+          channel: 'driver_self_service',
+        },
+      });
+
+      if (spendApplication.status === 'insufficient') {
+        throw new BadRequestException(spendApplication.reason);
+      }
     }
 
     this.logger.log(
@@ -6180,6 +6050,93 @@ export class DriversService {
     } catch {
       return driver;
     }
+  }
+
+  private async buildDriverCanonicalInsights(
+    tenantId: string,
+    driver: DriverWithIdentityState &
+      DriverIntelligenceSummary &
+      DriverGuarantorSummary &
+      DriverDocumentSummary &
+      DriverMobileAccessSummary &
+      DriverReadinessSummary,
+  ): Promise<DriverCanonicalInsights | undefined> {
+    const settings = await this.getOrganisationSettings(tenantId);
+    if (resolveVerificationTier(settings.operations) !== 'FULL_TRUST_VERIFICATION') {
+      return undefined;
+    }
+
+    const [driverRolePresence, guarantorRolePresence, guarantorReuseCount] = await Promise.all([
+      driver.personId
+        ? this.intelligenceClient.queryPersonRolePresence(driver.personId).catch(() => null)
+        : Promise.resolve(null),
+      driver.guarantorPersonId
+        ? this.intelligenceClient.queryPersonRolePresence(driver.guarantorPersonId).catch(() => null)
+        : Promise.resolve(null),
+      driver.guarantorPersonId
+        ? this.prisma.driverGuarantor.count({
+            where: {
+              tenantId,
+              personId: driver.guarantorPersonId,
+              disconnectedAt: null,
+            },
+          })
+        : Promise.resolve(0),
+    ]);
+
+    const fraudIndicators: string[] = [];
+    if (driver.duplicateIdentityFlag) {
+      fraudIndicators.push('Duplicate identity signal detected.');
+    }
+    if (driver.isWatchlisted) {
+      fraudIndicators.push('Driver watchlist signal is active.');
+    }
+    if (driver.riskBand === 'high' || driver.riskBand === 'critical') {
+      fraudIndicators.push(`Driver risk band is ${driver.riskBand}.`);
+    }
+    if (driverRolePresence?.hasMultiTenantPresence) {
+      fraudIndicators.push('Driver identity appears across multiple tenants.');
+    }
+    if (driver.guarantorIsAlsoDriver) {
+      fraudIndicators.push('Guarantor identity is also linked to a driver role.');
+    }
+    if (guarantorRolePresence?.hasMultiTenantPresence) {
+      fraudIndicators.push('Guarantor identity appears across multiple tenants.');
+    }
+    if ((guarantorReuseCount ?? 0) > 1) {
+      fraudIndicators.push('Guarantor identity is reused across multiple drivers in this tenant.');
+    }
+
+    const toLinkedRoles = (
+      presence: { isDriver: boolean; isGuarantor: boolean } | null,
+    ): string[] => {
+      if (!presence) return [];
+      return [
+        ...(presence.isDriver ? ['driver'] : []),
+        ...(presence.isGuarantor ? ['guarantor'] : []),
+      ];
+    };
+
+    return {
+      driverIdentity: {
+        personId: driver.personId ?? null,
+        tenantCount: driverRolePresence?.tenantCount ?? null,
+        hasMultiTenantPresence: driverRolePresence?.hasMultiTenantPresence ?? false,
+        hasMultiRolePresence: driverRolePresence?.hasMultiRolePresence ?? false,
+        linkedRoles: toLinkedRoles(driverRolePresence),
+      },
+      guarantorIdentity: driver.guarantorPersonId
+        ? {
+            personId: driver.guarantorPersonId,
+            tenantCount: guarantorRolePresence?.tenantCount ?? null,
+            hasMultiTenantPresence: guarantorRolePresence?.hasMultiTenantPresence ?? false,
+            hasMultiRolePresence: guarantorRolePresence?.hasMultiRolePresence ?? false,
+            linkedRoles: toLinkedRoles(guarantorRolePresence),
+            reuseCount: guarantorReuseCount,
+          }
+        : null,
+      fraudIndicators,
+    };
   }
 
   private withDefaultGuarantorSummary<
@@ -7183,6 +7140,75 @@ export class DriversService {
     return 'Identity verification has not started yet.';
   }
 
+  private buildVerificationComponentSummaries(
+    driver: {
+      identityStatus: string;
+      guarantorStatus?: string | null;
+      guarantorPersonId?: string | null;
+      hasApprovedLicence: boolean;
+      driverLicenceVerification?: DriverDocumentSummary['driverLicenceVerification'];
+    },
+    tier: VerificationTier,
+  ): VerificationComponentSummary[] {
+    const tierDescriptor = getVerificationTierDescriptor(tier);
+    const requiresGuarantor = tierDescriptor.components.includes('guarantor');
+    const requiresDriversLicense = tierDescriptor.components.includes('drivers_license');
+    const guarantorCompleted =
+      Boolean(driver.guarantorStatus) &&
+      driver.guarantorStatus !== 'disconnected' &&
+      Boolean(driver.guarantorPersonId);
+    const licence = driver.driverLicenceVerification ?? null;
+    const licenceCompleted =
+      driver.hasApprovedLicence &&
+      licence?.status === 'verified' &&
+      licence.validity !== 'invalid' &&
+      !licence.isExpired &&
+      licence.linkageStatus !== 'mismatch';
+
+    return [
+      {
+        key: 'identity',
+        label: 'Identity verification',
+        required: true,
+        status: driver.identityStatus === 'verified' ? 'completed' : 'pending',
+        message:
+          driver.identityStatus === 'verified'
+            ? 'Identity verified successfully.'
+            : 'Identity verification is required for this level.',
+      },
+      {
+        key: 'guarantor',
+        label: 'Guarantor verification',
+        required: requiresGuarantor,
+        status: requiresGuarantor
+          ? guarantorCompleted
+            ? 'completed'
+            : 'pending'
+          : 'not_required',
+        message: requiresGuarantor
+          ? guarantorCompleted
+            ? 'Guarantor verification completed.'
+            : 'A verified guarantor is required for this level.'
+          : `Guarantor not required under ${tierDescriptor.label}.`,
+      },
+      {
+        key: 'drivers_license',
+        label: "Driver's licence verification",
+        required: requiresDriversLicense,
+        status: requiresDriversLicense
+          ? licenceCompleted
+            ? 'completed'
+            : 'pending'
+          : 'not_required',
+        message: requiresDriversLicense
+          ? licenceCompleted
+            ? "Driver's licence verified successfully."
+            : "A verified driver's licence is required for this level."
+          : `Driver's licence not required under ${tierDescriptor.label}.`,
+      },
+    ];
+  }
+
   private computeReadiness(
     driver: {
       status: string;
@@ -7208,6 +7234,15 @@ export class DriversService {
       allowAdminAssignmentOverride: boolean;
     },
   ): DriverReadinessSummary {
+    const verificationTier = resolveVerificationTier(settings);
+    const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+    const verificationComponents = this.buildVerificationComponentSummaries(
+      driver,
+      verificationTier,
+    );
+    const requiresGuarantor = verificationTierDescriptor.components.includes('guarantor');
+    const requiresDriversLicense =
+      verificationTierDescriptor.components.includes('drivers_license');
     const authenticationAccessReasons: string[] = [];
     if (!driver.hasMobileAccess) {
       if (driver.mobileAccessStatus === 'inactive' || driver.mobileAccessStatus === 'revoked') {
@@ -7222,29 +7257,19 @@ export class DriversService {
     const activationReasons: string[] = [];
     const localRiskFlags: string[] = [];
 
-    if (settings.requireIdentityVerificationForActivation && driver.identityStatus !== 'verified') {
+    if (driver.identityStatus !== 'verified') {
       activationReasons.push('Identity verification must be completed.');
     }
 
-    if (settings.requireGuarantor) {
-      const guarantorMissing =
-        !driver.guarantorStatus ||
-        driver.guarantorStatus === 'disconnected' ||
-        (settings.requireGuarantorVerification && !driver.guarantorPersonId);
-
-      if (guarantorMissing) {
-        if (settings.guarantorBlocking) {
-          activationReasons.push('A guarantor with verified linkage is required.');
-        } else {
-          // Non-blocking: driver proceeds to ready but carries a risk flag.
-          localRiskFlags.push('missing_guarantor');
-        }
-      }
+    const guarantorMissing =
+      !driver.guarantorStatus || driver.guarantorStatus === 'disconnected' || !driver.guarantorPersonId;
+    if (requiresGuarantor && guarantorMissing) {
+      activationReasons.push('A verified guarantor is required.');
+    } else if (!requiresGuarantor && guarantorMissing) {
+      localRiskFlags.push('missing_optional_guarantor');
     }
 
-    const driverLicenceRequired = settings.requiredDriverDocumentSlugs.includes(
-      DRIVER_LICENCE_DOCUMENT_TYPE,
-    );
+    const driverLicenceRequired = requiresDriversLicense;
     const approvedDocumentTypes = new Set(driver.approvedDocumentTypes ?? []);
     const latestLicenceVerification = driver.driverLicenceVerification ?? null;
 
@@ -7282,13 +7307,14 @@ export class DriversService {
         activationReasons.push("Driver's licence verification needs to be retried.");
       } else if (latestLicenceVerification?.status === 'failed') {
         activationReasons.push("Driver's licence verification failed.");
-      } else if (
-        latestLicenceVerification &&
-        latestLicenceVerification.status !== 'verified' &&
-        latestLicenceVerification.status !== 'failed'
-      ) {
+      } else if (latestLicenceVerification && latestLicenceVerification.status !== 'verified') {
         activationReasons.push("Driver's licence verification is still pending.");
       }
+    } else if (
+      !driverLicenceRequired &&
+      !latestLicenceVerification
+    ) {
+      localRiskFlags.push('missing_optional_driver_licence');
     } else if (
       latestLicenceVerification?.isExpired ||
       latestLicenceVerification?.validity === 'invalid'
@@ -7344,6 +7370,10 @@ export class DriversService {
           : ['Driver status must be active before remittance can be recorded.']),
       ];
       return {
+        verificationTier,
+        verificationTierLabel: verificationTierDescriptor.label,
+        verificationTierDescription: verificationTierDescriptor.description,
+        verificationComponents,
         authenticationAccess,
         authenticationAccessReasons,
         activationReadiness,
@@ -7373,6 +7403,10 @@ export class DriversService {
           : ['Driver status must be active before remittance can be recorded.']),
       ];
       return {
+        verificationTier,
+        verificationTierLabel: verificationTierDescriptor.label,
+        verificationTierDescription: verificationTierDescriptor.description,
+        verificationComponents,
         authenticationAccess,
         authenticationAccessReasons,
         activationReadiness,
@@ -7405,6 +7439,10 @@ export class DriversService {
           : 'not_ready';
 
     return {
+      verificationTier,
+      verificationTierLabel: verificationTierDescriptor.label,
+      verificationTierDescription: verificationTierDescriptor.description,
+      verificationComponents,
       authenticationAccess,
       authenticationAccessReasons,
       activationReadiness,

@@ -13,6 +13,7 @@ import { PlatformWalletsService } from '../platform-wallets/platform-wallets.ser
 import { ControlPlaneRecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
+import type { InitializeCardAuthorizationSetupDto } from './dto/initialize-card-authorization-setup.dto';
 import type { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
 import type { InitializeIdentityVerificationPaymentDto } from './dto/initialize-identity-verification-payment.dto';
 import type { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
@@ -27,6 +28,7 @@ type PaymentPurpose =
   | 'invoice_settlement'
   | 'platform_wallet_topup'
   | 'identity_verification'
+  | 'card_authorization_setup'
   | 'driver_kyc';
 
 @Injectable()
@@ -136,6 +138,51 @@ export class PaymentsService {
       checkoutUrl: initialized.checkoutUrl,
       ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
       purpose: 'platform_wallet_topup',
+    };
+  }
+
+  async initializeCardAuthorizationSetup(
+    dto: InitializeCardAuthorizationSetupDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    const reference = this.buildReference('card_authorization_setup', dto.tenantId, dto.provider);
+    const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
+    const initialized = await this.paymentProvidersService.initializePayment({
+      provider: dto.provider,
+      reference,
+      amountMinorUnits: dto.amountMinorUnits,
+      currency: dto.currency,
+      redirectUrl,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      description: `Mobiris card authorization setup for tenant ${dto.tenantId}`,
+      metadata: {
+        purpose: 'card_authorization_setup',
+        tenantId: dto.tenantId,
+      },
+    });
+
+    await this.prisma.cpPaymentAttempt.create({
+      data: {
+        provider: dto.provider,
+        reference,
+        purpose: 'card_authorization_setup',
+        tenantId: dto.tenantId,
+        status: 'checkout_initialized',
+        amountMinorUnits: dto.amountMinorUnits,
+        currency: dto.currency,
+        customerEmail: dto.customerEmail,
+        customerName: dto.customerName ?? null,
+        checkoutUrl: initialized.checkoutUrl,
+        accessCode: initialized.accessCode ?? null,
+      },
+    });
+
+    return {
+      provider: initialized.provider,
+      reference,
+      checkoutUrl: initialized.checkoutUrl,
+      ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
+      purpose: 'card_authorization_setup',
     };
   }
 
@@ -260,6 +307,10 @@ export class PaymentsService {
     const normalizedDtoPurpose = this.normalizePurpose(dto.purpose);
 
     if (attempt?.status === 'applied') {
+      const recoveredPaymentMethod =
+        attempt.purpose === 'card_authorization_setup'
+          ? this.extractPaymentMethodFromPayload(attempt.providerPayload)
+          : undefined;
       return {
         provider: dto.provider,
         reference: dto.reference,
@@ -270,6 +321,7 @@ export class PaymentsService {
         ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
         ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
         ...(dto.driverId ? { driverId: dto.driverId } : {}),
+        ...(recoveredPaymentMethod ? { paymentMethod: recoveredPaymentMethod } : {}),
       };
     }
     const verified = await this.paymentProvidersService.verifyPayment(dto.provider, dto.reference);
@@ -431,6 +483,50 @@ export class PaymentsService {
         currency: verified.currency,
         tenantId: tenantId ?? '',
         ...(dto.driverId ? { driverId: dto.driverId } : {}),
+        ...(verified.paymentMethod ? { paymentMethod: verified.paymentMethod } : {}),
+      };
+    }
+
+    if (purpose === 'card_authorization_setup') {
+      if (!tenantId) {
+        throw new BadRequestException(
+          'tenantId is required for card_authorization_setup payment application',
+        );
+      }
+
+      const alreadyApplied = await this.platformWalletsService.hasEntryForReference(
+        tenantId,
+        dto.reference,
+        'payment',
+      );
+      if (!alreadyApplied) {
+        await this.platformWalletsService.createEntry(tenantId, {
+          type: 'credit',
+          amountMinorUnits: verified.amountMinorUnits,
+          currency: verified.currency,
+          referenceId: dto.reference,
+          referenceType: 'payment',
+          description: `${dto.provider} card authorization setup credit`,
+        });
+      }
+
+      await this.prisma.cpPaymentAttempt.updateMany({
+        where: { reference: dto.reference },
+        data: {
+          status: 'applied',
+          appliedAt: new Date(),
+        },
+      });
+
+      return {
+        provider: dto.provider,
+        reference: dto.reference,
+        purpose,
+        status: alreadyApplied ? 'already_applied' : 'applied',
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        tenantId,
+        ...(verified.paymentMethod ? { paymentMethod: verified.paymentMethod } : {}),
       };
     }
 
@@ -530,7 +626,8 @@ export class PaymentsService {
       purpose: this.normalizePurpose(attempt.purpose) as
         | 'invoice_settlement'
         | 'platform_wallet_topup'
-        | 'identity_verification',
+        | 'identity_verification'
+        | 'card_authorization_setup',
       ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
       ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
     });
@@ -568,7 +665,11 @@ export class PaymentsService {
   }
 
   private buildReference(
-    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'identity_verification',
+    purpose:
+      | 'invoice_settlement'
+      | 'platform_wallet_topup'
+      | 'identity_verification'
+      | 'card_authorization_setup',
     targetId: string,
     provider: string,
   ): string {
@@ -583,5 +684,76 @@ export class PaymentsService {
       );
     }
     return redirectUrl;
+  }
+
+  private extractPaymentMethodFromPayload(payload: unknown): {
+    authorizationCode?: string | null;
+    customerCode?: string | null;
+    last4?: string | null;
+    brand?: string | null;
+  } | undefined {
+    if (!payload || typeof payload !== 'object') {
+      return undefined;
+    }
+
+    const record = payload as Record<string, unknown>;
+    const data =
+      typeof record.data === 'object' && record.data !== null
+        ? (record.data as Record<string, unknown>)
+        : null;
+    if (!data) {
+      return undefined;
+    }
+
+    const authorization =
+      typeof data.authorization === 'object' && data.authorization !== null
+        ? (data.authorization as Record<string, unknown>)
+        : null;
+    const customer =
+      typeof data.customer === 'object' && data.customer !== null
+        ? (data.customer as Record<string, unknown>)
+        : null;
+    const card =
+      typeof data.card === 'object' && data.card !== null
+        ? (data.card as Record<string, unknown>)
+        : null;
+
+    const authorizationCode =
+      typeof authorization?.authorization_code === 'string'
+        ? authorization.authorization_code
+        : typeof card?.token === 'string'
+          ? card.token
+          : null;
+    const customerCode =
+      typeof customer?.customer_code === 'string'
+        ? customer.customer_code
+        : typeof customer?.id === 'string'
+          ? customer.id
+          : typeof customer?.id === 'number'
+            ? String(customer.id)
+            : null;
+    const last4 =
+      typeof authorization?.last4 === 'string'
+        ? authorization.last4
+        : typeof card?.last_4digits === 'string'
+          ? card.last_4digits
+          : null;
+    const brand =
+      typeof authorization?.brand === 'string'
+        ? authorization.brand
+        : typeof card?.type === 'string'
+          ? card.type
+          : null;
+
+    if (!authorizationCode && !customerCode && !last4 && !brand) {
+      return undefined;
+    }
+
+    return {
+      authorizationCode,
+      customerCode,
+      last4,
+      brand,
+    };
   }
 }

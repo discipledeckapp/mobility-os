@@ -94,29 +94,32 @@ function getVerificationFeeLabel(driver: {
 }
 
 function getVerificationStepSummary(driver: {
-  identityStatus: string;
-  hasApprovedLicence: boolean;
-  hasGuarantor: boolean;
+  verificationComponents?: Array<{
+    key: 'identity' | 'guarantor' | 'drivers_license';
+    label: string;
+    required: boolean;
+    status: 'completed' | 'pending' | 'not_required';
+    message: string;
+  }>;
   status: string;
 }) {
+  const componentTone = (status: 'completed' | 'pending' | 'not_required') => {
+    if (status === 'completed') return 'success' as const;
+    if (status === 'not_required') return 'neutral' as const;
+    return 'warning' as const;
+  };
+  const componentValue = (status: 'completed' | 'pending' | 'not_required') => {
+    if (status === 'completed') return 'Complete';
+    if (status === 'not_required') return 'Not required';
+    return 'Pending';
+  };
+
   return [
-    {
-      label: 'Verification',
-      value:
-        driver.identityStatus === 'verified'
-          ? 'Complete'
-          : driver.identityStatus === 'pending_verification'
-            ? 'Pending'
-            : driver.identityStatus === 'review_needed'
-              ? 'In review'
-              : 'Not started',
-      tone: getDriverIdentityTone(driver.identityStatus),
-    },
-    {
-      label: 'Guarantor',
-      value: driver.hasGuarantor ? 'Linked' : 'Pending',
-      tone: driver.hasGuarantor ? 'success' : 'warning',
-    },
+    ...(driver.verificationComponents ?? []).map((component) => ({
+      label: component.label,
+      value: componentValue(component.status),
+      tone: componentTone(component.status),
+    })),
     {
       label: 'Activation',
       value: driver.status === 'active' ? 'Active' : 'Pending',
@@ -147,6 +150,30 @@ function maskSensitiveValue(value: string | null | undefined): string {
     return trimmed || 'Not returned';
   }
   return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
+
+function getTierBadgeTone(
+  tier?: string | null,
+): 'success' | 'warning' | 'neutral' {
+  if (tier === 'FULL_TRUST_VERIFICATION') return 'success';
+  if (tier === 'VERIFIED_IDENTITY') return 'warning';
+  return 'neutral';
+}
+
+function formatRiskFlag(flag: string): string {
+  if (flag === 'missing_optional_guarantor') {
+    return 'No guarantor linked (optional).';
+  }
+  if (flag === 'missing_optional_driver_licence') {
+    return "Driver has not completed driver's licence verification (optional).";
+  }
+  if (flag === 'expired_driver_licence') {
+    return "Driver's licence is expired or invalid.";
+  }
+  if (flag === 'driver_licence_expiring_soon') {
+    return "Driver's licence expires soon.";
+  }
+  return flag.replace(/_/g, ' ');
 }
 
 function getDriverIdentityProfile(driver: {
@@ -309,8 +336,7 @@ export default async function DriverDetailsPage({
               <div className="space-y-1">
                 {(() => {
                   const driverPays = tenant?.driverPaysKyc ?? true;
-                  const requiresVerification =
-                    tenant?.requireIdentityVerificationForActivation ?? true;
+                  const tierLabel = tenant?.verificationTierLabel ?? 'Basic Identity';
                   const inviteStatus =
                     invite === 'sent' || invite === 'failed' || invite === 'skipped'
                       ? invite
@@ -322,25 +348,22 @@ export default async function DriverDetailsPage({
                     : inviteStatus === 'failed'
                       ? 'The driver was created, but Mobiris could not send the self-service verification link automatically.'
                       : 'No self-service verification link was sent automatically for this driver.';
-                  const paymentCopy = !requiresVerification
-                    ? 'Identity verification is not required for activation under the current policy.'
-                    : driverPays
-                      ? 'The driver pays the verification fee during self-service onboarding.'
-                      : 'Your organisation wallet covers the verification fee for this driver.';
+                  const paymentCopy = driverPays
+                    ? 'The current policy requires the driver to pay for verification.'
+                    : 'The current policy charges your organisation wallet for verification.';
                   return (
                     <>
                       <p className="text-sm font-semibold text-emerald-900">{heading}</p>
                       <p className="text-sm text-emerald-800">
-                        {linkCopy} <strong>{paymentCopy}</strong>{' '}
+                        {linkCopy} <strong>This driver will be verified using {tierLabel}.</strong>{' '}
+                        {paymentCopy}{' '}
                         <a
                           className="font-semibold underline hover:no-underline"
                           href="/settings?section=drivers"
                         >
                           Adjust in Settings → Drivers
                         </a>
-                        {requiresVerification && !linkSent
-                          ? ' or request the driver to self-verify below.'
-                          : '.'}
+                        {!linkSent ? ' or request the driver to self-verify below.' : '.'}
                       </p>
                     </>
                   );
@@ -420,6 +443,9 @@ export default async function DriverDetailsPage({
                     <Heading size="h2">{driverDisplayName}</Heading>
                     <Badge tone={getDriverStatusTone(driver.status)}>{driver.status}</Badge>
                     <Badge tone={identityTone}>{identityLabel}</Badge>
+                    <Badge tone={getTierBadgeTone(driver.verificationTier)}>
+                      {driver.verificationTierLabel ?? 'Basic Identity'}
+                    </Badge>
                     {isUnverifiedDriver ? (
                       <Badge tone="warning">
                         {driver.status === 'active' && (driver.adminAssignmentOverride ?? false)
@@ -434,6 +460,9 @@ export default async function DriverDetailsPage({
                   <Text tone="muted">
                     {driver.email ?? 'Email pending'} · {driver.phone ?? 'Phone pending'} ·{' '}
                     {fleetName}
+                  </Text>
+                  <Text tone="muted">
+                    {driver.verificationTierDescription ?? 'Confirm who the driver is'}
                   </Text>
                 </div>
 
@@ -672,6 +701,13 @@ export default async function DriverDetailsPage({
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-2">
+                    <Text tone="muted">Verification tier</Text>
+                    <Badge tone={getTierBadgeTone(driver.verificationTier)}>
+                      {driver.verificationTierLabel ?? 'Basic Identity'}
+                    </Badge>
+                    <Text tone="muted">{driver.verificationTierDescription}</Text>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-2">
                     <Text tone="muted">Activation readiness</Text>
                     <Badge tone={getReadinessTone(driver.activationReadiness)}>
                       {getReadinessLabel(driver.activationReadiness)}
@@ -684,10 +720,8 @@ export default async function DriverDetailsPage({
                     </Badge>
                   </div>
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-2">
-                    <Text tone="muted">Driver licence</Text>
-                    <Badge tone={driver.hasApprovedLicence ? 'success' : 'warning'}>
-                      {driver.hasApprovedLicence ? 'Approved' : 'Pending review'}
-                    </Badge>
+                    <Text tone="muted">Verification status</Text>
+                    <Badge tone={identityTone}>{identityLabel}</Badge>
                   </div>
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-2">
                     <Text tone="muted">Pending documents</Text>
@@ -721,6 +755,53 @@ export default async function DriverDetailsPage({
                   </CardContent>
                 </Card>
               ) : null}
+
+              {(driver.localRiskFlags?.length ?? 0) > 0 ? (
+                <Card className="border-blue-200 bg-blue-50/40">
+                  <CardHeader>
+                    <CardTitle>Risk signals</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {driver.localRiskFlags?.map((flag) => (
+                      <Text key={flag}>{formatRiskFlag(flag)}</Text>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              <Card className="border-slate-200 bg-white">
+                <CardHeader>
+                  <CardTitle>Verification components</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-3">
+                  {(driver.verificationComponents ?? []).map((component) => (
+                    <div
+                      key={component.key}
+                      className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Text tone="muted">{component.label}</Text>
+                        <Badge
+                          tone={
+                            component.status === 'completed'
+                              ? 'success'
+                              : component.status === 'not_required'
+                                ? 'neutral'
+                                : 'warning'
+                          }
+                        >
+                          {component.status === 'completed'
+                            ? 'Completed'
+                            : component.status === 'not_required'
+                              ? 'Not required'
+                              : 'Pending'}
+                        </Badge>
+                      </div>
+                      <Text>{component.message}</Text>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
               {driver.enforcementActions?.length ? (
                 <Card className="border-rose-200 bg-rose-50/40">
@@ -1539,6 +1620,76 @@ export default async function DriverDetailsPage({
                   </div>
                 </CardContent>
               </Card>
+
+              {driver.verificationTier === 'FULL_TRUST_VERIFICATION' &&
+              driver.canonicalInsights ? (
+                <Card className="border-slate-200 bg-white">
+                  <CardHeader>
+                    <CardTitle>Canonical insights</CardTitle>
+                    <Text tone="muted">
+                      Full Trust-only identity intelligence across duplicate signals, cross-tenant
+                      presence, guarantor reuse, and graph role connections.
+                    </Text>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4">
+                        <Text tone="muted">Driver identity graph</Text>
+                        <Text>
+                          {driver.canonicalInsights.driverIdentity.hasMultiTenantPresence
+                            ? `Seen across ${driver.canonicalInsights.driverIdentity.tenantCount ?? 'multiple'} tenants`
+                            : 'No cross-tenant identity match returned.'}
+                        </Text>
+                        <Text>
+                          Linked roles:{' '}
+                          {driver.canonicalInsights.driverIdentity.linkedRoles.length > 0
+                            ? driver.canonicalInsights.driverIdentity.linkedRoles.join(', ')
+                            : 'driver only'}
+                        </Text>
+                      </div>
+                      <div className="space-y-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4">
+                        <Text tone="muted">Guarantor identity graph</Text>
+                        {driver.canonicalInsights.guarantorIdentity ? (
+                          <>
+                            <Text>
+                              {driver.canonicalInsights.guarantorIdentity.hasMultiTenantPresence
+                                ? `Seen across ${driver.canonicalInsights.guarantorIdentity.tenantCount ?? 'multiple'} tenants`
+                                : 'No cross-tenant guarantor match returned.'}
+                            </Text>
+                            <Text>
+                              Reused across {driver.canonicalInsights.guarantorIdentity.reuseCount ?? 0}{' '}
+                              linked driver
+                              {(driver.canonicalInsights.guarantorIdentity.reuseCount ?? 0) === 1
+                                ? ''
+                                : 's'}{' '}
+                              in this tenant.
+                            </Text>
+                            <Text>
+                              Linked roles:{' '}
+                              {driver.canonicalInsights.guarantorIdentity.linkedRoles.length > 0
+                                ? driver.canonicalInsights.guarantorIdentity.linkedRoles.join(', ')
+                                : 'guarantor only'}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text>Guarantor identity graph is not available yet.</Text>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Text tone="muted">Fraud and discrepancy indicators</Text>
+                      {driver.canonicalInsights.fraudIndicators.length > 0 ? (
+                        driver.canonicalInsights.fraudIndicators.map((indicator) => (
+                          <Text key={indicator}>{indicator}</Text>
+                        ))
+                      ) : (
+                        <Text>No elevated Full Trust fraud indicators are currently returned.</Text>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
             </>
           }
           documents={

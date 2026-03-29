@@ -983,6 +983,39 @@ export class DriverSelfServiceController {
       requiredDriverDocumentSlugs:
         (driver as { requiredDriverDocumentSlugs?: string[] }).requiredDriverDocumentSlugs ?? [],
       driverPaysKyc: (driver as { driverPaysKyc?: boolean }).driverPaysKyc ?? false,
+      verificationTier:
+        (
+          driver as {
+            verificationTier?:
+              | 'BASIC_IDENTITY'
+              | 'VERIFIED_IDENTITY'
+              | 'FULL_TRUST_VERIFICATION';
+          }
+        ).verificationTier ?? 'BASIC_IDENTITY',
+      verificationTierLabel:
+        (driver as { verificationTierLabel?: string | null }).verificationTierLabel ??
+        'Basic Identity',
+      verificationTierDescription:
+        (driver as { verificationTierDescription?: string | null }).verificationTierDescription ??
+        'Confirm who the driver is',
+      verificationTierComponents:
+        (
+          driver as {
+            verificationTierComponents?: Array<'identity' | 'guarantor' | 'drivers_license'>;
+          }
+        ).verificationTierComponents ?? ['identity'],
+      verificationComponents:
+        (
+          driver as {
+            verificationComponents?: Array<{
+              key: 'identity' | 'guarantor' | 'drivers_license';
+              label: string;
+              required: boolean;
+              status: 'completed' | 'pending' | 'not_required';
+              message: string;
+            }>;
+          }
+        ).verificationComponents ?? [],
       kycPaymentVerified: (driver as { kycPaymentVerified?: boolean }).kycPaymentVerified ?? false,
       verificationPaymentState:
         (
@@ -1049,6 +1082,33 @@ export class DriverSelfServiceController {
         (driver as { verificationAmountMinorUnits?: number }).verificationAmountMinorUnits ?? 0,
       verificationCurrency:
         (driver as { verificationCurrency?: string }).verificationCurrency ?? null,
+      verificationAvailableSpendMinorUnits:
+        (driver as { verificationAvailableSpendMinorUnits?: number })
+          .verificationAvailableSpendMinorUnits ?? 0,
+      verificationCreditLimitMinorUnits:
+        (driver as { verificationCreditLimitMinorUnits?: number })
+          .verificationCreditLimitMinorUnits ?? 0,
+      verificationCreditUsedMinorUnits:
+        (driver as { verificationCreditUsedMinorUnits?: number })
+          .verificationCreditUsedMinorUnits ?? 0,
+      verificationStarterCreditActive:
+        (driver as { verificationStarterCreditActive?: boolean })
+          .verificationStarterCreditActive ?? false,
+      verificationCardCreditActive:
+        (driver as { verificationCardCreditActive?: boolean }).verificationCardCreditActive ??
+        false,
+      verificationSavedCard:
+        (driver as {
+          verificationSavedCard?: {
+            provider: string;
+            last4: string;
+            brand: string;
+            status: string;
+            active: boolean;
+            createdAt: string;
+            initialReference?: string | null;
+          } | null;
+        }).verificationSavedCard ?? null,
       verificationPaymentStatus:
         (
           driver as {
@@ -1063,6 +1123,50 @@ export class DriverSelfServiceController {
       verificationPaymentMessage:
         (driver as { verificationPaymentMessage?: string | null }).verificationPaymentMessage ??
         null,
+      localRiskFlags: (driver as { localRiskFlags?: string[] }).localRiskFlags ?? [],
+      ...((driver as {
+        canonicalInsights?: {
+          driverIdentity: {
+            personId: string | null;
+            tenantCount: number | null;
+            hasMultiTenantPresence: boolean;
+            hasMultiRolePresence: boolean;
+            linkedRoles: string[];
+          };
+          guarantorIdentity: {
+            personId: string | null;
+            tenantCount: number | null;
+            hasMultiTenantPresence: boolean;
+            hasMultiRolePresence: boolean;
+            linkedRoles: string[];
+            reuseCount: number | null;
+          } | null;
+          fraudIndicators: string[];
+        } | null;
+      }).canonicalInsights
+        ? {
+            canonicalInsights: (driver as {
+              canonicalInsights?: {
+                driverIdentity: {
+                  personId: string | null;
+                  tenantCount: number | null;
+                  hasMultiTenantPresence: boolean;
+                  hasMultiRolePresence: boolean;
+                  linkedRoles: string[];
+                };
+                guarantorIdentity: {
+                  personId: string | null;
+                  tenantCount: number | null;
+                  hasMultiTenantPresence: boolean;
+                  hasMultiRolePresence: boolean;
+                  linkedRoles: string[];
+                  reuseCount: number | null;
+                } | null;
+                fraudIndicators: string[];
+              } | null;
+            }).canonicalInsights,
+          }
+        : {}),
       pendingDocumentCount: (driver as Partial<DriverDocumentSummary>).pendingDocumentCount ?? 0,
       rejectedDocumentCount: (driver as Partial<DriverDocumentSummary>).rejectedDocumentCount ?? 0,
       expiredDocumentCount: (driver as Partial<DriverDocumentSummary>).expiredDocumentCount ?? 0,
@@ -1336,30 +1440,6 @@ export class GuarantorSelfServiceController {
     @Body('countryCode') countryCode?: string,
   ) {
     return this.service.initializeGuarantorLivenessSessionFromSelfService(token, countryCode);
-  }
-
-  @Post('kyc-checkout')
-  @ApiCreatedResponse({ type: Object })
-  initiateKycCheckout(
-    @Body('token') token: string,
-    @Body('provider') provider: 'paystack' | 'flutterwave',
-    @Body('returnUrl') returnUrl?: string,
-  ) {
-    return this.service.initiateGuarantorKycCheckoutFromSelfService(
-      token,
-      provider ?? 'paystack',
-      returnUrl,
-    );
-  }
-
-  @Post('verify-kyc-payment')
-  @ApiCreatedResponse({ type: Object })
-  verifyKycPayment(
-    @Body('token') token: string,
-    @Body('provider') provider: string,
-    @Body('reference') reference: string,
-  ) {
-    return this.service.verifyGuarantorKycPaymentFromSelfService(token, provider, reference);
   }
 
   @Post('identity-resolution')

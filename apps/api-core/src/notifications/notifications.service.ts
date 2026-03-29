@@ -1024,6 +1024,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     driverEmail?: string | null;
     organisationName?: string | null;
     tenantCountry?: string | null;
+    verificationTierLabel?: string | null;
     decision: 'verified' | 'failed' | 'pending';
     detail: string;
     actionUrl: string;
@@ -1034,10 +1035,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     );
     const title =
       input.decision === 'verified'
-        ? 'Driver verification completed'
+        ? `Driver completed ${input.verificationTierLabel ?? 'driver verification'}`
         : input.decision === 'failed'
-          ? 'Driver verification failed'
-          : 'Driver verification pending';
+          ? `${input.verificationTierLabel ?? 'Driver verification'} failed`
+          : `${input.verificationTierLabel ?? 'Driver verification'} pending`;
     let created = 0;
 
     for (const recipient of [...recipients.operators, ...recipients.driverUsers]) {
@@ -1048,7 +1049,11 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           title,
           body: `${input.driverName}: ${input.detail}`,
           actionUrl: input.actionUrl,
-          metadata: { driverId: input.driverId, decision: input.decision },
+          metadata: {
+            driverId: input.driverId,
+            decision: input.decision,
+            verificationTierLabel: input.verificationTierLabel ?? null,
+          },
         },
         {
           ...(input.tenantCountry !== undefined ? { tenantCountry: input.tenantCountry } : {}),

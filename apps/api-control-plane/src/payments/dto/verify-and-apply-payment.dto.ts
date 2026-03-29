@@ -6,6 +6,7 @@ const PAYMENT_PURPOSES = [
   'invoice_settlement',
   'platform_wallet_topup',
   'identity_verification',
+  'card_authorization_setup',
   // Legacy in-flight references created before the purpose rename.
   'driver_kyc',
 ] as const;

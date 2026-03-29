@@ -164,6 +164,7 @@ export function SelfServiceVerificationScreen({
     null,
   );
   const [livenessRunning, setLivenessRunning] = useState(false);
+  const [livenessFeedback, setLivenessFeedback] = useState<string | null>(null);
   const [nativeLivenessPassed, setNativeLivenessPassed] = useState<boolean | null>(null);
   const [nativeLivenessFaceB64, setNativeLivenessFaceB64] = useState<string | undefined>(undefined);
   const [identityResult, setIdentityResult] = useState<DriverIdentityResolutionResult | null>(null);
@@ -541,6 +542,11 @@ export function SelfServiceVerificationScreen({
       Alert.alert('Face verification', livenessReadiness.message);
       return;
     }
+    setLivenessFeedback(
+      'We are preparing the secure camera check now. Stay in the app and keep your face centered once the native screen opens.',
+    );
+    setNativeLivenessPassed(null);
+    setNativeLivenessFaceB64(undefined);
     setLivenessRunning(true);
     try {
       const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
@@ -548,6 +554,9 @@ export function SelfServiceVerificationScreen({
 
       const { clientAuthToken } = session;
       if (!clientAuthToken) {
+        setLivenessFeedback(
+          'The verification session could not be prepared. You can try again in a moment.',
+        );
         Alert.alert(
           'Face verification',
           'The server did not return a liveness token. The YouVerify provider may be unavailable.',
@@ -565,21 +574,39 @@ export function SelfServiceVerificationScreen({
       if (result.passed) {
         setNativeLivenessPassed(true);
         setNativeLivenessFaceB64(result.faceImageB64);
+        setLivenessFeedback(
+          'Face verification passed. Review the details below, then submit your identity check.',
+        );
         showToast('Face verification passed. Submit now.', 'success');
       } else {
         setNativeLivenessPassed(false);
         const msg = result.errorMessage ?? 'Face verification did not pass.';
         if (result.errorCode === 'USER_CANCELLED') {
+          setLivenessFeedback(
+            'Face verification was cancelled before completion. Restart it when you are ready.',
+          );
           showToast('Face verification cancelled.', 'info');
         } else {
+          setLivenessFeedback(`${msg} Check your lighting and face position, then try again.`);
           Alert.alert('Face verification', `${msg} You can try again.`);
         }
       }
     } catch (error) {
-      Alert.alert(
-        'Face verification',
-        error instanceof Error ? error.message : 'Unable to start face verification.',
-      );
+      const message =
+        error instanceof Error ? error.message : 'Unable to start face verification.';
+      setLivenessFeedback(message);
+      if (/camera|permission/i.test(message)) {
+        Alert.alert(
+          'Face verification',
+          'Camera access is required for live face verification. Open Settings to enable it and try again.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+          ],
+        );
+      } else {
+        Alert.alert('Face verification', message);
+      }
     } finally {
       setLivenessRunning(false);
     }
@@ -693,6 +720,7 @@ export function SelfServiceVerificationScreen({
     setSelfieBase64('');
     setSelfiePreviewUri(null);
     setLivenessSession(null);
+    setLivenessFeedback(null);
     setNativeLivenessPassed(null);
     setNativeLivenessFaceB64(undefined);
     setIdentityResult(null);
@@ -1391,6 +1419,10 @@ export function SelfServiceVerificationScreen({
                 Your face will be verified live using YouVerify's liveness detection. The camera
                 launches in a secure fullscreen view. Hold still and follow the on-screen prompt.
               </Text>
+              <Text style={styles.hintText}>
+                Best results: stay in a well-lit area, remove anything covering your face, and keep
+                the phone steady until the native screen closes automatically.
+              </Text>
               {livenessReadiness && !livenessReadiness.ready ? (
                 <View style={styles.warningCard}>
                   <Text style={styles.warningText}>{livenessReadiness.message}</Text>
@@ -1404,6 +1436,20 @@ export function SelfServiceVerificationScreen({
                 <View style={styles.successRow}>
                   <Badge label="Face verification failed — try again" tone="danger" />
                 </View>
+              ) : null}
+              {livenessFeedback ? (
+                <Text
+                  style={[
+                    styles.hintText,
+                    nativeLivenessPassed === true
+                      ? styles.successText
+                      : nativeLivenessPassed === false
+                        ? styles.warningText
+                        : null,
+                  ]}
+                >
+                  {livenessFeedback}
+                </Text>
               ) : null}
               {!identitySubmitted ? (
                 <Button
@@ -1517,6 +1563,7 @@ export function SelfServiceVerificationScreen({
                     label="Try again"
                     onPress={() => {
                       setIdentityResult(null);
+                      setLivenessFeedback(null);
                       setNativeLivenessPassed(null);
                       setNativeLivenessFaceB64(undefined);
                       setLivenessSession(null);
@@ -1588,6 +1635,7 @@ export function SelfServiceVerificationScreen({
                     label="Try again"
                     onPress={() => {
                       setIdentityResult(null);
+                      setLivenessFeedback(null);
                       setNativeLivenessPassed(null);
                       setNativeLivenessFaceB64(undefined);
                       setLivenessSession(null);

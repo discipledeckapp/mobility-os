@@ -1,0 +1,8 @@
+{
+  "name": "@mobility-os/youverify-liveness",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "Local Expo native module for YouVerify-backed Azure Face liveness flows in mobile-ops",
+  "license": "UNLICENSED"
+}

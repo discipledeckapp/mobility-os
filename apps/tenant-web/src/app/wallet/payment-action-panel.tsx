@@ -16,6 +16,7 @@ import { SelectField } from '../../features/shared/select-field';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
 import {
   changePlanAction,
+  initializeCardSetupCheckoutAction,
   type WalletCheckoutActionState,
   initializeOutstandingInvoiceCheckoutAction,
   initializeVerificationWalletTopUpAction,
@@ -43,6 +44,10 @@ export function PaymentActionPanel({
     initializeOutstandingInvoiceCheckoutAction,
     initialState,
   );
+  const [cardState, cardAction, cardPending] = useActionState(
+    initializeCardSetupCheckoutAction,
+    initialState,
+  );
   const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
 
   // Redirect to payment provider when checkout URL is returned from server action
@@ -58,11 +63,54 @@ export function PaymentActionPanel({
     }
   }, [invoiceState.checkoutUrl]);
 
+  useEffect(() => {
+    if (cardState.checkoutUrl) {
+      window.location.href = cardState.checkoutUrl;
+    }
+  }, [cardState.checkoutUrl]);
+
   const factor = 10 ** currencyMinorUnit;
   const amountMinorUnits = amountInput ? Math.round(Number(amountInput) * factor) : 0;
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
+      <Card className="border-slate-200/80">
+        <CardHeader>
+          <CardTitle>Add active card</CardTitle>
+          <CardDescription>
+            Save a reusable card with a small provider-hosted authorization. We only keep masked
+            card details plus the provider authorization token.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={cardAction} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="card-provider">Payment provider</Label>
+              <SelectField
+                id="card-provider"
+                name="provider"
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                  setProvider(event.target.value as 'paystack' | 'flutterwave')
+                }
+                value={provider}
+              >
+                <option value="paystack">Paystack</option>
+                <option value="flutterwave">Flutterwave</option>
+              </SelectField>
+            </div>
+            <input name="amountMinorUnits" type="hidden" value="10000" />
+            <Text className="text-xs text-slate-500">
+              A small NGN 100 authorization will be processed through the hosted modal. Successful
+              setups also count as wallet credit.
+            </Text>
+            <Button disabled={cardPending || Boolean(cardState.checkoutUrl)} type="submit">
+              {cardPending || cardState.checkoutUrl ? 'Opening provider modal...' : 'Add card'}
+            </Button>
+            {cardState.error ? <Text className="text-rose-700">{cardState.error}</Text> : null}
+          </form>
+        </CardContent>
+      </Card>
+
       <Card className="border-slate-200/80">
         <CardHeader>
           <CardTitle>Fund verification wallet</CardTitle>

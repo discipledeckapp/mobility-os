@@ -2,6 +2,7 @@
 
 import {
   changeTenantBillingPlan,
+  initializeTenantCardSetupCheckout,
   initializeTenantInvoiceCheckout,
   initializeTenantWalletTopUpCheckout,
 } from '../../lib/api-core';
@@ -67,6 +68,29 @@ export async function initializeOutstandingInvoiceCheckoutAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
+    };
+  }
+}
+
+export async function initializeCardSetupCheckoutAction(
+  _prevState: WalletCheckoutActionState,
+  formData: FormData,
+): Promise<WalletCheckoutActionState> {
+  const provider = getTrimmedValue(formData, 'provider');
+  const amountRaw = getTrimmedValue(formData, 'amountMinorUnits');
+  const amountMinorUnits = amountRaw ? Number.parseInt(amountRaw, 10) : 10_000;
+
+  try {
+    const checkout = await initializeTenantCardSetupCheckout({
+      ...(provider ? { provider } : {}),
+      ...(Number.isFinite(amountMinorUnits) && amountMinorUnits > 0
+        ? { amountMinorUnits }
+        : {}),
+    });
+    return { checkoutUrl: checkout.checkoutUrl };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to initialize card setup checkout.',
     };
   }
 }

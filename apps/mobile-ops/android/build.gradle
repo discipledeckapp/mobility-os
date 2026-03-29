@@ -12,11 +12,26 @@ buildscript {
   }
 }
 
+def azureMavenUsername =
+  (findProperty('AZURE_MAVEN_USERNAME') ?: System.getenv('AZURE_MAVEN_USERNAME'))
+def azureMavenPassword =
+  (findProperty('AZURE_MAVEN_PASSWORD') ?: System.getenv('AZURE_MAVEN_PASSWORD'))
+
 allprojects {
   repositories {
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
+    // Azure AI Vision Face Liveness Detection SDK (YouVerify native liveness).
+    maven {
+      url 'https://pkgs.dev.azure.com/msface/SDK/_packaging/AzureAIVision/maven/v1'
+      if (azureMavenUsername && azureMavenPassword) {
+        credentials {
+          username azureMavenUsername
+          password azureMavenPassword
+        }
+      }
+    }
   }
 }
 

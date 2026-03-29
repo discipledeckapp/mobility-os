@@ -22,6 +22,7 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const { driver, loading, refreshing, refreshDriver } = useDriverProfile(
     Boolean(session?.linkedDriverId),
   );
+  const licenceRequired = session?.requiredDriverDocumentSlugs?.includes('drivers-license') ?? true;
 
   const onRefresh = async () => {
     try {
@@ -82,7 +83,7 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             tone={identityTone(driver.identityStatus)}
           />
           <Text style={styles.statusTitle}>{getVerificationHeadline(driver.identityStatus)}</Text>
-          <Text style={styles.muted}>{guidanceForDriver(driver)}</Text>
+          <Text style={styles.muted}>{guidanceForDriver(driver, licenceRequired)}</Text>
           {driver.identityReviewCaseId ? (
             <Text style={styles.meta}>Review case: {driver.identityReviewCaseId}</Text>
           ) : null}
@@ -137,7 +138,7 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Eligibility</Text>
         <Text style={styles.meta}>
-          Approved licence: {driver.hasApprovedLicence ? 'Yes' : 'No'}
+          Approved licence: {licenceRequired ? (driver.hasApprovedLicence ? 'Yes' : 'No') : 'Not required'}
         </Text>
         <Text style={styles.meta}>Pending documents: {driver.pendingDocumentCount}</Text>
         <Text style={styles.meta}>Rejected documents: {driver.rejectedDocumentCount}</Text>
@@ -146,8 +147,8 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Next step</Text>
-        <Text style={styles.muted}>{guidanceForDriver(driver)}</Text>
-        {!driver.hasApprovedLicence ? (
+        <Text style={styles.muted}>{guidanceForDriver(driver, licenceRequired)}</Text>
+        {licenceRequired && !driver.hasApprovedLicence ? (
           <Button
             accessibilityHint="Show guidance for the missing licence requirement"
             label="Upload licence now"
@@ -245,8 +246,11 @@ function getDriverDisplayName(
   return identityStatus === 'unverified' ? 'Onboarding in progress' : 'New Driver';
 }
 
-function guidanceForDriver(driver: NonNullable<ReturnType<typeof useDriverProfile>['driver']>) {
-  if (driver.identityStatus === 'verified' && driver.hasApprovedLicence) {
+function guidanceForDriver(
+  driver: NonNullable<ReturnType<typeof useDriverProfile>['driver']>,
+  licenceRequired: boolean,
+) {
+  if (driver.identityStatus === 'verified' && (!licenceRequired || driver.hasApprovedLicence)) {
     return 'Verification is complete and licence requirements are satisfied.';
   }
   if (driver.identityStatus === 'review_needed') {
@@ -254,7 +258,7 @@ function guidanceForDriver(driver: NonNullable<ReturnType<typeof useDriverProfil
       driver.identityReviewCaseId ? ` under case ${driver.identityReviewCaseId}.` : '.'
     } Wait for operations support to confirm the decision.`;
   }
-  if (!driver.hasApprovedLicence) {
+  if (licenceRequired && !driver.hasApprovedLicence) {
     return 'An approved licence must be on file before new assignments can proceed. Upload the licence through the self-service flow or contact your fleet manager.';
   }
   return 'Complete the verification flow sent by your organisation, or contact support if guidance is missing.';

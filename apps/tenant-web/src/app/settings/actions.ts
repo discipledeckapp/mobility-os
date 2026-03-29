@@ -58,22 +58,28 @@ export async function updateOrganisationSettingsAction(
   _previousState: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
+  const readBoolean = (key: string): boolean => {
+    const value = formData.get(key);
+    return value === 'on' || value === 'true';
+  };
   const displayName = String(formData.get('displayName') ?? '').trim();
   const logoUrl = String(formData.get('logoUrl') ?? '').trim();
   const defaultLanguage = String(formData.get('defaultLanguage') ?? '').trim();
   const guarantorMaxActiveDrivers = Number(formData.get('guarantorMaxActiveDrivers') ?? 2);
-  const autoSendDriverSelfServiceLinkOnCreate =
-    formData.get('autoSendDriverSelfServiceLinkOnCreate') === 'on';
-  const requireIdentityVerificationForActivation =
-    formData.get('requireIdentityVerificationForActivation') === 'on';
-  const requireBiometricVerification =
-    formData.get('requireBiometricVerification') === 'on';
-  const requireGovernmentVerificationLookup =
-    formData.get('requireGovernmentVerificationLookup') === 'on';
+  const autoSendDriverSelfServiceLinkOnCreate = readBoolean(
+    'autoSendDriverSelfServiceLinkOnCreate',
+  );
+  const requireIdentityVerificationForActivation = readBoolean(
+    'requireIdentityVerificationForActivation',
+  );
+  const requireBiometricVerification = readBoolean('requireBiometricVerification');
+  const requireGovernmentVerificationLookup = readBoolean(
+    'requireGovernmentVerificationLookup',
+  );
   const driverPaysKyc = formData.get('driverPaysKyc') === 'true';
-  const requireGuarantor = formData.get('requireGuarantor') === 'on';
-  const guarantorBlocking = formData.get('guarantorBlocking') === 'on';
-  const requireGuarantorVerification = formData.get('requireGuarantorVerification') === 'on';
+  const requireGuarantor = readBoolean('requireGuarantor');
+  const guarantorBlocking = readBoolean('guarantorBlocking');
+  const requireGuarantorVerification = readBoolean('requireGuarantorVerification');
   const requiredDriverDocumentSlugs = formData
     .getAll('requiredDriverDocumentSlugs')
     .map((value) => String(value).trim().toLowerCase())
@@ -102,7 +108,7 @@ export async function updateOrganisationSettingsAction(
       customDriverDocumentTypes: [],
       requiredDriverDocumentSlugs: Array.from(new Set(requiredDriverDocumentSlugs)),
       ...(requiredVehicleDocumentSlugs.length > 0 ? { requiredVehicleDocumentSlugs } : {}),
-      allowAdminAssignmentOverride: formData.get('allowAdminAssignmentOverride') === 'on',
+      allowAdminAssignmentOverride: readBoolean('allowAdminAssignmentOverride'),
     });
     revalidatePath('/settings');
     revalidatePath('/');

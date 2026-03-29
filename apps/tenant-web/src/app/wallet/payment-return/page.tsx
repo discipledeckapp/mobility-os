@@ -34,6 +34,10 @@ export default async function PaymentReturnPage({ searchParams }: PaymentReturnP
     provider: string;
     purpose: string;
     reference: string;
+    paymentMethod?: {
+      last4?: string | null;
+      brand?: string | null;
+    };
   } | null = null;
   let error: string | null = null;
 
@@ -49,12 +53,19 @@ export default async function PaymentReturnPage({ searchParams }: PaymentReturnP
         reference,
         ...(invoiceId ? { invoiceId } : {}),
       });
+      const paymentMethod = response.paymentMethod
+        ? {
+            ...(response.paymentMethod.last4 ? { last4: response.paymentMethod.last4 } : {}),
+            ...(response.paymentMethod.brand ? { brand: response.paymentMethod.brand } : {}),
+          }
+        : undefined;
 
       result = {
         status: response.status,
         provider: response.provider,
         purpose: response.purpose,
         reference: response.reference,
+        ...(paymentMethod ? { paymentMethod } : {}),
       };
     } catch (verifyError) {
       error =
@@ -90,6 +101,14 @@ export default async function PaymentReturnPage({ searchParams }: PaymentReturnP
                 <Text>Provider: {result.provider}</Text>
                 <Text>Purpose: {result.purpose}</Text>
                 <Text>Reference: {result.reference}</Text>
+                {result.purpose === 'card_authorization_setup' ? (
+                  <Text>
+                    Saved card:{' '}
+                    {result.paymentMethod?.brand && result.paymentMethod?.last4
+                      ? `${result.paymentMethod.brand} ending in ${result.paymentMethod.last4}`
+                      : 'Card activated'}
+                  </Text>
+                ) : null}
               </div>
             </>
           ) : (

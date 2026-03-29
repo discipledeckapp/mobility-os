@@ -1257,7 +1257,9 @@ export function DriverIdentityVerification({
                         : identityStatus === 'review_needed'
                           ? 'Your verification has been submitted and is under manual review. You will be notified of the outcome.'
                           : identityStatus === 'failed'
-                            ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
+                            ? mode === 'guarantor_self_service'
+                              ? 'Verification could not be completed. Please review your details and try again or contact the organisation that invited you.'
+                              : 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
                             : 'Verification submitted. Loading next step…'}
                   </Text>
                   {getDisplayIdentityName(result.verifiedProfile) ? (
