@@ -102,9 +102,24 @@ export function RootNavigator() {
     );
   }
 
+  const initialRouteName: keyof RootStackParamList = session
+    ? isGuarantorSelfServiceSession
+      ? 'GuarantorSelfService'
+      : isDriverMode
+        ? requiresSelfServiceContinuation
+          ? 'SelfServiceResume'
+          : 'Home'
+        : 'OperatorDashboard'
+    : selfServiceToken
+      ? 'SelfServiceResume'
+      : selectedRole
+        ? 'Login'
+        : 'RoleSelection';
+
   return (
     <NavigationContainer linking={mobileLinking}>
       <Stack.Navigator
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerTintColor: tokens.colors.ink,
           headerStyle: {

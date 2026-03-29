@@ -6,7 +6,10 @@ import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
 
 export function LegalDocumentScreen({ route }: ScreenProps<'LegalDocument'>) {
-  const document = LEGAL_DOCUMENTS[route.params.document as LegalDocumentKind];
+  const requestedDocument = route.params?.document as LegalDocumentKind | undefined;
+  const document =
+    (requestedDocument ? LEGAL_DOCUMENTS[requestedDocument] : undefined) ??
+    LEGAL_DOCUMENTS.terms;
 
   return (
     <Screen>
