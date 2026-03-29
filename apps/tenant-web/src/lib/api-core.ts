@@ -2442,6 +2442,23 @@ export async function updateDriverSelfServiceProfile(
   });
 }
 
+export async function submitDriverSelfServiceGuarantor(
+  token: string,
+  input: {
+    name: string;
+    phone: string;
+    email?: string;
+    countryCode?: string;
+    relationship?: string;
+  },
+): Promise<DriverGuarantorRecord> {
+  return apiCoreFetch<DriverGuarantorRecord>('/driver-self-service/guarantor', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
 export async function exchangeDriverSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
   return apiCoreFetch<{ token: string }>('/driver-self-service/exchange-otp', {
     method: 'POST',
@@ -2470,6 +2487,7 @@ export type OnboardingStepRecord = {
     | 'payment'
     | 'identity_verification'
     | 'document_verification'
+    | 'guarantor'
     | 'manual_review'
     | 'complete';
   reason: string;
@@ -2482,7 +2500,13 @@ export type OnboardingStepRecord = {
   requiredDocumentTypes?: string[];
   verifiedDocumentTypes?: string[];
   requiresGuarantor?: boolean;
+  guarantorBlocking?: boolean;
   guarantorVerified?: boolean;
+  guarantorName?: string | null;
+  guarantorPhone?: string | null;
+  guarantorEmail?: string | null;
+  guarantorCountryCode?: string | null;
+  guarantorRelationship?: string | null;
 };
 
 export async function getDriverOnboardingStep(
@@ -2578,6 +2602,7 @@ export async function getGuarantorSelfServiceContext(selfServiceToken: string): 
   guarantorGender: string | null;
   guarantorPersonId: string | null;
   guarantorStatus: string;
+  guarantorResponsibilityAcceptedAt: string | null;
   guarantorSelfieImageUrl: string | null;
   guarantorProviderImageUrl: string | null;
   driverName: string;
@@ -2585,6 +2610,16 @@ export async function getGuarantorSelfServiceContext(selfServiceToken: string): 
   tenantId: string;
   organisationName: string | null;
   hasSelfServiceAccess: boolean;
+  verificationPaymentStatus:
+    | 'not_required'
+    | 'ready'
+    | 'driver_payment_required'
+    | 'wallet_missing'
+    | 'insufficient_balance';
+  verificationPaymentMessage: string | null;
+  verificationPayer: 'guarantor' | 'organisation';
+  verificationAmountMinorUnits: number;
+  verificationCurrency: string;
 }> {
   return apiCoreFetch('/guarantor-self-service/context', {
     method: 'POST',
@@ -2635,6 +2670,18 @@ export async function recordGuarantorSelfServiceVerificationConsent(
   return apiCoreFetch<{ message: string }>('/guarantor-self-service/verification-consent', {
     method: 'POST',
     body: JSON.stringify({ token }),
+    cache: 'no-store',
+  });
+}
+
+export async function initiateGuarantorKycCheckout(
+  token: string,
+  provider: 'paystack' | 'flutterwave' = 'paystack',
+  returnUrl?: string,
+): Promise<DriverKycCheckoutRecord> {
+  return apiCoreFetch<DriverKycCheckoutRecord>('/guarantor-self-service/kyc-checkout', {
+    method: 'POST',
+    body: JSON.stringify({ token, provider, ...(returnUrl ? { returnUrl } : {}) }),
     cache: 'no-store',
   });
 }

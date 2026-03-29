@@ -24,6 +24,7 @@ import {
   initiateDriverKycCheckout,
   loginDriverSelfServiceWithPassword,
   recordDriverSelfServiceVerificationConsent,
+  submitDriverSelfServiceGuarantor,
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
   verifyDriverDocumentId,
@@ -453,6 +454,7 @@ type FlowStep =
   | 'payment'
   | 'identity_verification'
   | 'document_verification'
+  | 'guarantor'
   | 'manual_review'
   | 'complete';
 
@@ -471,6 +473,7 @@ function StepProgress({ currentStep }: { currentStep: FlowStep }) {
     { key: 'payment', label: 'Payment' },
     { key: 'identity_verification', label: 'Verification' },
     { key: 'document_verification', label: 'Documents' },
+    { key: 'guarantor', label: 'Guarantor' },
     { key: 'manual_review', label: 'Review' },
     { key: 'complete', label: 'Complete' },
   ];
@@ -1208,6 +1211,118 @@ function ManualReviewStep({ identityStatus }: { identityStatus?: string }) {
   );
 }
 
+function GuarantorStep({
+  driver,
+  token,
+  onboardingStep,
+  onComplete,
+}: {
+  driver: DriverRecord;
+  token: string;
+  onboardingStep: OnboardingStepRecord;
+  onComplete: () => Promise<void>;
+}) {
+  const [name, setName] = useState(onboardingStep.guarantorName ?? '');
+  const [phone, setPhone] = useState(onboardingStep.guarantorPhone ?? '');
+  const [email, setEmail] = useState(onboardingStep.guarantorEmail ?? '');
+  const [countryCode, setCountryCode] = useState(
+    onboardingStep.guarantorCountryCode ?? driver.nationality ?? 'NG',
+  );
+  const [relationship, setRelationship] = useState(onboardingStep.guarantorRelationship ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!name.trim() || !phone.trim()) {
+      setError('Enter the guarantor name and phone number before continuing.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await submitDriverSelfServiceGuarantor(token, {
+        name: name.trim(),
+        phone: phone.trim(),
+        ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
+        ...(countryCode.trim() ? { countryCode: countryCode.trim().toUpperCase() } : {}),
+        ...(relationship.trim() ? { relationship: relationship.trim() } : {}),
+      });
+      await onComplete();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'We could not save your guarantor details right now.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+      <CardHeader className="space-y-2">
+        <CardTitle>Guarantor details</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Text tone="muted">
+          Your organisation requires a guarantor before activation can continue. Add the person who
+          will vouch for you and we&apos;ll guide them into their own verification flow.
+        </Text>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full name"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="text"
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+              placeholder="Country code"
+              maxLength={2}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="text"
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+              placeholder="Relationship"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 md:col-span-2"
+            />
+          </div>
+          <Text tone="muted" className="text-xs">
+            If you add an email address, the guarantor verification link will be sent automatically
+            once your organisation&apos;s policy allows it.
+          </Text>
+          {error ? <Text tone="danger">{error}</Text> : null}
+          <Button disabled={saving} type="submit">
+            {saving ? 'Saving guarantor…' : 'Save guarantor and continue'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function CompletionStep({
   driver,
   onboardingStep,
@@ -1563,6 +1678,15 @@ function DriverVerificationFlow({ token }: { token: string }) {
 
         {currentStep === 'document_verification' ? (
           <DocumentVerificationStep
+            driver={driver}
+            token={token}
+            onboardingStep={onboardingStep}
+            onComplete={refreshContext}
+          />
+        ) : null}
+
+        {currentStep === 'guarantor' ? (
+          <GuarantorStep
             driver={driver}
             token={token}
             onboardingStep={onboardingStep}

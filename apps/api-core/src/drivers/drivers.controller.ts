@@ -1322,6 +1322,30 @@ export class GuarantorSelfServiceController {
     return this.service.initializeGuarantorLivenessSessionFromSelfService(token, countryCode);
   }
 
+  @Post('kyc-checkout')
+  @ApiCreatedResponse({ type: Object })
+  initiateKycCheckout(
+    @Body('token') token: string,
+    @Body('provider') provider: 'paystack' | 'flutterwave',
+    @Body('returnUrl') returnUrl?: string,
+  ) {
+    return this.service.initiateGuarantorKycCheckoutFromSelfService(
+      token,
+      provider ?? 'paystack',
+      returnUrl,
+    );
+  }
+
+  @Post('verify-kyc-payment')
+  @ApiCreatedResponse({ type: Object })
+  verifyKycPayment(
+    @Body('token') token: string,
+    @Body('provider') provider: string,
+    @Body('reference') reference: string,
+  ) {
+    return this.service.verifyGuarantorKycPaymentFromSelfService(token, provider, reference);
+  }
+
   @Post('identity-resolution')
   @ApiCreatedResponse({ type: Object })
   resolveIdentity(

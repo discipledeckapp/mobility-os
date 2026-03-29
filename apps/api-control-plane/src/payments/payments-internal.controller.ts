@@ -4,6 +4,8 @@ import { InternalServiceAuthGuard } from '../auth/guards/internal-service-auth.g
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
+import { InitializeIdentityVerificationPaymentDto } from './dto/initialize-identity-verification-payment.dto';
+// biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
@@ -39,6 +41,13 @@ export class PaymentsInternalController {
     @Body() dto: InitializeDriverKycPaymentDto,
   ): Promise<PaymentCheckoutResponseDto> {
     return this.paymentsService.initializeDriverKycPayment(dto);
+  }
+
+  @Post('identity-verification-checkouts')
+  initializeIdentityVerificationPayment(
+    @Body() dto: InitializeIdentityVerificationPaymentDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    return this.paymentsService.initializeIdentityVerificationPayment(dto);
   }
 
   @Post('verify-and-apply')

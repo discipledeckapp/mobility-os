@@ -179,6 +179,23 @@ export class ControlPlaneBillingClient {
     });
   }
 
+  async initializeIdentityVerificationCheckout(input: {
+    tenantId: string;
+    subjectType: 'driver' | 'guarantor';
+    subjectId: string;
+    relatedDriverId?: string;
+    provider: string;
+    currency: string;
+    customerEmail: string;
+    customerName?: string;
+    redirectUrl: string;
+  }): Promise<TenantPaymentCheckout> {
+    return this.request('/internal/payments/identity-verification-checkouts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   async verifyAndApplyPayment(input: {
     provider: string;
     reference: string;

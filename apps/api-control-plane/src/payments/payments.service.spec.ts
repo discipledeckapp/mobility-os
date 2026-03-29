@@ -87,6 +87,40 @@ describe('PaymentsService', () => {
     expect(prisma.cpPaymentAttempt.create).toHaveBeenCalled();
   });
 
+  it('initializes an identity verification checkout for a guarantor subject', async () => {
+    paymentProvidersService.initializePayment.mockResolvedValue({
+      provider: 'paystack',
+      checkoutUrl: 'https://paystack.test/checkout',
+      accessCode: 'access_123',
+    });
+    prisma.cpPaymentAttempt.create.mockResolvedValue({
+      id: 'attempt_1',
+    });
+
+    const result = await service.initializeIdentityVerificationPayment({
+      provider: 'paystack',
+      tenantId: 'tenant_1',
+      subjectType: 'guarantor',
+      subjectId: 'guarantor_1',
+      relatedDriverId: 'driver_1',
+      currency: 'NGN',
+      customerEmail: 'guarantor@example.com',
+      customerName: 'Guarantor One',
+    });
+
+    expect(result.purpose).toBe('identity_verification');
+    expect(prisma.cpPaymentAttempt.create).toHaveBeenCalled();
+    expect(paymentProvidersService.initializePayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          subjectType: 'guarantor',
+          subjectId: 'guarantor_1',
+          driverId: 'driver_1',
+        }),
+      }),
+    );
+  });
+
   it('applies a successful wallet top-up exactly once', async () => {
     prisma.cpPaymentAttempt.findUnique.mockResolvedValue({
       reference: 'ref_1',

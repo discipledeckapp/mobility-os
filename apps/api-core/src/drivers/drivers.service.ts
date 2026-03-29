@@ -304,6 +304,8 @@ type DriverGuarantorRecord = {
   selfieImageUrl?: string | null;
   providerImageUrl?: string | null;
   status: string;
+  responsibilityAcceptedAt?: Date | null;
+  responsibilityAcceptanceEvidence?: Prisma.JsonValue | null;
   disconnectedAt?: Date | null;
   disconnectedReason?: string | null;
   createdAt: Date;
@@ -1680,6 +1682,139 @@ export class DriversService {
     }
   }
 
+  private async getGuarantorSelfServiceVerificationPolicy(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+    guarantor: DriverGuarantorRecord,
+  ): Promise<{
+    guarantorPaysKyc: boolean;
+    verificationPaymentState: VerificationPaymentState;
+    verificationEntitlementState: VerificationEntitlementState;
+    verificationAmountMinorUnits: number;
+    verificationCurrency: string;
+    verificationPaymentStatus:
+      | 'not_required'
+      | 'ready'
+      | 'driver_payment_required'
+      | 'wallet_missing'
+      | 'insufficient_balance';
+    verificationPaymentMessage: string | null;
+    verificationPayer: 'guarantor' | 'organisation';
+  }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true, metadata: true },
+    });
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+
+    if (settings.operations.requireGuarantorVerification !== true) {
+      return {
+        guarantorPaysKyc: false,
+        verificationPaymentState: 'not_required',
+        verificationEntitlementState: 'none',
+        verificationAmountMinorUnits: 0,
+        verificationCurrency: 'NGN',
+        verificationPaymentStatus: 'not_required',
+        verificationPaymentMessage: null,
+        verificationPayer: 'organisation',
+      };
+    }
+
+    const countryCode = guarantor.countryCode ?? driver.nationality ?? tenant?.country ?? null;
+    const verificationCurrency =
+      countryCode && isCountrySupported(countryCode)
+        ? getCountryConfig(countryCode).currency
+        : 'NGN';
+    const verificationAmountMinorUnits = this.getVerificationAmountMinorUnits(verificationCurrency);
+    const guarantorPaysKyc = settings.operations.driverPaysKyc === true;
+    const entitlement = await this.ensureLegacyVerificationEntitlement({
+      tenantId,
+      subjectType: 'guarantor',
+      subjectId: guarantor.id,
+      amountMinorUnits: verificationAmountMinorUnits,
+      currency: verificationCurrency,
+      payerType: guarantorPaysKyc ? 'guarantor' : 'tenant',
+    });
+    const verificationEntitlementState = this.mapEntitlementState(entitlement);
+    const verificationAlreadySatisfied = guarantor.status === 'verified' && Boolean(guarantor.personId);
+    const verificationPaymentState: VerificationPaymentState = guarantorPaysKyc
+      ? verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved'
+        ? 'paid'
+        : verificationEntitlementState === 'consumed'
+          ? 'reconciled'
+          : 'required'
+      : 'not_required';
+
+    let verificationPaymentStatus:
+      | 'not_required'
+      | 'ready'
+      | 'driver_payment_required'
+      | 'wallet_missing'
+      | 'insufficient_balance' = 'not_required';
+    let verificationPaymentMessage: string | null = null;
+
+    if (guarantorPaysKyc) {
+      if (verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved') {
+        verificationPaymentStatus = 'ready';
+        verificationPaymentMessage =
+          'Your guarantor verification payment has already been received. Continue to verification.';
+      } else if (verificationEntitlementState === 'consumed') {
+        verificationPaymentStatus = 'ready';
+        verificationPaymentMessage = verificationAlreadySatisfied
+          ? 'Your guarantor verification payment has already been used for this completed onboarding flow.'
+          : 'Your guarantor verification payment was already received. You can retry verification.';
+      } else if (verificationEntitlementState === 'expired') {
+        verificationPaymentStatus = 'driver_payment_required';
+        verificationPaymentMessage =
+          'Your previous guarantor verification payment expired. A new payment is required before verification can continue.';
+      } else {
+        verificationPaymentStatus = 'driver_payment_required';
+        verificationPaymentMessage =
+          'A guarantor verification payment is required before live verification can continue.';
+      }
+    } else {
+      verificationPaymentStatus = await this.getOperationalWalletFundingStatus(
+        tenantId,
+        driver.businessEntityId,
+        verificationAmountMinorUnits,
+      );
+      verificationPaymentMessage =
+        verificationPaymentStatus === 'ready'
+          ? 'The organisation has enabled guarantor verification for this onboarding flow.'
+          : verificationPaymentStatus === 'wallet_missing'
+            ? 'The organisation must set up an operations wallet before guarantor verification can continue.'
+            : 'The organisation wallet needs funding before guarantor verification can continue.';
+    }
+
+    return {
+      guarantorPaysKyc,
+      verificationPaymentState,
+      verificationEntitlementState,
+      verificationAmountMinorUnits,
+      verificationCurrency,
+      verificationPaymentStatus,
+      verificationPaymentMessage,
+      verificationPayer: guarantorPaysKyc ? 'guarantor' : 'organisation',
+    };
+  }
+
+  private async assertGuarantorSelfServiceVerificationPaymentReady(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+    guarantor: DriverGuarantorRecord,
+  ): Promise<void> {
+    const policy = await this.getGuarantorSelfServiceVerificationPolicy(tenantId, driver, guarantor);
+    if (
+      policy.verificationPaymentStatus === 'driver_payment_required' ||
+      policy.verificationPaymentStatus === 'wallet_missing' ||
+      policy.verificationPaymentStatus === 'insufficient_balance'
+    ) {
+      throw new BadRequestException(
+        policy.verificationPaymentMessage ?? 'Verification cannot continue yet.',
+      );
+    }
+  }
+
   private async getOrganisationSettings(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -1839,6 +1974,8 @@ export class DriversService {
         | 'gender'
         | 'selfieImageUrl'
         | 'providerImageUrl'
+        | 'responsibilityAcceptedAt'
+        | 'responsibilityAcceptanceEvidence'
         | 'disconnectedAt'
         | 'disconnectedReason'
       >;
@@ -1846,7 +1983,15 @@ export class DriversService {
     update(args: {
       where: { driverId: string };
       data: Partial<
-        Pick<DriverGuarantorRecord, 'status' | 'disconnectedAt' | 'disconnectedReason' | 'personId'>
+        Pick<
+          DriverGuarantorRecord,
+          | 'status'
+          | 'disconnectedAt'
+          | 'disconnectedReason'
+          | 'personId'
+          | 'responsibilityAcceptedAt'
+          | 'responsibilityAcceptanceEvidence'
+        >
       >;
     }): Promise<DriverGuarantorRecord>;
   } {
@@ -2175,6 +2320,7 @@ export class DriversService {
       | 'payment'
       | 'identity_verification'
       | 'document_verification'
+      | 'guarantor'
       | 'manual_review'
       | 'complete';
     reason: string;
@@ -2190,6 +2336,11 @@ export class DriversService {
     requiresGuarantor?: boolean;
     guarantorBlocking?: boolean;
     guarantorVerified?: boolean;
+    guarantorName?: string | null;
+    guarantorPhone?: string | null;
+    guarantorEmail?: string | null;
+    guarantorCountryCode?: string | null;
+    guarantorRelationship?: string | null;
   }> {
     const payload = await this.verifySelfServiceToken(token);
     const [driver, settings] = await Promise.all([
@@ -2338,20 +2489,40 @@ export class DriversService {
       }
     }
 
-    // All steps done — include guarantor status for completion screen
+    // Step 8: guarantor onboarding when required
     const requiresGuarantor = settings.operations.requireGuarantor !== false;
     const guarantorBlocking = settings.operations.guarantorBlocking === true;
     let guarantorVerified = !requiresGuarantor;
+    let guarantorRecord: DriverGuarantorRecord | null = null;
     if (requiresGuarantor) {
-      const guarantor = await this.prisma.driverGuarantor.findFirst({
+      guarantorRecord = await this.prisma.driverGuarantor.findFirst({
         where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
-        select: { id: true, status: true },
       });
       const needsGuarantorVerification = settings.operations.requireGuarantorVerification === true;
-      if (guarantor) {
-        guarantorVerified = needsGuarantorVerification ? guarantor.status === 'verified' : true;
+      if (guarantorRecord) {
+        guarantorVerified = needsGuarantorVerification
+          ? guarantorRecord.status === 'verified'
+          : true;
       } else {
         guarantorVerified = false;
+      }
+
+      if (!guarantorVerified) {
+        return {
+          step: 'guarantor',
+          reason: needsGuarantorVerification
+            ? 'A guarantor must be added and verified before onboarding is complete.'
+            : 'A guarantor must be added before onboarding is complete.',
+          verificationState,
+          requiresGuarantor,
+          guarantorBlocking,
+          guarantorVerified,
+          guarantorName: guarantorRecord?.name ?? null,
+          guarantorPhone: guarantorRecord?.phone ?? null,
+          guarantorEmail: guarantorRecord?.email ?? null,
+          guarantorCountryCode: guarantorRecord?.countryCode ?? null,
+          guarantorRelationship: guarantorRecord?.relationship ?? null,
+        };
       }
     }
 
@@ -2645,6 +2816,63 @@ export class DriversService {
     };
   }
 
+  private async maybeSendGuarantorSelfServiceLinkIfEligible(
+    tenantId: string,
+    driverId: string,
+    reason: 'guarantor_updated' | 'driver_verified',
+  ): Promise<void> {
+    const [driver, tenant] = await Promise.all([
+      this.findOne(tenantId, driverId),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { country: true, metadata: true },
+      }),
+    ]);
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+
+    if (settings.operations.requireGuarantorVerification !== true) {
+      return;
+    }
+
+    if (driver.identityStatus !== 'verified') {
+      return;
+    }
+
+    const guarantor = await this.driverGuarantors.findUnique({ where: { driverId } });
+    if (
+      !guarantor ||
+      guarantor.disconnectedAt !== null ||
+      guarantor.status === 'verified' ||
+      !guarantor.email
+    ) {
+      return;
+    }
+
+    try {
+      await this.sendGuarantorSelfServiceLink(tenantId, driverId);
+      this.logger.log(
+        JSON.stringify({
+          event: 'guarantor_self_service_link_auto_sent',
+          tenantId,
+          driverId,
+          guarantorId: guarantor.id,
+          reason,
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'guarantor_self_service_link_auto_send_failed',
+          tenantId,
+          driverId,
+          guarantorId: guarantor.id,
+          reason,
+          error: error instanceof Error ? error.message : 'unknown error',
+        }),
+      );
+    }
+  }
+
   async exchangeDriverSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
     const normalizedCode = otpCode.trim().toUpperCase();
     const now = new Date();
@@ -2739,6 +2967,7 @@ export class DriversService {
     guarantorGender: string | null;
     guarantorPersonId: string | null;
     guarantorStatus: string;
+    guarantorResponsibilityAcceptedAt: string | null;
     guarantorSelfieImageUrl: string | null;
     guarantorProviderImageUrl: string | null;
     driverName: string;
@@ -2746,6 +2975,16 @@ export class DriversService {
     tenantId: string;
     organisationName: string | null;
     hasSelfServiceAccess: boolean;
+    verificationPaymentStatus:
+      | 'not_required'
+      | 'ready'
+      | 'driver_payment_required'
+      | 'wallet_missing'
+      | 'insufficient_balance';
+    verificationPaymentMessage: string | null;
+    verificationPayer: 'guarantor' | 'organisation';
+    verificationAmountMinorUnits: number;
+    verificationCurrency: string;
   }> {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
     const [driver, tenant] = await Promise.all([
@@ -2767,6 +3006,11 @@ export class DriversService {
       ? (readOrganisationSettings(tenant.metadata, tenant.country).branding.displayName ??
         tenant.name)
       : null;
+    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
+      payload.tenantId,
+      driver,
+      guarantor,
+    );
 
     return {
       guarantorName: guarantor.name,
@@ -2778,6 +3022,7 @@ export class DriversService {
       guarantorGender: guarantor.gender ?? null,
       guarantorPersonId: guarantor.personId ?? null,
       guarantorStatus: guarantor.status,
+      guarantorResponsibilityAcceptedAt: guarantor.responsibilityAcceptedAt?.toISOString() ?? null,
       guarantorSelfieImageUrl: guarantor.selfieImageUrl ?? null,
       guarantorProviderImageUrl: guarantor.providerImageUrl ?? null,
       driverName: this.formatDriverName(driver),
@@ -2787,6 +3032,11 @@ export class DriversService {
       hasSelfServiceAccess: Boolean(
         await this.findGuarantorSelfServiceUser(driver.tenantId, driver.id),
       ),
+      verificationPaymentStatus: verificationPolicy.verificationPaymentStatus,
+      verificationPaymentMessage: verificationPolicy.verificationPaymentMessage,
+      verificationPayer: verificationPolicy.verificationPayer,
+      verificationAmountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+      verificationCurrency: verificationPolicy.verificationCurrency,
     };
   }
 
@@ -3053,14 +3303,189 @@ export class DriversService {
       );
     }
 
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    await this.assertGuarantorSelfServiceVerificationPaymentReady(
+      payload.tenantId,
+      driver,
+      guarantor,
+    );
+
     return this.intelligenceClient.initializeLivenessSession({
       tenantId: payload.tenantId,
       countryCode: resolvedCountryCode,
     });
   }
 
+  async initiateGuarantorKycCheckoutFromSelfService(
+    token: string,
+    provider: 'paystack' | 'flutterwave',
+    returnUrl?: string,
+  ): Promise<{
+    status: 'checkout_required' | 'already_paid';
+    checkoutUrl?: string;
+    amountMinorUnits: number;
+    currency: string;
+    entitlementState?: VerificationEntitlementState;
+  }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const [driver, guarantor] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
+    ]);
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
+      payload.tenantId,
+      driver,
+      guarantor,
+    );
+
+    if (!verificationPolicy.guarantorPaysKyc) {
+      throw new BadRequestException(
+        'This organisation does not require guarantors to pay for their own KYC verification.',
+      );
+    }
+
+    if (!guarantor.email) {
+      throw new BadRequestException(
+        'A guarantor email address is required to initiate a KYC payment checkout.',
+      );
+    }
+
+    if (
+      verificationPolicy.verificationEntitlementState === 'paid' ||
+      verificationPolicy.verificationEntitlementState === 'reserved'
+    ) {
+      return {
+        status: 'already_paid',
+        amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+        currency: verificationPolicy.verificationCurrency,
+        entitlementState: verificationPolicy.verificationEntitlementState,
+      };
+    }
+
+    const tenantWebUrl = process.env.TENANT_WEB_URL ?? 'http://localhost:3000';
+    const redirectUrl = new URL('/guarantor-kyc/payment-return', tenantWebUrl);
+    redirectUrl.searchParams.set('provider', provider);
+    redirectUrl.searchParams.set('token', token);
+    const safeReturnUrl = this.sanitizeSelfServiceReturnUrl(returnUrl);
+    if (safeReturnUrl) {
+      redirectUrl.searchParams.set('returnUrl', safeReturnUrl);
+    }
+
+    const checkout = await this.controlPlaneBillingClient.initializeIdentityVerificationCheckout({
+      tenantId: payload.tenantId,
+      subjectType: 'guarantor',
+      subjectId: guarantor.id,
+      relatedDriverId: driver.id,
+      provider,
+      currency: verificationPolicy.verificationCurrency,
+      customerEmail: guarantor.email,
+      customerName: guarantor.name,
+      redirectUrl: redirectUrl.toString(),
+    });
+
+    return {
+      status: 'checkout_required',
+      checkoutUrl: checkout.checkoutUrl,
+      amountMinorUnits: verificationPolicy.verificationAmountMinorUnits,
+      currency: verificationPolicy.verificationCurrency,
+      entitlementState: verificationPolicy.verificationEntitlementState,
+    };
+  }
+
+  async verifyGuarantorKycPaymentFromSelfService(
+    token: string,
+    provider: string,
+    reference: string,
+  ): Promise<{ status: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const [driver, guarantor] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
+    ]);
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const verificationPolicy = await this.getGuarantorSelfServiceVerificationPolicy(
+      payload.tenantId,
+      driver,
+      guarantor,
+    );
+    const normalizedReference = reference.trim();
+    const existingEntitlement = await this.getLatestVerificationEntitlement(
+      payload.tenantId,
+      'guarantor',
+      guarantor.id,
+    );
+    const existingEntitlementState = this.mapEntitlementState(existingEntitlement);
+
+    if (
+      existingEntitlement &&
+      existingEntitlement.paymentReference === normalizedReference &&
+      ['paid', 'reserved', 'consumed'].includes(existingEntitlementState)
+    ) {
+      return { status: 'already_applied' };
+    }
+
+    const applied = await this.controlPlaneBillingClient.verifyAndApplyPayment({
+      provider,
+      reference: normalizedReference,
+      purpose: 'identity_verification',
+      tenantId: payload.tenantId,
+      driverId: driver.id,
+    });
+
+    if (existingEntitlement) {
+      await this.updateVerificationEntitlement(existingEntitlement.id, {
+        status: existingEntitlement.status === 'consumed' ? existingEntitlement.status : 'paid',
+        paymentReference: normalizedReference,
+        paymentProvider: provider,
+        paidAt: new Date(),
+      });
+    } else {
+      await this.createVerificationEntitlement({
+        subjectType: 'guarantor',
+        subjectId: guarantor.id,
+        tenantId: payload.tenantId,
+        payerType: verificationPolicy.guarantorPaysKyc ? 'guarantor' : 'tenant',
+        paymentReference: normalizedReference,
+        paymentProvider: provider,
+        amountMinorUnits: applied.amountMinorUnits,
+        currency: applied.currency,
+        status: 'paid',
+        paidAt: new Date(),
+      });
+    }
+
+    return { status: applied.status === 'already_applied' ? 'already_applied' : 'verified' };
+  }
+
   async resolveGuarantorIdentityFromSelfService(token: string, dto: ResolveDriverIdentityDto) {
     const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const [driver, guarantor] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
+    ]);
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    await this.assertGuarantorSelfServiceVerificationPaymentReady(
+      payload.tenantId,
+      driver,
+      guarantor,
+    );
+
     const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
     return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, {
       ...rest,
@@ -3747,7 +4172,7 @@ export class DriversService {
       dto.countryCode?.trim().toUpperCase() || null,
     );
 
-    return this.driverGuarantors.upsert({
+    const guarantor = await this.driverGuarantors.upsert({
       where: { driverId: driver.id },
       create: {
         tenantId: driver.tenantId,
@@ -3759,6 +4184,8 @@ export class DriversService {
         countryCode: dto.countryCode?.trim().toUpperCase() || null,
         relationship: dto.relationship?.trim() || null,
         status: 'pending_verification',
+        responsibilityAcceptedAt: null,
+        responsibilityAcceptanceEvidence: null,
         disconnectedAt: null,
         disconnectedReason: null,
       },
@@ -3774,10 +4201,20 @@ export class DriversService {
         gender: null,
         selfieImageUrl: null,
         providerImageUrl: null,
+        responsibilityAcceptedAt: null,
+        responsibilityAcceptanceEvidence: null,
         disconnectedAt: null,
         disconnectedReason: null,
       },
     });
+
+    await this.maybeSendGuarantorSelfServiceLinkIfEligible(
+      tenantId,
+      driver.id,
+      'guarantor_updated',
+    );
+
+    return guarantor;
   }
 
   async removeGuarantor(
@@ -5304,32 +5741,50 @@ export class DriversService {
       );
     }
 
+    const acceptedAt = new Date();
+    const existingConsent = await this.prisma.userConsent.findFirst({
+      where: {
+        tenantId: payload.tenantId,
+        userId: linkedUser.id,
+        subjectType: 'guarantor',
+        subjectId: guarantor.id,
+        policyDocument: 'verification_sensitive_processing',
+        policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+        granted: true,
+      },
+      select: { id: true },
+    });
+
     await this.prisma.$transaction([
-      this.prisma.userConsent.create({
-        data: {
-          tenantId: payload.tenantId,
-          userId: linkedUser.id,
-          subjectType: 'guarantor',
-          subjectId: guarantor.id,
-          policyDocument: 'verification_sensitive_processing',
-          policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
-          consentScope: CONSENT_SCOPES.sensitive_identity_verification,
-          granted: true,
-          metadata: {
-            legalDocuments: {
-              privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
-              terms: LEGAL_DOCUMENT_VERSIONS.terms,
-            },
-            channel: 'guarantor_self_service',
-          },
-        },
-      }),
+      ...(!existingConsent
+        ? [
+            this.prisma.userConsent.create({
+              data: {
+                tenantId: payload.tenantId,
+                userId: linkedUser.id,
+                subjectType: 'guarantor',
+                subjectId: guarantor.id,
+                policyDocument: 'verification_sensitive_processing',
+                policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+                consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+                granted: true,
+                metadata: {
+                  legalDocuments: {
+                    privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+                    terms: LEGAL_DOCUMENT_VERSIONS.terms,
+                  },
+                  channel: 'guarantor_self_service',
+                },
+              },
+            }),
+          ]
+        : []),
       this.prisma.driverGuarantor.update({
         where: { id: guarantor.id },
         data: {
-          responsibilityAcceptedAt: new Date(),
+          responsibilityAcceptedAt: acceptedAt,
           responsibilityAcceptanceEvidence: {
-            acceptedAt: new Date().toISOString(),
+            acceptedAt: acceptedAt.toISOString(),
             acceptedFrom: 'guarantor_self_service',
             legalVersion: LEGAL_DOCUMENT_VERSIONS.terms,
             summary: 'Guarantor acknowledged linked-driver responsibility.',
@@ -6072,6 +6527,10 @@ export class DriversService {
         livenessProviderName: result.livenessProviderName ?? null,
       }),
     );
+
+    if (nextIdentityStatus === 'verified') {
+      await this.maybeSendGuarantorSelfServiceLinkIfEligible(tenantId, driver.id, 'driver_verified');
+    }
 
     return {
       ...result,

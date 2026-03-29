@@ -14,6 +14,7 @@ import { ControlPlaneRecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantLifecycleService } from '../tenant-lifecycle/tenant-lifecycle.service';
 import type { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
+import type { InitializeIdentityVerificationPaymentDto } from './dto/initialize-identity-verification-payment.dto';
 import type { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
 import type { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
 import type { PaymentApplicationResponseDto } from './dto/payment-application-response.dto';
@@ -155,8 +156,25 @@ export class PaymentsService {
   async initializeDriverKycPayment(
     dto: InitializeDriverKycPaymentDto,
   ): Promise<PaymentCheckoutResponseDto> {
+    return this.initializeIdentityVerificationPayment({
+      provider: dto.provider,
+      tenantId: dto.tenantId,
+      subjectType: 'driver',
+      subjectId: dto.driverId,
+      relatedDriverId: dto.driverId,
+      currency: dto.currency,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      ...(dto.redirectUrl ? { redirectUrl: dto.redirectUrl } : {}),
+    });
+  }
+
+  async initializeIdentityVerificationPayment(
+    dto: InitializeIdentityVerificationPaymentDto,
+  ): Promise<PaymentCheckoutResponseDto> {
     const currency = dto.currency.toUpperCase();
     const amountMinorUnits = this.KYC_AMOUNT_BY_CURRENCY[currency] ?? 500_000;
+    const subjectReferenceKey = `${dto.subjectType}_${dto.subjectId}`;
     const reusableAttempt = await this.prisma.cpPaymentAttempt.findFirst({
       where: {
         provider: dto.provider,
@@ -165,7 +183,7 @@ export class PaymentsService {
         customerEmail: dto.customerEmail,
         status: { in: ['checkout_initialized', 'provider_pending', 'webhook_received'] },
         reference: {
-          startsWith: `mos_${dto.provider}_identity_verification_${dto.driverId}_`,
+          startsWith: `mos_${dto.provider}_identity_verification_${subjectReferenceKey}_`,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -181,7 +199,11 @@ export class PaymentsService {
       };
     }
 
-    const reference = this.buildReference('identity_verification', dto.driverId, dto.provider);
+    const reference = this.buildReference(
+      'identity_verification',
+      subjectReferenceKey,
+      dto.provider,
+    );
     const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
     const initialized = await this.paymentProvidersService.initializePayment({
       provider: dto.provider,
@@ -195,7 +217,9 @@ export class PaymentsService {
       metadata: {
         purpose: 'identity_verification',
         tenantId: dto.tenantId,
-        driverId: dto.driverId,
+        subjectType: dto.subjectType,
+        subjectId: dto.subjectId,
+        driverId: dto.relatedDriverId ?? (dto.subjectType === 'driver' ? dto.subjectId : null),
       },
     });
 

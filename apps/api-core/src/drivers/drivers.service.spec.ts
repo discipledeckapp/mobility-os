@@ -30,6 +30,7 @@ describe('DriversService', () => {
     },
     driverGuarantor: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),
@@ -40,6 +41,15 @@ describe('DriversService', () => {
       update: jest.fn(),
       findFirst: jest.fn(),
     },
+    userConsent: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    selfServiceOtp: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
     fleet: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -47,6 +57,7 @@ describe('DriversService', () => {
     tenant: {
       findUnique: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -63,6 +74,7 @@ describe('DriversService', () => {
   };
   const authEmailService = {
     sendDriverSelfServiceVerificationEmail: jest.fn(),
+    sendGuarantorSelfServiceVerificationEmail: jest.fn(),
   };
   const documentStorageService = {
     uploadFile: jest.fn(),
@@ -88,14 +100,16 @@ describe('DriversService', () => {
   let service: DriversService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     prisma.driverGuarantor.findMany.mockResolvedValue([]);
+    prisma.driverGuarantor.findFirst.mockResolvedValue(null);
     prisma.driverDocument.findMany.mockResolvedValue([]);
     prisma.driverDocument.updateMany.mockResolvedValue({ count: 0 });
     prisma.driverDocument.findFirst.mockResolvedValue(null);
     prisma.driver.findMany.mockResolvedValue([]);
     prisma.driver.count.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.tenant.findUnique.mockResolvedValue({
       country: 'NG',
       metadata: {
@@ -125,6 +139,7 @@ describe('DriversService', () => {
     subscriptionEntitlementsService.enforceDriverCapacity.mockResolvedValue(undefined);
     policyService.evaluateDriverPolicies.mockResolvedValue([]);
     policyService.listActiveActionsByEntityIds.mockResolvedValue(new Map());
+    policyService.applyDriverEnforcement.mockImplementation((readiness: unknown) => readiness);
     const auditService = { recordTenantAction: jest.fn() };
     service = new DriversService(
       prisma as never,
@@ -134,7 +149,11 @@ describe('DriversService', () => {
       documentStorageService as never,
       subscriptionEntitlementsService as never,
       { fireEvent: jest.fn() } as never,
-      { initializeDriverKycCheckout: jest.fn() } as never,
+      {
+        initializeDriverKycCheckout: jest.fn(),
+        initializeIdentityVerificationCheckout: jest.fn(),
+        verifyAndApplyPayment: jest.fn(),
+      } as never,
       policyService as never,
       notificationsService as never,
       auditService as never,
@@ -142,9 +161,10 @@ describe('DriversService', () => {
   });
 
   it('creates or updates a guarantor for the driver', async () => {
-    prisma.driver.findUnique.mockResolvedValueOnce({
+    prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
       tenantId: 'tenant_1',
+      identityStatus: 'unverified',
       nationality: 'NG',
     });
     prisma.driverGuarantor.upsert.mockResolvedValue({
@@ -361,6 +381,114 @@ describe('DriversService', () => {
       data: { status: 'active' },
     });
     expect(result.status).toBe('active');
+  });
+
+  it('returns the guarantor step when guarantor onboarding is still outstanding', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requiredDriverDocumentSlugs: ['drivers-license'],
+          driverPaysKyc: false,
+          requireGuarantor: true,
+          requireGuarantorVerification: true,
+        },
+      },
+    });
+    jest
+      .spyOn(service as never, 'getOperationalWalletFundingStatus' as never)
+      .mockResolvedValue('ready' as never);
+    jest.spyOn(service as never, 'getSelfServiceVerificationPolicy' as never).mockResolvedValue({
+      enabledDriverIdentifierTypes: ['NATIONAL_ID'],
+      requiredDriverIdentifierTypes: ['NATIONAL_ID'],
+      requiredDriverDocumentSlugs: ['drivers-license'],
+      driverPaysKyc: false,
+      kycPaymentVerified: true,
+      verificationPaymentState: 'not_required',
+      verificationEntitlementState: 'none',
+      verificationState: 'success',
+      verificationEntitlementCode: null,
+      verificationPaymentReference: null,
+      verificationConsumedAt: null,
+      verificationAttemptCount: 1,
+      verificationBlockedReason: null,
+      verificationPayer: 'organisation',
+      verificationAmountMinorUnits: 0,
+      verificationCurrency: 'NGN',
+      verificationPaymentStatus: 'ready',
+      verificationPaymentMessage: null,
+    } as never);
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'driver_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      status: 'inactive',
+      identityStatus: 'verified',
+      nationality: 'NG',
+    });
+    prisma.user.findFirst
+      .mockResolvedValueOnce({ id: 'user_1' })
+      .mockResolvedValueOnce({ id: 'user_1', tenantId: 'tenant_1', driverId: 'driver_1' });
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([
+      { documentType: 'drivers-license', status: 'verified' },
+    ]);
+    prisma.driverGuarantor.findFirst.mockResolvedValue(null);
+
+    const result = await service.getOnboardingStep('driver-self-service-token');
+
+    expect(result.step).toBe('guarantor');
+    expect(result.requiresGuarantor).toBe(true);
+    expect(result.guarantorVerified).toBe(false);
+  });
+
+  it('auto-sends the guarantor link when a verified driver adds a guarantor with email', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.driverGuarantor.upsert.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Chinwe Okafor',
+      phone: '+2348012345678',
+      email: 'chinwe@example.com',
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Chinwe Okafor',
+      phone: '+2348012345678',
+      email: 'chinwe@example.com',
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+    jwtService.signAsync.mockResolvedValue('guarantor-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({
+      id: 'otp_1',
+      otpCode: 'ABC123',
+    });
+
+    await service.createOrUpdateGuarantor('tenant_1', 'driver_1', {
+      name: 'Chinwe Okafor',
+      phone: '08012345678',
+      countryCode: 'NG',
+      email: 'chinwe@example.com',
+    });
+
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).toHaveBeenCalled();
   });
 
   it('uploads driver documents in pending status', async () => {
