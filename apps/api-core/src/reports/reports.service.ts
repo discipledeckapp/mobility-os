@@ -2,6 +2,10 @@ import { computeNextRemittanceDueDate, toIsoDate } from '@mobility-os/domain-con
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import {
+  parseFinancialContractSnapshot,
+  summarizeFinancialContract,
+} from '../assignments/financial-contract';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -182,6 +186,7 @@ export class ReportsService {
           remittanceStartDate: true,
           remittanceCollectionDay: true,
           remittanceModel: true,
+          contractSnapshot: true,
         },
       }),
       this.driversService.list(tenantId, {
@@ -305,15 +310,26 @@ export class ReportsService {
     let ownershipRemittedValueMinorUnits = 0;
 
     for (const assignment of activeAssignments) {
-      const nextDueDate = computeNextRemittanceDueDate({
-        remittanceFrequency: assignment.remittanceFrequency,
-        remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
-        remittanceCurrency: assignment.remittanceCurrency,
-        remittanceStartDate: assignment.remittanceStartDate,
-        remittanceCollectionDay: assignment.remittanceCollectionDay,
+      const snapshot = parseFinancialContractSnapshot(assignment.contractSnapshot, assignment);
+      const summary = summarizeFinancialContract({
+        assignmentStatus: assignment.status,
+        snapshot,
+        remittances:
+          assignment.remittanceModel === 'hire_purchase'
+            ? confirmedHirePurchaseRemittances
+                .filter((remittance) => remittance.assignmentId === assignment.id)
+                .map((remittance) => ({
+                  dueDate: toIsoDate(new Date()),
+                  amountMinorUnits: remittance.amountMinorUnits,
+                  status: 'completed',
+                }))
+            : [],
       });
+      const nextDueDate = summary?.summary.nextDueDate ?? null;
+      const expectedPerPeriodMinorUnits =
+        summary?.summary.expectedPerPeriodAmountMinorUnits ?? assignment.remittanceAmountMinorUnits;
 
-      if (!nextDueDate || !assignment.remittanceAmountMinorUnits) {
+      if (!nextDueDate || !expectedPerPeriodMinorUnits) {
         continue;
       }
 
@@ -326,26 +342,23 @@ export class ReportsService {
       });
 
       if (nextDueDate === toIsoDate(today)) {
-        expectedTodayMinorUnits += assignment.remittanceAmountMinorUnits;
+        expectedTodayMinorUnits += expectedPerPeriodMinorUnits;
       }
 
       if (nextDue >= today && nextDue <= weekEnd) {
-        expectedThisWeekMinorUnits += assignment.remittanceAmountMinorUnits;
-        if (risk.status === 'at_risk') {
-          atRiskMinorUnits += assignment.remittanceAmountMinorUnits;
+        expectedThisWeekMinorUnits += expectedPerPeriodMinorUnits;
+        if (risk.status === 'at_risk' || summary?.summary.contractStatus === 'overdue') {
+          atRiskMinorUnits += expectedPerPeriodMinorUnits;
           atRiskAssignmentCount += 1;
         }
       }
 
-      if (assignment.remittanceModel === 'hire_purchase') {
-        const targetValuation = valuationByVehicleId.get(assignment.vehicleId);
-        if (targetValuation) {
-          ownershipTargetValueMinorUnits += targetValuation.amountMinorUnits;
-          ownershipRemittedValueMinorUnits += Math.min(
-            remittedByAssignmentId.get(assignment.id) ?? 0,
-            targetValuation.amountMinorUnits,
-          );
-        }
+      if (assignment.remittanceModel === 'hire_purchase' && summary?.hirePurchase) {
+        ownershipTargetValueMinorUnits += summary.hirePurchase.totalTargetAmountMinorUnits;
+        ownershipRemittedValueMinorUnits += Math.min(
+          summary.summary.cumulativePaidAmountMinorUnits,
+          summary.hirePurchase.totalTargetAmountMinorUnits,
+        );
       }
     }
 
@@ -775,14 +788,27 @@ export class ReportsService {
               vehicleStatus: detail.status,
             })
           : null;
+        const contractSnapshot = plannedAssignment
+          ? parseFinancialContractSnapshot(plannedAssignment.contractSnapshot, plannedAssignment)
+          : null;
+        const contractSummary =
+          plannedAssignment && contractSnapshot
+            ? summarizeFinancialContract({
+                assignmentStatus: plannedAssignment.status,
+                snapshot: contractSnapshot,
+                remittances: [],
+              })
+            : null;
         const ownershipTargetMinorUnits =
-          plannedAssignment?.remittanceModel === 'hire_purchase'
+          contractSummary?.hirePurchase?.totalTargetAmountMinorUnits ??
+          (plannedAssignment?.remittanceModel === 'hire_purchase'
             ? (currentValuation?.amountMinorUnits ?? null)
-            : null;
+            : null);
         const ownershipRemittedMinorUnits =
-          plannedAssignment?.remittanceModel === 'hire_purchase'
+          contractSummary?.summary.cumulativePaidAmountMinorUnits ??
+          (plannedAssignment?.remittanceModel === 'hire_purchase'
             ? (remittedByAssignmentId.get(plannedAssignment.id) ?? 0)
-            : null;
+            : null);
         const ownershipOutstandingMinorUnits =
           ownershipTargetMinorUnits !== null && ownershipRemittedMinorUnits !== null
             ? Math.max(ownershipTargetMinorUnits - ownershipRemittedMinorUnits, 0)

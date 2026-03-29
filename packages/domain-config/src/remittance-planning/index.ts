@@ -1,4 +1,4 @@
-export type RemittanceFrequency = 'daily' | 'weekly';
+export type RemittanceFrequency = 'daily' | 'weekly' | 'monthly';
 
 export interface AssignmentRemittanceTerms {
   remittanceFrequency?: string | null;
@@ -39,7 +39,7 @@ export function toIsoDate(value: Date): string {
 export function normalizeRemittanceFrequency(
   frequency?: string | null,
 ): RemittanceFrequency | null {
-  if (frequency === 'daily' || frequency === 'weekly') {
+  if (frequency === 'daily' || frequency === 'weekly' || frequency === 'monthly') {
     return frequency;
   }
 
@@ -65,6 +65,30 @@ export function computeNextRemittanceDueDate(
     return toIsoDate(cursor > startDate ? cursor : startDate);
   }
 
+  if (frequency === 'monthly') {
+    const effectiveBase = cursor > startDate ? cursor : startDate;
+    const anchorDay = startDate.getUTCDate();
+    const next = new Date(Date.UTC(effectiveBase.getUTCFullYear(), effectiveBase.getUTCMonth(), 1));
+    const lastDayOfCurrentMonth = new Date(
+      Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    const currentMonthDay = Math.min(anchorDay, lastDayOfCurrentMonth);
+    next.setUTCDate(currentMonthDay);
+
+    if (next < effectiveBase) {
+      const futureMonth = new Date(
+        Date.UTC(effectiveBase.getUTCFullYear(), effectiveBase.getUTCMonth() + 1, 1),
+      );
+      const lastDayOfFutureMonth = new Date(
+        Date.UTC(futureMonth.getUTCFullYear(), futureMonth.getUTCMonth() + 1, 0),
+      ).getUTCDate();
+      futureMonth.setUTCDate(Math.min(anchorDay, lastDayOfFutureMonth));
+      return toIsoDate(futureMonth);
+    }
+
+    return toIsoDate(next);
+  }
+
   const targetDay = terms.remittanceCollectionDay;
   if (!targetDay || targetDay < 1 || targetDay > 7) {
     return null;
@@ -86,6 +110,12 @@ export function describeRemittanceSchedule(terms: AssignmentRemittanceTerms): st
 
   if (frequency === 'daily') {
     return 'Daily remittance';
+  }
+
+  if (frequency === 'monthly') {
+    const anchorDate = parseIsoDate(terms.remittanceStartDate);
+    const dayOfMonth = anchorDate?.getUTCDate();
+    return dayOfMonth ? `Monthly remittance on day ${dayOfMonth}` : 'Monthly remittance';
   }
 
   const day = terms.remittanceCollectionDay;

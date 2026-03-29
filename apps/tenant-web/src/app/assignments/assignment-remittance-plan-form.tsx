@@ -10,6 +10,48 @@ import {
 
 const initialState: AssignmentRemittancePlanActionState = {};
 
+function MinorCurrencyField({
+  id,
+  name,
+  currency,
+  initialMinorUnits,
+  label,
+}: {
+  id: string;
+  name: string;
+  currency: string;
+  initialMinorUnits?: number | null;
+  label: string;
+}) {
+  const [display, setDisplay] = useState(
+    initialMinorUnits ? (initialMinorUnits / 100).toFixed(2) : '',
+  );
+  const minorUnits = Math.round((parseFloat(display.replace(/,/g, '')) || 0) * 100);
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        inputMode="decimal"
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDisplay(event.target.value)}
+        placeholder="2,500.00"
+        value={display}
+      />
+      <input name={name} type="hidden" value={minorUnits} />
+      <Text tone="muted">
+        {minorUnits > 0
+          ? new Intl.NumberFormat('en-NG', {
+              style: 'currency',
+              currency,
+              minimumFractionDigits: 2,
+            }).format(minorUnits / 100)
+          : 'Leave empty when this amount is not part of the contract.'}
+      </Text>
+    </div>
+  );
+}
+
 function AmountField({
   currency,
   initialMinorUnits,
@@ -53,34 +95,70 @@ function AmountField({
 
 export function AssignmentRemittancePlanForm({
   assignmentId,
+  contractType,
   remittanceAmountMinorUnits,
   remittanceCurrency,
   remittanceFrequency,
   remittanceStartDate,
   remittanceCollectionDay,
+  principalAmountMinorUnits,
+  totalTargetAmountMinorUnits,
+  depositAmountMinorUnits,
+  contractDurationPeriods,
+  contractEndDate,
 }: {
   assignmentId: string;
+  contractType?: 'regular_hire' | 'hire_purchase';
   remittanceAmountMinorUnits?: number | null;
   remittanceCurrency?: string | null;
   remittanceFrequency?: string | null;
   remittanceStartDate?: string | null;
   remittanceCollectionDay?: number | null;
+  principalAmountMinorUnits?: number | null;
+  totalTargetAmountMinorUnits?: number | null;
+  depositAmountMinorUnits?: number | null;
+  contractDurationPeriods?: number | null;
+  contractEndDate?: string | null;
 }) {
   const [state, formAction, isPending] = useActionState(
     updateAssignmentRemittancePlanAction,
     initialState,
   );
   const [currency, setCurrency] = useState(remittanceCurrency ?? 'NGN');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly'>(
-    remittanceFrequency === 'weekly' ? 'weekly' : 'daily',
+  const [nextContractType, setNextContractType] = useState<'regular_hire' | 'hire_purchase'>(
+    contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire',
+  );
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>(
+    remittanceFrequency === 'weekly'
+      ? 'weekly'
+      : remittanceFrequency === 'monthly'
+        ? 'monthly'
+        : 'daily',
   );
 
   return (
     <form action={formAction} className="space-y-3">
       <input name="assignmentId" type="hidden" value={assignmentId} />
+      <div className="space-y-2">
+        <Label htmlFor="contractType">Financial model</Label>
+        <select
+          className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          id="contractType"
+          name="contractType"
+          onChange={(event) =>
+            setNextContractType(event.target.value === 'hire_purchase' ? 'hire_purchase' : 'regular_hire')
+          }
+          value={nextContractType}
+        >
+          <option value="regular_hire">Regular hire</option>
+          <option value="hire_purchase">Hire purchase</option>
+        </select>
+      </div>
 
       <div className="space-y-2">
-        <Label htmlFor="remittanceAmountDisplay">Expected remittance amount</Label>
+        <Label htmlFor="remittanceAmountDisplay">
+          {nextContractType === 'hire_purchase' ? 'Expected installment amount' : 'Expected remittance amount'}
+        </Label>
         <AmountField
           currency={currency}
           {...(remittanceAmountMinorUnits !== undefined
@@ -116,6 +194,7 @@ export function AssignmentRemittancePlanForm({
         >
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
         </select>
         <Text tone="muted">
           {describeRemittanceSchedule({
@@ -157,6 +236,58 @@ export function AssignmentRemittancePlanForm({
             <option value="7">Sunday</option>
           </select>
         </div>
+      ) : null}
+
+      {nextContractType === 'hire_purchase' ? (
+        <>
+          <div className="space-y-2">
+            <MinorCurrencyField
+              currency={currency}
+              id="totalTargetAmountMinorUnitsDisplay"
+              label="Total target amount"
+              name="totalTargetAmountMinorUnits"
+              {...(totalTargetAmountMinorUnits !== undefined
+                ? { initialMinorUnits: totalTargetAmountMinorUnits }
+                : {})}
+            />
+          </div>
+          <div className="space-y-2">
+            <MinorCurrencyField
+              currency={currency}
+              id="principalAmountMinorUnitsDisplay"
+              label="Principal amount"
+              name="principalAmountMinorUnits"
+              {...(principalAmountMinorUnits !== undefined
+                ? { initialMinorUnits: principalAmountMinorUnits }
+                : {})}
+            />
+          </div>
+          <div className="space-y-2">
+            <MinorCurrencyField
+              currency={currency}
+              id="depositAmountMinorUnitsDisplay"
+              label="Deposit amount"
+              name="depositAmountMinorUnits"
+              {...(depositAmountMinorUnits !== undefined
+                ? { initialMinorUnits: depositAmountMinorUnits }
+                : {})}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contractDurationPeriods">Repayment periods</Label>
+            <Input
+              defaultValue={contractDurationPeriods ? String(contractDurationPeriods) : ''}
+              id="contractDurationPeriods"
+              inputMode="numeric"
+              name="contractDurationPeriods"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contractEndDate">Contract end date</Label>
+            <Input defaultValue={contractEndDate ?? ''} id="contractEndDate" name="contractEndDate" type="date" />
+          </div>
+        </>
       ) : null}
 
       <Button disabled={isPending} type="submit">

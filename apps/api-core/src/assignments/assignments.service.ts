@@ -2,9 +2,8 @@ import { createHash } from 'node:crypto';
 import {
   ASSIGNMENT_STATUS_CODES,
   LEGAL_DOCUMENT_VERSIONS,
-  getCountryConfig,
   isCountrySupported,
-  normalizeRemittanceFrequency,
+  getCountryConfig,
   toIsoDate,
 } from '@mobility-os/domain-config';
 import { asTenantId, assertTenantOwnership } from '@mobility-os/tenancy-domain';
@@ -21,6 +20,11 @@ import { VehicleRiskService } from '../vehicle-risk/services/vehicle-risk.servic
 import { PolicyService } from '../policy/policy.service';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto';
 import type { UpdateAssignmentRemittancePlanDto } from './dto/update-assignment-remittance-plan.dto';
+import {
+  normalizeFinancialContract,
+  parseFinancialContractSnapshot,
+  summarizeFinancialContract,
+} from './financial-contract';
 
 const OPEN_ASSIGNMENT_STATUSES = ['created', 'pending_driver_confirmation', 'active'] as const;
 const PLATFORM_ISSUER = {
@@ -63,87 +67,56 @@ export class AssignmentsService {
     return 'NGN';
   }
 
-  private normalizeRemittancePlan(
-    tenantCurrency: string,
-    input: {
-      remittanceAmountMinorUnits?: number | null;
-      remittanceModel?: string | null;
-      remittanceFrequency?: string | null;
-      remittanceCurrency?: string | null;
-      remittanceStartDate?: string | null;
-      remittanceCollectionDay?: number | null;
-    },
-  ) {
-    const remittanceModel =
-      input.remittanceModel?.trim().toLowerCase() === 'hire_purchase' ? 'hire_purchase' : 'fixed';
-    const remittanceFrequency = normalizeRemittanceFrequency(input.remittanceFrequency ?? 'daily');
-    if (!remittanceFrequency) {
-      throw new BadRequestException('remittanceFrequency must be daily or weekly.');
+  private async enrichAssignments<T extends Assignment>(
+    assignments: T[],
+  ): Promise<Array<T & { financialContract: unknown | null }>> {
+    if (assignments.length === 0) {
+      return [];
     }
 
-    if (!input.remittanceAmountMinorUnits || input.remittanceAmountMinorUnits < 1) {
-      throw new BadRequestException('remittanceAmountMinorUnits must be greater than 0.');
+    const remittances = await this.prisma.remittance.findMany({
+      where: { assignmentId: { in: assignments.map((assignment) => assignment.id) } },
+      select: {
+        assignmentId: true,
+        dueDate: true,
+        amountMinorUnits: true,
+        status: true,
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const remittancesByAssignmentId = new Map<
+      string,
+      Array<{ dueDate: string; amountMinorUnits: number; status: string }>
+    >();
+    for (const remittance of remittances) {
+      const bucket = remittancesByAssignmentId.get(remittance.assignmentId) ?? [];
+      bucket.push(remittance);
+      remittancesByAssignmentId.set(remittance.assignmentId, bucket);
     }
 
-    const remittanceCurrency = (input.remittanceCurrency ?? tenantCurrency).trim().toUpperCase();
-    if (remittanceCurrency !== tenantCurrency.toUpperCase()) {
-      throw new BadRequestException(
-        `Assignment remittance currency must be '${tenantCurrency}' for this organisation.`,
-      );
-    }
-
-    if (remittanceFrequency === 'weekly') {
-      if (
-        !input.remittanceCollectionDay ||
-        input.remittanceCollectionDay < 1 ||
-        input.remittanceCollectionDay > 7
-      ) {
-        throw new BadRequestException(
-          'Weekly remittance plans require remittanceCollectionDay between 1 and 7.',
-        );
-      }
-    }
-
-    return {
-      remittanceModel,
-      remittanceFrequency,
-      remittanceAmountMinorUnits: input.remittanceAmountMinorUnits,
-      remittanceCurrency,
-      remittanceStartDate: input.remittanceStartDate ?? toIsoDate(new Date()),
-      remittanceCollectionDay:
-        remittanceFrequency === 'weekly' ? input.remittanceCollectionDay ?? null : null,
-    };
+    return assignments.map((assignment) => {
+      const snapshot = parseFinancialContractSnapshot(assignment.contractSnapshot, assignment);
+      const financialContract = summarizeFinancialContract({
+        assignmentStatus: assignment.status,
+        snapshot,
+        remittances: remittancesByAssignmentId.get(assignment.id) ?? [],
+      });
+      return {
+        ...assignment,
+        financialContract,
+      };
+    });
   }
 
-  private buildContractSnapshot(input: {
-    remittanceModel: string;
-    remittanceFrequency: string;
-    remittanceAmountMinorUnits: number;
-    remittanceCurrency: string;
-    remittanceStartDate: string;
-    remittanceCollectionDay?: number | null;
-  }) {
-    const schedule =
-      input.remittanceFrequency === 'weekly' && input.remittanceCollectionDay
-        ? `weekly on collection day ${input.remittanceCollectionDay}`
-        : input.remittanceFrequency;
-    return {
-      paymentStructure:
-        input.remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'fixed_remittance',
-      expectedRemittanceTerms: `${input.remittanceAmountMinorUnits} ${input.remittanceCurrency} ${schedule} starting ${input.remittanceStartDate}`,
-      platformIssuer: {
-        productName: PLATFORM_ISSUER.productName,
-        legalName: PLATFORM_ISSUER.legalName,
-        jurisdiction: PLATFORM_ISSUER.jurisdiction,
-        website: PLATFORM_ISSUER.website,
-      },
-      obligations: [
-        'Submit remittance using the agreed schedule or record an exception with evidence.',
-        'Return the vehicle promptly when the shift closes or the operator requests recovery.',
-        'Report incidents, partial-day returns, and disputes with transparent notes.',
-      ],
-      generatedAt: new Date().toISOString(),
-    } satisfies Prisma.InputJsonValue;
+  private async enrichAssignment<T extends Assignment>(
+    assignment: T,
+  ): Promise<T & { financialContract: unknown | null }> {
+    const [enriched] = await this.enrichAssignments([assignment]);
+    if (!enriched) {
+      throw new NotFoundException(`Assignment '${assignment.id}' could not be enriched.`);
+    }
+    return enriched;
   }
 
   private buildAcceptanceSnapshotHash(input: {
@@ -192,7 +165,7 @@ export class AssignmentsService {
       page?: number;
       limit?: number;
     } = {},
-  ): Promise<PaginatedResponse<Assignment>> {
+  ): Promise<PaginatedResponse<Assignment & { financialContract: unknown | null }>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 50;
     const where = {
@@ -219,14 +192,17 @@ export class AssignmentsService {
     ]);
 
     return {
-      data,
+      data: await this.enrichAssignments(data),
       total,
       page,
       limit,
     };
   }
 
-  async findOne(tenantId: string, id: string): Promise<Assignment> {
+  async findOne(
+    tenantId: string,
+    id: string,
+  ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.prisma.assignment.findUnique({ where: { id } });
 
     if (!assignment) {
@@ -235,7 +211,7 @@ export class AssignmentsService {
 
     assertTenantOwnership(asTenantId(assignment.tenantId), asTenantId(tenantId));
 
-    return assignment;
+    return this.enrichAssignment(assignment);
   }
 
   private async loadAssignmentResources(
@@ -379,12 +355,20 @@ export class AssignmentsService {
     }
   }
 
-  async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment> {
+  async create(tenantId: string, dto: CreateAssignmentDto): Promise<Assignment & { financialContract: unknown | null }> {
     const tenantCurrency = await this.resolveTenantCurrency(tenantId);
     const { driver } = await this.loadAssignmentResources(tenantId, dto, ['available']);
     await this.ensureNoOverlappingAssignments(dto);
-    const remittancePlan = this.normalizeRemittancePlan(tenantCurrency, dto);
-    const contractSnapshot = this.buildContractSnapshot(remittancePlan);
+    const { topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, dto);
+    const contractSnapshot = {
+      ...snapshot,
+      platformIssuer: {
+        productName: PLATFORM_ISSUER.productName,
+        legalName: PLATFORM_ISSUER.legalName,
+        jurisdiction: PLATFORM_ISSUER.jurisdiction,
+        website: PLATFORM_ISSUER.website,
+      },
+    } as unknown as Prisma.InputJsonValue;
 
     const [assignment] = await this.prisma.$transaction([
       this.prisma.assignment.create({
@@ -397,7 +381,7 @@ export class AssignmentsService {
           vehicleId: dto.vehicleId,
           status: 'pending_driver_confirmation',
           notes: dto.notes ?? null,
-          ...remittancePlan,
+          ...topLevelPlan,
           contractVersion: LEGAL_DOCUMENT_VERSIONS.terms,
           contractSnapshot,
           contractStatus: 'pending_acceptance',
@@ -416,20 +400,28 @@ export class AssignmentsService {
       contractVersion: assignment.contractVersion,
     });
 
-    return assignment;
+    return this.enrichAssignment(assignment);
   }
 
   async updateRemittancePlan(
     tenantId: string,
     id: string,
     dto: UpdateAssignmentRemittancePlanDto,
-  ): Promise<Assignment> {
+  ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
     const tenantCurrency = await this.resolveTenantCurrency(tenantId);
 
-    const nextPlan = this.normalizeRemittancePlan(tenantCurrency, {
+    const { topLevelPlan, snapshot } = normalizeFinancialContract(tenantCurrency, {
+      contractType: dto.contractType ?? null,
+      totalTargetAmountMinorUnits: dto.totalTargetAmountMinorUnits ?? null,
+      principalAmountMinorUnits: dto.principalAmountMinorUnits ?? null,
+      depositAmountMinorUnits: dto.depositAmountMinorUnits ?? null,
+      contractDurationPeriods: dto.contractDurationPeriods ?? null,
+      contractEndDate: dto.contractEndDate ?? null,
       remittanceAmountMinorUnits:
         dto.remittanceAmountMinorUnits ?? assignment.remittanceAmountMinorUnits,
+      remittanceModel:
+        assignment.remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'fixed',
       remittanceFrequency: dto.remittanceFrequency ?? assignment.remittanceFrequency,
       remittanceCurrency: dto.remittanceCurrency ?? assignment.remittanceCurrency,
       remittanceStartDate: dto.remittanceStartDate ?? assignment.remittanceStartDate,
@@ -437,13 +429,22 @@ export class AssignmentsService {
         dto.remittanceCollectionDay ?? assignment.remittanceCollectionDay,
     });
 
-    return this.prisma.assignment.update({
+    const updated = await this.prisma.assignment.update({
       where: { id },
       data: {
-        ...nextPlan,
-        contractSnapshot: this.buildContractSnapshot(nextPlan),
+        ...topLevelPlan,
+        contractSnapshot: ({
+          ...snapshot,
+          platformIssuer: {
+            productName: PLATFORM_ISSUER.productName,
+            legalName: PLATFORM_ISSUER.legalName,
+            jurisdiction: PLATFORM_ISSUER.jurisdiction,
+            website: PLATFORM_ISSUER.website,
+          },
+        } as unknown as Prisma.InputJsonValue),
       },
     });
+    return this.enrichAssignment(updated);
   }
 
   async acceptDriverTerms(
@@ -456,7 +457,7 @@ export class AssignmentsService {
       deviceInfo?: Record<string, unknown>;
       signatureHash?: string;
     },
-  ): Promise<Assignment> {
+  ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
     if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
       throw new BadRequestException(
@@ -509,14 +510,14 @@ export class AssignmentsService {
     await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_activated', {
       activatedAt: acceptedAt.toISOString(),
     });
-    return updated;
+    return this.enrichAssignment(updated);
   }
 
   async decline(
     tenantId: string,
     id: string,
     input: { declinedFrom: string; note?: string },
-  ): Promise<Assignment> {
+  ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
     if (!['created', 'pending_driver_confirmation'].includes(assignment.status)) {
       throw new BadRequestException(
@@ -542,10 +543,10 @@ export class AssignmentsService {
       declinedFrom: input.declinedFrom,
       ...(input.note ? { note: input.note } : {}),
     });
-    return updated as Assignment;
+    return this.enrichAssignment(updated as Assignment);
   }
 
-  async start(tenantId: string, id: string): Promise<Assignment> {
+  async start(tenantId: string, id: string): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
 
     if (assignment.status === 'active') {
@@ -602,7 +603,7 @@ export class AssignmentsService {
       source: 'start_endpoint',
       activatedAt: assignment.driverConfirmedAt.toISOString(),
     });
-    return updated as Assignment;
+    return this.enrichAssignment(updated as Assignment);
   }
 
   async end(
@@ -615,7 +616,7 @@ export class AssignmentsService {
       returnEvidence?: Record<string, unknown>;
       closeCurrentRemittanceAs?: 'partially_settled' | 'cancelled_due_to_assignment_end';
     },
-  ): Promise<Assignment> {
+  ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
 
     const currentConfig =
@@ -702,7 +703,7 @@ export class AssignmentsService {
         reason: resolution,
       },
     });
-    return updated as Assignment;
+    return this.enrichAssignment(updated as Assignment);
   }
 
   async importAssignmentsFromCsv(
@@ -775,6 +776,9 @@ export class AssignmentsService {
           driverId,
           vehicleId,
           ...(row.notes?.trim() ? { notes: row.notes.trim() } : {}),
+          ...(row.contractType?.trim()
+            ? { contractType: row.contractType.trim() }
+            : {}),
           ...(row.remittanceModel?.trim()
             ? { remittanceModel: row.remittanceModel.trim() }
             : {}),
@@ -793,6 +797,21 @@ export class AssignmentsService {
             : {}),
           ...(row.remittanceCollectionDay
             ? { remittanceCollectionDay: Number.parseInt(row.remittanceCollectionDay, 10) }
+            : {}),
+          ...(row.totalTargetAmountMinorUnits
+            ? { totalTargetAmountMinorUnits: Number.parseInt(row.totalTargetAmountMinorUnits, 10) }
+            : {}),
+          ...(row.principalAmountMinorUnits
+            ? { principalAmountMinorUnits: Number.parseInt(row.principalAmountMinorUnits, 10) }
+            : {}),
+          ...(row.depositAmountMinorUnits
+            ? { depositAmountMinorUnits: Number.parseInt(row.depositAmountMinorUnits, 10) }
+            : {}),
+          ...(row.contractDurationPeriods
+            ? { contractDurationPeriods: Number.parseInt(row.contractDurationPeriods, 10) }
+            : {}),
+          ...(row.contractEndDate?.trim()
+            ? { contractEndDate: row.contractEndDate.trim() }
             : {}),
         };
         await this.create(tenantId, payload);
@@ -845,12 +864,18 @@ export class AssignmentsService {
         'vehicleCode',
         'vehiclePlate',
         'status',
+        'contractType',
         'remittanceModel',
         'remittanceAmountMinorUnits',
         'remittanceCurrency',
         'remittanceFrequency',
         'remittanceStartDate',
         'remittanceCollectionDay',
+        'totalTargetAmountMinorUnits',
+        'principalAmountMinorUnits',
+        'depositAmountMinorUnits',
+        'contractDurationPeriods',
+        'contractEndDate',
         'createdAt',
       ],
       assignments.map((assignment) => [
@@ -861,12 +886,35 @@ export class AssignmentsService {
         assignment.vehicle.tenantVehicleCode,
         assignment.vehicle.plate ?? '',
         assignment.status,
+        assignment.remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'regular_hire',
         assignment.remittanceModel ?? '',
         assignment.remittanceAmountMinorUnits ?? '',
         assignment.remittanceCurrency ?? '',
         assignment.remittanceFrequency ?? '',
         assignment.remittanceStartDate ?? '',
         assignment.remittanceCollectionDay ?? '',
+        (
+          (assignment.contractSnapshot as { hirePurchase?: { totalTargetAmountMinorUnits?: number } } | null)
+            ?.hirePurchase?.totalTargetAmountMinorUnits ?? ''
+        ),
+        (
+          (assignment.contractSnapshot as { hirePurchase?: { principalAmountMinorUnits?: number } } | null)
+            ?.hirePurchase?.principalAmountMinorUnits ?? ''
+        ),
+        (
+          (assignment.contractSnapshot as { hirePurchase?: { depositAmountMinorUnits?: number } } | null)
+            ?.hirePurchase?.depositAmountMinorUnits ?? ''
+        ),
+        (
+          (assignment.contractSnapshot as {
+            hirePurchase?: { installmentPlan?: { periodCount?: number } };
+          } | null)?.hirePurchase?.installmentPlan?.periodCount ?? ''
+        ),
+        (
+          (assignment.contractSnapshot as {
+            hirePurchase?: { installmentPlan?: { contractEndDate?: string } };
+          } | null)?.hirePurchase?.installmentPlan?.contractEndDate ?? ''
+        ),
         assignment.createdAt.toISOString(),
       ]),
     );

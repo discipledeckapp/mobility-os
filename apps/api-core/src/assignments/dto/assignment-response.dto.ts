@@ -61,6 +61,9 @@ export class AssignmentResponseDto {
   @ApiPropertyOptional({ type: Object })
   contractSnapshot?: unknown | null;
 
+  @ApiPropertyOptional({ type: Object })
+  financialContract?: unknown | null;
+
   @ApiPropertyOptional()
   contractStatus?: string;
 

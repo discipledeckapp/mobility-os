@@ -99,6 +99,15 @@ export interface NotificationChannelPreferenceRecord {
 }
 
 export interface NotificationPreferencesRecord {
+  verification_payment_receipt: NotificationChannelPreferenceRecord;
+  driver_verification_status: NotificationChannelPreferenceRecord;
+  driver_licence_review_pending: NotificationChannelPreferenceRecord;
+  driver_licence_review_resolved: NotificationChannelPreferenceRecord;
+  guarantor_status: NotificationChannelPreferenceRecord;
+  assignment_issued: NotificationChannelPreferenceRecord;
+  assignment_accepted: NotificationChannelPreferenceRecord;
+  assignment_changed: NotificationChannelPreferenceRecord;
+  assignment_ended: NotificationChannelPreferenceRecord;
   remittance_due: NotificationChannelPreferenceRecord;
   remittance_overdue: NotificationChannelPreferenceRecord;
   remittance_reconciled: NotificationChannelPreferenceRecord;
@@ -191,6 +200,41 @@ export interface AssignmentRecord {
     paymentStructure?: string | null;
     expectedRemittanceTerms?: string | null;
     obligations?: string[];
+  } | null;
+  financialContract?: {
+    version: string;
+    contractType: 'regular_hire' | 'hire_purchase';
+    currency: string;
+    schedule: {
+      frequency: 'daily' | 'weekly' | 'monthly';
+      startDate: string;
+      collectionDay?: number | null;
+    };
+    display: {
+      summaryLabel: string;
+      expectedRemittanceTerms: string;
+    };
+    hirePurchase?: {
+      totalTargetAmountMinorUnits: number;
+      principalAmountMinorUnits?: number | null;
+      depositAmountMinorUnits?: number | null;
+      installmentPlan: {
+        periodCount?: number | null;
+        contractEndDate?: string | null;
+        baseInstallmentAmountMinorUnits: number;
+        finalInstallmentAmountMinorUnits: number;
+      };
+    } | null;
+    summary: {
+      expectedPerPeriodAmountMinorUnits: number;
+      cumulativePaidAmountMinorUnits: number;
+      outstandingBalanceMinorUnits?: number | null;
+      nextDueDate?: string | null;
+      nextDueAmountMinorUnits?: number | null;
+      contractStatus: 'active' | 'overdue' | 'completed' | 'terminated';
+      contractCompletionPercentage?: number | null;
+      riskSignals: string[];
+    };
   } | null;
   contractStatus?: string;
   driverAcceptedTermsAt?: string | null;
@@ -469,6 +513,18 @@ export interface RemittanceRecord {
   shiftCode?: string | null;
   checkpointLabel?: string | null;
   shortfallAmountMinorUnits?: number;
+  reconciliation?: {
+    contractType: 'regular_hire' | 'hire_purchase';
+    expectedAmountMinorUnits: number;
+    varianceMinorUnits: number;
+    periodStatus: 'complete' | 'partial';
+    cumulativePaidAmountMinorUnits: number;
+    outstandingBalanceMinorUnits?: number | null;
+    contractCompletionPercentage?: number | null;
+    contractStatus: 'active' | 'overdue' | 'completed' | 'terminated';
+    nextDueDate?: string | null;
+    nextDueAmountMinorUnits?: number | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

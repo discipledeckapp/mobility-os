@@ -74,6 +74,9 @@ export class RemittanceResponseDto {
   @ApiPropertyOptional()
   shortfallAmountMinorUnits?: number;
 
+  @ApiPropertyOptional({ type: Object })
+  reconciliation?: unknown | null;
+
   @ApiProperty()
   createdAt!: Date;
 

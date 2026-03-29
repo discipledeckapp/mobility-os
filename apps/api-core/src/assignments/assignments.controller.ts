@@ -80,8 +80,8 @@ export class AssignmentsController {
   @ApiOkResponse({ type: String })
   async downloadImportTemplate(@Res({ passthrough: true }) res: HeaderWritableResponse) {
     const csv = [
-      'fleetName,driverPhone,vehicleCode,notes,remittanceModel,remittanceAmountMinorUnits,remittanceCurrency,remittanceFrequency,remittanceStartDate,remittanceCollectionDay',
-      'Lagos Core Fleet,08012345678,AJAH-0001,Daily route,fixed,250000,NGN,daily,2026-03-24,',
+      'fleetName,driverPhone,vehicleCode,notes,contractType,remittanceModel,remittanceAmountMinorUnits,remittanceCurrency,remittanceFrequency,remittanceStartDate,remittanceCollectionDay,totalTargetAmountMinorUnits,principalAmountMinorUnits,depositAmountMinorUnits,contractDurationPeriods,contractEndDate',
+      'Lagos Core Fleet,08012345678,AJAH-0001,Daily route,regular_hire,fixed,250000,NGN,daily,2026-03-24,,,,,',
     ].join('\n');
     res.setHeader('content-type', 'text/csv; charset=utf-8');
     res.setHeader(

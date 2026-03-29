@@ -132,6 +132,8 @@ export function RemittanceRecordsPanel({
               <TableHead>Driver</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Variance</TableHead>
               <TableHead>Due date</TableHead>
               <TableHead>Sync</TableHead>
               <TableHead>Actions</TableHead>
@@ -172,6 +174,12 @@ export function RemittanceRecordsPanel({
                 <TableCell>{driverLabels.get(remittance.driverId) ?? remittance.driverId}</TableCell>
                 <TableCell>{vehicleLabels.get(remittance.vehicleId) ?? remittance.vehicleId}</TableCell>
                 <TableCell>{formatAmount(remittance.amountMinorUnits, remittance.currency, locale)}</TableCell>
+                <TableCell>{remittance.reconciliation?.contractType ?? 'regular_hire'}</TableCell>
+                <TableCell>
+                  {remittance.reconciliation
+                    ? formatAmount(remittance.reconciliation.varianceMinorUnits, remittance.currency, locale)
+                    : 'Not available'}
+                </TableCell>
                 <TableCell>{formatDate(remittance.dueDate, locale)}</TableCell>
                 <TableCell>
                   <Badge tone={remittance.syncStatus === 'offline_submitted' ? 'warning' : 'neutral'}>

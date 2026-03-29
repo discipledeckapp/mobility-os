@@ -21,9 +21,14 @@ import { PrismaService } from '../database/prisma.service';
 import { OperationalWalletsService } from '../operational-wallets/operational-wallets.service';
 import { PolicyService } from '../policy/policy.service';
 import { RecordsService } from '../records/records.service';
+import {
+  buildRemittanceReconciliation,
+  parseFinancialContractSnapshot,
+} from '../assignments/financial-contract';
 import type { RecordRemittanceDto } from './dto/record-remittance.dto';
 
 type RemittanceWithWalletEntry = Remittance & { walletEntry?: OperationalWalletEntry };
+type EnrichedRemittance = RemittanceWithWalletEntry & { reconciliation?: unknown | null };
 
 @Injectable()
 export class RemittanceService {
@@ -33,6 +38,73 @@ export class RemittanceService {
     private readonly policyService: PolicyService,
     private readonly recordsService: RecordsService,
   ) {}
+
+  private async enrichRemittances<T extends RemittanceWithWalletEntry>(
+    remittances: T[],
+  ): Promise<Array<T & { reconciliation: unknown | null }>> {
+    if (remittances.length === 0) {
+      return [];
+    }
+
+    const assignments = await this.prisma.assignment.findMany({
+      where: { id: { in: remittances.map((remittance) => remittance.assignmentId) } },
+      select: {
+        id: true,
+        status: true,
+        contractSnapshot: true,
+        remittanceModel: true,
+        remittanceFrequency: true,
+        remittanceAmountMinorUnits: true,
+        remittanceCurrency: true,
+        remittanceStartDate: true,
+        remittanceCollectionDay: true,
+      },
+    });
+    const assignmentById = new Map(assignments.map((assignment) => [assignment.id, assignment]));
+
+    const relatedRemittances = await this.prisma.remittance.findMany({
+      where: { assignmentId: { in: assignments.map((assignment) => assignment.id) } },
+      select: {
+        assignmentId: true,
+        dueDate: true,
+        amountMinorUnits: true,
+        status: true,
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+    const remittancesByAssignmentId = new Map<
+      string,
+      Array<{ assignmentId: string; dueDate: string; amountMinorUnits: number; status: string }>
+    >();
+    for (const remittance of relatedRemittances) {
+      const bucket = remittancesByAssignmentId.get(remittance.assignmentId) ?? [];
+      bucket.push(remittance);
+      remittancesByAssignmentId.set(remittance.assignmentId, bucket);
+    }
+
+    return remittances.map((remittance) => {
+      const assignment = assignmentById.get(remittance.assignmentId);
+      const reconciliation = assignment
+        ? buildRemittanceReconciliation({
+            remittance,
+            snapshot: parseFinancialContractSnapshot(assignment.contractSnapshot, assignment),
+            remittances: remittancesByAssignmentId.get(remittance.assignmentId) ?? [],
+            assignmentStatus: assignment.status,
+          })
+        : null;
+      return { ...remittance, reconciliation };
+    });
+  }
+
+  private async enrichRemittance<T extends RemittanceWithWalletEntry>(
+    remittance: T,
+  ): Promise<T & { reconciliation: unknown | null }> {
+    const [enriched] = await this.enrichRemittances([remittance]);
+    if (!enriched) {
+      throw new NotFoundException(`Remittance '${remittance.id}' could not be enriched.`);
+    }
+    return enriched;
+  }
 
   async list(
     tenantId: string,
@@ -47,7 +119,7 @@ export class RemittanceService {
       page?: number;
       limit?: number;
     } = {},
-  ): Promise<PaginatedResponse<Remittance>> {
+  ): Promise<PaginatedResponse<EnrichedRemittance>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 50;
     const where = {
@@ -76,14 +148,14 @@ export class RemittanceService {
     ]);
 
     return {
-      data,
+      data: await this.enrichRemittances(data),
       total,
       page,
       limit,
     };
   }
 
-  async findOne(tenantId: string, id: string): Promise<Remittance> {
+  async findOne(tenantId: string, id: string): Promise<EnrichedRemittance> {
     const record = await this.prisma.remittance.findUnique({ where: { id } });
 
     if (!record) {
@@ -92,7 +164,7 @@ export class RemittanceService {
 
     assertTenantOwnership(asTenantId(record.tenantId), asTenantId(tenantId));
 
-    return record;
+    return this.enrichRemittance(record);
   }
 
   async exportCsv(
@@ -111,6 +183,8 @@ export class RemittanceService {
       orderBy: [{ dueDate: 'desc' }],
     });
 
+    const enrichedRecords = await this.enrichRemittances(records);
+
     return buildCsv(
       [
         'remittanceId',
@@ -118,7 +192,12 @@ export class RemittanceService {
         'driverId',
         'vehicleId',
         'fleetId',
+        'contractType',
         'amountMinorUnits',
+        'expectedAmountMinorUnits',
+        'varianceMinorUnits',
+        'cumulativePaidAmountMinorUnits',
+        'outstandingBalanceMinorUnits',
         'currency',
         'status',
         'dueDate',
@@ -126,13 +205,28 @@ export class RemittanceService {
         'notes',
         'createdAt',
       ],
-      records.map((record) => [
+      enrichedRecords.map((record) => [
         record.id,
         record.assignmentId,
         record.driverId,
         record.vehicleId,
         record.fleetId,
+        record.reconciliation && typeof record.reconciliation === 'object' && 'contractType' in record.reconciliation
+          ? String(record.reconciliation.contractType)
+          : '',
         record.amountMinorUnits,
+        record.reconciliation && typeof record.reconciliation === 'object' && 'expectedAmountMinorUnits' in record.reconciliation
+          ? String(record.reconciliation.expectedAmountMinorUnits)
+          : '',
+        record.reconciliation && typeof record.reconciliation === 'object' && 'varianceMinorUnits' in record.reconciliation
+          ? String(record.reconciliation.varianceMinorUnits)
+          : '',
+        record.reconciliation && typeof record.reconciliation === 'object' && 'cumulativePaidAmountMinorUnits' in record.reconciliation
+          ? String(record.reconciliation.cumulativePaidAmountMinorUnits)
+          : '',
+        record.reconciliation && typeof record.reconciliation === 'object' && 'outstandingBalanceMinorUnits' in record.reconciliation
+          ? String(record.reconciliation.outstandingBalanceMinorUnits ?? '')
+          : '',
         record.currency,
         record.status,
         record.dueDate,
@@ -151,7 +245,7 @@ export class RemittanceService {
     }
   }
 
-  async record(tenantId: string, dto: RecordRemittanceDto): Promise<Remittance> {
+  async record(tenantId: string, dto: RecordRemittanceDto): Promise<EnrichedRemittance> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { country: true },
@@ -209,7 +303,7 @@ export class RemittanceService {
     });
 
     if (existingRemittance) {
-      return existingRemittance;
+      return this.enrichRemittance(existingRemittance);
     }
 
     if (dto.fleetId && dto.fleetId !== assignment.fleetId) {
@@ -287,14 +381,14 @@ export class RemittanceService {
       },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, assignment.driverId);
-    return created;
+    return this.enrichRemittance(created);
   }
 
   async confirm(
     tenantId: string,
     id: string,
     paidDate: string,
-  ): Promise<RemittanceWithWalletEntry> {
+  ): Promise<EnrichedRemittance> {
     const record = await this.findOne(tenantId, id);
 
     if (record.status === 'completed') {
@@ -347,10 +441,10 @@ export class RemittanceService {
     });
     await this.recordsService.issueRemittanceReceipt(tenantId, result.id);
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
-    return result;
+    return this.enrichRemittance(result);
   }
 
-  async dispute(tenantId: string, id: string, notes: string): Promise<Remittance> {
+  async dispute(tenantId: string, id: string, notes: string): Promise<EnrichedRemittance> {
     const record = await this.findOne(tenantId, id);
 
     this.ensurePendingTransition(record, 'disputed');
@@ -364,10 +458,10 @@ export class RemittanceService {
       data: { status: 'disputed', notes: notes.trim() },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
-    return updated;
+    return this.enrichRemittance(updated);
   }
 
-  async waive(tenantId: string, id: string, notes: string, actorRole: string): Promise<Remittance> {
+  async waive(tenantId: string, id: string, notes: string, actorRole: string): Promise<EnrichedRemittance> {
     if (actorRole !== TenantRole.TenantOwner) {
       throw new ForbiddenException('Only tenant owners can waive remittance records.');
     }
@@ -385,11 +479,11 @@ export class RemittanceService {
       data: { status: 'waived', notes: notes.trim() },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
-    return updated;
+    return this.enrichRemittance(updated);
   }
 
   async confirmMany(tenantId: string, ids: string[], paidDate: string) {
-    const results: RemittanceWithWalletEntry[] = [];
+    const results: EnrichedRemittance[] = [];
     for (const id of ids) {
       results.push(await this.confirm(tenantId, id, paidDate));
     }
@@ -400,7 +494,7 @@ export class RemittanceService {
     const disputedRecords = await this.prisma.remittance.findMany({
       where: { tenantId, id: { in: ids }, status: 'disputed' },
     });
-    const results: RemittanceWithWalletEntry[] = [];
+    const results: EnrichedRemittance[] = [];
 
     for (const record of disputedRecords) {
       const updated = await this.prisma.$transaction(async (tx) => {
@@ -429,7 +523,7 @@ export class RemittanceService {
       });
 
       await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
-      results.push(updated);
+      results.push(await this.enrichRemittance(updated));
     }
 
     return results;

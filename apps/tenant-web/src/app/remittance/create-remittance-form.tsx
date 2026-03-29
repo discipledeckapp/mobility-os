@@ -107,6 +107,14 @@ export function CreateRemittanceForm({
         : '',
     [selectedAssignment],
   );
+  const suggestedAmountMajorUnits = useMemo(() => {
+    const nextDueAmountMinorUnits =
+      selectedAssignment?.financialContract?.summary.nextDueAmountMinorUnits ??
+      selectedAssignment?.financialContract?.summary.expectedPerPeriodAmountMinorUnits ??
+      selectedAssignment?.remittanceAmountMinorUnits ??
+      null;
+    return nextDueAmountMinorUnits ? String(nextDueAmountMinorUnits / 100) : '';
+  }, [selectedAssignment]);
 
   useEffect(() => {
     if (
@@ -122,7 +130,7 @@ export function CreateRemittanceForm({
       <CardHeader>
         <CardTitle>Record remittance</CardTitle>
         <CardDescription>
-          Record a daily collection for an active assignment.
+          Record a scheduled remittance or installment against an active assignment.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -190,15 +198,13 @@ export function CreateRemittanceForm({
               step="0.01"
               type="number"
               defaultValue={
-                selectedAssignment?.remittanceAmountMinorUnits
-                  ? String(selectedAssignment.remittanceAmountMinorUnits / 100)
-                  : ''
+                suggestedAmountMajorUnits
               }
-              readOnly={Boolean(selectedAssignment?.remittanceAmountMinorUnits)}
+              readOnly={Boolean(suggestedAmountMajorUnits)}
             />
             <Text tone="muted">
-              {selectedAssignment?.remittanceAmountMinorUnits
-                ? 'This amount is pulled from the assignment remittance plan.'
+              {selectedAssignment?.financialContract
+                ? `${selectedAssignment.financialContract.display.summaryLabel}: ${selectedAssignment.financialContract.summary.scheduleLabel}.`
                 : 'Enter the amount in the major currency unit (e.g. 1500 for ₦1,500).'}
             </Text>
           </div>
@@ -246,6 +252,22 @@ export function CreateRemittanceForm({
               </Text>
             ) : null}
           </div>
+
+          {selectedAssignment?.financialContract ? (
+            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/70 px-4 py-3 md:col-span-2">
+              <Text tone="strong">Contract summary</Text>
+              <Text tone="muted">
+                {selectedAssignment.financialContract.display.summaryLabel} · Paid so far {(
+                  selectedAssignment.financialContract.summary.cumulativePaidAmountMinorUnits / 100
+                ).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                {selectedAssignment.financialContract.currency}.
+                {selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits !== null &&
+                selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits !== undefined
+                  ? ` Remaining balance ${(selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${selectedAssignment.financialContract.currency}.`
+                  : ''}
+              </Text>
+            </div>
+          ) : null}
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="notes">Notes</Label>

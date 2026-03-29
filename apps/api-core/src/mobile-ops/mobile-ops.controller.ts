@@ -280,6 +280,7 @@ export class MobileOpsController {
       remittanceCollectionDay?: number | null;
       contractVersion?: string | null;
       contractSnapshot?: unknown | null;
+      financialContract?: unknown | null;
       contractStatus?: string | null;
       driverAcceptedTermsAt?: Date | null;
       driverAcceptanceEvidence?: unknown | null;

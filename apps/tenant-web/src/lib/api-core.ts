@@ -966,6 +966,57 @@ export interface AssignmentRecord {
     expectedRemittanceTerms?: string | null;
     obligations?: string[];
   } | null;
+  financialContract?: {
+    version: string;
+    contractType: 'regular_hire' | 'hire_purchase';
+    currency: string;
+    schedule: {
+      frequency: 'daily' | 'weekly' | 'monthly';
+      startDate: string;
+      collectionDay?: number | null;
+    };
+    display: {
+      summaryLabel: string;
+      expectedRemittanceTerms: string;
+    };
+    regularHire?: {
+      expectedPerPeriodAmountMinorUnits: number;
+    } | null;
+    hirePurchase?: {
+      principalAmountMinorUnits?: number | null;
+      totalTargetAmountMinorUnits: number;
+      depositAmountMinorUnits?: number | null;
+      installmentPlan: {
+        periodCount?: number | null;
+        contractEndDate?: string | null;
+        baseInstallmentAmountMinorUnits: number;
+        finalInstallmentAmountMinorUnits: number;
+        generatedFromTarget: boolean;
+      };
+    } | null;
+    summary: {
+      contractType: 'regular_hire' | 'hire_purchase';
+      scheduleLabel: string;
+      expectedPerPeriodAmountMinorUnits: number;
+      actualForCurrentPeriodMinorUnits: number;
+      currentPeriodVarianceMinorUnits: number;
+      currentPeriodStatus: 'complete' | 'partial' | 'late' | 'pending';
+      currentPeriodDueDate?: string | null;
+      nextDueDate?: string | null;
+      nextDueAmountMinorUnits?: number | null;
+      cumulativeRecordedAmountMinorUnits: number;
+      cumulativePaidAmountMinorUnits: number;
+      cumulativeExpectedAmountMinorUnits: number;
+      outstandingBalanceMinorUnits?: number | null;
+      contractCompletionPercentage?: number | null;
+      overduePeriods: number;
+      missedPeriods: number;
+      partialPeriods: number;
+      contractStatus: 'active' | 'overdue' | 'completed' | 'terminated';
+      ownershipTransferEligible: boolean;
+      riskSignals: string[];
+    };
+  } | null;
   contractStatus?: string;
   driverAcceptedTermsAt?: string | null;
   driverAcceptanceEvidence?: {
@@ -989,20 +1040,32 @@ export interface CreateAssignmentInput {
   driverId: string;
   vehicleId: string;
   notes?: string;
+  contractType?: 'regular_hire' | 'hire_purchase';
   remittanceModel?: 'fixed' | 'hire_purchase';
   remittanceAmountMinorUnits: number;
-  remittanceFrequency?: 'daily' | 'weekly';
+  remittanceFrequency?: 'daily' | 'weekly' | 'monthly';
   remittanceCurrency?: string;
   remittanceStartDate?: string;
   remittanceCollectionDay?: number;
+  principalAmountMinorUnits?: number;
+  totalTargetAmountMinorUnits?: number;
+  depositAmountMinorUnits?: number;
+  contractDurationPeriods?: number;
+  contractEndDate?: string;
 }
 
 export interface UpdateAssignmentRemittancePlanInput {
+  contractType?: 'regular_hire' | 'hire_purchase';
   remittanceAmountMinorUnits?: number;
-  remittanceFrequency?: 'daily' | 'weekly';
+  remittanceFrequency?: 'daily' | 'weekly' | 'monthly';
   remittanceCurrency?: string;
   remittanceStartDate?: string;
   remittanceCollectionDay?: number;
+  principalAmountMinorUnits?: number;
+  totalTargetAmountMinorUnits?: number;
+  depositAmountMinorUnits?: number;
+  contractDurationPeriods?: number;
+  contractEndDate?: string;
 }
 
 export interface RemittanceRecord {
@@ -1033,6 +1096,18 @@ export interface RemittanceRecord {
   shiftCode?: string | null;
   checkpointLabel?: string | null;
   shortfallAmountMinorUnits?: number;
+  reconciliation?: {
+    contractType: 'regular_hire' | 'hire_purchase';
+    expectedAmountMinorUnits: number;
+    varianceMinorUnits: number;
+    periodStatus: 'complete' | 'partial';
+    cumulativePaidAmountMinorUnits: number;
+    outstandingBalanceMinorUnits?: number | null;
+    contractCompletionPercentage?: number | null;
+    contractStatus: 'active' | 'overdue' | 'completed' | 'terminated';
+    nextDueDate?: string | null;
+    nextDueAmountMinorUnits?: number | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

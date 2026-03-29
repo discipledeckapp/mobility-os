@@ -64,6 +64,69 @@ function RemittanceAmountField({ currency }: { currency: string }) {
   );
 }
 
+function MoneyMinorInputField({
+  currency,
+  name,
+  id,
+  label,
+  helperText,
+  required = false,
+}: {
+  currency: string;
+  name: string;
+  id: string;
+  label: string;
+  helperText: string;
+  required?: boolean;
+}) {
+  const [display, setDisplay] = useState('');
+  const majorUnits = parseFloat(display.replace(/,/g, '')) || 0;
+  const minorUnits = Math.round(majorUnits * 100);
+  const formatted =
+    majorUnits > 0
+      ? new Intl.NumberFormat('en-NG', {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: 2,
+        }).format(majorUnits)
+      : null;
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>
+        {label}
+        {required ? <span aria-hidden="true" className="text-red-500"> *</span> : null}
+      </Label>
+      <Input
+        id={id}
+        inputMode="decimal"
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDisplay(event.target.value)}
+        placeholder="2,500.00"
+        required={required}
+        value={display}
+      />
+      <input name={name} type="hidden" value={minorUnits} />
+      <Text tone="muted">{formatted ? `${formatted} = ${minorUnits.toLocaleString()} minor units` : helperText}</Text>
+    </div>
+  );
+}
+
+function computeInstallmentSummary(input: {
+  totalTargetMinorUnits: number;
+  durationPeriods: number;
+}) {
+  if (!input.totalTargetMinorUnits || !input.durationPeriods) {
+    return null;
+  }
+  const baseAmountMinorUnits = Math.floor(input.totalTargetMinorUnits / input.durationPeriods);
+  const finalAmountMinorUnits =
+    input.totalTargetMinorUnits - baseAmountMinorUnits * Math.max(input.durationPeriods - 1, 0);
+  return {
+    baseAmountMinorUnits,
+    finalAmountMinorUnits,
+  };
+}
+
 export function CreateAssignmentForm({
   fleets,
   fleetError,
@@ -84,7 +147,10 @@ export function CreateAssignmentForm({
   const [fleetId, setFleetId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
-  const [remittanceFrequency, setRemittanceFrequency] = useState<'daily' | 'weekly'>('daily');
+  const [contractType, setContractType] = useState<'regular_hire' | 'hire_purchase'>('regular_hire');
+  const [remittanceFrequency, setRemittanceFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [hirePurchaseTargetDisplay, setHirePurchaseTargetDisplay] = useState('');
+  const [hirePurchaseDurationPeriods, setHirePurchaseDurationPeriods] = useState('20');
   const selectableFleets = useMemo(
     () => fleets.filter((fleet) => fleet.status !== 'inactive'),
     [fleets],
@@ -142,6 +208,17 @@ export function CreateAssignmentForm({
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
     };
   }, [state.success]);
+
+  const totalTargetMinorUnits = Math.round((parseFloat(hirePurchaseTargetDisplay.replace(/,/g, '')) || 0) * 100);
+  const durationPeriods = Number.parseInt(hirePurchaseDurationPeriods, 10) || 0;
+  const generatedInstallment = useMemo(
+    () =>
+      computeInstallmentSummary({
+        totalTargetMinorUnits,
+        durationPeriods,
+      }),
+    [durationPeriods, totalTargetMinorUnits],
+  );
 
   return (
     <Card>
@@ -253,18 +330,26 @@ export function CreateAssignmentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="remittanceModel">Remittance model</Label>
+            <Label htmlFor="contractType">Financial model</Label>
             <select
               className="h-11 w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 text-sm text-slate-900"
-              id="remittanceModel"
-              name="remittanceModel"
-              defaultValue="fixed"
+              id="contractType"
+              name="contractType"
+              onChange={(event) =>
+                setContractType(event.target.value === 'hire_purchase' ? 'hire_purchase' : 'regular_hire')
+              }
+              value={contractType}
             >
-              <option value="fixed">Fixed remittance</option>
+              <option value="regular_hire">Regular hire</option>
               <option value="hire_purchase">Hire purchase</option>
             </select>
+            <input
+              name="remittanceModel"
+              type="hidden"
+              value={contractType === 'hire_purchase' ? 'hire_purchase' : 'fixed'}
+            />
             <Text tone="muted">
-              Choose hire purchase when collections are contributing toward eventual vehicle ownership based on reported vehicle valuation.
+              Regular hire tracks recurring remittance performance. Hire purchase tracks contract payoff, balance, and ownership progress.
             </Text>
           </div>
 
@@ -273,10 +358,51 @@ export function CreateAssignmentForm({
             <Input id="notes" name="notes" placeholder="Morning dispatch rotation" />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="remittanceAmountDisplay">Expected remittance amount <span aria-hidden="true" className="text-red-500">*</span></Label>
-            <RemittanceAmountField currency="NGN" />
-          </div>
+          {contractType === 'regular_hire' ? (
+            <div className="space-y-2">
+              <Label htmlFor="remittanceAmountDisplay">Expected remittance amount <span aria-hidden="true" className="text-red-500">*</span></Label>
+              <RemittanceAmountField currency="NGN" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="totalTargetAmountMinorUnitsDisplay">Total target amount <span aria-hidden="true" className="text-red-500">*</span></Label>
+                <Input
+                  id="totalTargetAmountMinorUnitsDisplay"
+                  inputMode="decimal"
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setHirePurchaseTargetDisplay(event.target.value)
+                  }
+                  placeholder="2,500,000.00"
+                  required
+                  value={hirePurchaseTargetDisplay}
+                />
+                <input name="totalTargetAmountMinorUnits" type="hidden" value={totalTargetMinorUnits} />
+                <Text tone="muted">
+                  {totalTargetMinorUnits > 0
+                    ? `${new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 }).format(totalTargetMinorUnits / 100)} target payable`
+                    : 'Enter the full contract payoff target in major units.'}
+                </Text>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contractDurationPeriods">Repayment periods <span aria-hidden="true" className="text-red-500">*</span></Label>
+                <Input
+                  id="contractDurationPeriods"
+                  inputMode="numeric"
+                  min="1"
+                  name="contractDurationPeriods"
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setHirePurchaseDurationPeriods(event.target.value)
+                  }
+                  placeholder="20"
+                  required
+                  type="number"
+                  value={hirePurchaseDurationPeriods}
+                />
+                <Text tone="muted">Use the number of daily, weekly, or monthly periods the driver should repay across.</Text>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="remittanceCurrency">Remittance currency <span aria-hidden="true" className="text-red-500">*</span></Label>
@@ -297,12 +423,19 @@ export function CreateAssignmentForm({
               id="remittanceFrequency"
               name="remittanceFrequency"
               onChange={(event) =>
-                setRemittanceFrequency(event.target.value === 'weekly' ? 'weekly' : 'daily')
+                setRemittanceFrequency(
+                  event.target.value === 'weekly'
+                    ? 'weekly'
+                    : event.target.value === 'monthly'
+                      ? 'monthly'
+                      : 'daily',
+                )
               }
               value={remittanceFrequency}
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
             </select>
             <Text tone="muted">
               {describeRemittanceSchedule({ remittanceFrequency, remittanceCollectionDay: 1 })}
@@ -313,6 +446,46 @@ export function CreateAssignmentForm({
             <Label htmlFor="remittanceStartDate">First remittance due date <span aria-hidden="true" className="text-red-500">*</span></Label>
             <Input id="remittanceStartDate" name="remittanceStartDate" required type="date" />
           </div>
+
+          {contractType === 'hire_purchase' ? (
+            <>
+              <MoneyMinorInputField
+                currency="NGN"
+                helperText="Optional upfront deposit to recognize against the contract."
+                id="depositAmountMinorUnitsDisplay"
+                label="Deposit amount"
+                name="depositAmountMinorUnits"
+              />
+              <MoneyMinorInputField
+                currency="NGN"
+                helperText="Optional principal amount for principal-aware hire purchase reporting."
+                id="principalAmountMinorUnitsDisplay"
+                label="Principal amount"
+                name="principalAmountMinorUnits"
+              />
+              <div className="space-y-2">
+                <Label htmlFor="contractEndDate">Contract end date</Label>
+                <Input id="contractEndDate" name="contractEndDate" type="date" />
+                <Text tone="muted">Optional if you prefer a fixed end date instead of only counting periods.</Text>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/70 px-4 py-3 md:col-span-2">
+                <Text tone="strong">Generated installment</Text>
+                {generatedInstallment ? (
+                  <Text tone="muted">
+                    Base installment: {(generatedInstallment.baseAmountMinorUnits / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NGN.
+                    {' '}Final installment: {(generatedInstallment.finalAmountMinorUnits / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NGN.
+                  </Text>
+                ) : (
+                  <Text tone="muted">Enter the total target and repayment periods to generate the installment amount.</Text>
+                )}
+                <input
+                  name="remittanceAmountMinorUnits"
+                  type="hidden"
+                  value={generatedInstallment?.baseAmountMinorUnits ?? 0}
+                />
+              </div>
+            </>
+          ) : null}
 
           {remittanceFrequency === 'weekly' ? (
             <div className="space-y-2">

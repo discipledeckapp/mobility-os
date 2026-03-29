@@ -39,6 +39,17 @@ function formatDateTime(value?: string | null): string {
   }).format(date);
 }
 
+function formatMoney(amountMinorUnits?: number | null, currency = 'NGN'): string {
+  if (amountMinorUnits === null || amountMinorUnits === undefined) {
+    return 'Not available';
+  }
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinorUnits / 100);
+}
+
 export default async function AssignmentDetailPage({
   params,
 }: {
@@ -135,6 +146,7 @@ export default async function AssignmentDetailPage({
               </Text>
               <AssignmentRemittancePlanForm
                 assignmentId={assignment.id}
+                contractType={assignment.financialContract?.contractType ?? 'regular_hire'}
                 {...(assignment.remittanceAmountMinorUnits !== undefined
                   ? { remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits }
                   : {})}
@@ -150,6 +162,36 @@ export default async function AssignmentDetailPage({
                 {...(assignment.remittanceStartDate !== undefined
                   ? { remittanceStartDate: assignment.remittanceStartDate }
                   : {})}
+                {...(assignment.financialContract?.hirePurchase?.principalAmountMinorUnits !== undefined
+                  ? {
+                      principalAmountMinorUnits:
+                        assignment.financialContract?.hirePurchase?.principalAmountMinorUnits,
+                    }
+                  : {})}
+                {...(assignment.financialContract?.hirePurchase?.totalTargetAmountMinorUnits !== undefined
+                  ? {
+                      totalTargetAmountMinorUnits:
+                        assignment.financialContract?.hirePurchase?.totalTargetAmountMinorUnits,
+                    }
+                  : {})}
+                {...(assignment.financialContract?.hirePurchase?.depositAmountMinorUnits !== undefined
+                  ? {
+                      depositAmountMinorUnits:
+                        assignment.financialContract?.hirePurchase?.depositAmountMinorUnits,
+                    }
+                  : {})}
+                {...(assignment.financialContract?.hirePurchase?.installmentPlan.periodCount !== undefined
+                  ? {
+                      contractDurationPeriods:
+                        assignment.financialContract?.hirePurchase?.installmentPlan.periodCount,
+                    }
+                  : {})}
+                {...(assignment.financialContract?.hirePurchase?.installmentPlan.contractEndDate
+                  ? {
+                      contractEndDate:
+                        assignment.financialContract?.hirePurchase?.installmentPlan.contractEndDate,
+                    }
+                  : {})}
               />
             </CardContent>
           </Card>
@@ -159,6 +201,66 @@ export default async function AssignmentDetailPage({
               <CardTitle>Assignment contract</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {assignment.financialContract ? (
+                <div className="grid gap-4 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/60 p-4 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <Text tone="muted">Contract type</Text>
+                    <Text>{assignment.financialContract.display.summaryLabel}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Expected installment</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.summary.expectedPerPeriodAmountMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Contract status</Text>
+                    <Badge
+                      tone={
+                        assignment.financialContract.summary.contractStatus === 'completed'
+                          ? 'success'
+                          : assignment.financialContract.summary.contractStatus === 'overdue'
+                            ? 'danger'
+                            : 'warning'
+                      }
+                    >
+                      {assignment.financialContract.summary.contractStatus}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Paid so far</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.summary.cumulativePaidAmountMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Outstanding balance</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.summary.outstandingBalanceMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Next due</Text>
+                    <Text>
+                      {assignment.financialContract.summary.nextDueDate
+                        ? `${formatDateTime(`${assignment.financialContract.summary.nextDueDate}T00:00:00.000Z`)} · ${formatMoney(
+                            assignment.financialContract.summary.nextDueAmountMinorUnits,
+                            assignment.financialContract.currency,
+                          )}`
+                        : 'No further due date'}
+                    </Text>
+                  </div>
+                </div>
+              ) : null}
               <div className="space-y-1">
                 <Text tone="muted">Contract status</Text>
                 <Badge tone={assignment.contractStatus === 'accepted' ? 'success' : 'warning'}>
@@ -172,10 +274,48 @@ export default async function AssignmentDetailPage({
               <div className="space-y-1">
                 <Text tone="muted">Expected terms</Text>
                 <Text>
-                  {assignment.contractSnapshot?.expectedRemittanceTerms ??
+                  {assignment.financialContract?.display.expectedRemittanceTerms ??
+                    assignment.contractSnapshot?.expectedRemittanceTerms ??
                     'Contract terms will be generated from the current remittance plan.'}
                 </Text>
               </div>
+              {assignment.financialContract?.hirePurchase ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <Text tone="muted">Total target</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.hirePurchase.totalTargetAmountMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Principal</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.hirePurchase.principalAmountMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Deposit</Text>
+                    <Text>
+                      {formatMoney(
+                        assignment.financialContract.hirePurchase.depositAmountMinorUnits,
+                        assignment.financialContract.currency,
+                      )}
+                    </Text>
+                  </div>
+                </div>
+              ) : null}
+              {assignment.financialContract?.summary.riskSignals.length ? (
+                <div className="space-y-1">
+                  <Text tone="muted">Performance signals</Text>
+                  <Text>{assignment.financialContract.summary.riskSignals.join(' • ')}</Text>
+                </div>
+              ) : null}
               {assignment.driverAcceptedTermsAt ? (
                 <div className="space-y-1">
                   <Text tone="muted">Accepted at</Text>

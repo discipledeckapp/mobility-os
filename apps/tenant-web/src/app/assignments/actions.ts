@@ -120,6 +120,30 @@ export async function createAssignmentAction(
     formData,
     'remittanceCollectionDay' as keyof CreateAssignmentInput,
   );
+  const contractType = getTrimmedValue(
+    formData,
+    'contractType' as keyof CreateAssignmentInput,
+  );
+  const principalAmount = getTrimmedValue(
+    formData,
+    'principalAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const totalTargetAmount = getTrimmedValue(
+    formData,
+    'totalTargetAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const depositAmount = getTrimmedValue(
+    formData,
+    'depositAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const contractDurationPeriods = getTrimmedValue(
+    formData,
+    'contractDurationPeriods' as keyof CreateAssignmentInput,
+  );
+  const contractEndDate = getTrimmedValue(
+    formData,
+    'contractEndDate' as keyof CreateAssignmentInput,
+  );
 
   if (!payload.fleetId || !payload.driverId || !payload.vehicleId) {
     return {
@@ -127,10 +151,18 @@ export async function createAssignmentAction(
     };
   }
 
+  payload.contractType =
+    contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire';
   payload.remittanceFrequency =
-    remittanceFrequency === 'weekly' ? 'weekly' : 'daily';
+    remittanceFrequency === 'weekly'
+      ? 'weekly'
+      : remittanceFrequency === 'monthly'
+        ? 'monthly'
+        : 'daily';
   payload.remittanceModel =
-    remittanceModel === 'hire_purchase' ? 'hire_purchase' : 'fixed';
+    remittanceModel === 'hire_purchase' || payload.contractType === 'hire_purchase'
+      ? 'hire_purchase'
+      : 'fixed';
   if (remittanceCurrency) {
     payload.remittanceCurrency = remittanceCurrency.toUpperCase();
   }
@@ -139,6 +171,21 @@ export async function createAssignmentAction(
   }
   if (remittanceCollectionDay) {
     payload.remittanceCollectionDay = Number(remittanceCollectionDay);
+  }
+  if (principalAmount) {
+    payload.principalAmountMinorUnits = Number(principalAmount);
+  }
+  if (totalTargetAmount) {
+    payload.totalTargetAmountMinorUnits = Number(totalTargetAmount);
+  }
+  if (depositAmount) {
+    payload.depositAmountMinorUnits = Number(depositAmount);
+  }
+  if (contractDurationPeriods) {
+    payload.contractDurationPeriods = Number(contractDurationPeriods);
+  }
+  if (contractEndDate) {
+    payload.contractEndDate = contractEndDate;
   }
 
   if (notes) {
@@ -191,6 +238,30 @@ export async function updateAssignmentRemittancePlanAction(
     formData,
     'remittanceCollectionDay' as keyof CreateAssignmentInput,
   );
+  const contractType = getTrimmedValue(
+    formData,
+    'contractType' as keyof CreateAssignmentInput,
+  );
+  const principalAmount = getTrimmedValue(
+    formData,
+    'principalAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const totalTargetAmount = getTrimmedValue(
+    formData,
+    'totalTargetAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const depositAmount = getTrimmedValue(
+    formData,
+    'depositAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
+  const contractDurationPeriods = getTrimmedValue(
+    formData,
+    'contractDurationPeriods' as keyof CreateAssignmentInput,
+  );
+  const contractEndDate = getTrimmedValue(
+    formData,
+    'contractEndDate' as keyof CreateAssignmentInput,
+  );
 
   if (!assignmentId) {
     return { error: 'Assignment ID is required.' };
@@ -204,12 +275,30 @@ export async function updateAssignmentRemittancePlanAction(
   try {
     const payload = {
       remittanceAmountMinorUnits: Math.round(parsedAmount),
-      remittanceFrequency: remittanceFrequency === 'weekly' ? 'weekly' : 'daily',
+      ...(contractType
+        ? {
+            contractType:
+              contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire',
+          }
+        : {}),
+      remittanceFrequency:
+        remittanceFrequency === 'weekly'
+          ? 'weekly'
+          : remittanceFrequency === 'monthly'
+            ? 'monthly'
+            : 'daily',
       ...(remittanceCurrency ? { remittanceCurrency: remittanceCurrency.toUpperCase() } : {}),
       ...(remittanceStartDate ? { remittanceStartDate } : {}),
       ...(remittanceCollectionDay
         ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
         : {}),
+      ...(principalAmount ? { principalAmountMinorUnits: Number(principalAmount) } : {}),
+      ...(totalTargetAmount ? { totalTargetAmountMinorUnits: Number(totalTargetAmount) } : {}),
+      ...(depositAmount ? { depositAmountMinorUnits: Number(depositAmount) } : {}),
+      ...(contractDurationPeriods
+        ? { contractDurationPeriods: Number(contractDurationPeriods) }
+        : {}),
+      ...(contractEndDate ? { contractEndDate } : {}),
     } satisfies UpdateAssignmentRemittancePlanInput;
     await updateAssignmentRemittancePlan(assignmentId, payload);
   } catch (error) {

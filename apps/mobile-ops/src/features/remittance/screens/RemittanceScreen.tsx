@@ -100,14 +100,17 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     [eligibleAssignments, selectedAssignmentId],
   );
   const suggestedAmount = useMemo(() => {
-    if (!selectedAssignment?.remittanceAmountMinorUnits) {
+    const nextDueAmountMinorUnits =
+      selectedAssignment?.financialContract?.summary.nextDueAmountMinorUnits ??
+      selectedAssignment?.financialContract?.summary.expectedPerPeriodAmountMinorUnits ??
+      selectedAssignment?.remittanceAmountMinorUnits;
+    if (!nextDueAmountMinorUnits) {
       return '';
     }
     return String(
-      selectedAssignment.remittanceAmountMinorUnits /
-        getCurrencyMultiplier(session?.currencyMinorUnit),
+      nextDueAmountMinorUnits / getCurrencyMultiplier(session?.currencyMinorUnit),
     );
-  }, [selectedAssignment?.remittanceAmountMinorUnits, session?.currencyMinorUnit]);
+  }, [selectedAssignment?.financialContract, selectedAssignment?.remittanceAmountMinorUnits, session?.currencyMinorUnit]);
   const suggestedDueDate = useMemo(() => {
     if (!selectedAssignment) {
       return null;
@@ -377,8 +380,8 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           onChangeText={setAmount}
           value={amount}
           helperText={
-            selectedAssignment?.remittanceAmountMinorUnits
-              ? 'This amount is pulled from the assignment remittance plan.'
+            selectedAssignment?.financialContract
+              ? `${selectedAssignment.financialContract.display.summaryLabel} installment is prefilled from the contract summary.`
               : `The app converts this to minor units using ${
                   session?.currencyMinorUnit ?? 2
                 } decimal place${session?.currencyMinorUnit === 1 ? '' : 's'} before submit.`
@@ -415,6 +418,24 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
                   ? { remittanceCollectionDay: selectedAssignment.remittanceCollectionDay }
                   : {}),
               })}
+          </Text>
+        ) : null}
+        {selectedAssignment?.financialContract ? (
+          <Text style={styles.helper}>
+            Paid so far {(
+              selectedAssignment.financialContract.summary.cumulativePaidAmountMinorUnits / 100
+            ).toLocaleString(session?.formattingLocale ?? 'en-NG', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}{' '}
+            {selectedAssignment.financialContract.currency}. Remaining balance{' '}
+            {(
+              (selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits ?? 0) / 100
+            ).toLocaleString(session?.formattingLocale ?? 'en-NG', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}{' '}
+            {selectedAssignment.financialContract.currency}.
           </Text>
         ) : null}
 

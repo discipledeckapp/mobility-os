@@ -360,10 +360,43 @@ export function AssignmentDetailScreen({ navigation, route }: ScreenProps<'Assig
             Confirmation: {assignment.driverConfirmationMethod ?? 'Not recorded'}
           </Text>
           {assignment.notes ? <Text style={styles.meta}>Notes: {assignment.notes}</Text> : null}
-          {assignment.contractSnapshot?.expectedRemittanceTerms ? (
+          {assignment.financialContract ? (
             <Text style={styles.meta}>
-              Contract: {assignment.contractSnapshot.expectedRemittanceTerms}
+              Contract: {assignment.financialContract.display.expectedRemittanceTerms}
             </Text>
+          ) : null}
+          {assignment.financialContract ? (
+            <>
+              <Text style={styles.meta}>
+                Paid so far:{' '}
+                {(assignment.financialContract.summary.cumulativePaidAmountMinorUnits / 100).toLocaleString(
+                  session?.formattingLocale ?? 'en-NG',
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                )}{' '}
+                {assignment.financialContract.currency}
+              </Text>
+              {assignment.financialContract.summary.outstandingBalanceMinorUnits !== null &&
+              assignment.financialContract.summary.outstandingBalanceMinorUnits !== undefined ? (
+                <Text style={styles.meta}>
+                  Remaining balance:{' '}
+                  {(assignment.financialContract.summary.outstandingBalanceMinorUnits / 100).toLocaleString(
+                    session?.formattingLocale ?? 'en-NG',
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                  )}{' '}
+                  {assignment.financialContract.currency}
+                </Text>
+              ) : null}
+              {assignment.financialContract.summary.nextDueDate ? (
+                <Text style={styles.meta}>
+                  Next due: {assignment.financialContract.summary.nextDueDate} ·{' '}
+                  {((assignment.financialContract.summary.nextDueAmountMinorUnits ?? 0) / 100).toLocaleString(
+                    session?.formattingLocale ?? 'en-NG',
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                  )}{' '}
+                  {assignment.financialContract.currency}
+                </Text>
+              ) : null}
+            </>
           ) : null}
         </Card>
 
