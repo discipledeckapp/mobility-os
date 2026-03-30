@@ -1,15 +1,24 @@
+import type { Route } from 'next';
+import { redirect } from 'next/navigation';
 import { TenantDashboardShell } from '../features/dashboard/tenant-dashboard-shell';
 import {
   getDashboardData,
 } from '../features/dashboard/tenant-dashboard-data';
 import { getTenantApiToken, getTenantMe, getTenantSession } from '../lib/api-core';
+import { getSelfServiceContinuationPath } from '../lib/auth';
 
 export default async function HomePage() {
   const token = await getTenantApiToken().catch(() => undefined);
-  const [dashboardData, tenant, session] = await Promise.all([
+  const session = await getTenantSession(token).catch(() => null);
+  const continuationPath = getSelfServiceContinuationPath(session);
+
+  if (continuationPath) {
+    redirect(continuationPath as Route);
+  }
+
+  const [dashboardData, tenant] = await Promise.all([
     getDashboardData(token),
     getTenantMe(token).catch(() => null),
-    getTenantSession(token).catch(() => null),
   ]);
 
   return (

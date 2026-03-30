@@ -17,10 +17,19 @@ interface JwtPayload {
   role?: string;
   operatingUnitId?: string;
   accessMode?: 'tenant_user' | 'driver_mobile';
+  mobileRole?: 'driver' | 'field_officer' | null;
   linkedDriverId?: string;
   selfServiceSubjectType?: 'driver' | 'guarantor';
   selfServiceDriverId?: string;
 }
+
+type SelfServiceRoutingContext = {
+  accessMode?: JwtPayload['accessMode'] | null;
+  mobileRole?: JwtPayload['mobileRole'] | null;
+  selfServiceSubjectType?: JwtPayload['selfServiceSubjectType'] | null;
+  linkedDriverId?: string | null;
+  selfServiceDriverId?: string | null;
+};
 
 function getMaxAgeFromToken(token: string | undefined): number | undefined {
   const payload = decodeJwtPayload(token);
@@ -85,7 +94,9 @@ export function parseTenantJwtPayload(token: string | undefined): JwtPayload | n
   return decodeJwtPayload(token);
 }
 
-export function getSelfServiceContinuationPath(payload: JwtPayload | null): string | null {
+export function getSelfServiceContinuationPath(
+  payload: SelfServiceRoutingContext | null | undefined,
+): string | null {
   if (!payload) {
     return null;
   }
@@ -97,7 +108,9 @@ export function getSelfServiceContinuationPath(payload: JwtPayload | null): stri
   if (
     payload.selfServiceSubjectType === 'driver' ||
     payload.accessMode === 'driver_mobile' ||
-    typeof payload.linkedDriverId === 'string'
+    payload.mobileRole === 'driver' ||
+    typeof payload.linkedDriverId === 'string' ||
+    typeof payload.selfServiceDriverId === 'string'
   ) {
     return '/driver-self-service/continue';
   }
