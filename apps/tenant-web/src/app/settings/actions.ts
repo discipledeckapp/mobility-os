@@ -67,6 +67,7 @@ export async function updateOrganisationSettingsAction(
   const displayName = String(formData.get('displayName') ?? '').trim();
   const logoUrl = String(formData.get('logoUrl') ?? '').trim();
   const defaultLanguage = String(formData.get('defaultLanguage') ?? '').trim();
+  const verificationTier = String(formData.get('verificationTierSelect') ?? '').trim();
   const guarantorMaxActiveDrivers = Number(formData.get('guarantorMaxActiveDrivers') ?? 2);
   const autoSendDriverSelfServiceLinkOnCreate = readBoolean(
     'autoSendDriverSelfServiceLinkOnCreate',
@@ -96,6 +97,11 @@ export async function updateOrganisationSettingsAction(
       ...(displayName ? { displayName } : {}),
       ...(logoUrl ? { logoUrl } : {}),
       ...(defaultLanguage === 'en' || defaultLanguage === 'fr' ? { defaultLanguage } : {}),
+      ...(verificationTier === 'BASIC_IDENTITY' ||
+      verificationTier === 'VERIFIED_IDENTITY' ||
+      verificationTier === 'FULL_TRUST_VERIFICATION'
+        ? { verificationTier }
+        : {}),
       ...(Number.isFinite(guarantorMaxActiveDrivers)
         ? { guarantorMaxActiveDrivers }
         : {}),

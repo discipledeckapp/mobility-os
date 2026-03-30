@@ -267,6 +267,9 @@ model Driver {
   // Per-driver override for the driverPaysKyc org setting.
   // null = use the org-level default; true/false = explicit override for this driver.
   driverPaysKycOverride Boolean?
+  // Per-driver override for the organisation verification tier.
+  // null = use the org-level default tier; otherwise force this driver through the selected tier.
+  verificationTierOverride String?
 
   // Admin-set override that marks this driver as eligible for assignment even when
   // the standard readiness checks are incomplete (e.g. liveness not done but all
@@ -281,6 +284,9 @@ model Driver {
   adminAssignmentOverrideOtpExpiresAt DateTime?
   adminAssignmentOverrideConfirmedAt DateTime?
   adminAssignmentOverrideConfirmedBy String?
+  archivedAt DateTime?
+  archivedBy String?
+  archiveReason String?
 
   // Denormalized for fast lookups without joining fleet → operating unit → business entity.
   businessEntityId String
@@ -299,6 +305,8 @@ model Driver {
   @@index([tenantId])
   @@index([fleetId])
   @@index([personId])
+  @@index([tenantId, archivedAt])
+  @@index([tenantId, verificationTierOverride])
   // Phone unique per tenant — same driver cannot enroll twice under one tenant.
   @@unique([tenantId, phone])
   @@map("drivers")

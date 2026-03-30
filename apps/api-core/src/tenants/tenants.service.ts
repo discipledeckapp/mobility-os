@@ -51,6 +51,9 @@ export class TenantsService {
         ...(dto.displayName !== undefined ? { displayName: dto.displayName.trim() } : {}),
         ...(dto.logoUrl !== undefined ? { logoUrl: dto.logoUrl.trim() } : {}),
         ...(dto.defaultLanguage !== undefined ? { defaultLanguage: dto.defaultLanguage } : {}),
+        ...(dto.verificationTier !== undefined
+          ? { verificationTier: dto.verificationTier }
+          : {}),
         ...(dto.guarantorMaxActiveDrivers !== undefined
           ? { guarantorMaxActiveDrivers: dto.guarantorMaxActiveDrivers }
           : {}),

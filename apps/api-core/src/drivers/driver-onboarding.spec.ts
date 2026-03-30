@@ -46,6 +46,7 @@ function makeDriver(overrides: Record<string, unknown> = {}) {
     kycPaymentVerifiedAt: null,
     adminAssignmentOverride: false,
     driverPaysKycOverride: null,
+    verificationTierOverride: null,
     gender: null,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
@@ -928,6 +929,66 @@ describe('Driver onboarding — onboarding step state machine', () => {
     expect(step.step).toBe('account');
     expect(step.verificationTier).toBe('BASIC_IDENTITY');
     expect(step.verificationTierLabel).toBe('Basic Identity');
+  });
+
+  it('respects an explicitly selected verified tier even when legacy booleans are not set', async () => {
+    setup({
+      operations: {
+        verificationTier: 'VERIFIED_IDENTITY',
+        driverPaysKyc: false,
+        requireGuarantor: false,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.user.findFirst.mockResolvedValue(null);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.verificationTier).toBe('VERIFIED_IDENTITY');
+    expect(step.verificationTierLabel).toBe('Verified Identity');
+  });
+
+  it('respects an explicitly selected full tier for onboarding requirements and pricing context', async () => {
+    setup({
+      operations: {
+        verificationTier: 'FULL_TRUST_VERIFICATION',
+        driverPaysKyc: false,
+        requireGuarantor: false,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.user.findFirst.mockResolvedValue(null);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+    expect(step.verificationTierLabel).toBe('Full Trust Verification');
+  });
+
+  it('uses a per-driver reverification tier override when the tenant admin requests a stronger tier', async () => {
+    setup({
+      operations: {
+        verificationTier: 'BASIC_IDENTITY',
+        driverPaysKyc: false,
+        requireGuarantor: false,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        verificationTierOverride: 'FULL_TRUST_VERIFICATION',
+        identityStatus: 'verified',
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+    expect(step.verificationTierLabel).toBe('Full Trust Verification');
+    expect(step.verificationTierComponents).toEqual(
+      expect.arrayContaining(['identity', 'guarantor', 'drivers_license']),
+    );
   });
 
   it('returns identity_verification when name or DOB is missing because profile is provider-filled', async () => {

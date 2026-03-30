@@ -352,9 +352,28 @@ export class DriversController {
   sendSelfServiceLink(
     @CurrentTenant() ctx: TenantContext,
     @Param('id') id: string,
-    @Body() body?: { driverPaysKycOverride?: boolean },
+    @Body()
+    body?: {
+      driverPaysKycOverride?: boolean;
+      verificationTierOverride?:
+        | 'BASIC_IDENTITY'
+        | 'VERIFIED_IDENTITY'
+        | 'FULL_TRUST_VERIFICATION';
+      forceReverification?: boolean;
+    },
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string }> {
-    return this.service.sendSelfServiceLink(ctx.tenantId, id, body?.driverPaysKycOverride);
+    return this.service.sendSelfServiceLink(ctx.tenantId, id, {
+      ...(body?.driverPaysKycOverride !== undefined
+        ? { driverPaysKycOverride: body.driverPaysKycOverride }
+        : {}),
+      ...(body?.verificationTierOverride
+        ? { verificationTierOverride: body.verificationTierOverride }
+        : {}),
+      ...(body?.forceReverification !== undefined
+        ? { forceReverification: body.forceReverification }
+        : {}),
+      requestedBy: ctx.userId ?? null,
+    });
   }
 
   @Get(':id/guarantor')
@@ -659,6 +678,24 @@ export class DriversController {
       return this.service
         .updateStatus(ctx.tenantId, id, status)
         .then((updatedDriver) => this.toResponse(updatedDriver));
+    });
+  }
+
+  @Post(':id/archive')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  archiveDriver(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ): Promise<{ message: string; mode: 'archived' }> {
+    return this.service.findOne(ctx.tenantId, id).then((driver) => {
+      assertFleetAccess(ctx, driver.fleetId);
+      return this.service.archiveDriver(ctx.tenantId, id, {
+        archivedBy: ctx.userId ?? null,
+        ...(reason !== undefined ? { reason } : {}),
+      });
     });
   }
 

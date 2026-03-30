@@ -210,6 +210,26 @@ type DriverOperationalProfile = {
   emergencyContactRelationship?: string;
 };
 
+const DRIVER_OPERATIONAL_FIELD_LABELS: Record<keyof DriverOperationalProfile, string> = {
+  phoneNumber: 'Phone number',
+  address: 'Address',
+  town: 'Town',
+  localGovernmentArea: 'Local government area',
+  state: 'State',
+  nextOfKinName: 'Next of kin name',
+  nextOfKinPhone: 'Next of kin phone',
+  nextOfKinRelationship: 'Next of kin relationship',
+  emergencyContactName: 'Emergency contact name',
+  emergencyContactPhone: 'Emergency contact phone',
+  emergencyContactRelationship: 'Emergency contact relationship',
+};
+
+const DRIVER_VERIFICATION_TIERS: VerificationTier[] = [
+  'BASIC_IDENTITY',
+  'VERIFIED_IDENTITY',
+  'FULL_TRUST_VERIFICATION',
+];
+
 type SelfServiceAssignmentSummary = {
   id: string;
   status: string;
@@ -679,6 +699,68 @@ export class DriversService {
       const value = profile[field];
       return typeof value !== 'string' || value.trim().length === 0;
     });
+  }
+
+  private formatOperationalFieldLabels(
+    fields: Array<keyof DriverOperationalProfile>,
+  ): string[] {
+    return fields.map((field) => DRIVER_OPERATIONAL_FIELD_LABELS[field] ?? field);
+  }
+
+  private normalizeDriverVerificationTierOverride(
+    tier?: string | null,
+  ): VerificationTier | null {
+    if (!tier) {
+      return null;
+    }
+    return DRIVER_VERIFICATION_TIERS.includes(tier as VerificationTier)
+      ? (tier as VerificationTier)
+      : null;
+  }
+
+  private getEffectiveDriverVerificationTier(
+    settings: {
+      verificationTier?: VerificationTier;
+      requireGuarantor?: boolean;
+      requiredDriverDocumentSlugs?: string[];
+    },
+    driver: { verificationTierOverride?: string | null },
+  ): VerificationTier {
+    return (
+      this.normalizeDriverVerificationTierOverride(driver.verificationTierOverride) ??
+      resolveVerificationTier(settings)
+    );
+  }
+
+  private getEffectiveDriverVerificationPolicy(
+    settings: {
+      verificationTier?: VerificationTier;
+      requireGuarantor?: boolean;
+      requiredDriverDocumentSlugs?: string[];
+    },
+    driver: { verificationTierOverride?: string | null },
+    currency = 'NGN',
+  ) {
+    const tier = this.getEffectiveDriverVerificationTier(settings, driver);
+    return resolveVerificationPolicy({ verificationTier: tier }, currency);
+  }
+
+  private getEffectiveDriverOperationsSettings<
+    TSettings extends {
+      verificationTier?: VerificationTier;
+      requireGuarantor?: boolean;
+      requiredDriverDocumentSlugs?: string[];
+    },
+  >(settings: TSettings, driver: { verificationTierOverride?: string | null }): TSettings {
+    const policy = this.getEffectiveDriverVerificationPolicy(settings, driver);
+    return {
+      ...settings,
+      verificationTier: policy.tier,
+      requireGuarantor: policy.components.includes('guarantor'),
+      requiredDriverDocumentSlugs: policy.components.includes('drivers_license')
+        ? [DRIVER_LICENCE_DOCUMENT_TYPE]
+        : [],
+    };
   }
 
   private normalizeComparableText(value?: string | null): string | null {
@@ -1860,14 +1942,18 @@ export class DriversService {
       select: { country: true, metadata: true },
     });
     const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-    const verificationTier = resolveVerificationTier(settings.operations);
+    const effectiveOperations = this.getEffectiveDriverOperationsSettings(
+      settings.operations,
+      driver,
+    );
+    const verificationTier = effectiveOperations.verificationTier;
     const countryCode = driver.nationality ?? tenant?.country ?? null;
     const verificationCurrency =
       countryCode && isCountrySupported(countryCode)
         ? getCountryConfig(countryCode).currency
         : 'NGN';
     const verificationTierPolicy = resolveVerificationPolicy(
-      settings.operations,
+      { verificationTier },
       verificationCurrency,
     );
     const verificationAmountMinorUnits = verificationTierPolicy.price.amountMinorUnits;
@@ -2014,7 +2100,7 @@ export class DriversService {
       verificationTier: verificationTierPolicy.tier,
       enabledDriverIdentifierTypes: settings.operations.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: settings.operations.requiredDriverIdentifierTypes,
-      requiredDriverDocumentSlugs: settings.operations.requiredDriverDocumentSlugs,
+      requiredDriverDocumentSlugs: effectiveOperations.requiredDriverDocumentSlugs,
       driverPaysKyc,
       kycPaymentVerified,
       verificationPaymentState,
@@ -2306,6 +2392,7 @@ export class DriversService {
     const searchQuery = input.q?.trim();
     const where: Prisma.DriverWhereInput = {
       tenantId,
+      archivedAt: null,
       ...(input.fleetId
         ? { fleetId: input.fleetId }
         : input.fleetIds?.length
@@ -2353,11 +2440,11 @@ export class DriversService {
     const { driverCap } = await this.subscriptionEntitlementsService.getCapInfo(tenantId);
     let lockedDriverIds: Set<string> | null = null;
     if (driverCap !== null) {
-      const totalCount = await this.prisma.driver.count({ where: { tenantId } });
+      const totalCount = await this.prisma.driver.count({ where: { tenantId, archivedAt: null } });
       if (totalCount > driverCap) {
         // The first `driverCap` drivers by createdAt are unlocked; everything else is locked.
         const unlockedRows = await this.prisma.driver.findMany({
-          where: { tenantId },
+          where: { tenantId, archivedAt: null },
           orderBy: { createdAt: 'asc' },
           take: driverCap,
           select: { id: true },
@@ -2393,9 +2480,9 @@ export class DriversService {
   > {
     const driver = (await this.prisma.driver.findUnique({
       where: { id },
-    })) as DriverWithIdentityState | null;
+    })) as (DriverWithIdentityState & { archivedAt?: Date | null }) | null;
 
-    if (!driver) {
+    if (!driver || driver.archivedAt) {
       throw new NotFoundException(`Driver '${id}' not found`);
     }
 
@@ -2533,13 +2620,19 @@ export class DriversService {
       this.findOne(payload.tenantId, payload.driverId),
       this.getOrganisationSettings(payload.tenantId),
     ]);
+    const effectiveOperations = this.getEffectiveDriverOperationsSettings(
+      settings.operations,
+      driver,
+    );
     const verificationPolicy = await this.getSelfServiceVerificationPolicy(
       payload.tenantId,
       driver,
     );
 
     const selfServiceLocalRiskFlags: string[] = [];
-    const verificationTierPolicy = resolveVerificationPolicy(settings.operations);
+    const verificationTierPolicy = resolveVerificationPolicy({
+      verificationTier: effectiveOperations.verificationTier,
+    });
     if (
       !verificationTierPolicy.components.includes('guarantor') &&
       !driver.hasGuarantor
@@ -2640,8 +2733,14 @@ export class DriversService {
       this.findOne(payload.tenantId, payload.driverId),
       this.getOrganisationSettings(payload.tenantId),
     ]);
+    const effectiveOperations = this.getEffectiveDriverOperationsSettings(
+      settings.operations,
+      driver,
+    );
     const policy = await this.getSelfServiceVerificationPolicy(payload.tenantId, driver);
-    const verificationTierPolicy = resolveVerificationPolicy(settings.operations);
+    const verificationTierPolicy = resolveVerificationPolicy({
+      verificationTier: effectiveOperations.verificationTier,
+    });
     const onboardingContext = {
       verificationTier: verificationTierPolicy.tier,
       verificationTierLabel: verificationTierPolicy.label,
@@ -3267,22 +3366,106 @@ export class DriversService {
   async sendSelfServiceLink(
     tenantId: string,
     id: string,
-    driverPaysKycOverride?: boolean,
+    options: {
+      driverPaysKycOverride?: boolean;
+      verificationTierOverride?: VerificationTier;
+      forceReverification?: boolean;
+      requestedBy?: string | null;
+    } = {},
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
     const driver = await this.findOne(tenantId, id);
-
-    // Persist per-driver KYC payment override if explicitly provided
-    if (driverPaysKycOverride !== undefined) {
-      await this.prisma.driver.update({
-        where: { id: driver.id },
-        data: { driverPaysKycOverride },
-      });
-    }
 
     if (!driver.email) {
       throw new BadRequestException(
         'Driver has no email; please add one before sending a self-service link.',
       );
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: driver.tenantId },
+      select: { name: true, country: true, metadata: true },
+    });
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const requestedTierOverride =
+      this.normalizeDriverVerificationTierOverride(options.verificationTierOverride) ??
+      this.getEffectiveDriverVerificationTier(settings.operations, driver);
+    const storedTierOverride =
+      requestedTierOverride === settings.operations.verificationTier ? null : requestedTierOverride;
+    const shouldResetForFreshVerification = options.forceReverification === true;
+
+    if (
+      options.driverPaysKycOverride !== undefined ||
+      storedTierOverride !== this.normalizeDriverVerificationTierOverride(driver.verificationTierOverride) ||
+      shouldResetForFreshVerification
+    ) {
+      const updatePayload: Prisma.DriverUpdateInput = {
+        ...(options.driverPaysKycOverride !== undefined
+          ? { driverPaysKycOverride: options.driverPaysKycOverride }
+          : {}),
+        verificationTierOverride: storedTierOverride,
+      };
+
+      if (shouldResetForFreshVerification) {
+        Object.assign(updatePayload, {
+          identityStatus: 'unverified',
+          identityReviewCaseId: null,
+          identityReviewStatus: null,
+          identityLastDecision: null,
+          identityVerificationConfidence: null,
+          identityLastVerifiedAt: null,
+          identityLivenessPassed: null,
+          identityLivenessProvider: null,
+          identityLivenessConfidence: null,
+          identityLivenessReason: null,
+          kycPaymentReference: null,
+          kycPaymentVerifiedAt: null,
+          adminAssignmentOverride: false,
+          adminAssignmentOverrideRequestedAt: null,
+          adminAssignmentOverrideRequestedBy: null,
+          adminAssignmentOverrideReason: null,
+          adminAssignmentOverrideEvidence: Prisma.JsonNull,
+          adminAssignmentOverrideOtpHash: null,
+          adminAssignmentOverrideOtpExpiresAt: null,
+          adminAssignmentOverrideConfirmedAt: null,
+          adminAssignmentOverrideConfirmedBy: null,
+        } satisfies Prisma.DriverUpdateInput);
+      }
+
+      await this.prisma.driver.update({
+        where: { id: driver.id },
+        data: updatePayload,
+      });
+
+      await this.auditService.recordTenantAction({
+        tenantId,
+        entityType: 'driver',
+        entityId: driver.id,
+        action: shouldResetForFreshVerification
+          ? 'driver.reverification.requested'
+          : 'driver.verification.configuration.updated',
+        beforeState: {
+          verificationTierOverride:
+            this.normalizeDriverVerificationTierOverride(driver.verificationTierOverride) ?? null,
+          driverPaysKycOverride:
+            (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
+            null,
+          identityStatus: driver.identityStatus,
+        },
+        afterState: {
+          verificationTierOverride: storedTierOverride,
+          driverPaysKycOverride:
+            options.driverPaysKycOverride !== undefined
+              ? options.driverPaysKycOverride
+              : (driver as Driver & { driverPaysKycOverride?: boolean | null })
+                  .driverPaysKycOverride ?? null,
+          identityStatus: shouldResetForFreshVerification ? 'unverified' : driver.identityStatus,
+        },
+        metadata: {
+          requestedTier: requestedTierOverride,
+          forceReverification: shouldResetForFreshVerification,
+          requestedBy: options.requestedBy ?? null,
+        },
+      });
     }
 
     const [token, otpCode] = await Promise.all([
@@ -3291,10 +3474,6 @@ export class DriversService {
     ]);
 
     const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/driver-self-service?token=${encodeURIComponent(token)}`;
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: driver.tenantId },
-      select: { name: true, country: true, metadata: true },
-    });
 
     await this.authEmailService.sendDriverSelfServiceVerificationEmail({
       email: driver.email,
@@ -5083,8 +5262,13 @@ export class DriversService {
     if (isDriverLicenceVerification) {
       const notificationContext = await this.getTenantNotificationContext(payload.tenantId);
       const settings = await this.getOrganisationSettings(payload.tenantId);
-      const verificationTier = resolveVerificationTier(settings.operations);
-      const verificationTierDescriptor = getVerificationTierDescriptor(verificationTier);
+      const effectiveOperations = this.getEffectiveDriverOperationsSettings(
+        settings.operations,
+        driver,
+      );
+      const verificationTierDescriptor = getVerificationTierDescriptor(
+        effectiveOperations.verificationTier,
+      );
       await this.notificationsService.notifyDriverVerificationStatus({
         tenantId: payload.tenantId,
         driverId: driver.id,
@@ -5634,8 +5818,7 @@ export class DriversService {
     }
 
     if (!verificationPolicy.driverPaysKyc) {
-      const settings = await this.getOrganisationSettings(payload.tenantId);
-      const verificationTier = resolveVerificationTier(settings.operations);
+      const verificationTier = verificationPolicy.verificationTier;
       const spendApplication = await this.verificationSpendService.ensureVerificationSpendApplied({
         tenantId: payload.tenantId,
         subjectType: 'driver',
@@ -6256,6 +6439,15 @@ export class DriversService {
       ...existingOperationalProfile,
       ...normalizedProfile,
     };
+    const missingOperationalFields = this.getMissingOperationalProfileFields(nextOperationalProfile);
+
+    if (missingOperationalFields.length > 0) {
+      throw new BadRequestException(
+        `Complete the required profile fields before continuing: ${this.formatOperationalFieldLabels(
+          missingOperationalFields,
+        ).join(', ')}.`,
+      );
+    }
 
     await this.prisma.driver.update({
       where: { id: payload.driverId },
@@ -6354,7 +6546,8 @@ export class DriversService {
       DriverReadinessSummary,
   ): Promise<DriverCanonicalInsights | undefined> {
     const settings = await this.getOrganisationSettings(tenantId);
-    if (resolveVerificationTier(settings.operations) !== 'FULL_TRUST_VERIFICATION') {
+    const effectiveOperations = this.getEffectiveDriverOperationsSettings(settings.operations, driver);
+    if (effectiveOperations.verificationTier !== 'FULL_TRUST_VERIFICATION') {
       return undefined;
     }
 
@@ -6614,7 +6807,7 @@ export class DriversService {
     }
 
     const currentDriverCount = await this.prisma.driver.count({
-      where: { tenantId },
+      where: { tenantId, archivedAt: null },
     });
     await this.subscriptionEntitlementsService.enforceDriverCapacity(tenantId, currentDriverCount);
 
@@ -6718,6 +6911,117 @@ export class DriversService {
     });
 
     return updated;
+  }
+
+  async archiveDriver(
+    tenantId: string,
+    id: string,
+    input: { reason?: string; archivedBy?: string | null } = {},
+  ): Promise<{ message: string; mode: 'archived' }> {
+    const driver = (await this.prisma.driver.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+        personId: true,
+        firstName: true,
+        lastName: true,
+        archivedAt: true,
+      },
+    })) as
+      | {
+          id: string;
+          tenantId: string;
+          status: string;
+          personId: string | null;
+          firstName: string | null;
+          lastName: string | null;
+          archivedAt: Date | null;
+        }
+      | null;
+
+    if (!driver) {
+      throw new NotFoundException(`Driver '${id}' not found`);
+    }
+
+    assertTenantOwnership(asTenantId(driver.tenantId), asTenantId(tenantId));
+
+    if (driver.archivedAt) {
+      throw new BadRequestException('This driver record has already been removed from the roster.');
+    }
+
+    const [activeAssignments, assignmentHistoryCount, remittanceHistoryCount] = await Promise.all([
+      this.prisma.assignment.count({
+        where: {
+          tenantId,
+          driverId: id,
+          status: {
+            in: ['created', 'pending_driver_confirmation', 'driver_action_required', 'accepted', 'active'],
+          },
+        },
+      }),
+      this.prisma.assignment.count({ where: { tenantId, driverId: id } }),
+      this.prisma.remittance.count({ where: { tenantId, driverId: id } }),
+    ]);
+
+    if (activeAssignments > 0) {
+      throw new BadRequestException(
+        'This driver still has active assignment activity. End or cancel the active assignment before removing the driver record.',
+      );
+    }
+
+    const archiveReason =
+      input.reason?.trim() ||
+      (assignmentHistoryCount > 0 || remittanceHistoryCount > 0
+        ? 'Archived from active roster with historical activity preserved.'
+        : 'Archived from active roster.');
+
+    const archivedAt = new Date();
+
+    await this.prisma.$transaction([
+      this.prisma.driver.update({
+        where: { id },
+        data: {
+          archivedAt,
+          archivedBy: input.archivedBy?.trim() || null,
+          archiveReason,
+          status: driver.status === 'active' ? 'terminated' : driver.status,
+        },
+      }),
+      this.prisma.user.updateMany({
+        where: { tenantId, driverId: id },
+        data: { isActive: false },
+      }),
+    ]);
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'driver',
+      entityId: id,
+      action: 'driver.archived',
+      beforeState: {
+        status: driver.status,
+        archivedAt: null,
+      },
+      afterState: {
+        status: driver.status === 'active' ? 'terminated' : driver.status,
+        archivedAt: archivedAt.toISOString(),
+      },
+      metadata: {
+        archiveReason,
+        hadAssignmentHistory: assignmentHistoryCount > 0,
+        hadRemittanceHistory: remittanceHistoryCount > 0,
+      },
+    });
+
+    return {
+      message:
+        assignmentHistoryCount > 0 || remittanceHistoryCount > 0
+          ? 'Driver removed from the active roster. Historical assignment and remittance records were preserved.'
+          : 'Driver removed from the active roster.',
+      mode: 'archived',
+    };
   }
 
   async initializeIdentityLivenessSession(
@@ -6892,6 +7196,58 @@ export class DriversService {
         ...(dto.livenessCheck ? { livenessCheck: dto.livenessCheck } : {}),
       },
     });
+
+    if (result.personId) {
+      const conflictingDriver = await this.prisma.driver.findFirst({
+        where: {
+          tenantId,
+          personId: result.personId,
+          id: { not: driver.id },
+          archivedAt: null,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          status: true,
+        },
+      });
+
+      if (conflictingDriver) {
+        const conflictingName =
+          [conflictingDriver.firstName, conflictingDriver.lastName].filter(Boolean).join(' ') ||
+          conflictingDriver.email ||
+          conflictingDriver.phone ||
+          conflictingDriver.id;
+
+        await this.auditService.recordTenantAction({
+          tenantId,
+          entityType: 'driver',
+          entityId: driver.id,
+          action: 'driver.identity.duplicate_detected',
+          beforeState: {
+            personId: driver.personId ?? null,
+            identityStatus: driver.identityStatus,
+          },
+          afterState: {
+            personId: result.personId,
+            conflictingDriverId: conflictingDriver.id,
+          },
+          metadata: {
+            conflictingDriverName: conflictingName,
+            conflictingDriverStatus: conflictingDriver.status,
+            duplicateSignal: 'same_person_in_same_tenant',
+          },
+        });
+
+        throw new ConflictException(
+          `This verified identity is already linked to ${conflictingName} in your organisation. ` +
+            'Review that existing driver record instead of creating a second driver identity.',
+        );
+      }
+    }
 
     const nextIdentityStatus = this.mapIdentityStatus(
       result.decision,
@@ -8270,7 +8626,10 @@ export class DriversService {
       drivers.map((driver) => driver.id),
     );
     return drivers.map((driver) => {
-      const readiness = this.computeReadiness(driver, settings.operations);
+      const readiness = this.computeReadiness(
+        driver,
+        this.getEffectiveDriverOperationsSettings(settings.operations, driver),
+      );
       const enforcementActions = activeActionsByDriverId.get(driver.id) ?? [];
       return {
         ...driver,

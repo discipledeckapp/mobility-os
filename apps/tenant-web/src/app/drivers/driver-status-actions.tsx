@@ -5,11 +5,14 @@ import { useActionState, useEffect, useMemo, useState } from 'react';
 import { Button, Text } from '@mobility-os/ui';
 import type { DriverRecord } from '../../lib/api-core';
 import {
+  removeDriverAction,
+  type RemoveDriverActionState,
   updateDriverStatusAction,
   type UpdateDriverStatusActionState,
 } from './actions';
 
 const initialState: UpdateDriverStatusActionState = {};
+const initialRemoveState: RemoveDriverActionState = {};
 
 function getDriverActions(
   driver: DriverRecord,
@@ -43,7 +46,16 @@ function getDriverActions(
 
   switch (driver.status) {
     case 'inactive':
-      return [activationAction];
+      return [
+        activationAction,
+        {
+          label: 'Remove',
+          nextStatus: 'archive',
+          confirm: true,
+          consequence:
+            'This removes the driver from your active roster. Historical records, if any, are preserved.',
+        },
+      ];
     case 'active':
       return [
         {
@@ -68,6 +80,23 @@ function getDriverActions(
           confirm: true,
           consequence: 'Terminating is permanent. Active assignments will be ended.',
         },
+        {
+          label: 'Remove',
+          nextStatus: 'archive',
+          confirm: true,
+          consequence:
+            'This removes the driver from your active roster. Historical records, if any, are preserved.',
+        },
+      ];
+    case 'terminated':
+      return [
+        {
+          label: 'Remove',
+          nextStatus: 'archive',
+          confirm: true,
+          consequence:
+            'This removes the driver from your active roster. Historical records, if any, are preserved.',
+        },
       ];
     default:
       return [];
@@ -84,14 +113,19 @@ export function DriverStatusActions({
     updateDriverStatusAction,
     initialState,
   );
+  const [removeState, removeFormAction, isRemoving] = useActionState(
+    removeDriverAction,
+    initialRemoveState,
+  );
   const [confirmingStatus, setConfirmingStatus] = useState<string | null>(null);
+  const [removeReason, setRemoveReason] = useState('');
   const actions = useMemo(() => getDriverActions(driver), [driver]);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success || removeState.success) {
       router.refresh();
     }
-  }, [router, state.success]);
+  }, [removeState.success, router, state.success]);
 
   if (actions.length === 0) {
     return <Text tone="muted">No actions</Text>;
@@ -104,6 +138,40 @@ export function DriverStatusActions({
           const isConfirming = confirmingStatus === action.nextStatus;
 
           if (action.confirm && isConfirming) {
+            if (action.nextStatus === 'archive') {
+              return (
+                <div className="flex flex-col gap-2" key={action.nextStatus}>
+                  <div className="space-y-0.5">
+                    <Text tone="muted">Confirm remove driver?</Text>
+                    {action.consequence ? <Text tone="danger">{action.consequence}</Text> : null}
+                  </div>
+                  <form action={removeFormAction} className="flex flex-col gap-2">
+                    <input name="driverId" type="hidden" value={driver.id} />
+                    <input name="reason" type="hidden" value={removeReason} />
+                    <textarea
+                      className="min-h-[80px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      onChange={(event) => setRemoveReason(event.target.value)}
+                      placeholder="Optional reason for removing this driver"
+                      value={removeReason}
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button disabled={isRemoving} size="sm" type="submit">
+                        {isRemoving ? 'Removing...' : 'Remove driver'}
+                      </Button>
+                      <Button
+                        disabled={isRemoving}
+                        onClick={() => setConfirmingStatus(null)}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              );
+            }
+
             return (
               <div className="flex flex-wrap items-center gap-2" key={action.nextStatus}>
                 <div className="space-y-0.5">
@@ -170,6 +238,8 @@ export function DriverStatusActions({
 
       {state.error ? <Text tone="danger">{state.error}</Text> : null}
       {state.success ? <Text tone="success">{state.success}</Text> : null}
+      {removeState.error ? <Text tone="danger">{removeState.error}</Text> : null}
+      {removeState.success ? <Text tone="success">{removeState.success}</Text> : null}
     </div>
   );
 }

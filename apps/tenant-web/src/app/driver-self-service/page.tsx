@@ -1564,6 +1564,24 @@ function formatNotificationDate(value: string): string {
   }).format(date);
 }
 
+const OPERATIONAL_FIELD_LABELS: Record<string, string> = {
+  phoneNumber: 'Phone number',
+  address: 'Address',
+  town: 'Town',
+  localGovernmentArea: 'Local government area',
+  state: 'State',
+  nextOfKinName: 'Next of kin name',
+  nextOfKinPhone: 'Next of kin phone',
+  nextOfKinRelationship: 'Next of kin relationship',
+  emergencyContactName: 'Emergency contact name',
+  emergencyContactPhone: 'Emergency contact phone',
+  emergencyContactRelationship: 'Emergency contact relationship',
+};
+
+function formatOperationalFieldLabel(field: string): string {
+  return OPERATIONAL_FIELD_LABELS[field] ?? field;
+}
+
 function notificationAssignmentId(notification: UserNotificationRecord): string | null {
   if (typeof notification.metadata?.assignmentId === 'string') {
     return notification.metadata.assignmentId;
@@ -1582,11 +1600,13 @@ function Field({
   value,
   onChange,
   required = true,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  error?: string | undefined;
 }) {
   return (
     <div>
@@ -1595,12 +1615,17 @@ function Field({
         {!required ? <span className="ml-1 text-slate-400">(Optional)</span> : null}
       </label>
       <input
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+          error
+            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
+            : 'border-slate-300 focus:border-blue-500 focus:ring-blue-100'
+        }`}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         type="text"
         value={value}
       />
+      {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}
     </div>
   );
 }
@@ -2152,11 +2177,47 @@ function OperationalProfileStep({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const requiredFieldValues: Record<string, string> = {
+    phoneNumber,
+    address,
+    town,
+    localGovernmentArea,
+    state: stateValue,
+    nextOfKinName,
+    nextOfKinPhone,
+    emergencyContactName,
+    emergencyContactPhone,
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setFieldErrors({});
+
+    const nextFieldErrors = Object.entries(requiredFieldValues).reduce<Record<string, string>>(
+      (acc, [field, value]) => {
+        if (!value.trim()) {
+          acc[field] = `${formatOperationalFieldLabel(field)} is required.`;
+        }
+        return acc;
+      },
+      {},
+    );
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setError(
+        `Complete the required fields before continuing: ${Object.keys(nextFieldErrors)
+          .map((field) => formatOperationalFieldLabel(field))
+          .join(', ')}.`,
+      );
+      setSaving(false);
+      return;
+    }
+
     try {
       await updateDriverSelfServiceProfile(token, {
         phoneNumber,
@@ -2171,7 +2232,15 @@ function OperationalProfileStep({
         emergencyContactPhone,
         emergencyContactRelationship,
       });
-      await onComplete();
+      try {
+        await onComplete();
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `Your details were saved, but we could not refresh onboarding yet. ${err.message}`
+            : 'Your details were saved, but we could not refresh onboarding yet. Please try again.',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save your profile right now.');
     } finally {
@@ -2231,17 +2300,29 @@ function OperationalProfileStep({
               <Badge tone="warning">You can edit these</Badge>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Phone number" value={phoneNumber} onChange={setPhoneNumber} />
-              <Field label="Address" value={address} onChange={setAddress} />
-              <Field label="Town" value={town} onChange={setTown} />
               <Field
+                error={fieldErrors.phoneNumber}
+                label="Phone number"
+                value={phoneNumber}
+                onChange={setPhoneNumber}
+              />
+              <Field error={fieldErrors.address} label="Address" value={address} onChange={setAddress} />
+              <Field error={fieldErrors.town} label="Town" value={town} onChange={setTown} />
+              <Field
+                error={fieldErrors.localGovernmentArea}
                 label="LGA"
                 value={localGovernmentArea}
                 onChange={setLocalGovernmentArea}
               />
-              <Field label="State" value={stateValue} onChange={setStateValue} />
-              <Field label="Next of kin name" value={nextOfKinName} onChange={setNextOfKinName} />
+              <Field error={fieldErrors.state} label="State" value={stateValue} onChange={setStateValue} />
               <Field
+                error={fieldErrors.nextOfKinName}
+                label="Next of kin name"
+                value={nextOfKinName}
+                onChange={setNextOfKinName}
+              />
+              <Field
+                error={fieldErrors.nextOfKinPhone}
                 label="Next of kin phone"
                 value={nextOfKinPhone}
                 onChange={setNextOfKinPhone}
@@ -2253,11 +2334,13 @@ function OperationalProfileStep({
                 required={false}
               />
               <Field
+                error={fieldErrors.emergencyContactName}
                 label="Emergency contact name"
                 value={emergencyContactName}
                 onChange={setEmergencyContactName}
               />
               <Field
+                error={fieldErrors.emergencyContactPhone}
                 label="Emergency contact phone"
                 value={emergencyContactPhone}
                 onChange={setEmergencyContactPhone}
@@ -2271,7 +2354,11 @@ function OperationalProfileStep({
             </div>
             {onboardingStep.missingOperationalFields?.length ? (
               <Text tone="muted">
-                Required before continuing: {onboardingStep.missingOperationalFields.join(', ')}.
+                Required before continuing:{' '}
+                {onboardingStep.missingOperationalFields
+                  .map((field) => formatOperationalFieldLabel(field))
+                  .join(', ')}
+                .
               </Text>
             ) : null}
             {error ? <Text tone="danger">{error}</Text> : null}

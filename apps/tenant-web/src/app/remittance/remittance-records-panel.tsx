@@ -158,6 +158,7 @@ export function RemittanceRecordsPanel({
               <TableHead>Amount</TableHead>
               <TableHead>Model</TableHead>
               <TableHead>Variance</TableHead>
+              <TableHead>Outstanding</TableHead>
               <TableHead>Due date</TableHead>
               <TableHead>Sync</TableHead>
               <TableHead>Actions</TableHead>
@@ -200,9 +201,43 @@ export function RemittanceRecordsPanel({
                 <TableCell>{formatAmount(remittance.amountMinorUnits, remittance.currency, locale)}</TableCell>
                 <TableCell>{remittance.reconciliation?.contractType ?? 'regular_hire'}</TableCell>
                 <TableCell>
-                  {remittance.reconciliation
-                    ? formatAmount(remittance.reconciliation.varianceMinorUnits, remittance.currency, locale)
-                    : 'Not available'}
+                  {remittance.reconciliation ? (
+                    <div className="space-y-1">
+                      <Text>
+                        {formatAmount(remittance.reconciliation.varianceMinorUnits, remittance.currency, locale)}
+                      </Text>
+                      <Text tone="muted">
+                        {remittance.reconciliation.varianceMinorUnits < 0
+                          ? 'Underpaid'
+                          : remittance.reconciliation.varianceMinorUnits > 0
+                            ? 'Overpaid'
+                            : 'Matched'}
+                      </Text>
+                    </div>
+                  ) : (
+                    'Not available'
+                  )}
+                </TableCell>
+                <TableCell>
+                  {remittance.reconciliation?.outstandingBalanceMinorUnits !== null &&
+                  remittance.reconciliation?.outstandingBalanceMinorUnits !== undefined ? (
+                    <div className="space-y-1">
+                      <Text>
+                        {formatAmount(
+                          remittance.reconciliation.outstandingBalanceMinorUnits,
+                          remittance.currency,
+                          locale,
+                        )}
+                      </Text>
+                      <Text tone="muted">
+                        {remittance.reconciliation.outstandingBalanceMinorUnits > 0
+                          ? 'Still outstanding'
+                          : 'No balance due'}
+                      </Text>
+                    </div>
+                  ) : (
+                    'Not available'
+                  )}
                 </TableCell>
                 <TableCell>{formatDate(remittance.dueDate, locale)}</TableCell>
                 <TableCell>

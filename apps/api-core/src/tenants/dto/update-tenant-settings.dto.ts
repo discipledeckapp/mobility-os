@@ -17,6 +17,7 @@ const VEHICLE_DOCUMENT_TYPES = getDocumentTypesByScope(DocumentScope.Vehicle).ma
   (document) => document.slug,
 );
 const DRIVER_IDENTIFIER_TYPES = ['NATIONAL_ID', 'BANK_ID', 'PASSPORT', 'DRIVERS_LICENSE', 'TAX_ID'];
+const VERIFICATION_TIERS = ['BASIC_IDENTITY', 'VERIFIED_IDENTITY', 'FULL_TRUST_VERIFICATION'];
 
 export class UpdateTenantSettingsDto {
   @ApiPropertyOptional()
@@ -35,6 +36,12 @@ export class UpdateTenantSettingsDto {
   @IsString()
   @IsIn(['en', 'fr'])
   defaultLanguage?: 'en' | 'fr';
+
+  @ApiPropertyOptional({ enum: VERIFICATION_TIERS })
+  @IsOptional()
+  @IsString()
+  @IsIn(VERIFICATION_TIERS)
+  verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
 
   @ApiPropertyOptional()
   @IsOptional()

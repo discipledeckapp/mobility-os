@@ -202,6 +202,80 @@ describe('RemittanceService', () => {
     expect(result.walletEntry?.id).toBe('wallet_entry_1');
   });
 
+  it('marks an underpaid remittance as partially settled and preserves the outstanding balance', async () => {
+    prisma.remittance.findUnique.mockResolvedValue({
+      id: 'rem_1',
+      tenantId: 'tenant_1',
+      assignmentId: 'assignment_1',
+      businessEntityId: 'be_1',
+      driverId: 'driver_1',
+      amountMinorUnits: 400000,
+      currency: 'NGN',
+      dueDate: '2026-03-21',
+      status: 'pending',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: 'tenant_1',
+      country: 'NG',
+    });
+    prisma.assignment.findMany.mockResolvedValue([
+      {
+        id: 'assignment_1',
+        status: 'active',
+        contractSnapshot: {
+          contractType: 'regular_hire',
+          currency: 'NGN',
+          regularHire: {
+            expectedPerPeriodAmountMinorUnits: 500000,
+          },
+        },
+        remittanceModel: 'fixed',
+        remittanceFrequency: 'daily',
+        remittanceAmountMinorUnits: 500000,
+        remittanceCurrency: 'NGN',
+        remittanceStartDate: '2026-03-20',
+        remittanceCollectionDay: null,
+      },
+    ]);
+    prisma.remittance.findMany.mockResolvedValue([
+      {
+        assignmentId: 'assignment_1',
+        dueDate: '2026-03-21',
+        amountMinorUnits: 400000,
+        status: 'pending',
+      },
+    ]);
+    prisma.remittance.update.mockResolvedValue({
+      id: 'rem_1',
+      tenantId: 'tenant_1',
+      assignmentId: 'assignment_1',
+      businessEntityId: 'be_1',
+      amountMinorUnits: 400000,
+      currency: 'NGN',
+      status: 'partially_settled',
+      paidDate: '2026-03-21',
+    });
+    operationalWalletsService.addEntryInTransaction.mockResolvedValue({
+      id: 'wallet_entry_1',
+      walletId: 'wallet_1',
+      type: 'credit',
+      amountMinorUnits: 400000,
+      currency: 'NGN',
+      referenceId: 'rem_1',
+      referenceType: 'remittance',
+      description: 'Remittance partially settled for assignment assignment_1',
+      createdAt: new Date('2026-03-21T00:00:00.000Z'),
+    });
+
+    const result = await service.confirm('tenant_1', 'rem_1', '2026-03-21');
+
+    expect(prisma.remittance.update).toHaveBeenCalledWith({
+      where: { id: 'rem_1' },
+      data: { status: 'partially_settled', paidDate: '2026-03-21' },
+    });
+    expect(result.status).toBe('partially_settled');
+  });
+
   it('rejects confirm from non-pending status', async () => {
     prisma.remittance.findUnique.mockResolvedValue({
       id: 'rem_1',

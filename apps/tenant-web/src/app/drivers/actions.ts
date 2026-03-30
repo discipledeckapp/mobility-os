@@ -8,6 +8,7 @@ import {
   type DriverIdentityResolutionResult,
   type DriverLivenessSessionRecord,
   type DriverSelfServiceDeliveryRecord,
+  archiveDriver,
   createDriver,
   createDriverLivenessSession,
   createDriverSelfServiceLivenessSession,
@@ -66,6 +67,11 @@ export interface SendDriverSelfServiceLinkActionState {
 }
 
 export interface UpdateDriverStatusActionState {
+  error?: string;
+  success?: string;
+}
+
+export interface RemoveDriverActionState {
   error?: string;
   success?: string;
 }
@@ -664,6 +670,14 @@ export async function sendDriverSelfServiceLinkAction(
   formData: FormData,
 ): Promise<SendDriverSelfServiceLinkActionState> {
   const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const verificationTierOverride = getOptionalTrimmedValue(formData, 'verificationTierOverride');
+  const forceReverificationRaw = formData.get('forceReverification');
+  const forceReverification =
+    forceReverificationRaw === 'true'
+      ? true
+      : forceReverificationRaw === 'false'
+        ? false
+        : undefined;
   const driverPaysKycOverrideRaw = formData.get('driverPaysKycOverride');
   const driverPaysKycOverride =
     driverPaysKycOverrideRaw === 'true'
@@ -679,10 +693,19 @@ export async function sendDriverSelfServiceLinkAction(
   try {
     const delivery = await sendDriverSelfServiceLink(driverId, {
       ...(driverPaysKycOverride !== undefined ? { driverPaysKycOverride } : {}),
+      ...(verificationTierOverride === 'BASIC_IDENTITY' ||
+      verificationTierOverride === 'VERIFIED_IDENTITY' ||
+      verificationTierOverride === 'FULL_TRUST_VERIFICATION'
+        ? { verificationTierOverride }
+        : {}),
+      ...(forceReverification !== undefined ? { forceReverification } : {}),
     });
     return {
       delivery,
-      success: `A self-service verification link was sent to ${delivery.destination}.`,
+      success:
+        forceReverification === true
+          ? `A re-verification link was sent to ${delivery.destination}. Fresh verified details will replace the current identity record when the driver completes the new check.`
+          : `A self-service verification link was sent to ${delivery.destination}.`,
     };
   } catch (error) {
     return {
@@ -719,6 +742,29 @@ export async function updateDriverStatusAction(
   return {
     success: `Driver status updated to ${status}.`,
   };
+}
+
+export async function removeDriverAction(
+  _prevState: RemoveDriverActionState,
+  formData: FormData,
+): Promise<RemoveDriverActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const reason = getOptionalTrimmedValue(formData, 'reason');
+
+  if (!driverId) {
+    return { error: 'Driver record is missing.' };
+  }
+
+  try {
+    const result = await archiveDriver(driverId, reason || undefined);
+    revalidatePath('/drivers');
+    revalidatePath(`/drivers/${driverId}`);
+    return { success: result.message };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to remove this driver right now.',
+    };
+  }
 }
 
 export async function saveDriverGuarantorAction(

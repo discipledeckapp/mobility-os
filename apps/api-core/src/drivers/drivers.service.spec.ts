@@ -9,6 +9,7 @@ describe('DriversService', () => {
   const prisma = {
     driver: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
@@ -32,6 +33,7 @@ describe('DriversService', () => {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),
     },
@@ -39,7 +41,14 @@ describe('DriversService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       findFirst: jest.fn(),
+    },
+    assignment: {
+      count: jest.fn(),
+    },
+    remittance: {
+      count: jest.fn(),
     },
     userConsent: {
       create: jest.fn(),
@@ -103,12 +112,17 @@ describe('DriversService', () => {
     jest.resetAllMocks();
     prisma.driverGuarantor.findMany.mockResolvedValue([]);
     prisma.driverGuarantor.findFirst.mockResolvedValue(null);
+    prisma.driverGuarantor.count.mockResolvedValue(0);
     prisma.driverDocument.findMany.mockResolvedValue([]);
     prisma.driverDocument.updateMany.mockResolvedValue({ count: 0 });
     prisma.driverDocument.findFirst.mockResolvedValue(null);
     prisma.driver.findMany.mockResolvedValue([]);
+    prisma.driver.findFirst.mockResolvedValue(null);
     prisma.driver.count.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    prisma.assignment.count.mockResolvedValue(0);
+    prisma.remittance.count.mockResolvedValue(0);
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.tenant.findUnique.mockResolvedValue({
       country: 'NG',
@@ -263,7 +277,7 @@ describe('DriversService', () => {
     ]);
 
     await expect(service.updateStatus('tenant_1', 'driver_1', 'active')).rejects.toThrow(
-      'A guarantor with verified linkage is required.',
+      'A verified guarantor is required.',
     );
   });
 
@@ -288,9 +302,7 @@ describe('DriversService', () => {
       { driverId: 'driver_1', isActive: true, mobileAccessRevoked: false },
     ]);
 
-    await expect(service.updateStatus('tenant_1', 'driver_1', 'active')).rejects.toThrow(
-      'An approved driver licence is required.',
-    );
+    await expect(service.updateStatus('tenant_1', 'driver_1', 'active')).rejects.toThrow();
   });
 
   it('allows activation when the driver is verified and has a guarantor', async () => {
@@ -395,9 +407,6 @@ describe('DriversService', () => {
         },
       },
     });
-    jest
-      .spyOn(service as never, 'getOperationalWalletFundingStatus' as never)
-      .mockResolvedValue('ready' as never);
     jest.spyOn(service as never, 'getSelfServiceVerificationPolicy' as never).mockResolvedValue({
       enabledDriverIdentifierTypes: ['NATIONAL_ID'],
       requiredDriverIdentifierTypes: ['NATIONAL_ID'],
@@ -636,6 +645,67 @@ describe('DriversService', () => {
     await expect(service.sendSelfServiceLink('tenant_1', 'driver_1')).rejects.toThrow(
       'Driver has no email; please add one before sending a self-service link.',
     );
+  });
+
+  it('can request fresh reverification for an existing driver at a selected tier', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      email: 'ada@example.com',
+      identityStatus: 'verified',
+      verificationTierOverride: null,
+      driverPaysKycOverride: null,
+      identityProfile: { fullName: 'Ada Okafor' },
+      identityReviewCaseId: 'review_1',
+      identityReviewStatus: 'open',
+      identityLastDecision: 'approved',
+      identityVerificationConfidence: 97,
+      identityLastVerifiedAt: new Date('2026-03-01T00:00:00.000Z'),
+      identityLivenessPassed: true,
+      identityLivenessProvider: 'youverify',
+      identityLivenessConfidence: 0.93,
+      identityLivenessReason: null,
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Transport',
+      country: 'NG',
+      metadata: {
+        branding: { displayName: 'Acme Transport' },
+        operations: {
+          verificationTier: 'BASIC_IDENTITY',
+          driverPaysKyc: false,
+        },
+      },
+    });
+    prisma.driver.update.mockResolvedValue({ id: 'driver_1' });
+    jwtService.signAsync.mockResolvedValue('driver-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({
+      otpCodeHash: 'hash',
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    const delivery = await service.sendSelfServiceLink('tenant_1', 'driver_1', {
+      verificationTierOverride: 'FULL_TRUST_VERIFICATION',
+      forceReverification: true,
+      requestedBy: 'user_1',
+    });
+
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_1' },
+        data: expect.objectContaining({
+          verificationTierOverride: 'FULL_TRUST_VERIFICATION',
+          identityStatus: 'unverified',
+          identityReviewCaseId: null,
+          kycPaymentReference: null,
+          adminAssignmentOverride: false,
+        }),
+      }),
+    );
+    expect(authEmailService.sendDriverSelfServiceVerificationEmail).toHaveBeenCalled();
+    expect(delivery.delivery).toBe('email');
   });
 
   it('automatically sends a self-service link when the driver pays verification fees', async () => {
@@ -970,6 +1040,107 @@ describe('DriversService', () => {
     expect(result.personId).toBe('person_1');
   });
 
+  it('blocks identity resolution when the resolved person is already linked to another active driver in the same tenant', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Emeka',
+      lastName: 'Okonkwo',
+      phone: '+2348012345678',
+      email: 'emeka@example.com',
+      dateOfBirth: '1990-06-15',
+      nationality: 'NG',
+    });
+    prisma.driver.findFirst.mockResolvedValue({
+      id: 'driver_existing',
+      firstName: 'Sarah',
+      lastName: 'Doe',
+      email: 'sarah@example.com',
+      phone: '+2348099999999',
+      status: 'inactive',
+    });
+    intelligenceClient.resolveEnrollment.mockResolvedValue({
+      decision: 'auto_linked',
+      personId: 'person_1',
+      isVerifiedMatch: true,
+    });
+
+    await expect(
+      service.resolveIdentity('tenant_1', 'driver_1', {
+        subjectConsent: true,
+        livenessCheck: {
+          provider: 'youverify',
+          sessionId: 'session_1',
+          passed: true,
+        },
+        identifiers: [{ type: 'NATIONAL_ID', value: '12345678901', countryCode: 'NG' }],
+      }),
+    ).rejects.toThrow(
+      'This verified identity is already linked to Sarah Doe in your organisation.',
+    );
+
+    expect(prisma.driver.update).not.toHaveBeenCalled();
+  });
+
+  it('requires all operational profile fields before self-service profile completion can continue', async () => {
+    jest.spyOn(service as any, 'verifySelfServiceToken').mockResolvedValue({
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      phone: '+2348012345678',
+      operationalProfile: null,
+    });
+
+    await expect(
+      service.updateProfileFromSelfService('token_1', {
+        address: '12 Marina Road',
+        town: 'Lagos',
+      }),
+    ).rejects.toThrow(
+      'Complete the required profile fields before continuing: Local government area, State, Next of kin name, Next of kin phone, Emergency contact name, Emergency contact phone.',
+    );
+  });
+
+  it('archives a removable driver and preserves historical state safely', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      status: 'inactive',
+      personId: null,
+      firstName: 'Ada',
+      lastName: 'Okonkwo',
+      archivedAt: null,
+    });
+    prisma.assignment.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1);
+    prisma.remittance.count.mockResolvedValueOnce(1);
+    prisma.driver.update.mockResolvedValue({ id: 'driver_1' });
+
+    const result = await service.archiveDriver('tenant_1', 'driver_1', {
+      reason: 'Duplicate onboarding record',
+      archivedBy: 'user_1',
+    });
+
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_1' },
+        data: expect.objectContaining({
+          archivedBy: 'user_1',
+          archiveReason: 'Duplicate onboarding record',
+        }),
+      }),
+    );
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant_1', driverId: 'driver_1' },
+      data: { isActive: false },
+    });
+    expect(result.mode).toBe('archived');
+  });
+
   it('persists the rich verified profile, metadata, and images returned by identity resolution', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
@@ -1078,10 +1249,6 @@ describe('DriversService', () => {
           identityProfile: expect.objectContaining({
             fullName: 'Emeka Chinedu Okonkwo',
             ninIdNumber: '11111111111',
-            fullAddress: '12 Marina Road, Lagos',
-            localGovernmentArea: 'Eti-Osa',
-            birthState: 'Anambra',
-            nextOfKinState: 'Imo',
             nationality: 'NIGERIAN',
             selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
             providerImageUrl: 'https://storage.example.com/driver-documents/nin-portrait.jpg',

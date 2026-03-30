@@ -19,6 +19,7 @@ export interface OrganisationBrandingSettings {
 
 export interface OrganisationOperationsSettings {
   defaultLanguage: SupportedLanguage;
+  verificationTier: VerificationTier;
   guarantorMaxActiveDrivers: number;
   autoSendDriverSelfServiceLinkOnCreate: boolean;
   requireIdentityVerificationForActivation: boolean;
@@ -218,14 +219,47 @@ function normalizeIdentifierTypeList(
   return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
 }
 
+function resolveVerificationRequirementsFromTier(tier: VerificationTier): {
+  requireGuarantor: boolean;
+  requiredDriverDocumentSlugs: string[];
+} {
+  if (tier === 'FULL_TRUST_VERIFICATION') {
+    return {
+      requireGuarantor: true,
+      requiredDriverDocumentSlugs: ['drivers-license'],
+    };
+  }
+
+  if (tier === 'VERIFIED_IDENTITY') {
+    return {
+      requireGuarantor: true,
+      requiredDriverDocumentSlugs: [],
+    };
+  }
+
+  return {
+    requireGuarantor: false,
+    requiredDriverDocumentSlugs: [],
+  };
+}
+
 export function getDefaultLanguageForCountry(countryCode?: string | null): SupportedLanguage {
   return FRANCOPHONE_COUNTRIES.has((countryCode ?? '').toUpperCase()) ? 'fr' : 'en';
 }
 
 export function resolveVerificationTier(settings: {
+  verificationTier?: VerificationTier;
   requireGuarantor?: boolean;
   requiredDriverDocumentSlugs?: string[];
 }): VerificationTier {
+  if (
+    settings.verificationTier === 'BASIC_IDENTITY' ||
+    settings.verificationTier === 'VERIFIED_IDENTITY' ||
+    settings.verificationTier === 'FULL_TRUST_VERIFICATION'
+  ) {
+    return settings.verificationTier;
+  }
+
   const requiresDriversLicense = (settings.requiredDriverDocumentSlugs ?? []).includes(
     'drivers-license',
   );
@@ -301,6 +335,7 @@ export function listVerificationTierPrices(currency = 'NGN'): VerificationTierPr
 
 export function resolveVerificationPolicy(
   settings: {
+    verificationTier?: VerificationTier;
     requireGuarantor?: boolean;
     requiredDriverDocumentSlugs?: string[];
   },
@@ -368,6 +403,24 @@ export function readOrganisationSettings(
     operations.guarantorMaxActiveDrivers >= 1
       ? Math.floor(operations.guarantorMaxActiveDrivers)
       : 2;
+  const configuredVerificationTier =
+    operations.verificationTier === 'BASIC_IDENTITY' ||
+    operations.verificationTier === 'VERIFIED_IDENTITY' ||
+    operations.verificationTier === 'FULL_TRUST_VERIFICATION'
+      ? operations.verificationTier
+      : null;
+  const verificationTier = resolveVerificationTier({
+    ...(configuredVerificationTier ? { verificationTier: configuredVerificationTier } : {}),
+    requireGuarantor:
+      typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : false,
+    requiredDriverDocumentSlugs: normalizeDocumentSlugList(
+      operations.requiredDriverDocumentSlugs,
+      DRIVER_DOCUMENT_SLUGS,
+      documentDefaults.requiredDriverDocumentSlugs,
+      { preserveEmpty: true },
+    ),
+  });
+  const tierRequirements = resolveVerificationRequirementsFromTier(verificationTier);
 
   return {
     branding: {
@@ -382,6 +435,7 @@ export function readOrganisationSettings(
     },
     operations: {
       defaultLanguage: defaultLanguageCandidate,
+      verificationTier,
       guarantorMaxActiveDrivers: guarantorLimitCandidate,
       autoSendDriverSelfServiceLinkOnCreate:
         typeof operations.autoSendDriverSelfServiceLinkOnCreate === 'boolean'
@@ -407,12 +461,7 @@ export function readOrganisationSettings(
         [],
         { preserveEmpty: true },
       ).filter((slug) => !DRIVER_DOCUMENT_SLUGS.has(slug)),
-      requiredDriverDocumentSlugs: normalizeDocumentSlugList(
-        operations.requiredDriverDocumentSlugs,
-        DRIVER_DOCUMENT_SLUGS,
-        documentDefaults.requiredDriverDocumentSlugs,
-        { preserveEmpty: true },
-      ),
+      requiredDriverDocumentSlugs: tierRequirements.requiredDriverDocumentSlugs,
       requiredVehicleDocumentSlugs: normalizeDocumentSlugList(
         operations.requiredVehicleDocumentSlugs,
         VEHICLE_DOCUMENT_SLUGS,
@@ -420,8 +469,7 @@ export function readOrganisationSettings(
       ),
       driverPaysKyc:
         typeof operations.driverPaysKyc === 'boolean' ? operations.driverPaysKyc : false,
-      requireGuarantor:
-        typeof operations.requireGuarantor === 'boolean' ? operations.requireGuarantor : false,
+      requireGuarantor: tierRequirements.requireGuarantor,
       guarantorBlocking:
         typeof operations.guarantorBlocking === 'boolean' ? operations.guarantorBlocking : false,
       requireGuarantorVerification:
@@ -442,6 +490,7 @@ export function writeOrganisationSettings(
     displayName: string | null;
     logoUrl: string | null;
     defaultLanguage: SupportedLanguage;
+    verificationTier: VerificationTier;
     guarantorMaxActiveDrivers: number;
     autoSendDriverSelfServiceLinkOnCreate: boolean;
     requireIdentityVerificationForActivation: boolean;
@@ -465,6 +514,8 @@ export function writeOrganisationSettings(
       ? ({ ...(currentMetadata as Record<string, unknown>) } as Record<string, unknown>)
       : {};
   const settings = readOrganisationSettings(currentMetadata, countryCode);
+  const verificationTier = input.verificationTier ?? settings.operations.verificationTier;
+  const tierRequirements = resolveVerificationRequirementsFromTier(verificationTier);
 
   current.branding = {
     displayName:
@@ -473,6 +524,7 @@ export function writeOrganisationSettings(
   };
   current.operations = {
     defaultLanguage: input.defaultLanguage ?? settings.operations.defaultLanguage,
+    verificationTier,
     guarantorMaxActiveDrivers:
       input.guarantorMaxActiveDrivers ?? settings.operations.guarantorMaxActiveDrivers,
     autoSendDriverSelfServiceLinkOnCreate:
@@ -492,12 +544,11 @@ export function writeOrganisationSettings(
       input.requiredDriverIdentifierTypes ?? settings.operations.requiredDriverIdentifierTypes,
     customDriverDocumentTypes:
       input.customDriverDocumentTypes ?? settings.operations.customDriverDocumentTypes,
-    requiredDriverDocumentSlugs:
-      input.requiredDriverDocumentSlugs ?? settings.operations.requiredDriverDocumentSlugs,
+    requiredDriverDocumentSlugs: tierRequirements.requiredDriverDocumentSlugs,
     requiredVehicleDocumentSlugs:
       input.requiredVehicleDocumentSlugs ?? settings.operations.requiredVehicleDocumentSlugs,
     driverPaysKyc: input.driverPaysKyc ?? settings.operations.driverPaysKyc,
-    requireGuarantor: input.requireGuarantor ?? settings.operations.requireGuarantor,
+    requireGuarantor: tierRequirements.requireGuarantor,
     guarantorBlocking: input.guarantorBlocking ?? settings.operations.guarantorBlocking,
     requireGuarantorVerification:
       input.requireGuarantorVerification ?? settings.operations.requireGuarantorVerification,

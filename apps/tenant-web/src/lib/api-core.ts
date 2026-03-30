@@ -149,6 +149,7 @@ export interface UpdateTenantSettingsInput {
   displayName?: string;
   logoUrl?: string;
   defaultLanguage?: 'en' | 'fr';
+  verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
   guarantorMaxActiveDrivers?: number;
   autoSendDriverSelfServiceLinkOnCreate?: boolean;
   requireIdentityVerificationForActivation?: boolean;
@@ -366,6 +367,8 @@ export interface DriverRecord {
   riskBand?: string | null;
   isWatchlisted?: boolean | null;
   duplicateIdentityFlag?: boolean | null;
+  reverificationRequired?: boolean | null;
+  reverificationReason?: string | null;
   hasGuarantor: boolean;
   guarantorStatus?: string | null;
   guarantorDisconnectedAt?: string | null;
@@ -1432,6 +1435,7 @@ export interface TenantBillingPlanRecord {
   currency: string;
   isActive: boolean;
   features: Record<string, unknown>;
+  customTerms?: Record<string, unknown> | null;
 }
 
 export interface TenantBillingInvoiceRecord {
@@ -2394,6 +2398,19 @@ export async function updateDriverStatus(
   });
 }
 
+export async function archiveDriver(
+  driverId: string,
+  reason?: string,
+  token?: string,
+): Promise<{ message: string; mode: 'archived' }> {
+  return apiCoreFetch<{ message: string; mode: 'archived' }>(`/drivers/${driverId}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ ...(reason?.trim() ? { reason: reason.trim() } : {}) }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function createDriverLivenessSession(
   driverId: string,
   input: { countryCode?: string } = {},
@@ -2412,12 +2429,25 @@ export async function createDriverLivenessSession(
 
 export async function sendDriverSelfServiceLink(
   driverId: string,
-  options?: { driverPaysKycOverride?: boolean; token?: string },
+  options?: {
+    driverPaysKycOverride?: boolean;
+    verificationTierOverride?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+    forceReverification?: boolean;
+    token?: string;
+  },
 ): Promise<DriverSelfServiceDeliveryRecord> {
-  const body =
-    options?.driverPaysKycOverride !== undefined
-      ? JSON.stringify({ driverPaysKycOverride: options.driverPaysKycOverride })
-      : undefined;
+  const payload = {
+    ...(options?.driverPaysKycOverride !== undefined
+      ? { driverPaysKycOverride: options.driverPaysKycOverride }
+      : {}),
+    ...(options?.verificationTierOverride
+      ? { verificationTierOverride: options.verificationTierOverride }
+      : {}),
+    ...(options?.forceReverification !== undefined
+      ? { forceReverification: options.forceReverification }
+      : {}),
+  };
+  const body = Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined;
   return apiCoreFetch<DriverSelfServiceDeliveryRecord>(`/drivers/${driverId}/self-service-links`, {
     method: 'POST',
     cache: 'no-store',

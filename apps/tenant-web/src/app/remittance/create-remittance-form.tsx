@@ -63,6 +63,7 @@ export function CreateRemittanceForm({
   const formRef = useRef<HTMLFormElement | null>(null);
   const [fleetId, setFleetId] = useState(initialFleetId ?? '');
   const [assignmentId, setAssignmentId] = useState(initialAssignmentId ?? '');
+  const [amountValue, setAmountValue] = useState('');
   const hasActiveAssignments = activeAssignments.length > 0;
   const selectableFleets = useMemo(
     () => fleets.filter((fleet) => fleet.status !== 'inactive'),
@@ -131,6 +132,16 @@ export function CreateRemittanceForm({
       null;
     return nextDueAmountMinorUnits ? String(nextDueAmountMinorUnits / 100) : '';
   }, [selectedAssignment]);
+  const expectedAmountMinorUnits =
+    selectedAssignment?.financialContract?.summary.nextDueAmountMinorUnits ??
+    selectedAssignment?.financialContract?.summary.expectedPerPeriodAmountMinorUnits ??
+    selectedAssignment?.remittanceAmountMinorUnits ??
+    null;
+  const enteredAmountMinorUnits = amountValue.trim() ? Math.round(Number(amountValue) * 100) : null;
+  const amountVarianceMinorUnits =
+    enteredAmountMinorUnits !== null && Number.isFinite(enteredAmountMinorUnits) && expectedAmountMinorUnits !== null
+      ? enteredAmountMinorUnits - expectedAmountMinorUnits
+      : null;
 
   useEffect(() => {
     if (
@@ -142,6 +153,10 @@ export function CreateRemittanceForm({
   }, [assignmentId, fleetAssignments]);
 
   useEffect(() => {
+    setAmountValue(suggestedAmountMajorUnits);
+  }, [suggestedAmountMajorUnits]);
+
+  useEffect(() => {
     if (!state.success) {
       return;
     }
@@ -149,8 +164,9 @@ export function CreateRemittanceForm({
     formRef.current?.reset();
     setAssignmentId(initialAssignmentId ?? '');
     setFleetId(initialFleetId ?? '');
+    setAmountValue(initialAssignmentId ? suggestedAmountMajorUnits : '');
     router.refresh();
-  }, [initialAssignmentId, initialFleetId, router, state.success]);
+  }, [initialAssignmentId, initialFleetId, router, state.success, suggestedAmountMajorUnits]);
 
   return (
     <TenantSurfaceCard
@@ -286,7 +302,6 @@ export function CreateRemittanceForm({
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
             <Input
-              key={`${assignmentId || 'none'}-amount`}
               disabled={!selectedAssignment}
               id="amount"
               min="0.01"
@@ -295,16 +310,33 @@ export function CreateRemittanceForm({
               required
               step="0.01"
               type="number"
-              defaultValue={
-                suggestedAmountMajorUnits
-              }
-              readOnly={Boolean(suggestedAmountMajorUnits)}
+              onChange={(event) => setAmountValue(event.target.value)}
+              value={amountValue}
             />
             <Text tone="muted">
               {selectedAssignment?.financialContract
                 ? `${selectedAssignment.financialContract.display.summaryLabel}: ${selectedAssignment.financialContract.summary.scheduleLabel}.`
                 : 'Enter the amount in the major currency unit (e.g. 1500 for ₦1,500).'}
             </Text>
+            {selectedAssignment && expectedAmountMinorUnits !== null && amountVarianceMinorUnits !== null ? (
+              amountVarianceMinorUnits < 0 ? (
+                <Text tone="danger">
+                  This is an underpayment of{' '}
+                  {formatAmount(Math.abs(amountVarianceMinorUnits), selectedAssignment.financialContract?.currency ?? selectedAssignment.remittanceCurrency ?? 'NGN')}.
+                  The remaining balance will stay outstanding on the driver and organisation ledger.
+                </Text>
+              ) : amountVarianceMinorUnits > 0 ? (
+                <Text tone="accent">
+                  This is an overpayment of{' '}
+                  {formatAmount(amountVarianceMinorUnits, selectedAssignment.financialContract?.currency ?? selectedAssignment.remittanceCurrency ?? 'NGN')}.
+                  The excess will be recorded in the remittance history against this assignment period.
+                </Text>
+              ) : (
+                <Text tone="success">
+                  This matches the expected remittance for the current period.
+                </Text>
+              )
+            ) : null}
           </div>
 
           <div className="space-y-2">

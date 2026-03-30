@@ -445,11 +445,18 @@ export class RemittanceService {
     const walletCurrency = isCountrySupported(tenant.country)
       ? getCountryConfig(tenant.country).currency
       : record.currency;
+    const nextStatus =
+      record.reconciliation &&
+      typeof record.reconciliation === 'object' &&
+      'periodStatus' in record.reconciliation &&
+      record.reconciliation.periodStatus === 'partial'
+        ? 'partially_settled'
+        : 'completed';
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedRemittance = await tx.remittance.update({
         where: { id },
-        data: { status: 'completed', paidDate },
+        data: { status: nextStatus, paidDate },
       });
 
       const walletEntry = await this.operationalWalletsService.addEntryInTransaction(
@@ -462,7 +469,10 @@ export class RemittanceService {
           currency: walletCurrency,
           referenceId: record.id,
           referenceType: 'remittance',
-            description: `Remittance completed for assignment ${record.assignmentId}`,
+          description:
+            nextStatus === 'partially_settled'
+              ? `Remittance partially settled for assignment ${record.assignmentId}`
+              : `Remittance completed for assignment ${record.assignmentId}`,
           },
         );
 
@@ -526,14 +536,24 @@ export class RemittanceService {
     const disputedRecords = await this.prisma.remittance.findMany({
       where: { tenantId, id: { in: ids }, status: 'disputed' },
     });
+    const enrichedRecords = await this.enrichRemittances(disputedRecords);
+    const disputedRecordById = new Map(enrichedRecords.map((record) => [record.id, record]));
     const results: EnrichedRemittance[] = [];
 
     for (const record of disputedRecords) {
+      const enrichedRecord = disputedRecordById.get(record.id) ?? null;
+      const nextStatus =
+        enrichedRecord?.reconciliation &&
+        typeof enrichedRecord.reconciliation === 'object' &&
+        'periodStatus' in enrichedRecord.reconciliation &&
+        enrichedRecord.reconciliation.periodStatus === 'partial'
+          ? 'partially_settled'
+          : 'completed';
       const updated = await this.prisma.$transaction(async (tx) => {
         const remittance = await tx.remittance.update({
           where: { id: record.id },
           data: {
-            status: 'completed',
+            status: nextStatus,
             paidDate,
             notes: [record.notes, `Dispute resolved on ${paidDate}`].filter(Boolean).join('\n'),
           },
@@ -548,7 +568,10 @@ export class RemittanceService {
             currency: record.currency,
             referenceId: record.id,
             referenceType: 'remittance',
-            description: `Disputed remittance completed for assignment ${record.assignmentId}`,
+            description:
+              nextStatus === 'partially_settled'
+                ? `Disputed remittance partially settled for assignment ${record.assignmentId}`
+                : `Disputed remittance completed for assignment ${record.assignmentId}`,
           },
         );
         return { ...remittance, walletEntry };

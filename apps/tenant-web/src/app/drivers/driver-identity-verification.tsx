@@ -53,6 +53,11 @@ const initialStartState: StartDriverVerificationActionState = {};
 const initialResolveState: ResolveDriverVerificationActionState = {};
 const initialSendState: SendDriverSelfServiceLinkActionState = {};
 const initialRetryState: RetryDriverVerificationActionState = {};
+const VERIFICATION_TIER_OPTIONS = [
+  { value: 'BASIC_IDENTITY', label: 'Basic Identity' },
+  { value: 'VERIFIED_IDENTITY', label: 'Verified Identity' },
+  { value: 'FULL_TRUST_VERIFICATION', label: 'Full Trust Verification' },
+] as const;
 
 function sanitizeSelfServiceError(message?: string | null): string | null {
   if (!message) return null;
@@ -252,6 +257,10 @@ export function DriverIdentityVerification({
   const router = useRouter();
   const [isOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
   const [sendLinkPaysKyc, setSendLinkPaysKyc] = useState(driver.driverPaysKyc ?? orgDriverPaysKyc);
+  const [selectedVerificationTier, setSelectedVerificationTier] = useState<
+    'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION'
+  >(driver.verificationTier ?? 'BASIC_IDENTITY');
+  const [forceReverification, setForceReverification] = useState(false);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
     () =>
@@ -360,9 +369,21 @@ export function DriverIdentityVerification({
           minimumFractionDigits: 2,
         }).format(driver.verificationAmountMinorUnits / 100)
       : null;
+  const selectedVerificationTierLabel =
+    VERIFICATION_TIER_OPTIONS.find((option) => option.value === selectedVerificationTier)?.label ??
+    verificationTierLabel;
+  const formattedSelectedVerificationAmount =
+    selectedVerificationTier === driver.verificationTier ? formattedVerificationAmount : null;
   const verificationFeeCopy = sendLinkPaysKyc
-    ? `Driver will pay ${formattedVerificationAmount ?? 'the selected tier price'} for ${verificationTierLabel} during self-service onboarding.`
-    : `Your organisation wallet or approved credit will cover ${verificationTierLabel}${formattedVerificationAmount ? ` (${formattedVerificationAmount})` : ''} for this driver.`;
+    ? `Driver will pay ${formattedSelectedVerificationAmount ?? 'the selected tier price'} for ${selectedVerificationTierLabel} during self-service onboarding.`
+    : `Your organisation wallet or approved credit will cover ${selectedVerificationTierLabel}${formattedSelectedVerificationAmount ? ` (${formattedSelectedVerificationAmount})` : ''} for this driver.`;
+  const canRequestFreshVerification =
+    mode === 'operator' &&
+    (driver.identityStatus !== 'unverified' ||
+      Boolean(driver.identityLastVerifiedAt) ||
+      Boolean(driver.identityReviewCaseId) ||
+      Boolean(driver.identityProfile) ||
+      Boolean(driver.reverificationRequired));
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64 || selfieImageUrl);
@@ -454,6 +475,14 @@ export function DriverIdentityVerification({
   useEffect(() => {
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
   }, [driver.driverPaysKyc, orgDriverPaysKyc]);
+
+  useEffect(() => {
+    setSelectedVerificationTier(driver.verificationTier ?? 'BASIC_IDENTITY');
+  }, [driver.verificationTier]);
+
+  useEffect(() => {
+    setForceReverification(Boolean(driver.reverificationRequired));
+  }, [driver.reverificationRequired]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -778,6 +807,8 @@ export function DriverIdentityVerification({
             <form action={sendLinkAction} className="flex flex-wrap items-center gap-2">
               <input name="driverId" type="hidden" value={driver.id} />
               <input name="driverPaysKycOverride" type="hidden" value={String(sendLinkPaysKyc)} />
+              <input name="verificationTierOverride" type="hidden" value={selectedVerificationTier} />
+              <input name="forceReverification" type="hidden" value={String(forceReverification)} />
               <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600 select-none">
                 <input
                   checked={sendLinkPaysKyc}
@@ -797,8 +828,52 @@ export function DriverIdentityVerification({
                   ) : null}
                 </span>
               </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600">
+                <span className="font-medium text-slate-700">Verification tier for this driver</span>
+                <select
+                  className="min-w-[190px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  onChange={(event) =>
+                    setSelectedVerificationTier(
+                      event.target.value as
+                        | 'BASIC_IDENTITY'
+                        | 'VERIFIED_IDENTITY'
+                        | 'FULL_TRUST_VERIFICATION',
+                    )
+                  }
+                  value={selectedVerificationTier}
+                >
+                  {VERIFICATION_TIER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {canRequestFreshVerification ? (
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600 select-none">
+                  <input
+                    checked={forceReverification}
+                    className="mt-0.5 size-3.5 accent-[var(--mobiris-primary)]"
+                    onChange={(event) => setForceReverification(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span className="space-y-0.5">
+                    <span className="block font-medium text-slate-700">
+                      Request fresh re-verification
+                    </span>
+                    <span className="block text-slate-500">
+                      The driver will repeat verification at the selected tier, and the new
+                      verified details will replace the current record.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
               <Button disabled={isSendingLink || !canSendSelfServiceLink} size="sm" type="submit">
-                {isSendingLink ? 'Sending link...' : 'Request driver to self-verify'}
+                {isSendingLink
+                  ? 'Sending link...'
+                  : forceReverification
+                    ? 'Request driver re-verification'
+                    : 'Request driver to self-verify'}
               </Button>
             </form>
           </span>
