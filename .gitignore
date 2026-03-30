@@ -11,5 +11,7 @@ coverage/
 .vercel/output
 .vercel/.env*
 apps/mobile-ops/google-play-service-account.json
+apps/mobile-ops/android/keystore.properties
+apps/mobile-ops/.gradle/
 docs/playstore/key/*.json
 build-output/

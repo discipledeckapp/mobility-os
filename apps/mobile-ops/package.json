@@ -8,6 +8,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "native:prebuild": "expo prebuild --platform ios,android",
+    "release:android:apk": "./scripts/build-android-release.sh apk",
+    "release:android:aab": "./scripts/build-android-release.sh aab",
+    "release:android": "./scripts/build-android-release.sh all",
+    "release:ios:archive": "./scripts/build-ios-release.sh archive",
+    "release:ios:export": "./scripts/build-ios-release.sh export",
+    "release:ios:xcode": "./scripts/open-xcode.sh",
     "lint": "biome check .",
     "type-check": "tsc --noEmit"
   },

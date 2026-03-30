@@ -17,7 +17,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* MobirisMobileOps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MobirisMobileOps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* Mobiris Fleet OS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mobiris Fleet OS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MobirisMobileOps/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MobirisMobileOps/Info.plist; sourceTree = "<group>"; };
 		19AA2AAC6CE0516657E7804C /* Pods-MobirisMobileOps.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MobirisMobileOps.debug.xcconfig"; path = "Target Support Files/Pods-MobirisMobileOps/Pods-MobirisMobileOps.debug.xcconfig"; sourceTree = "<group>"; };
@@ -100,7 +100,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* MobirisMobileOps.app */,
+				13B07F961A680F5B00A75B9A /* Mobiris Fleet OS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -153,7 +153,7 @@
 			);
 			name = MobirisMobileOps;
 			productName = MobirisMobileOps;
-			productReference = 13B07F961A680F5B00A75B9A /* MobirisMobileOps.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* Mobiris Fleet OS.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -367,7 +367,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mobiris.mobileops;
-				PRODUCT_NAME = MobirisMobileOps;
+				PRODUCT_NAME = "Mobiris Fleet OS";
 				SWIFT_OBJC_BRIDGING_HEADER = "MobirisMobileOps/MobirisMobileOps-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -400,7 +400,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mobiris.mobileops;
-				PRODUCT_NAME = MobirisMobileOps;
+				PRODUCT_NAME = "Mobiris Fleet OS";
 				SWIFT_OBJC_BRIDGING_HEADER = "MobirisMobileOps/MobirisMobileOps-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
