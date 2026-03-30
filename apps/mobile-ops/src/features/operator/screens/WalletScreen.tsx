@@ -101,7 +101,10 @@ export function WalletScreen() {
       setPendingPayment(await getPendingTenantPayment());
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
-      Alert.alert('Wallet top-up', error instanceof Error ? error.message : 'Unable to initialize wallet top-up.');
+      Alert.alert(
+        'Verification funding',
+        error instanceof Error ? error.message : 'Unable to initialize verification funding top-up.',
+      );
     }
   };
 
@@ -126,8 +129,8 @@ export function WalletScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={billingQuery.isRefetching} onRefresh={() => void billingQuery.refetch()} />}>
       <Card style={styles.section}>
-        <Text style={styles.title}>Operational wallet</Text>
-        <Text style={styles.copy}>Platform billing wallet, outstanding invoices, and mobile checkout links.</Text>
+        <Text style={styles.title}>Verification funding</Text>
+        <Text style={styles.copy}>Verification funding balance, outstanding subscription invoices, and mobile checkout links.</Text>
       </Card>
       {billingQuery.isLoading || !billingQuery.data ? (
         <Card><LoadingSkeleton height={120} /></Card>

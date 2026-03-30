@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Text,
-} from '@mobility-os/ui';
-import { TenantAppShell } from '../../features/shared/tenant-app-shell';
+import { RouteErrorState } from '../../features/shared/route-state';
 
 export default function RemittanceError({
   error,
@@ -18,22 +10,13 @@ export default function RemittanceError({
   reset: () => void;
 }) {
   return (
-    <TenantAppShell
+    <RouteErrorState
       description="Daily collections recording and reconciliation for transport operators."
       eyebrow="Collections"
+      error={error}
+      heading="Unable to load remittance"
+      reset={reset}
       title="Remittance"
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle>Unable to load remittance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Text>{error.message}</Text>
-          <Button onClick={reset} variant="secondary">
-            Try again
-          </Button>
-        </CardContent>
-      </Card>
-    </TenantAppShell>
+    />
   );
 }

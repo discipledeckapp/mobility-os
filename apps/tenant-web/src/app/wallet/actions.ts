@@ -130,7 +130,7 @@ export async function initializeVerificationWalletTopUpAction(
 
   const amountMinorUnits = parseAmountToMinorUnits(amountRaw, currencyMinorUnitRaw);
   if (!amountMinorUnits || amountMinorUnits <= 0) {
-    return { error: 'Enter an amount greater than zero to fund the verification wallet.' };
+    return { error: 'Enter an amount greater than zero to fund verification funding.' };
   }
 
   try {

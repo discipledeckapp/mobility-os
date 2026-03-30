@@ -11,12 +11,12 @@ export default function WalletError({
 }) {
   return (
     <RouteErrorState
-      description="Track verification wallet funding, available credit, and operational wallet context."
-      eyebrow="Verification Wallet"
+      description="Review operational wallet balances and ledger activity for the selected business entity."
+      eyebrow="Operational Finance"
       error={error}
-      heading="Unable to load verification wallet"
+      heading="Unable to load operational wallet"
       reset={reset}
-      title="Verification wallet"
+      title="Operational wallet"
     />
   );
 }

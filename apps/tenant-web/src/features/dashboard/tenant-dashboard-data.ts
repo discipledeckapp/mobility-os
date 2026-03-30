@@ -246,6 +246,11 @@ function getDashboardFeatureCards(): DashboardFeatureCard[] {
       title: 'Insights',
       description: 'Review remittance health, readiness blockers, utilization gaps, and fleet risk.',
     },
+    {
+      href: '/records' as Route,
+      title: 'Records',
+      description: 'Inspect generated documents, dispute history, and operational audit evidence.',
+    },
   ];
 }
 

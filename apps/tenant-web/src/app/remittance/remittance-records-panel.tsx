@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Button, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from '@mobility-os/ui';
+import { Badge, Button, Input, RegistryTable, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from '@mobility-os/ui';
 import {
   confirmManyRemittances,
   resolveManyRemittanceDisputes,
@@ -12,6 +12,7 @@ import {
   type VehicleRecord,
 } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
+import { TenantMetricCard, TenantMetricGrid } from '../../features/shared/tenant-page-patterns';
 import { RemittanceRowActions } from './remittance-row-actions';
 
 function formatAmount(amountMinorUnits: number, currency: string, locale: string): string {
@@ -67,6 +68,11 @@ export function RemittanceRecordsPanel({
   const selectedDisputedIds = selectedIds.filter((id) =>
     remittances.some((record) => record.id === id && record.status === 'disputed'),
   );
+  const pendingCount = remittances.filter((record) => record.status === 'pending').length;
+  const completedCount = remittances.filter((record) =>
+    ['completed', 'partially_settled'].includes(record.status),
+  ).length;
+  const disputedCount = remittances.filter((record) => record.status === 'disputed').length;
 
   const toggleSelection = (id: string) => {
     setSelectedIds((current) =>
@@ -93,8 +99,25 @@ export function RemittanceRecordsPanel({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <RegistryTable
+      description="Confirm pending collections, resolve disputes in batches, and keep remittance decisions close to the live ledger."
+      emptyState={<Text tone="muted">No remittance entries match the current view.</Text>}
+      filteredItems={remittances.length}
+      onPageChange={() => undefined}
+      onPageSizeChange={() => undefined}
+      page={1}
+      pageSize={Math.max(remittances.length, 1)}
+      pageSizeOptions={[Math.max(remittances.length, 1)]}
+      summary={
+        <TenantMetricGrid>
+          <TenantMetricCard accent="primary" label="Total records" note="Current history" value={remittances.length} />
+          <TenantMetricCard accent="warning" label="Pending" note="Ready for confirmation" value={pendingCount} />
+          <TenantMetricCard accent="success" label="Settled" note="Completed or partially settled" value={completedCount} />
+          <TenantMetricCard accent="danger" label="Disputed" note="Need review or resolution" value={disputedCount} />
+        </TenantMetricGrid>
+      }
+      title="Collection ledger"
+      toolbar={
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <Text tone="strong">Quick actions</Text>
@@ -119,9 +142,10 @@ export function RemittanceRecordsPanel({
             </Button>
           </div>
         </div>
-        {feedback ? <Text className="mt-3" tone="muted">{feedback}</Text> : null}
-      </div>
-
+      }
+      totalItems={remittances.length}
+    >
+      {feedback ? <Text className="mb-1" tone="muted">{feedback}</Text> : null}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -194,6 +218,6 @@ export function RemittanceRecordsPanel({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </RegistryTable>
   );
 }

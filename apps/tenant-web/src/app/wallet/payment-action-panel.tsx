@@ -115,7 +115,7 @@ export function PaymentActionPanel({
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <Card className="border-slate-200">
         <CardHeader>
-          <CardTitle>Fund verification wallet</CardTitle>
+          <CardTitle>Fund verification funding</CardTitle>
           <CardDescription>
             Add funds with your preferred payment gateway. If one gateway fails, switch to the other and continue.
           </CardDescription>

@@ -1,10 +1,5 @@
 import {
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,9 +7,15 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
+import {
+  TenantEmptyStateCard,
+  TenantHeroPanel,
+  TenantMetricCard,
+  TenantMetricGrid,
+  TenantSurfaceCard,
+} from '../../features/shared/tenant-page-patterns';
 import {
   getTenantApiToken,
   getTenantMe,
@@ -209,42 +210,50 @@ export default async function RemittancePage({
       eyebrow="Collections"
       title="Remittance"
     >
-      {showExportCard ? (
-        <Card className="mb-6">
-          <CardContent className="flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <Text tone="strong">Export remittance history</Text>
-              <Text tone="muted">
-                Download the current remittance ledger as CSV for reconciliation, finance review, or external reporting.
-              </Text>
-            </div>
+      <TenantHeroPanel
+        actions={
+          showExportCard ? (
             <a
-              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+              className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
               href="/api/download/remittance-export"
             >
               Export remittance CSV
             </a>
-          </CardContent>
-        </Card>
-      ) : null}
+          ) : null
+        }
+        description="Record daily collections, compare expected versus settled cash, and keep reconciliation context close to every remittance record."
+        eyebrow="Collections workflow"
+        title="Operate remittance with the same clarity as your driver registry."
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
+            {activeAssignments.length} active assignments ready for collection
+          </div>
+          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
+            {remittances.length} recorded remittance entries
+          </div>
+          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
+            {disputes.length} disputes and {documents.length} linked documents
+          </div>
+        </div>
+      </TenantHeroPanel>
 
       {assignmentContextUnavailable ? (
-        <Card className="mb-6 border-amber-200 bg-amber-50/70">
-          <CardContent className="space-y-3 py-5">
-            <Text tone="strong">Assignment context is temporarily unavailable</Text>
-            <Text tone="muted">
-              We could not load the active assignments needed to record remittance right now. Please try again shortly or open Assignments to confirm the current assignment status.
-            </Text>
-            <div className="flex flex-wrap gap-3">
+        <div className="mb-6">
+          <TenantEmptyStateCard
+            actions={
               <a
                 className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
                 href="/assignments"
               >
                 Go to Assignments
               </a>
-            </div>
-          </CardContent>
-        </Card>
+            }
+            description="We could not load the active assignments needed to record remittance right now. Please try again shortly or open Assignments to confirm the current assignment status."
+            title="Assignment context is temporarily unavailable"
+            tone="warning"
+          />
+        </div>
       ) : null}
 
       {!assignmentContextUnavailable ? (
@@ -261,61 +270,54 @@ export default async function RemittancePage({
       ) : null}
 
       {showSummaryCards ? (
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
-          {[
-            {
-              label: 'Total expected',
-              note: 'Live target from active assignment terms',
-              value: formatAmount(expectedTodayMinorUnits, operatingCurrency, locale),
-            },
-            {
-              label: 'Total received',
-              note: 'Completed collections so far',
-              value: formatAmount(receivedMinorUnits, operatingCurrency, locale),
-            },
-            {
-              label: 'Leakage',
-              note: 'Gap between target and settled cash',
-              value: formatAmount(leakageMinorUnits, operatingCurrency, locale),
-            },
-            {
-              label: 'Flagged drivers',
-              note: `Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}`,
-              value: String(flaggedDrivers),
-            },
-          ].map((item) => (
-            <Card key={item.label}>
-              <CardContent className="space-y-1 py-5">
-                <Text tone="muted">{item.label}</Text>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                  {item.value}
-                </p>
-                <Text tone="muted">{item.note}</Text>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <TenantMetricGrid className="mb-6">
+          <TenantMetricCard
+            accent="primary"
+            label="Total expected"
+            note="Live target from active assignment terms"
+            value={formatAmount(expectedTodayMinorUnits, operatingCurrency, locale)}
+          />
+          <TenantMetricCard
+            accent="success"
+            label="Total received"
+            note="Completed collections so far"
+            value={formatAmount(receivedMinorUnits, operatingCurrency, locale)}
+          />
+          <TenantMetricCard
+            accent="warning"
+            label="Leakage"
+            note="Gap between target and settled cash"
+            value={formatAmount(leakageMinorUnits, operatingCurrency, locale)}
+          />
+          <TenantMetricCard
+            accent="violet"
+            label="Flagged drivers"
+            note={`Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}`}
+            value={String(flaggedDrivers)}
+          />
+        </TenantMetricGrid>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Remittance records</CardTitle>
-          <CardDescription>
-            Collections that have already been recorded against assignment-linked remittance schedules.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <TenantSurfaceCard
+        contentClassName="space-y-4"
+        description="Collections that have already been recorded against assignment-linked remittance schedules."
+        title="Remittance history"
+      >
           {remittanceLoadError ? (
-            <Text>{remittanceLoadError}</Text>
+            <TenantEmptyStateCard
+              description={remittanceLoadError}
+              title="We could not load remittance records right now"
+              tone="warning"
+            />
           ) : remittances.length === 0 ? (
-            <div className="space-y-2">
-              <Text tone="strong">No remittance records yet</Text>
-              <Text tone="muted">
-                {activeAssignments.length > 0
+            <TenantEmptyStateCard
+              description={
+                activeAssignments.length > 0
                   ? 'Select an active assignment above to record the first remittance for this period.'
-                  : 'Records will appear here after a remittance is logged against an active assignment.'}
-              </Text>
-            </div>
+                  : 'Records will appear here after a remittance is logged against an active assignment.'
+              }
+              title="No remittance records yet"
+            />
           ) : (
             <RemittanceRecordsPanel
               assignments={assignments}
@@ -325,20 +327,15 @@ export default async function RemittancePage({
               vehicles={vehicles}
             />
           )}
-        </CardContent>
-      </Card>
+      </TenantSurfaceCard>
 
       {showSecondarySections ? (
         <div className="mt-6 grid gap-6 xl:grid-cols-2">
           {recentDisputes.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Dispute registry</CardTitle>
-                <CardDescription>
-                  Formal remittance disputes, with status and timeline-backed claim references.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <TenantSurfaceCard
+              description="Formal remittance disputes, with status and timeline-backed claim references."
+              title="Dispute registry"
+            >
                 <TableViewport>
                   <Table>
                     <TableHeader>
@@ -370,19 +367,14 @@ export default async function RemittancePage({
                     </TableBody>
                   </Table>
                 </TableViewport>
-              </CardContent>
-            </Card>
+            </TenantSurfaceCard>
           ) : null}
 
           {recentDocuments.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Receipts and documents</CardTitle>
-                <CardDescription>
-                  Fingerprinted remittance receipts and dispute outputs linked back to source records.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <TenantSurfaceCard
+              description="Fingerprinted remittance receipts and dispute outputs linked back to source records."
+              title="Receipts and documents"
+            >
                 <TableViewport>
                   <Table>
                     <TableHeader>
@@ -419,8 +411,7 @@ export default async function RemittancePage({
                     </TableBody>
                   </Table>
                 </TableViewport>
-              </CardContent>
-            </Card>
+            </TenantSurfaceCard>
           ) : null}
         </div>
       ) : null}

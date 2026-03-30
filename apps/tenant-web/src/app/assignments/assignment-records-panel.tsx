@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
   Input,
   RegistryTable,
   SearchableSelect,
@@ -26,6 +24,7 @@ import type {
   VehicleRecord,
 } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
+import { TenantMetricCard, TenantMetricGrid } from '../../features/shared/tenant-page-patterns';
 import { AssignmentRowActions } from './assignment-row-actions';
 
 const STATUS_OPTIONS: SearchableSelectOption[] = [
@@ -82,11 +81,13 @@ export function AssignmentRecordsPanel({
   drivers,
   vehicles,
   fleets,
+  remittanceBackedAssignments,
 }: {
   assignments: AssignmentRecord[];
   drivers: DriverRecord[];
   vehicles: VehicleRecord[];
   fleets: FleetRecord[];
+  remittanceBackedAssignments: number;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [fleetId, setFleetId] = useState('');
@@ -192,32 +193,27 @@ export function AssignmentRecordsPanel({
       pageSize={pageSize}
       summary={
         assignments.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardContent className="space-y-1 py-5">
-                <Text tone="muted">Total assignments</Text>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                  {assignments.length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="space-y-1 py-5">
-                <Text tone="muted">Active assignments</Text>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                  {assignments.filter((assignment) => assignment.status === 'active').length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="space-y-1 py-5">
-                <Text tone="muted">Matching current filters</Text>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
-                  {filteredAssignments.length}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <TenantMetricGrid>
+            <TenantMetricCard accent="primary" label="Total assignments" value={assignments.length} />
+            <TenantMetricCard
+              accent="success"
+              label="Active assignments"
+              note="Live operator workload"
+              value={assignments.filter((assignment) => assignment.status === 'active').length}
+            />
+            <TenantMetricCard
+              accent="sky"
+              label="Remittance-backed"
+              note="Assignments with collection terms"
+              value={remittanceBackedAssignments}
+            />
+            <TenantMetricCard
+              accent="slate"
+              label="Matching filters"
+              note="Current registry slice"
+              value={filteredAssignments.length}
+            />
+          </TenantMetricGrid>
         ) : null
       }
       title="Assignment registry"
@@ -283,40 +279,54 @@ export function AssignmentRecordsPanel({
         </TableHeader>
         <TableBody>
             {paginatedAssignments.map((assignment) => (
-              <TableRow key={assignment.id}>
+              <TableRow className="group hover:bg-slate-50/80" key={assignment.id}>
                 <TableCell>
-                <div className="space-y-1">
-                  <Link
-                    className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-                    href={`/assignments/${assignment.id}`}
-                  >
-                    {assignment.id}
-                  </Link>
-                  <Text tone="muted">{assignment.notes ?? 'No note added'}</Text>
-                </div>
+                  <div className="space-y-1">
+                    <Link
+                      className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                      href={`/assignments/${assignment.id}`}
+                    >
+                      {assignment.id}
+                    </Link>
+                    <Text tone="muted">{assignment.notes ?? 'No assignment note added'}</Text>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Badge tone={assignment.paymentModel === 'salary' || assignment.paymentModel === 'commission' ? 'neutral' : 'warning'}>
                     {formatPaymentModel(assignment.paymentModel)}
                   </Badge>
                 </TableCell>
-                <TableCell>{driverLabels.get(assignment.driverId) ?? assignment.driverId}</TableCell>
-              <TableCell>{vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}</TableCell>
-              <TableCell>{fleetLabels.get(assignment.fleetId) ?? assignment.fleetId}</TableCell>
-              <TableCell>
-                <Badge tone={getStatusTone(assignment.status)}>
-                  {formatStatusLabel(assignment.status)}
-                </Badge>
-              </TableCell>
-              <TableCell>{formatDateTime(assignment.startedAt)}</TableCell>
-              <TableCell>
-                <AssignmentRowActions
-                  assignmentId={assignment.id}
-                  status={assignment.status}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
+                <TableCell>
+                  <div className="space-y-1">
+                    <p className="font-medium text-[var(--mobiris-ink)]">
+                      {driverLabels.get(assignment.driverId) ?? assignment.driverId}
+                    </p>
+                    <p className="text-xs text-slate-500">{assignment.driverId}</p>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <p className="font-medium text-[var(--mobiris-ink)]">
+                      {vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}
+                    </p>
+                    <p className="text-xs text-slate-500">{assignment.vehicleId}</p>
+                  </div>
+                </TableCell>
+                <TableCell>{fleetLabels.get(assignment.fleetId) ?? assignment.fleetId}</TableCell>
+                <TableCell>
+                  <Badge tone={getStatusTone(assignment.status)}>
+                    {formatStatusLabel(assignment.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{formatDateTime(assignment.startedAt)}</TableCell>
+                <TableCell>
+                  <AssignmentRowActions
+                    assignmentId={assignment.id}
+                    status={assignment.status}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
         </TableBody>
       </Table>
     </RegistryTable>

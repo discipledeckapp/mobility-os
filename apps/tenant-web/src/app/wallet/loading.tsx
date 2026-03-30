@@ -3,11 +3,11 @@ import { RouteLoadingState } from '../../features/shared/route-state';
 export default function WalletLoading() {
   return (
     <RouteLoadingState
-      description="Track verification wallet funding, available credit, and operational wallet context."
-      eyebrow="Verification Wallet"
+      description="Load operational wallet balances and ledger activity for the selected business entity."
+      eyebrow="Operational Finance"
       summaryCount={3}
       tableRows={5}
-      title="Verification wallet"
+      title="Operational wallet"
     />
   );
 }

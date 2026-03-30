@@ -1,67 +1,142 @@
 # Wallet Model
 
+Date: 2026-03-30
+Status: Current architecture plus terminology warning
+
 ## Overview
 
-Mobility OS uses two distinct wallet types that must never be co-mingled. See [ADR-009](../decisions/ADR-009-wallet-separation.md).
+Mobility OS now has three related but distinct financial concepts:
 
-This document describes the target wallet model and the current schema boundary. Some wallet service workflows are defined in Prisma and architecture docs before their full service modules are wired.
+1. platform billing / SaaS wallet
+2. operational wallet
+3. verification funding
+
+The original architectural separation in [ADR-009](/Users/seyiadelaju/mobility-os/docs/decisions/ADR-009-wallet-separation.md) remains correct:
+
+- platform wallet and operational wallet must never be co-mingled
+
+However, the product surface has evolved and now also includes verification-funding flows, which sit adjacent to billing but are not the same thing as the operational wallet.
 
 ## Wallet Types
 
 ### Platform Wallet
 
-**Scope**: Owned by the platform (control plane)
-**Purpose**: SaaS billing, service credits, and consumption charges
-**Location**: `cp_platform_wallets` table
-**Who manages it**: Platform billing ops staff via the control-plane dashboard
+Scope:
+- owned by the control plane
 
-- Funded by tenant payment (bank transfer, card on file, etc.)
-- Debited automatically on invoice generation
-- Credited via service credits issued by platform staff
-- Balance below zero triggers grace period → suspension flow
+Purpose:
+- SaaS billing
+- service credits
+- invoice settlement
+- billing-side debits and credits
+
+Owner:
+- `apps/api-control-plane`
+
+Primary surface:
+- `apps/control-plane-web`
+- tenant billing summaries where appropriate
 
 ### Operational Wallet
 
-**Scope**: Owned by a tenant business or operating unit
-**Purpose**: Driver remittance accounting, cash collections, and internal fleet finance
-**Location**: `ow_*` tables in the tenant data plane
-**Who manages it**: Tenant finance staff via the tenant-web dashboard
+Scope:
+- owned by the tenant operations plane
 
-- Independently funded by tenant business operations
-- Not visible to platform billing
-- Transactions follow tenant-defined ledger rules
+Purpose:
+- tenant business operational finance
+- remittance-related accounting
+- internal cash and ledger operations
 
-## Separation Rule
+Owner:
+- `apps/api-core`
 
-> Platform wallet and operational wallet must remain distinct.
+Primary intended surface:
+- tenant operator and finance workflows
 
-The platform must never debit an operational wallet to settle a SaaS invoice. Operational wallet transactions must never appear on a SaaS invoice.
+Current implementation note:
+- backend endpoints exist in `api-core`
+- tenant-web no longer cleanly presents this as the canonical `/wallet` experience
 
-## Ledger Design Principles
+### Verification Funding
 
-- All wallet mutations are recorded as double-entry ledger entries
-- Every entry references the initiating event (invoice ID, payment ID, remittance run ID)
-- Wallet balance is always derived from the ledger — never stored as a mutable column
-- All transactions are append-only; corrections are made via reversal entries
+Scope:
+- tenant-facing billing/funding concept for company-paid verification
 
-## Implementation Status
+Purpose:
+- wallet, credit, and saved-card-backed ability to fund verification activity
+- verification-specific payment and spend state
 
-Current repo state:
-- Wallet schemas and separation rules are defined
-- Operational wallet functionality exists within `apps/api-core`
-- `apps/tenant-web` now has a read-only wallet page for the current business entity
-- The tenant sidebar wallet link is live and points to that read-only page
+Owner:
+- tenant-facing orchestration in `apps/api-core/tenant-billing`
+- underlying platform-side funding and payment integrations via control-plane internals
 
-Still pending in the control-plane service layer:
-- Full platform-wallet workflows
-- Billing-ops mutation endpoints
-- End-to-end invoice settlement automation
+Primary current surface:
+- `apps/tenant-web/src/app/wallet`
 
-Still pending in tenant-web:
-- wallet mutation flows
-- wallet filters and reporting views
+Important:
+- verification funding is not the operational wallet
+- verification funding is not the platform wallet
+- verification funding must be kept semantically separate in UX even when it relies on billing-side integrations
+
+## Separation Rules
+
+### Platform Wallet vs Operational Wallet
+
+The platform must never debit an operational wallet to settle a SaaS invoice.
+Operational wallet transactions must never appear on a SaaS invoice.
+
+### Verification Funding vs Operational Wallet
+
+Verification funding must not be described as the tenant’s operational remittance wallet.
+It is a distinct product concept tied to verification payment coverage, not general operational cash accounting.
+
+### Verification Funding vs SaaS Billing
+
+Verification funding may rely on adjacent billing/payment infrastructure, but users must still understand:
+
+- subscription billing pays for platform access
+- verification funding pays for company-funded verification activity
+- operational wallet manages tenant business operational finance
+
+## Ledger Principles
+
+- wallet mutations should remain ledger-derived
+- entries remain append-only
+- initiating references should be explicit
+- corrections should be modeled as reversals or superseding entries, not silent mutation
+
+## Current Implementation Status
+
+### Implemented
+
+- platform-wallet and billing infrastructure exist materially in the control plane
+- operational-wallet backend endpoints exist in `api-core`
+- tenant verification-funding summary and payment-return flows exist in tenant-web
+
+### Incomplete / Needing Clarification
+
+- tenant-web route semantics for wallet-related surfaces
+- explicit operational-wallet UX in tenant-web
+- clearer IA between:
+  - `/subscription`
+  - `/wallet`
+  - future operational finance surfaces
+
+## Current Recommendation
+
+Do not treat tenant-web `/wallet` as the canonical operational-wallet product surface until route semantics are formally resolved.
+
+Use these terms carefully:
+
+- `platform wallet`
+- `operational wallet`
+- `verification funding`
+
+Avoid using plain `wallet` without context in implementation planning.
 
 ## Related Docs
 
-- [Subscription & Billing](./subscription-and-billing.md)
-- [ADR-009: Wallet Separation](../decisions/ADR-009-wallet-separation.md)
+- [ADR-009: Wallet Separation](/Users/seyiadelaju/mobility-os/docs/decisions/ADR-009-wallet-separation.md)
+- [Subscription & Billing](/Users/seyiadelaju/mobility-os/docs/platform/subscription-and-billing.md)
+- [Canonical Ownership Matrix](/Users/seyiadelaju/mobility-os/docs/architecture/canonical-ownership-matrix.md)
+- [Product Intent Recovery Implementation Plan](/Users/seyiadelaju/mobility-os/docs/engineering/product-intent-recovery-implementation-plan.md)

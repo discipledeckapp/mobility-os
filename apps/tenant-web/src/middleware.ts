@@ -13,6 +13,23 @@ import {
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
 
+function isAuthEntryRoute(pathname: string) {
+  return (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname.startsWith('/reset-password')
+  );
+}
+
+function isSelfServiceRoute(pathname: string) {
+  return (
+    pathname.startsWith('/driver-self-service') ||
+    pathname.startsWith('/guarantor-self-service') ||
+    pathname.startsWith('/driver-kyc/payment-return')
+  );
+}
+
 async function refreshTenantSession(refreshToken: string) {
   const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
     method: 'POST',
@@ -65,15 +82,10 @@ export async function middleware(request: NextRequest) {
   const authCookie = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
   const refreshCookie = request.cookies.get(TENANT_REFRESH_COOKIE_NAME)?.value;
   const isPublicRoute =
-    pathname === '/login' ||
-    pathname === '/signup' ||
-    pathname === '/forgot-password' ||
+    isAuthEntryRoute(pathname) ||
     pathname === '/privacy' ||
     pathname === '/terms' ||
-    pathname.startsWith('/reset-password') ||
-    pathname.startsWith('/driver-kyc/payment-return') ||
-    pathname.startsWith('/driver-self-service') ||
-    pathname.startsWith('/guarantor-self-service');
+    isSelfServiceRoute(pathname);
 
   let activeAccessToken = authCookie;
   let activeRefreshToken = refreshCookie;
@@ -85,20 +97,15 @@ export async function middleware(request: NextRequest) {
       activeRefreshToken = refreshedSession.refreshToken;
       const payload = parseTenantJwtPayload(activeAccessToken);
       const continuationPath = getSelfServiceContinuationPath(payload);
-      const isLoginRoute = pathname === '/login';
+      const isAuthRoute = isAuthEntryRoute(pathname);
 
-      if (
-        continuationPath &&
-        !pathname.startsWith('/driver-self-service') &&
-        !pathname.startsWith('/guarantor-self-service') &&
-        !pathname.startsWith('/driver-kyc/payment-return')
-      ) {
+      if (continuationPath && !isSelfServiceRoute(pathname)) {
         const response = NextResponse.redirect(new URL(continuationPath, request.url));
         applySessionCookies(response, refreshedSession);
         return response;
       }
 
-      if (isLoginRoute) {
+      if (isAuthRoute) {
         const response = NextResponse.redirect(new URL(continuationPath ?? '/', request.url));
         applySessionCookies(response, refreshedSession);
         return response;
@@ -139,18 +146,12 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  const isLoginRoute = pathname === '/login';
-  if (
-    hasUsableSession &&
-    continuationPath &&
-    !pathname.startsWith('/driver-self-service') &&
-    !pathname.startsWith('/guarantor-self-service') &&
-    !pathname.startsWith('/driver-kyc/payment-return')
-  ) {
+  const isAuthRoute = isAuthEntryRoute(pathname);
+  if (hasUsableSession && continuationPath && !isSelfServiceRoute(pathname)) {
     return NextResponse.redirect(new URL(continuationPath, request.url));
   }
 
-  if (hasUsableSession && isLoginRoute) {
+  if (hasUsableSession && isAuthRoute) {
     return NextResponse.redirect(new URL(continuationPath ?? '/', request.url));
   }
 

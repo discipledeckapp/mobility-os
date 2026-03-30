@@ -20,6 +20,10 @@ import {
   type SearchableSelectOption,
 } from '@mobility-os/ui';
 import type { DriverRecord, FleetRecord } from '../../lib/api-core';
+import {
+  TenantMetricCard,
+  TenantMetricGrid,
+} from '../../features/shared/tenant-page-patterns';
 import { DriverStatusActions } from './driver-status-actions';
 
 function LockIcon() {
@@ -356,61 +360,22 @@ export function DriverRecordsPanel({
         page={page}
         pageSize={pageSize}
         summary={
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
-              <div className="h-0.5 bg-[var(--mobiris-primary)]" />
-              <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Total drivers</Text>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {totalDrivers}
-                </p>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
-              <div className="h-0.5 bg-emerald-400" />
-              <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Ready to operate</Text>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {verifiedActiveDrivers}
-                </p>
-                <Text tone="muted">On this page</Text>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-violet-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
-              <div className="h-0.5 bg-violet-400" />
-              <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Need verification</Text>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {unverifiedDrivers}
-                </p>
-                <Text tone="muted">{tenantVerificationTierLabel}</Text>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-sky-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
-              <div className="h-0.5 bg-sky-400" />
-              <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Guarantor complete</Text>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {
-                    drivers.filter((driver) =>
-                      getVerificationComponentLabel(driver, 'guarantor').tone === 'success',
-                    ).length
-                  }
-                </p>
-                <Text tone="muted">Required drivers only</Text>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.10)]">
-              <div className="h-0.5 bg-slate-300" />
-              <div className="space-y-1 px-5 py-4">
-                <Text tone="muted">Showing</Text>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-                  {drivers.length}
-                </p>
-                <Text tone="muted">Current page rows</Text>
-              </div>
-            </div>
-          </div>
+          <TenantMetricGrid className="lg:grid-cols-5 xl:grid-cols-5">
+            <TenantMetricCard accent="primary" label="Total drivers" value={totalDrivers} />
+            <TenantMetricCard accent="success" label="Ready to operate" note="On this page" value={verifiedActiveDrivers} />
+            <TenantMetricCard accent="violet" label="Need verification" note={tenantVerificationTierLabel} value={unverifiedDrivers} />
+            <TenantMetricCard
+              accent="sky"
+              label="Guarantor complete"
+              note="Required drivers only"
+              value={
+                drivers.filter((driver) =>
+                  getVerificationComponentLabel(driver, 'guarantor').tone === 'success',
+                ).length
+              }
+            />
+            <TenantMetricCard accent="slate" label="Showing" note="Current page rows" value={drivers.length} />
+          </TenantMetricGrid>
         }
         title="Driver registry"
         toolbar={

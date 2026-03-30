@@ -1,5 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { ProcessingScreen } from '../components/processing-state';
 import { useAppEntry } from '../contexts/app-entry-context';
@@ -45,7 +46,11 @@ import { SelfServiceReadinessScreen } from '../features/self-service/screens/Sel
 import { SelfServiceResumeScreen } from '../features/self-service/screens/SelfServiceResumeScreen';
 import { SelfServiceVerificationScreen } from '../features/self-service/screens/SelfServiceVerificationScreen';
 import { tokens } from '../theme/tokens';
-import { isDriverMobileSession } from '../utils/roles';
+import {
+  getMobileSessionExperience,
+  isDriverMobileSession,
+  isDriverScopedSession,
+} from '../utils/roles';
 import { mobileLinking } from './linking';
 import type { RootStackParamList } from './types';
 
@@ -53,15 +58,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { session, isLoading } = useAuth();
-  const { selectedRole, isLoading: isEntryLoading } = useAppEntry();
+  const { selectedRole, isLoading: isEntryLoading, setSelectedRole } = useAppEntry();
   const {
     token: selfServiceToken,
     driver: selfServiceDriver,
     documents: selfServiceDocuments,
     isLoading: isSelfServiceLoading,
   } = useSelfService();
-  const isDriverMode = isDriverMobileSession(session);
-  const isGuarantorSelfServiceSession = session?.selfServiceSubjectType === 'guarantor';
+  const sessionExperience = getMobileSessionExperience(session);
+  const isDriverMode = isDriverScopedSession(session);
+  const isDriverMobileMode = isDriverMobileSession(session);
   const requiresSelfServiceContinuation =
     isDriverMode &&
     Boolean(
@@ -81,6 +87,27 @@ export function RootNavigator() {
               !selfServiceDocuments.some((document) => document.documentType === slug),
           )),
     );
+
+  useEffect(() => {
+    if (sessionExperience === 'guarantor_self_service' && selectedRole !== 'guarantor') {
+      void setSelectedRole('guarantor');
+      return;
+    }
+
+    if (sessionExperience === 'driver_scoped' && selectedRole !== 'driver') {
+      void setSelectedRole('driver');
+      return;
+    }
+
+    if (sessionExperience === 'operator' && selectedRole !== 'operator') {
+      void setSelectedRole('operator');
+      return;
+    }
+
+    if (!session && selfServiceToken && selectedRole !== 'driver') {
+      void setSelectedRole('driver');
+    }
+  }, [selectedRole, selfServiceToken, session, sessionExperience, setSelectedRole]);
 
   if (isLoading || isSelfServiceLoading || isEntryLoading) {
     return (
@@ -103,12 +130,14 @@ export function RootNavigator() {
   }
 
   const initialRouteName: keyof RootStackParamList = session
-    ? isGuarantorSelfServiceSession
+    ? sessionExperience === 'guarantor_self_service'
       ? 'GuarantorSelfService'
       : isDriverMode
         ? requiresSelfServiceContinuation
           ? 'SelfServiceResume'
-          : 'Home'
+          : isDriverMobileMode
+            ? 'Home'
+            : 'SelfServiceReadiness'
         : 'OperatorDashboard'
     : selfServiceToken
       ? 'SelfServiceResume'
@@ -131,7 +160,7 @@ export function RootNavigator() {
         }}
       >
         {session ? (
-          isGuarantorSelfServiceSession ? (
+          sessionExperience === 'guarantor_self_service' ? (
           <>
             <Stack.Screen
               name="LegalDocument"
@@ -192,7 +221,7 @@ export function RootNavigator() {
               component={ProfileScreen}
               options={{ title: 'Verification status' }}
             />
-            {!requiresSelfServiceContinuation ? (
+            {!requiresSelfServiceContinuation && isDriverMobileMode ? (
               <>
                 <Stack.Screen
                   name="Home"
@@ -312,7 +341,7 @@ export function RootNavigator() {
               <Stack.Screen
                 name="OperatorWallet"
                 component={WalletScreen}
-                options={{ title: 'Wallet' }}
+                options={{ title: 'Verification funding' }}
               />
               <Stack.Screen
                 name="OperatorSettings"

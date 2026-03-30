@@ -5,12 +5,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionPendingButtonState,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
   InlineLoadingState,
-  CardTitle,
   Input,
   Label,
   SearchableSelect,
@@ -20,6 +15,11 @@ import type { SearchableSelectOption } from '@mobility-os/ui';
 import type { AssignmentRecord, DriverRecord, FleetRecord, VehicleRecord } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { FleetSelectField } from '../../features/shared/fleet-select-field';
+import {
+  TenantEmptyStateCard,
+  TenantSurfaceCard,
+  TenantToolbarPanel,
+} from '../../features/shared/tenant-page-patterns';
 import {
   recordRemittanceAction,
   type RecordRemittanceActionState,
@@ -153,34 +153,29 @@ export function CreateRemittanceForm({
   }, [initialAssignmentId, initialFleetId, router, state.success]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Record remittance</CardTitle>
-        <CardDescription>
-          {hasActiveAssignments
-            ? 'Choose an active assignment, review its collection context, then record the remittance.'
-            : 'Remittance becomes available once a driver has an active assignment.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <TenantSurfaceCard
+      contentClassName="space-y-4"
+      description={
+        hasActiveAssignments
+          ? 'Choose an active assignment, review its collection context, then record the remittance.'
+          : 'Remittance becomes available once a driver has an active assignment.'
+      }
+      title="Record remittance"
+    >
         {!hasActiveAssignments ? (
           <div className="space-y-4">
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 px-4 py-4">
-              <Text tone="strong">No active assignments found</Text>
-              <Text className="mt-2" tone="muted">
-                Remittance must be recorded against an active assignment that uses the remittance or hire purchase payment model. Create or activate a remittance-enabled assignment first, then return here to log collections.
-              </Text>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-                href="/assignments"
-              >
-                Go to Assignments
-              </a>
-            </div>
-
+            <TenantEmptyStateCard
+              actions={
+                <a
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+                  href="/assignments"
+                >
+                  Go to Assignments
+                </a>
+              }
+              description="Remittance must be recorded against an active assignment that uses the remittance or hire purchase payment model. Create or activate a remittance-enabled assignment first, then return here to log collections."
+              title="No active assignments found"
+            />
             {helperNote ? (
               <Text tone="muted">{helperNote}</Text>
             ) : null}
@@ -213,7 +208,7 @@ export function CreateRemittanceForm({
           />
           <div className="space-y-2">
             {fleetAssignments.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-slate-50/75 p-3">
                 {fleetAssignments.slice(0, 4).map((assignment) => (
                   <Button
                     className="max-w-full"
@@ -239,7 +234,7 @@ export function CreateRemittanceForm({
           </div>
 
           {selectedAssignment ? (
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50 px-4 py-4 md:col-span-2">
+            <TenantToolbarPanel className="md:col-span-2">
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="space-y-1">
                   <Text tone="muted">Driver</Text>
@@ -279,13 +274,13 @@ export function CreateRemittanceForm({
                   </Text>
                 </div>
               </div>
-            </div>
+            </TenantToolbarPanel>
           ) : (
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-dashed border-slate-300 bg-white px-4 py-4 md:col-span-2">
+            <TenantToolbarPanel className="border-dashed border-slate-300 bg-white md:col-span-2">
               <Text tone="muted">
                 Select an active assignment to load the driver, vehicle, expected remittance, and due date before recording a collection.
               </Text>
-            </div>
+            </TenantToolbarPanel>
           )}
 
           <div className="space-y-2">
@@ -441,7 +436,6 @@ export function CreateRemittanceForm({
             {helperNote}
           </Text>
         ) : null}
-      </CardContent>
-    </Card>
+    </TenantSurfaceCard>
   );
 }

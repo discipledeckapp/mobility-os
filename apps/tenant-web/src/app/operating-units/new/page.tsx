@@ -1,4 +1,5 @@
 import { Card, CardContent, Text } from '@mobility-os/ui';
+import type { Route } from 'next';
 import Link from 'next/link';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import { listBusinessEntities } from '../../../lib/api-core';
@@ -20,15 +21,15 @@ export default async function NewOperatingUnitPage() {
             <div>
               <Text tone="strong">Operating unit registry workflow</Text>
               <Text tone="muted">
-                Create the operating unit here, then return to business entities to review the
-                hierarchy and linked fleets.
+                Create the operating unit here, then continue into its detail page to review linked
+                fleets and dispatch coverage.
               </Text>
             </div>
             <Link
               className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-              href="/business-entities"
+              href={'/operating-units' as Route}
             >
-              Back to business entities
+              Back to operating units
             </Link>
           </CardContent>
         </Card>

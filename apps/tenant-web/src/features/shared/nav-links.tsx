@@ -108,6 +108,27 @@ const FleetsIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
+const OperatingUnitsIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <rect height="4" rx="1" width="5" x="1.5" y="2" />
+    <rect height="4" rx="1" width="5" x="9.5" y="2" />
+    <rect height="4" rx="1" width="5" x="5.5" y="10" />
+    <path d="M4 6v2.2h8V6M8 8.2v1.8" />
+  </svg>
+);
+
 const AssignmentsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -209,6 +230,25 @@ const ReportsIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
+const RecordsIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <rect height="11" rx="1.5" width="10" x="3" y="2.5" />
+    <path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" />
+  </svg>
+);
+
 const SettingsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -252,6 +292,7 @@ const navigationSections = [
     label: 'Structure',
     items: [
       { href: '/business-entities', label: 'Business entities', Icon: BusinessEntitiesIcon },
+      { href: '/operating-units' as Route, label: 'Operating units', Icon: OperatingUnitsIcon },
       { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
     ],
   },
@@ -259,7 +300,9 @@ const navigationSections = [
     label: 'Insights',
     items: [
       { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
-      { href: '/wallet', label: 'Verification Wallet', Icon: WalletIcon },
+      { href: '/wallet', label: 'Operational wallet', Icon: WalletIcon },
+      { href: '/verification-funding' as Route, label: 'Verification funding', Icon: WalletIcon },
+      { href: '/records' as Route, label: 'Records', Icon: RecordsIcon },
       { href: '/reports' as Route, label: 'Operations Insights', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],

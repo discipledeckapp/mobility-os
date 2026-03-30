@@ -16,6 +16,7 @@ interface AppEntryContextValue {
   selectedRole: AppEntryRole | null;
   isLoading: boolean;
   setSelectedRole: (role: AppEntryRole) => Promise<void>;
+  clearSelectedRole: () => Promise<void>;
 }
 
 const AppEntryContext = createContext<AppEntryContextValue | null>(null);
@@ -45,13 +46,19 @@ export function AppEntryProvider({ children }: PropsWithChildren) {
     await AsyncStorage.setItem(STORAGE_KEYS.appEntryRole, role);
   }, []);
 
+  const clearSelectedRole = useCallback(async () => {
+    setSelectedRoleState(null);
+    await AsyncStorage.removeItem(STORAGE_KEYS.appEntryRole);
+  }, []);
+
   const value = useMemo<AppEntryContextValue>(
     () => ({
       selectedRole,
       isLoading,
       setSelectedRole,
+      clearSelectedRole,
     }),
-    [isLoading, selectedRole, setSelectedRole],
+    [clearSelectedRole, isLoading, selectedRole, setSelectedRole],
   );
 
   return <AppEntryContext.Provider value={value}>{children}</AppEntryContext.Provider>;

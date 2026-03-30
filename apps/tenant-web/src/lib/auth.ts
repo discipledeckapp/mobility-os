@@ -23,13 +23,19 @@ interface JwtPayload {
   selfServiceDriverId?: string;
 }
 
-type SelfServiceRoutingContext = {
+export type SelfServiceRoutingContext = {
   accessMode?: JwtPayload['accessMode'] | null;
   mobileRole?: JwtPayload['mobileRole'] | null;
   selfServiceSubjectType?: JwtPayload['selfServiceSubjectType'] | null;
   linkedDriverId?: string | null;
   selfServiceDriverId?: string | null;
 };
+
+export type TenantExperience =
+  | 'guarantor_self_service'
+  | 'driver_scoped'
+  | 'tenant_user'
+  | 'anonymous';
 
 function getMaxAgeFromToken(token: string | undefined): number | undefined {
   const payload = decodeJwtPayload(token);
@@ -94,24 +100,55 @@ export function parseTenantJwtPayload(token: string | undefined): JwtPayload | n
   return decodeJwtPayload(token);
 }
 
-export function getSelfServiceContinuationPath(
+export function isGuarantorSelfServiceContext(
   payload: SelfServiceRoutingContext | null | undefined,
-): string | null {
+): boolean {
+  return payload?.selfServiceSubjectType === 'guarantor';
+}
+
+export function isDriverScopedContext(
+  payload: SelfServiceRoutingContext | null | undefined,
+): boolean {
   if (!payload) {
-    return null;
+    return false;
   }
 
-  if (payload.selfServiceSubjectType === 'guarantor') {
-    return '/guarantor-self-service/continue';
-  }
-
-  if (
+  return (
     payload.selfServiceSubjectType === 'driver' ||
     payload.accessMode === 'driver_mobile' ||
     payload.mobileRole === 'driver' ||
     typeof payload.linkedDriverId === 'string' ||
     typeof payload.selfServiceDriverId === 'string'
-  ) {
+  );
+}
+
+export function getTenantExperience(
+  payload: SelfServiceRoutingContext | null | undefined,
+): TenantExperience {
+  if (!payload) {
+    return 'anonymous';
+  }
+
+  if (isGuarantorSelfServiceContext(payload)) {
+    return 'guarantor_self_service';
+  }
+
+  if (isDriverScopedContext(payload)) {
+    return 'driver_scoped';
+  }
+
+  return 'tenant_user';
+}
+
+export function getSelfServiceContinuationPath(
+  payload: SelfServiceRoutingContext | null | undefined,
+): string | null {
+  const experience = getTenantExperience(payload);
+  if (experience === 'guarantor_self_service') {
+    return '/guarantor-self-service/continue';
+  }
+
+  if (experience === 'driver_scoped') {
     return '/driver-self-service/continue';
   }
 

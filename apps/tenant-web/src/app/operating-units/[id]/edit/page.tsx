@@ -1,3 +1,4 @@
+import type { Route } from 'next';
 import { Card, CardContent, Text } from '@mobility-os/ui';
 import Link from 'next/link';
 import { TenantAppShell } from '../../../../features/shared/tenant-app-shell';
@@ -38,9 +39,9 @@ export default async function EditOperatingUnitPage({
             </div>
             <Link
               className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-              href={`/business-entities?entityId=${encodeURIComponent(operatingUnit.businessEntityId)}`}
+              href={`/operating-units/${encodeURIComponent(operatingUnit.id)}` as Route}
             >
-              Back to business entity
+              Back to operating unit
             </Link>
           </CardContent>
         </Card>

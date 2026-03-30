@@ -5,12 +5,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionPendingButtonState,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
   InlineLoadingState,
-  CardTitle,
   Input,
   Label,
   SearchableSelect,
@@ -20,6 +15,10 @@ import type { SearchableSelectOption } from '@mobility-os/ui';
 import type { DriverRecord, FleetRecord, VehicleRecord } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { FleetSelectField } from '../../features/shared/fleet-select-field';
+import {
+  TenantSurfaceCard,
+  TenantToolbarPanel,
+} from '../../features/shared/tenant-page-patterns';
 import {
   createAssignmentAction,
   type CreateAssignmentActionState,
@@ -236,17 +235,14 @@ export function CreateAssignmentForm({
   const usesRemittance = paymentModel === 'remittance' || paymentModel === 'hire_purchase';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create assignment</CardTitle>
-        <CardDescription>
-          Pair an active driver with an available vehicle.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-slate-600">
+    <TenantSurfaceCard
+      contentClassName="space-y-4"
+      description="Pair an active driver with an available vehicle."
+      title="Create assignment"
+    >
+        <TenantToolbarPanel className="border-blue-100 bg-blue-50/60 text-sm text-slate-600">
           <span className="font-semibold text-blue-800">Before you start:</span> Both the driver and vehicle must be active and available. Only eligible options appear in the quick-picks below. Drivers also need an approved licence on file.
-        </div>
+        </TenantToolbarPanel>
         <form action={formAction} className="grid gap-4 md:grid-cols-2" ref={formRef}>
           <FleetSelectField
             fleetError={fleetError}
@@ -274,7 +270,7 @@ export function CreateAssignmentForm({
           />
           <div className="space-y-2">
             {fleetDrivers.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-[var(--mobiris-border)] bg-slate-50/75 p-3">
                 {fleetDrivers.slice(0, 4).map((driver) => (
                   <Button
                     className="max-w-full"
@@ -606,7 +602,6 @@ export function CreateAssignmentForm({
             {helperNote}
           </Text>
         ) : null}
-      </CardContent>
-    </Card>
+    </TenantSurfaceCard>
   );
 }

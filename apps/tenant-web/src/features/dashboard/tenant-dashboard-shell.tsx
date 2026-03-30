@@ -112,6 +112,23 @@ const featureCardIcons: Record<string, React.ReactNode> = {
       <path d="M5 8v5M15 8v5" />
     </svg>
   ),
+  '/records': (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      focusable="false"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+      viewBox="0 0 20 20"
+      width="20"
+    >
+      <rect height="14" rx="2" width="12" x="4" y="3" />
+      <path d="M7 7h6M7 10.5h6M7 14h4" />
+    </svg>
+  ),
 };
 
 const activityKindColors: Record<string, string> = {
@@ -500,12 +517,25 @@ export function TenantDashboardShell({
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="strong">Close remittance gaps quickly</Text>
                 <Text tone="muted">
-                  Use the remittance queue and wallet view to clear pending collections before they age out.
+                  Use the remittance queue and verification funding view to clear pending collections and keep driver verification moving.
                 </Text>
                 <div className="mt-3">
-                  <Link href="/wallet">
+                  <Link href={'/verification-funding' as Route}>
                     <Button size="sm" variant="secondary">
-                      Open wallet and credit
+                      Open verification funding
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="strong">Keep the audit trail visible</Text>
+                <Text tone="muted">
+                  Review signed documents and dispute history so assignment, remittance, and compliance records stay easy to verify.
+                </Text>
+                <div className="mt-3">
+                  <Link href={'/records' as Route}>
+                    <Button size="sm" variant="secondary">
+                      Open records
                     </Button>
                   </Link>
                 </div>

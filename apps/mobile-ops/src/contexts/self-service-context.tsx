@@ -18,6 +18,7 @@ import {
   type DriverSelfServiceDocumentRecord,
 } from '../api';
 import { STORAGE_KEYS } from '../constants';
+import { isDriverScopedSession } from '../utils/roles';
 import { useAuth } from './auth-context';
 
 interface SelfServiceContextValue {
@@ -131,13 +132,10 @@ export function SelfServiceProvider({ children }: PropsWithChildren) {
   }, [loadContext, token]);
 
   useEffect(() => {
-    const restore = async () => {
+      const restore = async () => {
       const storedToken = await SecureStore.getItemAsync(STORAGE_KEYS.selfServiceToken);
       if (!storedToken) {
-        const canResumeFromAuthenticatedSession =
-          session?.selfServiceSubjectType === 'driver' ||
-          session?.accessMode === 'driver_mobile' ||
-          session?.mobileRole === 'driver';
+        const canResumeFromAuthenticatedSession = isDriverScopedSession(session);
 
         if (canResumeFromAuthenticatedSession) {
           try {

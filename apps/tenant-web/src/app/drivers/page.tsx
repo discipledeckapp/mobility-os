@@ -1,7 +1,12 @@
 import Link from 'next/link';
-import { Card, CardContent, Text } from '@mobility-os/ui';
 import { CsvBulkImportCard } from '../../components/csv-bulk-import-card';
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
+import {
+  TenantHeroPanel,
+  TenantSectionHeader,
+  TenantSurfaceCard,
+  TenantToolbarPanel,
+} from '../../features/shared/tenant-page-patterns';
 import {
   getTenantMe,
   getTenantApiToken,
@@ -109,27 +114,20 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
       eyebrow="Operators"
       title="Drivers"
     >
-      <Card className="mb-6 overflow-hidden border-slate-200 bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(239,246,255,0.95)_45%,rgba(219,234,254,0.84))] shadow-[0_22px_48px_-34px_rgba(37,99,235,0.34)]">
-        <CardContent className="space-y-5 py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
-                Verification level
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                {verificationTierLabel}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {verificationTierDescription}
-              </p>
-            </div>
-            <Link
-              className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
-              href="/drivers/new"
-            >
-              Add driver
-            </Link>
-          </div>
+      <TenantHeroPanel
+        actions={
+          <Link
+            className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+            href="/drivers/new"
+          >
+            Add driver
+          </Link>
+        }
+        description={verificationTierDescription}
+        eyebrow="Verification level"
+        title={verificationTierLabel}
+      >
+        <TenantToolbarPanel className="border-white/70 bg-white/55">
           <div className="grid gap-3 sm:grid-cols-3">
             {verificationChecklist.map((item) => (
               <div
@@ -140,8 +138,8 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </TenantToolbarPanel>
+      </TenantHeroPanel>
 
       <DriverRecordsPanel
         drivers={drivers}
@@ -160,31 +158,35 @@ export default async function DriversPage({ searchParams }: DriversPageProps) {
       />
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        <CsvBulkImportCard
-          id="bulk-import"
-          checkboxLabel="Send self-verification link after importing each driver"
-          checkboxName="autoSendSelfServiceLink"
-          description="Use bulk import when you already have a prepared roster and want to upload drivers in one pass."
-          exportHref="/api/download/drivers-export"
-          formAction={importDriversCsvAction}
-          templateHref="/api/download/driver-import-template"
-          title="Add drivers in bulk"
-        />
+        <div className="space-y-4" id="bulk-import">
+          <TenantSectionHeader
+            description="Use bulk import when you already have a prepared roster and want to upload drivers in one pass."
+            eyebrow="Secondary workflow"
+            title="Add drivers in bulk"
+          />
+          <CsvBulkImportCard
+            checkboxLabel="Send self-verification link after importing each driver"
+            checkboxName="autoSendSelfServiceLink"
+            description="Use bulk import when you already have a prepared roster and want to upload drivers in one pass."
+            exportHref="/api/download/drivers-export"
+            formAction={importDriversCsvAction}
+            templateHref="/api/download/driver-import-template"
+            title="Add drivers in bulk"
+          />
+        </div>
         {documentsEnabled ? (
-          <Card className="border-slate-200 bg-white">
-            <CardContent className="space-y-3 py-6">
-              <Text tone="strong">Document review queue</Text>
-              <Text tone="muted">
-                Review uploaded driver documents only when your verification setup requires them.
-              </Text>
-              <Link
-                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
-                href="/drivers/review-queue"
-              >
-                Open document review queue
-              </Link>
-            </CardContent>
-          </Card>
+          <TenantSurfaceCard
+            contentClassName="space-y-3 py-6"
+            description="Review uploaded driver documents only when your verification setup requires them."
+            title="Document review queue"
+          >
+            <Link
+              className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white px-4 text-sm font-semibold text-[var(--mobiris-primary-dark)]"
+              href="/drivers/review-queue"
+            >
+              Open document review queue
+            </Link>
+          </TenantSurfaceCard>
         ) : null}
       </div>
     </TenantAppShell>

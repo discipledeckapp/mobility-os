@@ -29,7 +29,11 @@ function getPayload(
   };
 }
 
-function getRedirectPath(businessEntityId: string): Route {
+function getCreateRedirectPath(operatingUnitId: string): Route {
+  return `/operating-units/${encodeURIComponent(operatingUnitId)}` as Route;
+}
+
+function getBusinessEntityRedirectPath(businessEntityId: string): Route {
   return `/business-entities?entityId=${encodeURIComponent(businessEntityId)}`;
 }
 
@@ -46,16 +50,16 @@ export async function createOperatingUnitAction(
   }
 
   try {
-    await createOperatingUnit(payload);
+    const operatingUnit = await createOperatingUnit(payload);
+    revalidatePath('/operating-units');
+    revalidatePath('/business-entities');
+    redirect(getCreateRedirectPath(operatingUnit.id));
   } catch (error) {
     return {
       error:
         error instanceof Error ? error.message : 'Unable to create operating unit at this time.',
     };
   }
-
-  revalidatePath('/business-entities');
-  redirect(getRedirectPath(payload.businessEntityId));
 }
 
 export async function updateOperatingUnitAction(
@@ -80,6 +84,8 @@ export async function updateOperatingUnitAction(
     };
   }
 
+  revalidatePath('/operating-units');
+  revalidatePath(`/operating-units/${operatingUnitId}`);
   revalidatePath('/business-entities');
-  redirect(getRedirectPath(payload.businessEntityId));
+  redirect(getBusinessEntityRedirectPath(payload.businessEntityId));
 }

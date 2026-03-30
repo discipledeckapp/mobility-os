@@ -467,7 +467,7 @@ export default async function DriverDetailsPage({
                 <p className="text-sm text-amber-800">
                   Your organisation wallet or credit cover may not be enough for {tierLabel}
                   {amount ? ` (${amount})` : ''} for this driver.{' '}
-                  <a className="font-semibold underline hover:no-underline" href="/wallet">
+                  <a className="font-semibold underline hover:no-underline" href="/verification-funding">
                     Fund the wallet
                   </a>{' '}
                   before starting verification, or switch to driver-pays mode in{' '}
