@@ -1,11 +1,6 @@
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -18,10 +13,15 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
-  getPlatformApiToken,
-  listInvoices,
-  listSubscriptions,
-} from '../../lib/api-control-plane';
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+  ControlPlaneToolbarPanel,
+} from '../../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
+import { getPlatformApiToken, listInvoices, listSubscriptions, listTenants } from '../../lib/api-control-plane';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -41,10 +41,12 @@ type SubscriptionsPageProps = {
 export default async function SubscriptionsPage({ searchParams }: SubscriptionsPageProps) {
   const params = (await searchParams) ?? {};
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [subscriptions, invoices] = await Promise.all([
+  const [subscriptions, invoices, tenants] = await Promise.all([
     listSubscriptions(token),
     listInvoices(token),
+    listTenants(token),
   ]);
+  const tenantLookup = buildTenantLookup(tenants);
   const planFilter = params.plan?.trim().toLowerCase() ?? '';
   const statusFilter = params.status?.trim().toLowerCase() ?? '';
   const filteredSubscriptions = subscriptions.filter((subscription) => {
@@ -52,60 +54,49 @@ export default async function SubscriptionsPage({ searchParams }: SubscriptionsP
     const matchesStatus = !statusFilter || subscription.status.toLowerCase() === statusFilter;
     return matchesPlan && matchesStatus;
   });
-  const availablePlanTiers = Array.from(
-    new Set(subscriptions.map((subscription) => subscription.planTier)),
-  );
+  const availablePlanTiers = Array.from(new Set(subscriptions.map((subscription) => subscription.planTier)));
 
-  const activeCount = subscriptions.filter(
-    (subscription) => subscription.status === 'active',
+  const activeCount = subscriptions.filter((subscription) => subscription.status === 'active').length;
+  const trialingCount = subscriptions.filter((subscription) => subscription.status === 'trialing').length;
+  const atRiskCount = subscriptions.filter((subscription) =>
+    ['past_due', 'suspended'].includes(subscription.status),
   ).length;
-  const endingSoonCount = subscriptions.filter(
-    (subscription) => subscription.cancelAtPeriodEnd,
-  ).length;
+  const endingSoonCount = subscriptions.filter((subscription) => subscription.cancelAtPeriodEnd).length;
   const openInvoiceTotal = invoices
     .filter((invoice) => invoice.status === 'open')
     .reduce((sum, invoice) => sum + invoice.amountDueMinorUnits, 0);
 
   return (
     <ControlPlaneShell
-      description="Review organisation subscription posture, active plans, and outstanding billing state."
-      eyebrow="Billing"
+      description="Review organisation subscription posture, plan shifts, invoice exposure, and renewal risk from one platform-admin surface."
+      eyebrow="Billing oversight"
       title="Subscriptions"
     >
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Active subscriptions</CardDescription>
-              <CardTitle>{activeCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Ending at period close</CardDescription>
-              <CardTitle>{endingSoonCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Open invoice exposure</CardDescription>
-              <CardTitle>
-                {formatCurrency(openInvoiceTotal, invoices[0]?.currency ?? 'NGN')}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${activeCount} active`, tone: 'success' },
+            { label: `${trialingCount} trialing`, tone: 'neutral' },
+            { label: `${atRiskCount} at risk`, tone: atRiskCount ? 'warning' : 'success' },
+          ]}
+          description="This is the platform subscription registry, not a tenant billing page. Use it to spot renewals, grace-period risk, and tenants whose plan posture needs intervention."
+          eyebrow="Subscription governance"
+          title="Track the organisations that are trialing, active, ending soon, or drifting into billing risk."
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Subscription registry</CardTitle>
-            <CardDescription>
-              Review each organisation subscription, billing period, and plan posture from one
-              platform surface.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="mb-4 flex flex-wrap gap-3" method="get">
+        <ControlPlaneMetricGrid columns={4}>
+          <ControlPlaneMetricCard detail="Currently paying and within normal posture." label="Active" tone="success" value={activeCount} />
+          <ControlPlaneMetricCard detail="Still in assisted conversion or onboarding." label="Trialing" tone="neutral" value={trialingCount} />
+          <ControlPlaneMetricCard detail="Past-due or suspended subscriptions needing action." label="At risk" tone={atRiskCount ? 'warning' : 'success'} value={atRiskCount} />
+          <ControlPlaneMetricCard detail={formatCurrency(openInvoiceTotal, invoices[0]?.currency ?? 'NGN')} label="Open exposure" tone={openInvoiceTotal > 0 ? 'warning' : 'success'} value={endingSoonCount} />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="Filter the platform subscription registry by plan tier or lifecycle status."
+          title="Subscription registry"
+        >
+          <ControlPlaneToolbarPanel>
+            <form className="flex flex-wrap gap-3" method="get">
               <select
                 className="rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm"
                 defaultValue={params.plan ?? ''}
@@ -127,79 +118,100 @@ export default async function SubscriptionsPage({ searchParams }: SubscriptionsP
                 <option value="active">Active</option>
                 <option value="trialing">Trialing</option>
                 <option value="past_due">Past due</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="suspended">Suspended</option>
+                <option value="terminated">Terminated</option>
               </select>
               <Button type="submit" variant="secondary">
                 Apply
               </Button>
             </form>
-            <TableViewport>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Organisation</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Current period</TableHead>
-                    <TableHead>Renewal posture</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSubscriptions.map((subscription) => (
-                    <TableRow key={subscription.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Link
-                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
-                            href={`/tenants/${subscription.tenantId}`}
-                          >
-                            {subscription.tenantId}
-                          </Link>
-                          <p className="text-xs text-slate-500">{subscription.id}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium text-slate-900">{subscription.planName}</p>
-                          <p className="text-xs uppercase tracking-wide text-slate-500">
-                            {subscription.planTier} · {subscription.currency}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          tone={
-                            subscription.status === 'active'
-                              ? 'success'
-                              : subscription.status === 'trialing'
-                                ? 'neutral'
-                                : 'warning'
-                          }
-                        >
-                          {subscription.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date(subscription.currentPeriodStart).toLocaleDateString()} to{' '}
-                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {subscription.cancelAtPeriodEnd ? (
-                          <Badge tone="warning">Cancel at period end</Badge>
-                        ) : (
-                          <Badge tone="success">Continuing</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableViewport>
+          </ControlPlaneToolbarPanel>
+
+          <div className="mt-4">
             {filteredSubscriptions.length === 0 ? (
-              <Text className="pt-4">No subscriptions match the current filters.</Text>
-            ) : null}
-          </CardContent>
-        </Card>
+              <ControlPlaneEmptyStateCard
+                description="No subscriptions match the current filters."
+                title="Nothing in this billing slice"
+              />
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organisation</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Current period</TableHead>
+                      <TableHead>Renewal posture</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSubscriptions.map((subscription) => {
+                      const tenant = getTenantLabel(tenantLookup, subscription.tenantId);
+                      return (
+                        <TableRow key={subscription.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Link
+                                className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                                href={`/tenants/${subscription.tenantId}`}
+                              >
+                                {tenant.name}
+                              </Link>
+                              <p className="text-xs text-slate-500">
+                                {tenant.slug} · {tenant.country} · {tenant.status}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-900">{subscription.planName}</p>
+                              <p className="text-xs uppercase tracking-wide text-slate-500">
+                                {subscription.planTier} · {subscription.currency}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              tone={
+                                subscription.status === 'active'
+                                  ? 'success'
+                                  : subscription.status === 'trialing'
+                                    ? 'neutral'
+                                    : ['past_due', 'suspended'].includes(subscription.status)
+                                      ? 'warning'
+                                      : 'danger'
+                              }
+                            >
+                              {subscription.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {new Date(subscription.currentPeriodStart).toLocaleDateString()} to{' '}
+                            {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {subscription.cancelAtPeriodEnd ? (
+                              <Badge tone="warning">Ending at period close</Badge>
+                            ) : (
+                              <Badge tone="success">Continuing</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <Text tone="muted">
+              {filteredSubscriptions.length} of {subscriptions.length} subscriptions shown.
+            </Text>
+          </div>
+        </ControlPlaneSectionShell>
       </div>
     </ControlPlaneShell>
   );

@@ -1,10 +1,5 @@
 import {
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,9 +7,16 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import { getGovernanceOversight, listTenants } from '../../lib/api-control-plane';
 
 function statusTone(
@@ -28,12 +30,8 @@ function statusTone(
 }
 
 export default async function GovernancePage() {
-  const [overview, tenants] = await Promise.all([
-    getGovernanceOversight(),
-    listTenants().catch(() => []),
-  ]);
-
-  const tenantNameById = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
+  const [overview, tenants] = await Promise.all([getGovernanceOversight(), listTenants().catch(() => [])]);
+  const tenantLookup = buildTenantLookup(tenants);
   const mergedTenantIds = new Set([
     ...overview.privacy.tenantSummaries.map((item) => item.tenantId),
     ...overview.notifications.tenantSummaries.map((item) => item.tenantId),
@@ -46,57 +44,52 @@ export default async function GovernancePage() {
       description="Track privacy requests, consent posture, and notification delivery health across tenants so platform support can respond before issues turn into compliance debt."
     >
       <div className="space-y-6">
-        <div className="grid gap-4 xl:grid-cols-4">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Open privacy requests</CardDescription>
-              <CardTitle>{overview.privacy.totals.openRequests}</CardTitle>
-              <Text tone="muted">
-                {overview.privacy.totals.pendingReviewRequests} pending review across tenants.
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Consent activity</CardDescription>
-              <CardTitle>{overview.privacy.totals.consentEventsLast30Days}</CardTitle>
-              <Text tone="muted">
-                {overview.privacy.support.privacyPolicyVersion} privacy policy version currently in
-                force.
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Unread notifications</CardDescription>
-              <CardTitle>{overview.notifications.totals.unreadNotifications}</CardTitle>
-              <Text tone="muted">
-                {overview.notifications.totals.tenantsWithUnreadNotifications} tenants currently
-                have unread platform-relevant notices.
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Push delivery footprint</CardDescription>
-              <CardTitle>{overview.notifications.totals.pushDevices}</CardTitle>
-              <Text tone="muted">
-                {overview.notifications.totals.pushEnabledUsers} push-enabled users across tracked
-                tenants.
-              </Text>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${overview.privacy.totals.openRequests} privacy requests`, tone: overview.privacy.totals.openRequests ? 'warning' : 'success' },
+            { label: `${overview.notifications.totals.unreadNotifications} unread notices`, tone: overview.notifications.totals.unreadNotifications ? 'warning' : 'success' },
+            { label: `${overview.notifications.totals.pushDevices} push devices`, tone: 'neutral' },
+          ]}
+          description="This is the platform governance queue for privacy, consent, and notification posture. It should tell support where compliance debt is building and which tenants are not receiving the right notices."
+          eyebrow="Privacy and communication oversight"
+          title="See which tenants have open privacy pressure or unread operational notices."
+        />
 
-        <Card className="border-slate-200/80">
-          <CardHeader>
-            <CardTitle>Cross-tenant governance queue</CardTitle>
-            <CardDescription>
-              This is the platform-side complement to privacy, consent, and notification behavior
-              already happening in tenant web and the driver app.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneMetricGrid columns={4}>
+          <ControlPlaneMetricCard
+            detail={`${overview.privacy.totals.pendingReviewRequests} pending review across tenants.`}
+            label="Open privacy requests"
+            tone={overview.privacy.totals.openRequests ? 'warning' : 'success'}
+            value={overview.privacy.totals.openRequests}
+          />
+          <ControlPlaneMetricCard
+            detail={`${overview.privacy.support.privacyPolicyVersion} privacy policy currently in force.`}
+            label="Consent activity"
+            value={overview.privacy.totals.consentEventsLast30Days}
+          />
+          <ControlPlaneMetricCard
+            detail={`${overview.notifications.totals.tenantsWithUnreadNotifications} tenants currently have unread notices.`}
+            label="Unread notifications"
+            tone={overview.notifications.totals.unreadNotifications ? 'warning' : 'success'}
+            value={overview.notifications.totals.unreadNotifications}
+          />
+          <ControlPlaneMetricCard
+            detail={`${overview.notifications.totals.pushEnabledUsers} push-enabled users across tracked tenants.`}
+            label="Push delivery footprint"
+            value={overview.notifications.totals.pushDevices}
+          />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="This is the platform-side complement to privacy, consent, and notification behavior already happening in tenant web and mobile."
+          title="Cross-tenant governance queue"
+        >
+          {mergedTenantIds.size === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No privacy or notification activity is currently being surfaced."
+              title="No governance queue yet"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
@@ -110,20 +103,19 @@ export default async function GovernancePage() {
                 </TableHeader>
                 <TableBody>
                   {Array.from(mergedTenantIds).map((tenantId) => {
-                    const privacy = overview.privacy.tenantSummaries.find(
-                      (item) => item.tenantId === tenantId,
-                    );
-                    const notifications = overview.notifications.tenantSummaries.find(
-                      (item) => item.tenantId === tenantId,
-                    );
+                    const privacy = overview.privacy.tenantSummaries.find((item) => item.tenantId === tenantId);
+                    const notifications = overview.notifications.tenantSummaries.find((item) => item.tenantId === tenantId);
+                    const tenant = getTenantLabel(tenantLookup, tenantId);
 
                     return (
                       <TableRow key={tenantId}>
                         <TableCell>
-                          <div className="font-medium text-slate-900">
-                            {tenantNameById.get(tenantId) ?? tenantId}
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-900">{tenant.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {tenant.slug} · {tenant.country}
+                            </p>
                           </div>
-                          <div className="text-xs text-slate-500">{tenantId}</div>
                         </TableCell>
                         <TableCell className="text-sm text-slate-700">
                           <Badge
@@ -133,8 +125,7 @@ export default async function GovernancePage() {
                               3,
                             )}
                           >
-                            {(privacy?.openRequests ?? 0) + (privacy?.pendingReviewRequests ?? 0)}{' '}
-                            open
+                            {(privacy?.openRequests ?? 0) + (privacy?.pendingReviewRequests ?? 0)} open
                           </Badge>
                           <div className="text-xs text-slate-500">
                             {privacy?.closedRequests ?? 0} closed · last request{' '}
@@ -172,73 +163,81 @@ export default async function GovernancePage() {
                 </TableBody>
               </Table>
             </TableViewport>
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Recent privacy requests</CardTitle>
-              <CardDescription>
-                Use this to identify unresolved subject-access, deletion, or correction pressure.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {overview.privacy.requests.slice(0, 8).map((request) => (
-                <div className="rounded-2xl border border-slate-200 px-4 py-3" key={request.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {request.requestType} ·{' '}
-                        {tenantNameById.get(request.tenantId) ?? request.tenantId}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {request.subjectType} · {request.contactEmail ?? 'No contact email'}
+          <ControlPlaneSectionShell
+            description="Use this to identify unresolved subject-access, deletion, or correction pressure."
+            title="Recent privacy requests"
+          >
+            {overview.privacy.requests.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No privacy requests are currently open or recently recorded."
+                title="No privacy queue"
+              />
+            ) : (
+              <div className="space-y-3">
+                {overview.privacy.requests.slice(0, 8).map((request) => {
+                  const tenant = getTenantLabel(tenantLookup, request.tenantId);
+                  return (
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3" key={request.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {request.requestType} · {tenant.name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {request.subjectType} · {request.contactEmail ?? 'No contact email'}
+                          </p>
+                        </div>
+                        <Badge tone={request.status === 'closed' ? 'success' : 'warning'}>
+                          {request.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {request.details?.trim() || 'No additional request detail was supplied.'}
                       </p>
                     </div>
-                    <Badge tone={request.status === 'closed' ? 'success' : 'warning'}>
-                      {request.status}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {request.details?.trim() || 'No additional request detail was supplied.'}
-                  </p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </ControlPlaneSectionShell>
 
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Recent notification activity</CardTitle>
-              <CardDescription>
-                Delivery visibility for verification, compliance, assignment, and remittance
-                communication.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {overview.notifications.notifications.slice(0, 8).map((notification) => (
-                <div
-                  className="rounded-2xl border border-slate-200 px-4 py-3"
-                  key={notification.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
-                      <p className="text-xs text-slate-500">
-                        {tenantNameById.get(notification.tenantId) ?? notification.tenantId} ·{' '}
-                        {notification.user?.email ?? 'Unknown recipient'} · {notification.topic}
-                      </p>
+          <ControlPlaneSectionShell
+            description="Delivery visibility for verification, compliance, assignment, and remittance communication."
+            title="Recent notification activity"
+          >
+            {overview.notifications.notifications.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No cross-tenant notification activity is currently being surfaced."
+                title="No notification feed yet"
+              />
+            ) : (
+              <div className="space-y-3">
+                {overview.notifications.notifications.slice(0, 8).map((notification) => {
+                  const tenant = getTenantLabel(tenantLookup, notification.tenantId);
+                  return (
+                    <div className="rounded-2xl border border-slate-200 px-4 py-3" key={notification.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+                          <p className="text-xs text-slate-500">
+                            {tenant.name} · {notification.user?.email ?? 'Unknown recipient'} · {notification.topic}
+                          </p>
+                        </div>
+                        <Badge tone={notification.readAt ? 'success' : 'warning'}>
+                          {notification.readAt ? 'Read' : 'Unread'}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">{notification.body}</p>
                     </div>
-                    <Badge tone={notification.readAt ? 'success' : 'warning'}>
-                      {notification.readAt ? 'Read' : 'Unread'}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{notification.body}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </ControlPlaneSectionShell>
         </div>
       </div>
     </ControlPlaneShell>

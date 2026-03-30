@@ -19,7 +19,15 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useState, useTransition } from 'react';
+import { useActionState, useMemo, useState, useTransition } from 'react';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+  ControlPlaneToolbarPanel,
+} from '../../features/shared/control-plane-page-patterns';
 import type { FeatureFlagRecord, TenantListItemRecord } from '../../lib/api-control-plane';
 import {
   type FeatureFlagActionState,
@@ -127,33 +135,46 @@ export function FeatureFlagsPanel({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [filter, setFilter] = useState('');
+
+  const filteredFlags = useMemo(() => {
+    const normalized = filter.trim().toLowerCase();
+    if (!normalized) {
+      return flags;
+    }
+
+    return flags.filter((flag) => {
+      const haystack = `${flag.key} ${flag.description ?? ''}`.toLowerCase();
+      return haystack.includes(normalized);
+    });
+  }, [filter, flags]);
 
   const enabledFlags = flags.filter((flag) => flag.isEnabled).length;
   const overrideCount = flags.reduce((sum, flag) => sum + flag.overrides.length, 0);
+  const tenantScopedCount = flags.reduce(
+    (sum, flag) => sum + flag.overrides.filter((override) => Boolean(override.tenantId)).length,
+    0,
+  );
 
   return (
     <>
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Flags configured</CardDescription>
-              <CardTitle>{flags.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Globally enabled</CardDescription>
-              <CardTitle>{enabledFlags}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Scoped overrides</CardDescription>
-              <CardTitle>{overrideCount}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${enabledFlags} enabled`, tone: enabledFlags ? 'success' : 'neutral' },
+            { label: `${overrideCount} overrides`, tone: overrideCount ? 'warning' : 'neutral' },
+            { label: `${tenantScopedCount} tenant-scoped`, tone: tenantScopedCount ? 'warning' : 'neutral' },
+          ]}
+          description="Feature flags are rollout controls, not decoration. Use this registry to understand what is globally enabled, what is tenant-specific, and where rollout posture is being overridden."
+          eyebrow="Rollout governance"
+          title="Control feature rollout by global default, plan tier, country, and tenant."
+        />
+
+        <ControlPlaneMetricGrid columns={3}>
+          <ControlPlaneMetricCard label="Flags configured" value={flags.length} />
+          <ControlPlaneMetricCard label="Globally enabled" tone={enabledFlags ? 'success' : 'neutral'} value={enabledFlags} />
+          <ControlPlaneMetricCard label="Scoped overrides" tone={overrideCount ? 'warning' : 'neutral'} value={overrideCount} />
+        </ControlPlaneMetricGrid>
 
         {error ? <Text tone="danger">{error}</Text> : null}
         {feedback ? <Text tone="success">{feedback}</Text> : null}
@@ -165,109 +186,121 @@ export function FeatureFlagsPanel({
           />
         ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Flag registry</CardTitle>
-            <CardDescription>
-              Review global posture, toggle a flag, and add tenant-scoped overrides without leaving
-              the page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TableViewport>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Flag</TableHead>
-                    <TableHead>Global posture</TableHead>
-                    <TableHead>Overrides</TableHead>
-                    <TableHead>Expiry</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {flags.map((flag) => (
-                    <TableRow key={flag.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium text-slate-900">{flag.key}</p>
-                          <p className="text-sm text-slate-500">
-                            {flag.description ?? 'No operator description has been documented yet.'}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={flag.isEnabled ? 'success' : 'warning'}>
-                          {flag.isEnabled ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="space-y-2">
-                        <p className="text-sm text-slate-600">{flag.overrides.length}</p>
-                        <div className="space-y-1">
-                          {flag.overrides.slice(0, 3).map((override) => (
-                            <div
-                              className="flex items-center gap-2 text-xs text-slate-500"
-                              key={override.id}
-                            >
-                              <span>
-                                {override.tenantId ??
-                                  override.planTier ??
-                                  override.countryCode ??
-                                  'Scoped'}
-                              </span>
-                              <button
-                                className="text-[var(--mobiris-primary)]"
-                                onClick={() => {
-                                  startTransition(async () => {
-                                    const result = await removeFeatureFlagOverrideAction(
-                                      override.id,
-                                    );
-                                    setError(result.error ?? null);
-                                    setFeedback(result.success ?? null);
-                                  });
-                                }}
-                                type="button"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {flag.expiresAt ? new Date(flag.expiresAt).toLocaleString() : 'No expiry'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            disabled={pending}
-                            onClick={() => {
-                              startTransition(async () => {
-                                const result = await toggleFeatureFlagAction(
-                                  flag.key,
-                                  !flag.isEnabled,
-                                );
-                                setError(result.error ?? null);
-                                setFeedback(result.success ?? null);
-                              });
-                            }}
-                            type="button"
-                            variant="secondary"
-                          >
-                            {flag.isEnabled ? 'Disable' : 'Enable'}
-                          </Button>
-                          <Button onClick={() => setActiveFlagKey(flag.key)} type="button">
-                            Add override
-                          </Button>
-                        </div>
-                      </TableCell>
+        <ControlPlaneSectionShell
+          description="Review global posture, toggle a flag, and add tenant-scoped overrides without leaving the page."
+          title="Flag registry"
+        >
+          <ControlPlaneToolbarPanel>
+            <input
+              className="w-full rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Search flag key or description"
+              value={filter}
+            />
+          </ControlPlaneToolbarPanel>
+
+          <div className="mt-4">
+            {filteredFlags.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No feature flags match the current filter."
+                title="No flags in this slice"
+              />
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Flag</TableHead>
+                      <TableHead>Global posture</TableHead>
+                      <TableHead>Overrides</TableHead>
+                      <TableHead>Expiry</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableViewport>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFlags.map((flag) => (
+                      <TableRow key={flag.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-900">{flag.key}</p>
+                            <p className="text-sm text-slate-500">
+                              {flag.description ?? 'No operator description has been documented yet.'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={flag.isEnabled ? 'success' : 'warning'}>
+                            {flag.isEnabled ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="space-y-2">
+                          <p className="text-sm text-slate-600">{flag.overrides.length}</p>
+                          <div className="space-y-1">
+                            {flag.overrides.slice(0, 3).map((override) => (
+                              <div
+                                className="flex items-center gap-2 text-xs text-slate-500"
+                                key={override.id}
+                              >
+                                <span>
+                                  {override.tenantId ??
+                                    override.planTier ??
+                                    override.countryCode ??
+                                    'Scoped'}
+                                </span>
+                                <button
+                                  className="text-[var(--mobiris-primary)]"
+                                  onClick={() => {
+                                    startTransition(async () => {
+                                      const result = await removeFeatureFlagOverrideAction(
+                                        override.id,
+                                      );
+                                      setError(result.error ?? null);
+                                      setFeedback(result.success ?? null);
+                                    });
+                                  }}
+                                  type="button"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {flag.expiresAt ? new Date(flag.expiresAt).toLocaleString() : 'No expiry'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              disabled={pending}
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const result = await toggleFeatureFlagAction(
+                                    flag.key,
+                                    !flag.isEnabled,
+                                  );
+                                  setError(result.error ?? null);
+                                  setFeedback(result.success ?? null);
+                                });
+                              }}
+                              type="button"
+                              variant="secondary"
+                            >
+                              {flag.isEnabled ? 'Disable' : 'Enable'}
+                            </Button>
+                            <Button onClick={() => setActiveFlagKey(flag.key)} type="button">
+                              Add override
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </div>
+        </ControlPlaneSectionShell>
       </div>
 
       {activeFlagKey ? (

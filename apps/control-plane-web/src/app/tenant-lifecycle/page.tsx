@@ -1,10 +1,5 @@
 import {
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,20 +7,30 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
-import { listSubscriptions, listTenantLifecycleEvents } from '../../lib/api-control-plane';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
+import { listSubscriptions, listTenantLifecycleEvents, listTenants } from '../../lib/api-control-plane';
 import { TransitionLifecycleForm } from './transition-lifecycle-form';
 
-function getTone(status: string): 'success' | 'warning' | 'neutral' {
+function getTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
   if (status === 'active') return 'success';
   if (['past_due', 'grace_period', 'suspended'].includes(status)) return 'warning';
+  if (status === 'terminated') return 'danger';
   return 'neutral';
 }
 
 export default async function TenantLifecyclePage() {
-  const subscriptions = await listSubscriptions();
+  const [subscriptions, tenants] = await Promise.all([listSubscriptions(), listTenants()]);
+  const tenantLookup = buildTenantLookup(tenants);
   const lifecycleEvents = await Promise.all(
     subscriptions.map(async (subscription) => {
       const events = await listTenantLifecycleEvents(subscription.tenantId);
@@ -38,13 +43,9 @@ export default async function TenantLifecyclePage() {
   );
   const recentEvents = lifecycleEvents
     .flatMap(([, events]) => events)
-    .sort(
-      (left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime(),
-    )
+    .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())
     .slice(0, 8);
-  const activeCount = subscriptions.filter(
-    (subscription) => subscription.status === 'active',
-  ).length;
+  const activeCount = subscriptions.filter((subscription) => subscription.status === 'active').length;
   const attentionCount = subscriptions.filter((subscription) =>
     ['past_due', 'grace_period', 'suspended'].includes(subscription.status),
   ).length;
@@ -52,40 +53,37 @@ export default async function TenantLifecyclePage() {
   return (
     <ControlPlaneShell
       description="Review lifecycle posture and apply governed organisation status transitions from the control plane."
-      eyebrow="Lifecycle"
+      eyebrow="Lifecycle governance"
       title="Tenant lifecycle"
     >
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Tracked organisations</CardDescription>
-              <CardTitle>{subscriptions.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Active posture</CardDescription>
-              <CardTitle>{activeCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Needs attention</CardDescription>
-              <CardTitle>{attentionCount}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${subscriptions.length} tracked`, tone: 'neutral' },
+            { label: `${activeCount} active`, tone: 'success' },
+            { label: `${attentionCount} need intervention`, tone: attentionCount ? 'warning' : 'success' },
+          ]}
+          description="Use lifecycle controls deliberately. This is where platform staff move organisations between governed states and preserve the audit trail of why that change happened."
+          eyebrow="Organisation status transitions"
+          title="See current lifecycle posture and apply controlled status changes with context."
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lifecycle registry</CardTitle>
-            <CardDescription>
-              Review current organisation status, most recent lifecycle event, and governed
-              transition controls.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneMetricGrid columns={3}>
+          <ControlPlaneMetricCard label="Tracked organisations" value={subscriptions.length} />
+          <ControlPlaneMetricCard label="Active posture" tone="success" value={activeCount} />
+          <ControlPlaneMetricCard label="Needs attention" tone={attentionCount ? 'warning' : 'success'} value={attentionCount} />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="Review current organisation status, most recent lifecycle event, and governed transition controls."
+          title="Lifecycle registry"
+        >
+          {subscriptions.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No organisation subscriptions are available yet."
+              title="No lifecycle registry yet"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
@@ -100,12 +98,20 @@ export default async function TenantLifecyclePage() {
                 <TableBody>
                   {subscriptions.map((subscription) => {
                     const latestEvent = latestEventByTenant.get(subscription.tenantId);
+                    const tenant = getTenantLabel(tenantLookup, subscription.tenantId);
                     return (
                       <TableRow key={subscription.id}>
                         <TableCell>
                           <div className="space-y-1">
-                            <p className="font-medium text-slate-900">{subscription.tenantId}</p>
-                            <p className="text-xs text-slate-500">{subscription.id}</p>
+                            <Link
+                              className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                              href={`/tenants/${subscription.tenantId}`}
+                            >
+                              {tenant.name}
+                            </Link>
+                            <p className="text-xs text-slate-500">
+                              {tenant.slug} · {tenant.country}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -138,44 +144,42 @@ export default async function TenantLifecyclePage() {
                 </TableBody>
               </Table>
             </TableViewport>
-            {subscriptions.length === 0 ? (
-              <Text className="pt-4">No organisation subscriptions are available yet.</Text>
-            ) : null}
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent lifecycle activity</CardTitle>
-            <CardDescription>
-              The latest governed organisation status changes recorded in the control plane.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {recentEvents.length === 0 ? (
-              <Text>No lifecycle events have been recorded yet.</Text>
-            ) : (
-              recentEvents.map((event) => (
-                <div
-                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 px-4 py-3"
-                  key={event.id}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-slate-900">{event.tenantId}</p>
-                    <Badge tone={getTone(event.toStatus)}>{event.toStatus}</Badge>
-                    <p className="text-xs text-slate-500">
-                      {new Date(event.occurredAt).toLocaleString()}
+        <ControlPlaneSectionShell
+          description="The latest governed organisation status changes recorded in the control plane."
+          title="Recent lifecycle activity"
+        >
+          {recentEvents.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No lifecycle events have been recorded yet."
+              title="No lifecycle activity yet"
+            />
+          ) : (
+            <div className="space-y-3">
+              {recentEvents.map((event) => {
+                const tenant = getTenantLabel(tenantLookup, event.tenantId);
+                return (
+                  <div
+                    className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 px-4 py-3"
+                    key={event.id}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-slate-900">{tenant.name}</p>
+                      <Badge tone={getTone(event.toStatus)}>{event.toStatus}</Badge>
+                      <p className="text-xs text-slate-500">{new Date(event.occurredAt).toLocaleString()}</p>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {event.fromStatus ?? 'none'} to {event.toStatus}
+                      {event.reason ? ` · ${event.reason}` : ''}
                     </p>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {event.fromStatus ?? 'none'} to {event.toStatus}
-                    {event.reason ? ` · ${event.reason}` : ''}
-                  </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </div>
+          )}
+        </ControlPlaneSectionShell>
       </div>
     </ControlPlaneShell>
   );

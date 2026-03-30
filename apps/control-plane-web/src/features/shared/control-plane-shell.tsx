@@ -38,17 +38,13 @@ export function ControlPlaneShell({
 
           <div className="mb-6 rounded-[calc(var(--mobiris-radius-card)-2px)] border border-white/10 bg-white/6 px-3 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-100/35">
-              Governance
+              Platform desk
             </p>
             <p className="mt-1 text-sm font-semibold text-white">Platform staff console</p>
             <p className="mt-1 text-xs leading-5 text-blue-50/55">
-              Manage organisations, subscriptions, wallet posture, and feature rollout controls.
+              Work tenant oversight, billing posture, governance pressure, and intelligence review from one admin surface.
             </p>
           </div>
-
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-100/30">
-            Platform operations
-          </p>
           <NavLinks />
 
           <div className="mt-auto">

@@ -1,11 +1,6 @@
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -13,10 +8,16 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../../features/shared/control-plane-page-patterns';
 import { getOperationalOversight } from '../../lib/api-control-plane';
 
 function attentionTone(score: number): 'success' | 'warning' | 'danger' | 'neutral' {
@@ -34,6 +35,7 @@ function complianceTone(rate: number): 'success' | 'warning' | 'danger' | 'neutr
 
 export default async function OperationsPage() {
   const overview = await getOperationalOversight();
+  const highestAttention = overview.tenants.slice(0, 8);
 
   return (
     <ControlPlaneShell
@@ -42,64 +44,60 @@ export default async function OperationsPage() {
       description="Work the real platform support queue: activation blockers, licence review pressure, provider-retry issues, remittance risk, and vehicle health across tenants."
     >
       <div className="space-y-6">
-        <div className="grid gap-4 xl:grid-cols-5">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Tenants needing intervention</CardDescription>
-              <CardTitle>{overview.totals.tenantsNeedingAttention}</CardTitle>
-              <Text tone="muted">Tenants with operational attention score above zero.</Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Drivers awaiting activation</CardDescription>
-              <CardTitle>{overview.totals.driversAwaitingActivation}</CardTitle>
-              <Text tone="muted">
-                Onboarding and verification blockers platform support can monitor.
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Licence verification issue pressure</CardDescription>
-              <CardTitle>
-                {overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired}
-              </CardTitle>
-              <Text tone="muted">
-                {overview.totals.pendingLicenceReviews} failed verification ·{' '}
-                {overview.totals.providerRetryRequired} provider retry
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Assignments at risk</CardDescription>
-              <CardTitle>{overview.totals.atRiskAssignments}</CardTitle>
-              <Text tone="muted">
-                Remittance or readiness posture likely needs support attention.
-              </Text>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Fleet risk load</CardDescription>
-              <CardTitle>{overview.totals.vehiclesAtRisk}</CardTitle>
-              <Text tone="muted">
-                {overview.totals.criticalMaintenanceCount} critical maintenance items open.
-              </Text>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${overview.totals.tenantsNeedingAttention} tenants need intervention`, tone: overview.totals.tenantsNeedingAttention ? 'warning' : 'success' },
+            { label: `${overview.totals.driversAwaitingActivation} activation blockers`, tone: overview.totals.driversAwaitingActivation ? 'warning' : 'success' },
+            { label: `${overview.totals.providerRetryRequired} provider retries`, tone: overview.totals.providerRetryRequired ? 'warning' : 'neutral' },
+          ]}
+          description="This is the support-facing operations queue for issues that cut across tenant boundaries: blocked onboarding, verification failures, expiring licences, and fleet risk indicators that need intervention."
+          eyebrow="Cross-tenant intervention queue"
+          title="See which tenants have operational pressure building before it turns into escalations."
+        />
 
-        <Card className="border-slate-200/80">
-          <CardHeader>
-            <CardTitle>Cross-tenant operations queue</CardTitle>
-            <CardDescription>
-              This is the platform-facing complement to tenant operations. It highlights where
-              support, risk, or intervention is needed without cloning tenant CRUD screens.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneMetricGrid columns={5}>
+          <ControlPlaneMetricCard
+            detail="Tenants with operational attention score above zero."
+            label="Tenants needing intervention"
+            tone={overview.totals.tenantsNeedingAttention ? 'warning' : 'success'}
+            value={overview.totals.tenantsNeedingAttention}
+          />
+          <ControlPlaneMetricCard
+            detail="Onboarding and verification blockers platform support can monitor."
+            label="Drivers awaiting activation"
+            tone={overview.totals.driversAwaitingActivation ? 'warning' : 'success'}
+            value={overview.totals.driversAwaitingActivation}
+          />
+          <ControlPlaneMetricCard
+            detail={`${overview.totals.pendingLicenceReviews} failed verification · ${overview.totals.providerRetryRequired} provider retry`}
+            label="Licence issue pressure"
+            tone={overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired ? 'warning' : 'success'}
+            value={overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired}
+          />
+          <ControlPlaneMetricCard
+            detail="Assignments whose readiness or remittance posture suggests support attention."
+            label="Assignments at risk"
+            tone={overview.totals.atRiskAssignments ? 'warning' : 'success'}
+            value={overview.totals.atRiskAssignments}
+          />
+          <ControlPlaneMetricCard
+            detail={`${overview.totals.criticalMaintenanceCount} critical maintenance items open.`}
+            label="Fleet risk load"
+            tone={overview.totals.vehiclesAtRisk ? 'warning' : 'success'}
+            value={overview.totals.vehiclesAtRisk}
+          />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="Platform-facing complement to tenant operations. It highlights where support, risk, or intervention is needed without cloning tenant CRUD screens."
+          title="Cross-tenant operations queue"
+        >
+          {highestAttention.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No cross-tenant operational issues are currently being surfaced."
+              title="No operations queue"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
@@ -114,7 +112,7 @@ export default async function OperationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {overview.tenants.map((tenant) => (
+                  {highestAttention.map((tenant) => (
                     <TableRow key={tenant.tenantId}>
                       <TableCell>
                         <div>
@@ -171,8 +169,8 @@ export default async function OperationsPage() {
                 </TableBody>
               </Table>
             </TableViewport>
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
       </div>
     </ControlPlaneShell>
   );

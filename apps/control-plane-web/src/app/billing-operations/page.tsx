@@ -1,10 +1,5 @@
 import {
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,14 +7,23 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
+import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import {
   getPlatformApiToken,
   listControlPlaneDisputes,
   listControlPlaneDocuments,
   listInvoices,
+  listTenants,
 } from '../../lib/api-control-plane';
 import { RunBillingOpsCard } from './run-billing-ops-card';
 
@@ -46,11 +50,13 @@ function getDisputeTone(status: string): 'success' | 'warning' | 'neutral' | 'da
 
 export default async function BillingOperationsPage() {
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [invoices, disputes, documents] = await Promise.all([
+  const [invoices, disputes, documents, tenants] = await Promise.all([
     listInvoices(token),
     listControlPlaneDisputes(undefined, token),
     listControlPlaneDocuments(undefined, token),
+    listTenants(token),
   ]);
+  const tenantLookup = buildTenantLookup(tenants);
   const openInvoices = invoices.filter((invoice) => invoice.status === 'open');
   const overdueExposure = openInvoices.reduce(
     (sum, invoice) => sum + (invoice.amountDueMinorUnits - invoice.amountPaidMinorUnits),
@@ -61,47 +67,45 @@ export default async function BillingOperationsPage() {
 
   return (
     <ControlPlaneShell
-      description="Run billing and collections deliberately, then review invoice posture without leaving the control plane."
-      eyebrow="Billing"
+      description="Run billing cycles and collections deliberately, then inspect invoices, disputes, and issued documents from one admin surface."
+      eyebrow="Billing operations"
       title="Billing operations"
     >
       <div className="space-y-6">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Invoices tracked</CardDescription>
-                <CardTitle>{invoices.length}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Open invoices</CardDescription>
-                <CardTitle>{openInvoices.length}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Open exposure</CardDescription>
-                <CardTitle>
-                  {formatCurrency(overdueExposure, invoices[0]?.currency ?? 'NGN')}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${openInvoices.length} open invoices`, tone: openInvoices.length ? 'warning' : 'success' },
+            { label: `${recentDisputes.length} recent disputes`, tone: recentDisputes.length ? 'warning' : 'neutral' },
+            { label: `${recentDocuments.length} recent documents`, tone: 'neutral' },
+          ]}
+          description="This is the platform billing desk. Use it to trigger billing runs, watch invoice exposure, review disputes, and inspect issued billing artefacts without relying on raw database state."
+          eyebrow="Collections and billing desk"
+          title="See invoice exposure, dispute load, and platform billing artefacts together."
+        >
           <RunBillingOpsCard />
-        </div>
+        </ControlPlaneHeroPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice registry</CardTitle>
-            <CardDescription>
-              Review invoice posture, collection exposure, and payment outcomes across
-              organisations.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneMetricGrid columns={3}>
+          <ControlPlaneMetricCard label="Invoices tracked" value={invoices.length} />
+          <ControlPlaneMetricCard label="Open invoices" tone={openInvoices.length ? 'warning' : 'success'} value={openInvoices.length} />
+          <ControlPlaneMetricCard
+            detail="Outstanding across open invoices."
+            label="Open exposure"
+            tone={overdueExposure > 0 ? 'warning' : 'success'}
+            value={formatCurrency(overdueExposure, invoices[0]?.currency ?? 'NGN')}
+          />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="Review invoice posture, collection exposure, and tenant-level payment pressure."
+          title="Invoice registry"
+        >
+          {invoices.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No invoices have been generated yet."
+              title="No invoice registry yet"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
@@ -114,95 +118,103 @@ export default async function BillingOperationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium text-slate-900">{invoice.tenantId}</p>
-                          <p className="text-xs text-slate-500">{invoice.id}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={getInvoiceTone(invoice.status)}>{invoice.status}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-900">
-                        {formatCurrency(invoice.amountDueMinorUnits, invoice.currency)}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date(invoice.periodStart).toLocaleDateString()} to{' '}
-                        {new Date(invoice.periodEnd).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {invoice.dueAt ? new Date(invoice.dueAt).toLocaleString() : 'No due date'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {invoices.map((invoice) => {
+                    const tenant = getTenantLabel(tenantLookup, invoice.tenantId);
+                    return (
+                      <TableRow key={invoice.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Link
+                              className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                              href={`/tenants/${invoice.tenantId}`}
+                            >
+                              {tenant.name}
+                            </Link>
+                            <p className="text-xs text-slate-500">{tenant.slug}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={getInvoiceTone(invoice.status)}>{invoice.status}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {formatCurrency(invoice.amountDueMinorUnits, invoice.currency)}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {new Date(invoice.periodStart).toLocaleDateString()} to{' '}
+                          {new Date(invoice.periodEnd).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {invoice.dueAt ? new Date(invoice.dueAt).toLocaleString() : 'No due date'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableViewport>
-            {invoices.length === 0 ? (
-              <Text className="pt-4">No invoices have been generated yet.</Text>
-            ) : null}
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dispute registry</CardTitle>
-              <CardDescription>
-                Billing, payment, and reconciliation disputes with evidence-backed status history.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <ControlPlaneSectionShell
+            description="Billing, payment, and reconciliation disputes with evidence-backed status history."
+            title="Dispute registry"
+          >
+            {recentDisputes.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No disputes have been opened in the control plane yet."
+                title="No active disputes"
+              />
+            ) : (
               <TableViewport>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Dispute</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Entity</TableHead>
+                      <TableHead>Organisation</TableHead>
                       <TableHead>Updated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentDisputes.map((dispute) => (
-                      <TableRow key={dispute.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium text-slate-900">{dispute.title}</p>
-                            <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          {dispute.relatedEntityType}:{' '}
-                          <span className="font-mono text-xs">{dispute.relatedEntityId}</span>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          {new Date(dispute.updatedAt).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {recentDisputes.map((dispute) => {
+                      const tenant = dispute.tenantId ? getTenantLabel(tenantLookup, dispute.tenantId) : null;
+                      return (
+                        <TableRow key={dispute.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-900">{dispute.title}</p>
+                              <p className="text-xs text-slate-500">{dispute.disputeCode}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={getDisputeTone(dispute.status)}>{dispute.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {tenant ? `${tenant.name} · ${tenant.slug}` : 'No tenant linked'}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {new Date(dispute.updatedAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableViewport>
-              {recentDisputes.length === 0 ? (
-                <Text className="pt-4">No disputes have been opened in the control plane yet.</Text>
-              ) : null}
-            </CardContent>
-          </Card>
+            )}
+          </ControlPlaneSectionShell>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Issued documents</CardTitle>
-              <CardDescription>
-                Fingerprinted invoices, receipts, and resolution summaries generated from billing events.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <ControlPlaneSectionShell
+            description="Fingerprinted invoices, receipts, and resolution artefacts generated from billing events."
+            title="Issued documents"
+          >
+            {recentDocuments.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No platform documents have been issued yet."
+                title="No billing artefacts yet"
+              />
+            ) : (
               <TableViewport>
                 <Table>
                   <TableHeader>
@@ -239,11 +251,8 @@ export default async function BillingOperationsPage() {
                   </TableBody>
                 </Table>
               </TableViewport>
-              {recentDocuments.length === 0 ? (
-                <Text className="pt-4">No platform documents have been issued yet.</Text>
-              ) : null}
-            </CardContent>
-          </Card>
+            )}
+          </ControlPlaneSectionShell>
         </div>
       </div>
     </ControlPlaneShell>

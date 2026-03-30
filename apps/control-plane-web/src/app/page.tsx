@@ -1,11 +1,6 @@
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -13,11 +8,18 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
+import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../features/shared/tenant-lookup';
 import {
   getGovernanceOversight,
   getOperationalOversight,
@@ -48,393 +50,319 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 
 export default async function HomePage() {
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [tenants, subscriptions, invoices, wallets, flags, ledger] = await Promise.all([
+  const [
+    tenants,
+    subscriptions,
+    invoices,
+    wallets,
+    flags,
+    ledger,
+    operationsOverview,
+    governanceOverview,
+  ] = await Promise.all([
     listTenants(token),
     listSubscriptions(token),
     listInvoices(token),
     listPlatformWallets(token),
     listFeatureFlags(token),
     listPlatformWalletLedger({ page: 1, limit: 8 }, token),
+    getOperationalOversight(token).catch(() => null),
+    getGovernanceOversight(token).catch(() => null),
   ]);
-  const operationsOverview = await getOperationalOversight(token).catch(() => null);
-  const governanceOverview = await getGovernanceOversight(token).catch(() => null);
 
-  const tenantStatusCounts = tenants.reduce<Record<string, number>>((acc, tenant) => {
-    acc[tenant.status] = (acc[tenant.status] ?? 0) + 1;
-    return acc;
-  }, {});
-  const subscriptionStatusCounts = subscriptions.reduce<Record<string, number>>((acc, item) => {
-    acc[item.status] = (acc[item.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  const tenantLookup = buildTenantLookup(tenants);
+  const atRiskSubscriptions = subscriptions.filter((item) =>
+    ['past_due', 'suspended'].includes(item.status),
+  );
   const invoicesNeedingAction = invoices.filter((invoice) =>
     ['open', 'uncollectible'].includes(invoice.status),
   );
   const walletsNeedingAttention = wallets.filter((wallet) => wallet.balanceMinorUnits <= 0);
   const enabledFlags = flags.filter((flag) => flag.isEnabled).length;
   const scopedOverrides = flags.reduce((sum, flag) => sum + flag.overrides.length, 0);
+  const highestAttentionTenants = operationsOverview?.tenants.slice(0, 6) ?? [];
+  const recentInvoices = invoicesNeedingAction.slice(0, 6);
 
   return (
     <ControlPlaneShell
-      description="Run tenant governance, plan posture, wallet oversight, rollout controls, and staff access from one real internal console."
+      description="Platform staff workspace for tenant oversight, operational intervention, billing posture, and governance controls."
       eyebrow="Platform operations"
       title="Control plane dashboard"
     >
       <div className="space-y-6">
-        <div className="grid gap-4 xl:grid-cols-4">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Active tenants</CardDescription>
-              <CardTitle>{tenantStatusCounts.active ?? 0}</CardTitle>
-              <Text tone="muted">Platform organisations currently operating normally.</Text>
-            </CardHeader>
-            <CardContent>
-              <Link href="/tenants">
-                <Button variant="secondary">Open organisations</Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Subscription posture</CardDescription>
-              <CardTitle>{subscriptions.length}</CardTitle>
-              <Text tone="muted">
-                {subscriptionStatusCounts.trialing ?? 0} trialing ·{' '}
-                {subscriptionStatusCounts.active ?? 0} active ·{' '}
-                {(subscriptionStatusCounts.suspended ?? 0) +
-                  (subscriptionStatusCounts.past_due ?? 0)}{' '}
-                at risk
-              </Text>
-            </CardHeader>
-            <CardContent>
-              <Link href="/subscriptions">
-                <Button variant="secondary">Open subscriptions</Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Invoices needing action</CardDescription>
-              <CardTitle>{invoicesNeedingAction.length}</CardTitle>
-              <Text tone="muted">
-                {formatMoney(
-                  invoicesNeedingAction.reduce(
-                    (sum, invoice) => sum + invoice.amountDueMinorUnits,
-                    0,
-                  ),
-                  invoicesNeedingAction[0]?.currency ?? 'NGN',
-                )}{' '}
-                outstanding
-              </Text>
-            </CardHeader>
-            <CardContent>
-              <Link href="/billing-operations">
-                <Button variant="secondary">Run billing ops</Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Wallets needing attention</CardDescription>
-              <CardTitle>{walletsNeedingAttention.length}</CardTitle>
-              <Text tone="muted">
-                {wallets.length - walletsNeedingAttention.length} funded ·{' '}
-                {walletsNeedingAttention.length} need review
-              </Text>
-            </CardHeader>
-            <CardContent>
-              <Link href="/platform-wallets">
-                <Button variant="secondary">Open platform wallets</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {operationsOverview ? (
-          <div className="grid gap-4 xl:grid-cols-4">
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Activation blockers</CardDescription>
-                <CardTitle>{operationsOverview.totals.driversAwaitingActivation}</CardTitle>
-                <Text tone="muted">
-                  Drivers waiting on verification, documents, guarantor, or activation readiness.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Licence verification issues</CardDescription>
-                <CardTitle>{operationsOverview.totals.pendingLicenceReviews}</CardTitle>
-                <Text tone="muted">
-                  {operationsOverview.totals.providerRetryRequired} provider retry cases still need
-                  support visibility.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>At-risk operations</CardDescription>
-                <CardTitle>{operationsOverview.totals.atRiskAssignments}</CardTitle>
-                <Text tone="muted">
-                  {operationsOverview.totals.vehiclesAtRisk} vehicles at risk across tenants.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Expiry pressure</CardDescription>
-                <CardTitle>
-                  {operationsOverview.totals.expiredLicences +
-                    operationsOverview.totals.expiringLicencesSoon}
-                </CardTitle>
-                <Text tone="muted">
-                  {operationsOverview.totals.expiredLicences} expired ·{' '}
-                  {operationsOverview.totals.expiringLicencesSoon} due soon
-                </Text>
-              </CardHeader>
-              <CardContent>
-                <Link href={'/operations' as Route}>
-                  <Button variant="secondary">Open operations queue</Button>
-                </Link>
-              </CardContent>
-            </Card>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${tenants.length} organisations`, tone: 'neutral' },
+            { label: `${atRiskSubscriptions.length} billing at risk`, tone: atRiskSubscriptions.length ? 'warning' : 'success' },
+            { label: `${walletsNeedingAttention.length} wallets need review`, tone: walletsNeedingAttention.length ? 'warning' : 'success' },
+          ]}
+          description="Work the live platform queues from one place: who is at risk, what is blocked, where billing is exposed, and which governance issues need intervention before tenants escalate."
+          eyebrow="Platform operator cockpit"
+          title="See the tenants, risks, and interventions that need platform action now."
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Activation blockers
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                {operationsOverview?.totals.driversAwaitingActivation ?? 0}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">Drivers waiting on verification or support help.</p>
+            </div>
+            <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Privacy and notice pressure
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-slate-950">
+                {(governanceOverview?.privacy.totals.openRequests ?? 0) +
+                  (governanceOverview?.notifications.totals.unreadNotifications ?? 0)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">Open privacy requests plus unread governance notices.</p>
+            </div>
           </div>
-        ) : null}
+        </ControlPlaneHeroPanel>
 
-        {governanceOverview ? (
-          <div className="grid gap-4 xl:grid-cols-4">
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Privacy requests</CardDescription>
-                <CardTitle>
-                  {governanceOverview.privacy.totals.openRequests +
-                    governanceOverview.privacy.totals.pendingReviewRequests}
-                </CardTitle>
-                <Text tone="muted">
-                  {governanceOverview.privacy.totals.closedRequests} closed recently across tenant
-                  privacy workflows.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Consent activity</CardDescription>
-                <CardTitle>{governanceOverview.privacy.totals.consentEventsLast30Days}</CardTitle>
-                <Text tone="muted">
-                  {governanceOverview.privacy.totals.tenantsWithOpenPrivacyRequests} tenants with
-                  active privacy requests.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Unread notifications</CardDescription>
-                <CardTitle>{governanceOverview.notifications.totals.unreadNotifications}</CardTitle>
-                <Text tone="muted">
-                  {governanceOverview.notifications.totals.notificationsLast30Days} notifications
-                  sent in the last 30 days.
-                </Text>
-              </CardHeader>
-            </Card>
-            <Card className="border-slate-200/80">
-              <CardHeader>
-                <CardDescription>Push delivery posture</CardDescription>
-                <CardTitle>{governanceOverview.notifications.totals.pushDevices}</CardTitle>
-                <Text tone="muted">
-                  {governanceOverview.notifications.totals.pushEnabledUsers} push-enabled users are
-                  currently reachable.
-                </Text>
-              </CardHeader>
-              <CardContent>
-                <Link href={'/governance' as Route}>
-                  <Button variant="secondary">Open governance</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-        ) : null}
+        <ControlPlaneMetricGrid columns={4}>
+          <ControlPlaneMetricCard
+            detail="Organisations currently operating normally."
+            label="Active organisations"
+            tone="success"
+            value={tenants.filter((tenant) => tenant.status === 'active').length}
+          />
+          <ControlPlaneMetricCard
+            detail={`${subscriptions.filter((item) => item.status === 'trialing').length} trialing · ${atRiskSubscriptions.length} at risk`}
+            label="Subscription posture"
+            tone={atRiskSubscriptions.length ? 'warning' : 'neutral'}
+            value={subscriptions.length}
+          />
+          <ControlPlaneMetricCard
+            detail={formatMoney(
+              invoicesNeedingAction.reduce((sum, invoice) => sum + invoice.amountDueMinorUnits, 0),
+              invoicesNeedingAction[0]?.currency ?? 'NGN',
+            )}
+            label="Invoice exposure"
+            tone={invoicesNeedingAction.length ? 'warning' : 'success'}
+            value={invoicesNeedingAction.length}
+          />
+          <ControlPlaneMetricCard
+            detail={`${enabledFlags} enabled · ${scopedOverrides} scoped overrides`}
+            label="Rollout controls"
+            tone="neutral"
+            value={flags.length}
+          />
+        </ControlPlaneMetricGrid>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Tenants by lifecycle status</CardTitle>
-              <CardDescription>
-                Real platform posture across prospect, trialing, active, suspended, and terminated
-                organisations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-3">
-              {['prospect', 'trialing', 'active', 'suspended', 'terminated', 'archived'].map(
-                (status) => (
-                  <div
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
-                    key={status}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <Badge tone={statusTone(status)}>{status}</Badge>
-                      <p className="text-xl font-semibold text-slate-900">
-                        {tenantStatusCounts[status] ?? 0}
-                      </p>
-                    </div>
-                  </div>
-                ),
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Feature rollout summary</CardTitle>
-              <CardDescription>
-                Track how much of the platform is running on global defaults versus scoped
-                overrides.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <Text tone="muted">Flags enabled globally</Text>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{enabledFlags}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <Text tone="muted">Scoped overrides</Text>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{scopedOverrides}</p>
-              </div>
-              <Link href="/feature-flags">
-                <Button variant="secondary">Open feature flags</Button>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          <ControlPlaneSectionShell
+            description="Prioritise the tenants whose support pressure is highest right now."
+            helper={
+              <Link href={'/operations' as Route}>
+                <Button variant="secondary">Open operations queue</Button>
               </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Invoices needing action</CardTitle>
-              <CardDescription>
-                Use billing operations for open or recoverability-risk invoices.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            }
+            title="Tenants needing intervention"
+          >
+            {highestAttentionTenants.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="No cross-tenant operational attention is currently being reported."
+                title="No intervention queue yet"
+              />
+            ) : (
               <TableViewport>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tenant</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Amount due</TableHead>
-                      <TableHead>Period</TableHead>
+                      <TableHead>Organisation</TableHead>
+                      <TableHead>Attention</TableHead>
+                      <TableHead>Activation</TableHead>
+                      <TableHead>Ops risk</TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoicesNeedingAction.slice(0, 6).map((invoice) => (
-                      <TableRow key={invoice.id}>
+                    {highestAttentionTenants.map((tenant) => (
+                      <TableRow key={tenant.tenantId}>
                         <TableCell>
-                          <Link
-                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
-                            href={`/tenants/${invoice.tenantId}`}
-                          >
-                            {invoice.tenantId}
+                          <div className="space-y-1">
+                            <Link
+                              className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                              href={`/tenants/${tenant.tenantId}`}
+                            >
+                              {tenant.tenantName}
+                            </Link>
+                            <p className="text-xs text-slate-500">
+                              {tenant.slug} · {tenant.country} · {tenant.tenantStatus}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={tenant.attentionScore >= 16 ? 'danger' : tenant.attentionScore >= 6 ? 'warning' : 'neutral'}>
+                            {tenant.attentionScore}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-700">
+                          {tenant.verificationHealth.driversAwaitingActivation} blocked
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-700">
+                          {tenant.riskSummary.atRiskAssignmentCount} assignments ·{' '}
+                          {tenant.riskSummary.vehiclesAtRiskCount} vehicles
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/tenants/${tenant.tenantId}`}>
+                            <Button variant="secondary">Open</Button>
                           </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {formatMoney(invoice.amountDueMinorUnits, invoice.currency)}
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          {new Date(invoice.periodStart).toLocaleDateString()} to{' '}
-                          {new Date(invoice.periodEnd).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableViewport>
-              {invoicesNeedingAction.length === 0 ? (
-                <Text className="pt-4">No invoices currently need staff action.</Text>
-              ) : null}
-            </CardContent>
-          </Card>
+            )}
+          </ControlPlaneSectionShell>
 
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardTitle>Recent platform actions</CardTitle>
-              <CardDescription>
-                Most recent platform wallet ledger activity across organisations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {ledger.data.map((entry) => (
-                <div className="rounded-2xl border border-slate-200 px-4 py-3" key={entry.id}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <Link
-                        className="text-sm font-semibold text-slate-900 hover:text-[var(--mobiris-primary)]"
-                        href={`/tenants/${entry.tenantId}`}
-                      >
-                        {entry.tenantId}
-                      </Link>
-                      <Text tone="muted">
-                        {entry.referenceType ?? 'manual_adjustment'} ·{' '}
-                        {new Date(entry.createdAt).toLocaleString()}
-                      </Text>
-                    </div>
-                    <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>
-                      {entry.type}
-                    </Badge>
-                  </div>
-                </div>
+          <ControlPlaneSectionShell
+            description="Jump directly into the surfaces platform staff use most often."
+            title="Control surfaces"
+          >
+            <div className="grid gap-3">
+              {[
+                { href: '/tenants', label: 'Organisation oversight', detail: 'Lifecycle, plan posture, and owner context.' },
+                { href: '/subscriptions', label: 'Subscriptions and invoices', detail: 'Billing pressure, renewals, and collections.' },
+                { href: '/governance', label: 'Governance and notifications', detail: 'Privacy queue, notification load, and delivery posture.' },
+                { href: '/intelligence/review-cases', label: 'Identity review cases', detail: 'Fraud, duplicates, and adjudication work.' },
+              ].map((item) => (
+                <Link
+                  className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 px-4 py-3 transition hover:border-[var(--mobiris-primary-light)] hover:bg-blue-50/40"
+                  href={item.href as Route}
+                  key={item.href}
+                >
+                  <p className="text-sm font-semibold text-slate-950">{item.label}</p>
+                  <p className="mt-1 text-sm text-slate-500">{item.detail}</p>
+                </Link>
               ))}
-              <Link href="/platform-wallets">
-                <Button variant="secondary">Open wallet ledger</Button>
-              </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </ControlPlaneSectionShell>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Link href={'/operations' as Route}>
-            <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
-              <CardHeader>
-                <CardTitle>Operational oversight</CardTitle>
-                <CardDescription>
-                  Monitor activation blockers, verification pressure, licence expiry, and fleet risk
-                  across tenants.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link href="/tenants">
-            <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
-              <CardHeader>
-                <CardTitle>Organisation registry</CardTitle>
-                <CardDescription>
-                  Open an organisation detail page and act on lifecycle, plan, and wallet posture.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link href="/feature-flags">
-            <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
-              <CardHeader>
-                <CardTitle>Feature rollout controls</CardTitle>
-                <CardDescription>
-                  Override rollout by tenant, country, or plan without leaving the control plane.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link href="/staff">
-            <Card className="border-slate-200/80 transition hover:border-[var(--mobiris-primary-light)]">
-              <CardHeader>
-                <CardTitle>Staff access</CardTitle>
-                <CardDescription>
-                  Invite platform staff properly and keep operator access governed.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <ControlPlaneSectionShell
+            description="Open invoices and failed collections that need platform follow-up."
+            helper={
+              <Link href={'/billing-operations' as Route}>
+                <Button variant="secondary">Open billing ops</Button>
+              </Link>
+            }
+            title="Billing queue"
+          >
+            {recentInvoices.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="There are no open or uncollectible invoices right now."
+                title="No billing queue"
+              />
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organisation</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Amount due</TableHead>
+                      <TableHead>Due</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentInvoices.map((invoice) => {
+                      const tenant = getTenantLabel(tenantLookup, invoice.tenantId);
+                      return (
+                        <TableRow key={invoice.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Link
+                                className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                                href={`/tenants/${invoice.tenantId}`}
+                              >
+                                {tenant.name}
+                              </Link>
+                              <p className="text-xs text-slate-500">{tenant.slug}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {formatMoney(invoice.amountDueMinorUnits, invoice.currency)}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {invoice.dueAt ? new Date(invoice.dueAt).toLocaleDateString() : 'No due date'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </ControlPlaneSectionShell>
+
+          <ControlPlaneSectionShell
+            description="Recent billing ledger movement across platform wallets."
+            helper={
+              <Link href={'/wallets' as Route}>
+                <Button variant="secondary">Open wallets</Button>
+              </Link>
+            }
+            title="Recent wallet ledger"
+          >
+            {ledger.data.length === 0 ? (
+              <ControlPlaneEmptyStateCard
+                description="Platform wallet entries will appear here once billing credits and debits are flowing."
+                title="No wallet movement yet"
+              />
+            ) : (
+              <TableViewport>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organisation</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>When</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ledger.data.map((entry) => {
+                      const tenant = getTenantLabel(tenantLookup, entry.tenantId);
+                      return (
+                        <TableRow key={entry.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Link
+                                className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                                href={`/tenants/${entry.tenantId}`}
+                              >
+                                {tenant.name}
+                              </Link>
+                              <p className="text-xs text-slate-500">{tenant.slug}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>{entry.type}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {formatMoney(entry.amountMinorUnits, entry.currency)}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableViewport>
+            )}
+          </ControlPlaneSectionShell>
         </div>
       </div>
     </ControlPlaneShell>

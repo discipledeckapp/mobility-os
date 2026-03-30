@@ -20,6 +20,11 @@ import {
   Text,
 } from '@mobility-os/ui';
 import { useActionState, useState } from 'react';
+import {
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+} from '../../features/shared/control-plane-page-patterns';
 import { SelectField } from '../../features/shared/select-field';
 import type { StaffMemberRecord } from '../../lib/api-control-plane';
 import {
@@ -51,19 +56,40 @@ export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
   );
   const [showForm, setShowForm] = useState(false);
 
+  const activeMembers = members.filter((member) => member.isActive).length;
+  const pendingMembers = members.length - activeMembers;
+  const platformAdmins = members.filter((member) => member.role === 'PLATFORM_ADMIN').length;
+
   return (
     <div className="space-y-6">
+      <ControlPlaneHeroPanel
+        badges={[
+          { label: `${activeMembers} active`, tone: 'success' },
+          { label: `${pendingMembers} pending`, tone: pendingMembers ? 'warning' : 'neutral' },
+          { label: `${platformAdmins} platform admins`, tone: 'neutral' },
+        ]}
+        description="Platform staff should be invited deliberately and deactivated cleanly. This is the access registry for the people who operate tenant oversight, billing, governance, and intelligence workflows."
+        eyebrow="Platform access control"
+        title="Manage staff access, invitation state, and operational roles."
+      />
+
+      <ControlPlaneMetricGrid columns={3}>
+        <ControlPlaneMetricCard label="Staff records" value={members.length} />
+        <ControlPlaneMetricCard label="Active access" tone="success" value={activeMembers} />
+        <ControlPlaneMetricCard label="Pending invitations" tone={pendingMembers ? 'warning' : 'success'} value={pendingMembers} />
+      </ControlPlaneMetricGrid>
+
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <CardTitle>Platform staff</CardTitle>
+              <CardTitle>Platform staff registry</CardTitle>
               <CardDescription>
                 Control-plane staff accounts. Only PLATFORM_ADMIN can create new staff.
               </CardDescription>
             </div>
             <Button onClick={() => setShowForm((v) => !v)} type="button" variant="secondary">
-              {showForm ? 'Cancel' : '+ Add staff'}
+              {showForm ? 'Cancel' : 'Invite staff'}
             </Button>
           </div>
         </CardHeader>

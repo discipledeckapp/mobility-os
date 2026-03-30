@@ -1,10 +1,5 @@
 import {
   Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,14 +7,22 @@ import {
   TableHeader,
   TableRow,
   TableViewport,
-  Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneEmptyStateCard,
+  ControlPlaneHeroPanel,
+  ControlPlaneMetricCard,
+  ControlPlaneMetricGrid,
+  ControlPlaneSectionShell,
+} from '../../features/shared/control-plane-page-patterns';
+import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
+import {
   getPlatformApiToken,
   listPlatformWalletLedger,
   listPlatformWallets,
+  listTenants,
 } from '../../lib/api-control-plane';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
@@ -32,10 +35,12 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
 
 export default async function PlatformWalletsPage() {
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [wallets, ledger] = await Promise.all([
+  const [wallets, ledger, tenants] = await Promise.all([
     listPlatformWallets(token),
     listPlatformWalletLedger({ page: 1, limit: 20 }, token),
+    listTenants(token),
   ]);
+  const tenantLookup = buildTenantLookup(tenants);
   const fundedWallets = wallets.filter((wallet) => wallet.balanceMinorUnits > 0).length;
   const balancesByCurrency = wallets.reduce<Record<string, number>>((totals, wallet) => {
     totals[wallet.currency] = (totals[wallet.currency] ?? 0) + wallet.balanceMinorUnits;
@@ -44,37 +49,45 @@ export default async function PlatformWalletsPage() {
 
   return (
     <ControlPlaneShell
-      description="Inspect SaaS wallet balances and activity without mixing them with tenant operational wallets."
-      eyebrow="Billing"
+      description="Inspect SaaS billing wallets and ledger movement without mixing them with tenant operational wallets."
+      eyebrow="Platform wallet oversight"
       title="Platform wallets"
     >
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          {Object.entries(balancesByCurrency).map(([currency, total]) => (
-            <Card className="border-slate-200/80" key={currency}>
-              <CardHeader>
-                <CardDescription>{currency} balance</CardDescription>
-                <CardTitle>{formatCurrency(total, currency)}</CardTitle>
-              </CardHeader>
-            </Card>
-          ))}
-          <Card className="border-slate-200/80">
-            <CardHeader>
-              <CardDescription>Funded wallets</CardDescription>
-              <CardTitle>{fundedWallets}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <ControlPlaneHeroPanel
+          badges={[
+            { label: `${wallets.length} wallets`, tone: 'neutral' },
+            { label: `${fundedWallets} funded`, tone: fundedWallets ? 'success' : 'warning' },
+            { label: `${wallets.length - fundedWallets} need funding`, tone: wallets.length - fundedWallets ? 'warning' : 'success' },
+          ]}
+          description="These are the SaaS billing wallets, not tenant remittance wallets. Use this page to see who is funded, who is depleted, and what ledger activity is shaping platform billing posture."
+          eyebrow="Billing reserves"
+          title="Track wallet balances and funding posture across every tenant on the platform."
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Wallet registry</CardTitle>
-            <CardDescription>
-              Review funded posture, ledger activity volume, and recent wallet movement by
-              organisation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneMetricGrid columns={3}>
+          {Object.entries(balancesByCurrency).map(([currency, total]) => (
+            <ControlPlaneMetricCard
+              detail={`Aggregate balance across all platform wallets in ${currency}.`}
+              key={currency}
+              label={`${currency} balance`}
+              tone={total > 0 ? 'success' : 'warning'}
+              value={formatCurrency(total, currency)}
+            />
+          ))}
+          <ControlPlaneMetricCard label="Funded wallets" tone="success" value={fundedWallets} />
+        </ControlPlaneMetricGrid>
+
+        <ControlPlaneSectionShell
+          description="Review funded posture, ledger activity volume, and the organisations that are currently depleted."
+          title="Wallet registry"
+        >
+          {wallets.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No platform wallets have been created yet."
+              title="No platform wallet registry yet"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
@@ -87,99 +100,103 @@ export default async function PlatformWalletsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {wallets.map((wallet) => (
-                    <TableRow key={wallet.walletId}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Link
-                            className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
-                            href={`/tenants/${wallet.tenantId}`}
-                          >
-                            {wallet.tenantId}
-                          </Link>
-                          <p className="text-xs text-slate-500">{wallet.walletId}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-900">
-                        {formatCurrency(wallet.balanceMinorUnits, wallet.currency)}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">{wallet.entryCount}</TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {wallet.lastEntryAt
-                          ? new Date(wallet.lastEntryAt).toLocaleString()
-                          : 'No ledger activity yet'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={wallet.balanceMinorUnits > 0 ? 'success' : 'warning'}>
-                          {wallet.balanceMinorUnits > 0 ? 'Funded' : 'Needs funding'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {wallets.map((wallet) => {
+                    const tenant = getTenantLabel(tenantLookup, wallet.tenantId);
+                    return (
+                      <TableRow key={wallet.walletId}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Link
+                              className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                              href={`/tenants/${wallet.tenantId}`}
+                            >
+                              {tenant.name}
+                            </Link>
+                            <p className="text-xs text-slate-500">
+                              {tenant.slug} · {tenant.country}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {formatCurrency(wallet.balanceMinorUnits, wallet.currency)}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{wallet.entryCount}</TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {wallet.lastEntryAt
+                            ? new Date(wallet.lastEntryAt).toLocaleString()
+                            : 'No ledger activity yet'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={wallet.balanceMinorUnits > 0 ? 'success' : 'warning'}>
+                            {wallet.balanceMinorUnits > 0 ? 'Funded' : 'Needs funding'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableViewport>
-            {wallets.length === 0 ? (
-              <Text className="pt-4">No platform wallets have been created yet.</Text>
-            ) : null}
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction ledger</CardTitle>
-            <CardDescription>
-              Most recent platform wallet entries across tenants, paged from the control-plane
-              ledger.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ControlPlaneSectionShell
+          description="Recent platform wallet credits and debits across all tenants."
+          title="Transaction ledger"
+        >
+          {ledger.data.length === 0 ? (
+            <ControlPlaneEmptyStateCard
+              description="No platform wallet ledger entries have been recorded yet."
+              title="No wallet movement yet"
+            />
+          ) : (
             <TableViewport>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tenant</TableHead>
+                    <TableHead>Organisation</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Reference</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>When</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ledger.data.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        <Link
-                          className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
-                          href={`/tenants/${entry.tenantId}`}
-                        >
-                          {entry.tenantId}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>
-                          {entry.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(entry.amountMinorUnits, entry.currency)}
-                      </TableCell>
-                      <TableCell>
-                        {entry.referenceType ?? entry.referenceId ?? 'Manual entry'}
-                      </TableCell>
-                      <TableCell>{new Date(entry.createdAt).toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
+                  {ledger.data.map((entry) => {
+                    const tenant = getTenantLabel(tenantLookup, entry.tenantId);
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Link
+                              className="font-medium text-slate-900 hover:text-[var(--mobiris-primary)]"
+                              href={`/tenants/${entry.tenantId}`}
+                            >
+                              {tenant.name}
+                            </Link>
+                            <p className="text-xs text-slate-500">{tenant.slug}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={entry.type === 'credit' ? 'success' : 'warning'}>{entry.type}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {formatCurrency(entry.amountMinorUnits, entry.currency)}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {entry.referenceType ? `${entry.referenceType} · ${entry.referenceId ?? 'n/a'}` : 'No linked reference'}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableViewport>
-            {ledger.data.length === 0 ? (
-              <Text className="pt-4">
-                No platform wallet ledger entries have been recorded yet.
-              </Text>
-            ) : null}
-          </CardContent>
-        </Card>
+          )}
+        </ControlPlaneSectionShell>
       </div>
     </ControlPlaneShell>
   );
