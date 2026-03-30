@@ -4,6 +4,7 @@ import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 import { PolicyModule } from '../policy/policy.module';
+import { RemittanceModule } from '../remittance/remittance.module';
 import { TenantBillingModule } from '../tenant-billing/tenant-billing.module';
 import { DocumentStorageService } from './document-storage.service';
 import { DriversVerificationSchedulerService } from './drivers-verification-scheduler.service';
@@ -11,7 +12,14 @@ import { DriverSelfServiceController, DriversController, GuarantorSelfServiceCon
 import { DriversService } from './drivers.service';
 
 @Module({
-  imports: [AuthModule, TenantBillingModule, PolicyModule, AuditModule, forwardRef(() => AssignmentsModule)],
+  imports: [
+    AuthModule,
+    TenantBillingModule,
+    PolicyModule,
+    AuditModule,
+    RemittanceModule,
+    forwardRef(() => AssignmentsModule),
+  ],
   controllers: [DriversController, DriverSelfServiceController, GuarantorSelfServiceController],
   providers: [DriversService, IntelligenceClient, DocumentStorageService, DriversVerificationSchedulerService],
   exports: [DriversService, IntelligenceClient, DocumentStorageService],

@@ -57,6 +57,7 @@ import { DriverResponseDto } from './dto/driver-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UserNotificationResponseDto } from '../notifications/dto/user-notification-response.dto';
 import { AssignmentsService } from '../assignments/assignments.service';
+import { RemittanceService } from '../remittance/remittance.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { LinkDriverUserDto } from './dto/link-driver-user.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -915,6 +916,7 @@ export class DriverSelfServiceController {
     private readonly service: DriversService,
     private readonly notificationsService: NotificationsService,
     private readonly assignmentsService: AssignmentsService,
+    private readonly remittanceService: RemittanceService,
   ) {}
 
   @Post('exchange-otp')
@@ -1343,6 +1345,75 @@ export class DriverSelfServiceController {
     return this.assignmentsService.decline(context.tenantId, assignmentId, {
       declinedFrom: 'driver_self_service_web',
       ...(note ? { note } : {}),
+    });
+  }
+
+  @Post('remittance/list')
+  @ApiCreatedResponse({ type: Object })
+  async listRemittance(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    const context = await this.service.getSelfServiceContext(token);
+    const result = await this.remittanceService.list(context.tenantId, {
+      driverId: context.id,
+      limit: 50,
+    });
+    return result.data;
+  }
+
+  @Post('remittance')
+  @ApiCreatedResponse({ type: Object })
+  async recordRemittance(
+    @Body()
+    body: {
+      token?: string;
+      assignmentId?: string;
+      fleetId?: string;
+      amountMinorUnits?: number;
+      currency?: string;
+      dueDate?: string;
+      notes?: string;
+      clientReferenceId?: string;
+      submissionSource?: string;
+      syncStatus?: string;
+      originalCapturedAt?: string;
+      evidence?: Record<string, unknown>;
+      shiftCode?: string;
+      checkpointLabel?: string;
+    },
+  ) {
+    const token = body.token?.trim();
+    if (!token) {
+      throw new BadRequestException('token is required');
+    }
+    if (!body.assignmentId?.trim()) {
+      throw new BadRequestException('assignmentId is required');
+    }
+
+    const context = await this.service.getSelfServiceContext(token);
+    const assignment = await this.assignmentsService.findOne(context.tenantId, body.assignmentId);
+    if (assignment.driverId !== context.id) {
+      throw new BadRequestException('This assignment does not belong to the signed-in driver.');
+    }
+
+    return this.remittanceService.record(context.tenantId, {
+      assignmentId: body.assignmentId,
+      ...(body.fleetId ? { fleetId: body.fleetId } : {}),
+      ...(typeof body.amountMinorUnits === 'number'
+        ? { amountMinorUnits: body.amountMinorUnits }
+        : {}),
+      ...(body.currency ? { currency: body.currency } : {}),
+      ...(body.dueDate ? { dueDate: body.dueDate } : {}),
+      ...(body.notes ? { notes: body.notes } : {}),
+      ...(body.clientReferenceId ? { clientReferenceId: body.clientReferenceId } : {}),
+      submissionSource: body.submissionSource ?? 'online',
+      ...(body.syncStatus ? { syncStatus: body.syncStatus } : {}),
+      ...(body.originalCapturedAt ? { originalCapturedAt: body.originalCapturedAt } : {}),
+      ...(body.evidence ? { evidence: body.evidence } : {}),
+      ...(body.shiftCode ? { shiftCode: body.shiftCode } : {}),
+      ...(body.checkpointLabel ? { checkpointLabel: body.checkpointLabel } : {}),
     });
   }
 

@@ -229,7 +229,7 @@ const SettingsIcon: NavIcon = ({ className }) => (
 );
 
 type NavLinksProps = {
-  variant?: 'sidebar' | 'mobile';
+  variant?: 'sidebar' | 'mobile' | 'bottom';
   collapsed?: boolean;
 };
 
@@ -272,15 +272,55 @@ const navigationSections = [
 export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksProps) {
   const pathname = usePathname();
   const isMobile = variant === 'mobile';
+  const isBottom = variant === 'bottom';
+
+  const bottomItems = [
+    { href: '/' as Route, label: 'Home', Icon: DashboardIcon },
+    { href: '/drivers' as Route, label: 'Drivers', Icon: DriversIcon },
+    { href: '/assignments' as Route, label: 'Assignments', Icon: AssignmentsIcon },
+    { href: '/remittance' as Route, label: 'Remittance', Icon: RemittanceIcon },
+    { href: '/reports' as Route, label: 'Insights', Icon: ReportsIcon },
+  ] as const;
+
+  if (isBottom) {
+    return (
+      <nav
+        aria-label="Primary mobile navigation"
+        className="grid grid-cols-5 gap-2"
+      >
+        {bottomItems.map(({ href, label, Icon }) => {
+          const isActive = href === '/' ? pathname === '/' : (pathname ?? '').startsWith(href);
+          return (
+            <Link
+              className={`flex min-h-[62px] flex-col items-center justify-center rounded-2xl px-2 py-2 text-center text-[11px] font-semibold transition-all ${
+                isActive
+                  ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_18px_35px_-20px_rgba(37,99,235,0.82)]'
+                  : 'bg-slate-50 text-slate-600'
+              }`}
+              href={href}
+              key={href}
+            >
+              <Icon className={isActive ? 'mb-1 opacity-100' : 'mb-1 opacity-70'} />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
 
   return (
     <nav
       aria-label="Tenant navigation"
-      className={isMobile ? 'flex gap-2 overflow-x-auto pb-1' : 'space-y-0.5'}
+      className={isMobile ? 'space-y-4' : 'space-y-0.5'}
     >
       {navigationSections.map((section) => (
-        <div className={isMobile ? 'contents' : 'space-y-1'} key={section.label}>
-          {!isMobile && !collapsed ? (
+        <div className={isMobile ? 'space-y-2' : 'space-y-1'} key={section.label}>
+          {isMobile ? (
+            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              {section.label}
+            </p>
+          ) : !collapsed ? (
             <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-100/25 first:pt-0">
               {section.label}
             </p>
@@ -292,10 +332,10 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
                 className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
                   isActive
                     ? isMobile
-                      ? 'shrink-0 bg-[var(--mobiris-primary)] text-white shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]'
+                      ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_14px_28px_-18px_rgba(37,99,235,0.55)]'
                       : 'bg-[var(--mobiris-primary)] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)]'
                     : isMobile
-                      ? 'shrink-0 border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
+                      ? 'border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
                       : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
                 }`}
                 href={href as Route}

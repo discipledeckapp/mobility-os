@@ -19,6 +19,7 @@ import {
   type DriverIdentityResolutionResult,
   type DriverRecord,
   type OnboardingStepRecord,
+  type RemittanceRecord,
   type UserNotificationRecord,
   acceptDriverSelfServiceAssignment,
   createDriverSelfServiceAccount,
@@ -27,10 +28,12 @@ import {
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
   listDriverSelfServiceNotifications,
+  listDriverSelfServiceRemittance,
   listDriverSelfServiceAssignments,
   markDriverSelfServiceNotificationRead,
   loginDriverSelfServiceWithPassword,
   notifyDriverSelfServiceOrganisation,
+  recordDriverSelfServiceRemittance,
   recordDriverSelfServiceVerificationConsent,
   submitDriverSelfServiceGuarantor,
   updateDriverSelfServiceContact,
@@ -470,6 +473,8 @@ type FlowStep =
   | 'manual_review'
   | 'complete';
 
+type DriverAppTab = 'home' | 'assignment' | 'remittance' | 'notifications' | 'profile';
+
 function formatMinorCurrency(amountMinorUnits: number, currency?: string | null): string {
   const divisor = 100;
   return new Intl.NumberFormat('en-NG', {
@@ -483,6 +488,10 @@ function formatAssignmentStatus(status: string) {
     return 'Driver action required';
   }
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatStepLabel(step: FlowStep): string {
+  return step.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatVehicleLabel(input: DriverSelfServiceAssignmentRecord['vehicle']) {
@@ -517,6 +526,59 @@ function getDriverAssignmentPaymentModelLabel(assignment: DriverSelfServiceAssig
     return 'Commission';
   }
   return 'Remittance';
+}
+
+function assignmentSupportsRemittance(assignment: DriverSelfServiceAssignmentRecord | null): boolean {
+  if (!assignment) {
+    return false;
+  }
+
+  return assignment.paymentModel === 'remittance' || assignment.paymentModel === 'hire_purchase';
+}
+
+function amountInputFromMinorUnits(value?: number | null): string {
+  if (!value || value < 1) {
+    return '';
+  }
+
+  const amount = (value / 100).toFixed(2);
+  return amount.endsWith('.00') ? amount.slice(0, -3) : amount;
+}
+
+function parseAmountInputToMinorUnits(value: string): number | null {
+  const trimmed = value.trim().replace(/,/g, '');
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.round(parsed * 100);
+}
+
+function formatRemittanceStatus(status: string): string {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function remittanceStatusTone(
+  status: string,
+): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'completed' || status === 'partially_settled') {
+    return 'success';
+  }
+  if (status === 'disputed') {
+    return 'danger';
+  }
+  if (status === 'pending') {
+    return 'warning';
+  }
+  return 'neutral';
 }
 
 function AssignmentWorkspace({
@@ -673,6 +735,236 @@ function AssignmentWorkspace({
         {error ? <Text tone="danger">{error}</Text> : null}
       </CardContent>
     </Card>
+  );
+}
+
+function RemittanceWorkspace({
+  token,
+  assignment,
+  remittances,
+  onRefresh,
+  onOpenAssignment,
+}: {
+  token: string;
+  assignment: DriverSelfServiceAssignmentRecord | null;
+  remittances: RemittanceRecord[];
+  onRefresh: () => Promise<void>;
+  onOpenAssignment: () => void;
+}) {
+  const [amount, setAmount] = useState(amountInputFromMinorUnits(assignment?.remittanceAmountMinorUnits));
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAmount(amountInputFromMinorUnits(assignment?.remittanceAmountMinorUnits));
+  }, [assignment?.id, assignment?.remittanceAmountMinorUnits]);
+
+  if (!assignment) {
+    return (
+      <Card className="border-slate-200 bg-white shadow-[0_22px_60px_-32px_rgba(15,23,42,0.28)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Remittance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <Text className="font-semibold text-[var(--mobiris-ink)]">No active assignment yet</Text>
+            <Text tone="muted">
+              Remittance becomes available when your assignment is active and your payment model
+              requires remittance.
+            </Text>
+          </div>
+          <Button onClick={onOpenAssignment} type="button">
+            Go to assignment
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!assignmentSupportsRemittance(assignment)) {
+    return (
+      <Card className="border-slate-200 bg-white shadow-[0_22px_60px_-32px_rgba(15,23,42,0.28)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Remittance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <Text className="font-semibold text-[var(--mobiris-ink)]">
+              Remittance is not required for this assignment
+            </Text>
+            <Text tone="muted">
+              This assignment uses the {getDriverAssignmentPaymentModelLabel(assignment)} payment
+              model, so there is no remittance action to complete here.
+            </Text>
+          </div>
+          <Button onClick={onOpenAssignment} type="button" variant="secondary">
+            View assignment
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const remittanceAssignment = assignment;
+  const canRecord = assignment.status === 'active';
+  const amountMinorUnits = parseAmountInputToMinorUnits(amount);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!canRecord) {
+      setError('Remittance can be recorded after your assignment becomes active.');
+      return;
+    }
+
+    if (amountMinorUnits === null) {
+      setError('Enter a valid remittance amount greater than zero.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await recordDriverSelfServiceRemittance(token, {
+        assignmentId: remittanceAssignment.id,
+        amountMinorUnits,
+        ...(remittanceAssignment.remittanceCurrency
+          ? { currency: remittanceAssignment.remittanceCurrency }
+          : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        submissionSource: 'online',
+        syncStatus: 'synced',
+        originalCapturedAt: new Date().toISOString(),
+      });
+      setNotes('');
+      setSuccess('Remittance recorded successfully.');
+      await onRefresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to record remittance right now.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-slate-200 bg-white shadow-[0_22px_60px_-32px_rgba(15,23,42,0.28)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Remittance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <Text tone="muted">Expected amount</Text>
+              <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--mobiris-ink)]">
+                {assignment.remittanceAmountMinorUnits
+                  ? formatMinorCurrency(
+                      assignment.remittanceAmountMinorUnits,
+                      assignment.remittanceCurrency,
+                    )
+                  : 'Not set yet'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <Text tone="muted">Frequency</Text>
+              <Text className="font-semibold text-[var(--mobiris-ink)]">
+                {assignment.remittanceFrequency
+                  ? formatAssignmentStatus(assignment.remittanceFrequency)
+                  : 'Not scheduled'}
+              </Text>
+              <Text tone="muted">
+                {canRecord
+                  ? 'Your assignment is active. Record each collection here.'
+                  : 'Your assignment has not started collecting remittance yet.'}
+              </Text>
+            </div>
+          </div>
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="remittanceAmount">
+                Amount collected
+              </label>
+              <input
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                disabled={!canRecord || submitting}
+                id="remittanceAmount"
+                inputMode="decimal"
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="Enter amount"
+                value={amount}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="remittanceNotes">
+                Note
+              </label>
+              <textarea
+                className="min-h-[100px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                disabled={!canRecord || submitting}
+                id="remittanceNotes"
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Optional note for this collection"
+                value={notes}
+              />
+            </div>
+            {success ? <Text className="text-emerald-700">{success}</Text> : null}
+            {error ? <Text tone="danger">{error}</Text> : null}
+            <Button
+              className="h-12 w-full text-base shadow-[0_18px_35px_-18px_rgba(37,99,235,0.75)]"
+              disabled={!canRecord || submitting}
+              type="submit"
+            >
+              {submitting ? 'Recording…' : 'Record remittance'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 bg-white shadow-[0_22px_60px_-32px_rgba(15,23,42,0.22)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Remittance history</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {remittances.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <Text className="font-semibold text-[var(--mobiris-ink)]">No remittance recorded yet</Text>
+              <Text tone="muted">
+                Your submitted remittance will appear here after it is recorded.
+              </Text>
+            </div>
+          ) : (
+            remittances.map((remittance) => (
+              <div
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                key={remittance.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <Text className="font-semibold text-[var(--mobiris-ink)]">
+                      {formatMinorCurrency(remittance.amountMinorUnits, remittance.currency)}
+                    </Text>
+                    <Text tone="muted">
+                      Due {formatShortDate(remittance.dueDate)} · Recorded{' '}
+                      {formatNotificationDate(remittance.createdAt)}
+                    </Text>
+                    {remittance.notes ? <Text tone="muted">{remittance.notes}</Text> : null}
+                  </div>
+                  <Badge tone={remittanceStatusTone(remittance.status)}>
+                    {formatRemittanceStatus(remittance.status)}
+                  </Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -1997,11 +2289,19 @@ function OperationalProfileStep({
 // Main flow orchestrator — backend-driven
 // ---------------------------------------------------------------------------
 
-function DriverVerificationFlow({ token }: { token: string }) {
+function DriverVerificationFlow({
+  token,
+  initialAssignmentId,
+}: {
+  token: string;
+  initialAssignmentId?: string | null;
+}) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStepRecord | null>(null);
   const [assignments, setAssignments] = useState<DriverSelfServiceAssignmentRecord[]>([]);
+  const [remittances, setRemittances] = useState<RemittanceRecord[]>([]);
   const [notifications, setNotifications] = useState<UserNotificationRecord[]>([]);
+  const [activeTab, setActiveTab] = useState<DriverAppTab>('home');
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
   const [refreshingAfterVerification, setRefreshingAfterVerification] = useState(false);
   const [postSubmitRefreshError, setPostSubmitRefreshError] = useState<string | null>(null);
@@ -2014,16 +2314,19 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const loaded = useRef(false);
 
   const refreshContext = useCallback(async () => {
-    const [nextDriver, nextStep, nextAssignments, nextNotifications] = await Promise.all([
+    const [nextDriver, nextStep, nextAssignments, nextNotifications, nextRemittances] =
+      await Promise.all([
       getDriverSelfServiceContext(token),
       getDriverOnboardingStep(token),
       listDriverSelfServiceAssignments(token),
       listDriverSelfServiceNotifications(token).catch(() => []),
+      listDriverSelfServiceRemittance(token).catch(() => []),
     ]);
     setDriver(nextDriver);
     setOnboardingStep(nextStep);
     setAssignments(nextAssignments);
     setNotifications(nextNotifications);
+    setRemittances(nextRemittances);
   }, [token]);
 
   useEffect(() => {
@@ -2134,6 +2437,26 @@ function DriverVerificationFlow({ token }: { token: string }) {
         assignment.status,
       ),
     ) ?? null;
+  const onboardingIncomplete = currentStep !== 'complete';
+  const activeAssignmentSupportsRemittance =
+    currentAssignment?.status === 'active' && assignmentSupportsRemittance(currentAssignment);
+  const unreadNotifications = notifications.filter((item) => !item.readAt).length;
+
+  useEffect(() => {
+    if (initialAssignmentId && currentAssignment?.id === initialAssignmentId) {
+      setActiveTab('assignment');
+      return;
+    }
+
+    if (currentAssignment?.status === 'driver_action_required') {
+      setActiveTab('assignment');
+      return;
+    }
+
+    if (activeAssignmentSupportsRemittance) {
+      setActiveTab((current) => (current === 'home' ? 'home' : current));
+    }
+  }, [initialAssignmentId, currentAssignment?.id, currentAssignment?.status, activeAssignmentSupportsRemittance]);
 
   async function handleNotificationOpen(notification: UserNotificationRecord) {
     try {
@@ -2149,314 +2472,521 @@ function DriverVerificationFlow({ token }: { token: string }) {
 
     const assignmentId = notificationAssignmentId(notification);
     if (assignmentId && currentAssignment?.id === assignmentId) {
-      document.getElementById('assignment-workspace')?.scrollIntoView({ behavior: 'smooth' });
+      setActiveTab('assignment');
+      requestAnimationFrame(() => {
+        document.getElementById('assignment-workspace')?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
   }
+  const homeStatusTone =
+    onboardingIncomplete
+      ? 'warning'
+      : currentAssignment?.status === 'driver_action_required'
+        ? 'warning'
+        : currentAssignment?.status === 'active'
+          ? 'success'
+          : 'neutral';
+
+  const onboardingPanel =
+    currentStep === 'account' ? (
+      <AccountSetupStep driver={driver} onComplete={refreshContext} token={token} />
+    ) : currentStep === 'profile' ? (
+      <OperationalProfileStep
+        driver={driver}
+        onboardingStep={onboardingStep}
+        onComplete={refreshContext}
+        token={token}
+      />
+    ) : currentStep === 'consent' ? (
+      <ConsentStep token={token} onComplete={refreshContext} />
+    ) : currentStep === 'payment' ? (
+      <PaymentStep
+        driver={driver}
+        token={token}
+        onboardingStep={onboardingStep}
+        onRefresh={refreshContext}
+      />
+    ) : currentStep === 'identity_verification' ? (
+      <DriverIdentityVerification
+        defaultCountryCode={driver.nationality ?? null}
+        driver={driver}
+        key={verificationKey}
+        mode="self_service"
+        onVerificationSubmitted={(result) => {
+          setLastVerificationResult(result);
+          setRefreshingAfterVerification(true);
+          setPostSubmitRefreshError(null);
+          void refreshContext()
+            .then(() => {
+              setVerificationKey((k) => k + 1);
+            })
+            .catch((error: unknown) => {
+              setPostSubmitRefreshError(
+                error instanceof Error
+                  ? error.message
+                  : 'Unable to refresh onboarding status right now.',
+              );
+            })
+            .finally(() => setRefreshingAfterVerification(false));
+        }}
+        selfServiceToken={token}
+        {...(driver.enabledDriverIdentifierTypes
+          ? { enabledIdentifierTypes: driver.enabledDriverIdentifierTypes }
+          : {})}
+        {...(driver.requiredDriverIdentifierTypes
+          ? { requiredIdentifierTypes: driver.requiredDriverIdentifierTypes }
+          : {})}
+      />
+    ) : currentStep === 'document_verification' ? (
+      <DocumentVerificationStep
+        driver={driver}
+        token={token}
+        onboardingStep={onboardingStep}
+        onComplete={refreshContext}
+      />
+    ) : currentStep === 'guarantor' ? (
+      <GuarantorStep
+        driver={driver}
+        token={token}
+        onboardingStep={onboardingStep}
+        onComplete={refreshContext}
+      />
+    ) : currentStep === 'manual_review' ? (
+      <ManualReviewStep
+        {...(onboardingStep.identityStatus
+          ? { identityStatus: onboardingStep.identityStatus }
+          : {})}
+        {...(onboardingStep.reason ? { reason: onboardingStep.reason } : {})}
+      />
+    ) : (
+      <CompletionStep driver={driver} onboardingStep={onboardingStep} />
+    );
+
+  const tabs: Array<{
+    key: DriverAppTab;
+    label: string;
+    enabled: boolean;
+    badge?: number;
+  }> = [
+    { key: 'home', label: 'Home', enabled: true },
+    { key: 'assignment', label: 'Assignment', enabled: true },
+    { key: 'remittance', label: 'Remittance', enabled: true },
+    {
+      key: 'notifications',
+      label: 'Alerts',
+      enabled: true,
+      ...(unreadNotifications > 0 ? { badge: unreadNotifications } : {}),
+    },
+    { key: 'profile', label: 'Profile', enabled: true },
+  ];
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <section className="space-y-3">
-          <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
-            Mobiris driver onboarding
-          </Text>
-          <div className="flex flex-wrap items-start justify-between gap-3 space-y-2">
-            <div className="space-y-2">
-              <Heading size="h1">{driverDisplayName}</Heading>
-              <Text tone="muted">
-                Complete the remaining onboarding steps for {organisationName}. Your progress is
-                saved as you go.
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_26%,#f8fbff_58%,#ffffff_100%)] pb-28">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pt-5">
+        <header className="sticky top-0 z-20 -mx-4 border-b border-white/70 bg-white/90 px-4 pb-4 pt-2 backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <Text className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
+                Mobiris Fleet OS
               </Text>
-              <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
-                <Text className="font-semibold text-[var(--mobiris-ink)]">
-                  You are being verified using {onboardingStep.verificationTierLabel}
-                </Text>
-                <Text tone="muted">{onboardingStep.verificationTierDescription}</Text>
-                <Text tone="muted">Included: {tierIncludes.join(', ')}.</Text>
-                <Text tone="muted">Required: {tierRequires.join(', ')}.</Text>
-              </div>
+              <Heading size="h3">{driverDisplayName}</Heading>
+              <Text tone="muted">{organisationName}</Text>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <a
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                href="/driver-self-service?saved=1"
-              >
-                Save and exit
-              </a>
-              {driver.hasMobileAccess ? (
-                <a
-                  className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-                  href="/login"
-                >
-                  Sign in later
-                </a>
-              ) : null}
-            </div>
+            <a
+              className="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              href="/driver-self-service?saved=1"
+            >
+              Sign out
+            </a>
           </div>
-        </section>
+        </header>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <Card className="border-slate-200 bg-white shadow-[0_18px_50px_-24px_rgba(15,23,42,0.28)]">
-            <CardHeader>
-              <CardTitle>Your profile information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Text tone="muted">Full name</Text>
-                <Text>{driverDisplayName}</Text>
+        <div className="flex-1 space-y-4 py-4">
+          <Card className="overflow-hidden border-slate-200 bg-white shadow-[0_30px_80px_-38px_rgba(15,23,42,0.38)]">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={homeStatusTone}>
+                  {onboardingIncomplete
+                    ? 'Onboarding in progress'
+                    : currentAssignment?.status === 'driver_action_required'
+                      ? 'Assignment action needed'
+                      : currentAssignment?.status === 'accepted'
+                        ? 'Assignment accepted'
+                        : currentAssignment?.status === 'active'
+                          ? 'Operational'
+                          : 'Ready and waiting'}
+                </Badge>
+                {!onboardingIncomplete ? (
+                  <Badge tone="neutral">{onboardingStep.verificationTierLabel}</Badge>
+                ) : null}
               </div>
               <div className="space-y-1">
-                <Text tone="muted">Phone</Text>
-                <Text>{formatProfileValue(driver.phone)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Email</Text>
-                <Text>{formatProfileValue(driver.email)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Date of birth</Text>
-                <Text>{formatShortDate(driver.dateOfBirth)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Gender</Text>
-                <Text>{formatProfileValue(driver.gender)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Nationality</Text>
-                <Text>{formatProfileValue(driver.nationality)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">NIN</Text>
-                <Text>{maskNin(driver.identityProfile?.ninIdNumber)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Mobile access</Text>
-                <Text>{driver.hasMobileAccess ? 'Enabled' : 'Not enabled yet'}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Address</Text>
-                <Text>{formatProfileValue(driver.operationalProfile?.address)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">State</Text>
-                <Text>{formatProfileValue(driver.operationalProfile?.state)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Next of kin</Text>
-                <Text>{formatProfileValue(driver.operationalProfile?.nextOfKinName)}</Text>
-              </div>
-              <div className="space-y-1">
-                <Text tone="muted">Emergency contact</Text>
-                <Text>{formatProfileValue(driver.operationalProfile?.emergencyContactName)}</Text>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 bg-white shadow-[0_18px_50px_-24px_rgba(15,23,42,0.28)]">
-            <CardHeader>
-              <CardTitle>
-                Notifications
-                {notifications.filter((item) => !item.readAt).length > 0
-                  ? ` · ${notifications.filter((item) => !item.readAt).length} new`
-                  : ''}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {notifications.length === 0 ? (
+                <p className="text-2xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
+                  {onboardingIncomplete
+                    ? 'Finish your onboarding'
+                    : currentAssignment?.status === 'driver_action_required'
+                      ? 'Review your vehicle assignment'
+                      : currentAssignment?.status === 'accepted'
+                        ? 'You are ready to begin'
+                        : currentAssignment?.status === 'active'
+                          ? 'Your workday is active'
+                          : 'You are ready for assignment'}
+                </p>
                 <Text tone="muted">
-                  Assignment changes, verification updates, and remittance alerts will appear here.
+                  {onboardingIncomplete
+                    ? `Next step: ${formatStepLabel(currentStep)}. Complete the required checks for ${onboardingStep.verificationTierLabel}.`
+                    : currentAssignment?.status === 'driver_action_required'
+                      ? 'You have been assigned a vehicle. Review the details and accept or reject it.'
+                      : currentAssignment?.status === 'accepted'
+                        ? 'Your assignment has been accepted. Your organisation can begin operations when ready.'
+                        : currentAssignment?.status === 'active'
+                          ? 'Check your assignment, record remittance when needed, and keep up with alerts.'
+                          : 'Your verification is complete. We will show your next assignment here as soon as it is ready.'}
                 </Text>
-              ) : (
-                notifications.slice(0, 5).map((notification) => (
-                  <div
-                    className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
-                    key={notification.id}
+              </div>
+              <div className="grid gap-3 grid-cols-2">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <Text tone="muted">Current assignment</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {currentAssignment ? formatVehicleLabel(currentAssignment.vehicle) : 'Waiting'}
+                  </Text>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <Text tone="muted">Expected amount</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {currentAssignment?.remittanceAmountMinorUnits
+                      ? formatMinorCurrency(
+                          currentAssignment.remittanceAmountMinorUnits,
+                          currentAssignment.remittanceCurrency,
+                        )
+                      : 'Not due'}
+                  </Text>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  className="h-12 w-full text-base shadow-[0_18px_35px_-18px_rgba(37,99,235,0.75)]"
+                  onClick={() =>
+                    setActiveTab(
+                      onboardingIncomplete
+                        ? 'home'
+                        : currentAssignment
+                          ? 'assignment'
+                          : 'profile',
+                    )
+                  }
+                  type="button"
+                >
+                  {onboardingIncomplete
+                    ? `Continue ${formatStepLabel(currentStep)}`
+                    : currentAssignment
+                      ? 'Open assignment'
+                      : 'View profile'}
+                </Button>
+                {activeAssignmentSupportsRemittance ? (
+                  <Button
+                    className="h-11 w-full"
+                    onClick={() => setActiveTab('remittance')}
+                    type="button"
+                    variant="secondary"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Text className="font-semibold text-[var(--mobiris-ink)]">
-                            {notification.title}
-                          </Text>
-                          {!notification.readAt ? <Badge tone="success">New</Badge> : null}
-                        </div>
-                        <Text tone="muted">{notification.body}</Text>
-                        <Text tone="muted">{formatNotificationDate(notification.createdAt)}</Text>
-                      </div>
-                      {notificationAssignmentId(notification) ? (
-                        <Button
-                          onClick={() => void handleNotificationOpen(notification)}
-                          type="button"
-                          variant="secondary"
-                        >
-                          Open
-                        </Button>
-                      ) : !notification.readAt ? (
-                        <Button
-                          onClick={() => void handleNotificationOpen(notification)}
-                          type="button"
-                          variant="secondary"
-                        >
-                          Mark read
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              )}
+                    Open remittance
+                  </Button>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
-        </section>
 
-        {postSubmitRefreshError ? (
-          <Card className="border-amber-200 bg-amber-50/70">
-            <CardContent className="pt-5 pb-4 space-y-3">
-              <Text className="font-semibold text-[var(--mobiris-ink)]">
-                Verification result saved
-              </Text>
-              <Text tone="muted">
-                Your verification response was received, but we could not refresh the next step yet.
-                Refreshing here only reloads the saved result. It does not start a new paid
-                verification attempt.
-              </Text>
-              {lastVerificationResult?.verifiedProfile?.fullName ? (
-                <Text tone="muted">
-                  Latest returned identity: {lastVerificationResult.verifiedProfile.fullName}
+          {postSubmitRefreshError ? (
+            <Card className="border-amber-200 bg-amber-50/70">
+              <CardContent className="space-y-3 pt-5 pb-4">
+                <Text className="font-semibold text-[var(--mobiris-ink)]">
+                  Verification result saved
                 </Text>
-              ) : null}
-              <Text tone="muted">{postSubmitRefreshError}</Text>
-              <Button
-                disabled={refreshingAfterVerification}
-                onClick={() => {
-                  setRefreshingAfterVerification(true);
-                  setPostSubmitRefreshError(null);
-                  void refreshContext()
-                    .then(() => {
-                      setVerificationKey((current) => current + 1);
-                    })
-                    .catch((error: unknown) => {
-                      setPostSubmitRefreshError(
-                        error instanceof Error
-                          ? error.message
-                          : 'Unable to refresh onboarding status right now.',
-                      );
-                    })
-                    .finally(() => setRefreshingAfterVerification(false));
-                }}
-                type="button"
-              >
-                {refreshingAfterVerification ? 'Refreshing status…' : 'Refresh saved result'}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
+                <Text tone="muted">
+                  We received your verification result, but we still need to refresh your next step.
+                </Text>
+                {lastVerificationResult?.verifiedProfile?.fullName ? (
+                  <Text tone="muted">
+                    Latest returned identity: {lastVerificationResult.verifiedProfile.fullName}
+                  </Text>
+                ) : null}
+                <Text tone="muted">{postSubmitRefreshError}</Text>
+                <Button
+                  disabled={refreshingAfterVerification}
+                  onClick={() => {
+                    setRefreshingAfterVerification(true);
+                    setPostSubmitRefreshError(null);
+                    void refreshContext()
+                      .then(() => {
+                        setVerificationKey((current) => current + 1);
+                      })
+                      .catch((error: unknown) => {
+                        setPostSubmitRefreshError(
+                          error instanceof Error
+                            ? error.message
+                            : 'Unable to refresh onboarding status right now.',
+                        );
+                      })
+                      .finally(() => setRefreshingAfterVerification(false));
+                  }}
+                  type="button"
+                >
+                  {refreshingAfterVerification ? 'Refreshing status…' : 'Refresh status'}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
-        {!currentAssignment && currentStep !== 'complete' ? (
-          <StepProgress
-            currentStep={currentStep}
-            verificationTierComponents={onboardingStep.verificationTierComponents}
-          />
-        ) : null}
+          {activeTab === 'home' ? (
+            <div className="space-y-4">
+              {onboardingIncomplete ? (
+                <>
+                  <Card className="border-slate-200 bg-white shadow-[0_18px_48px_-26px_rgba(15,23,42,0.28)]">
+                    <CardHeader className="space-y-2">
+                      <CardTitle>Onboarding tasks</CardTitle>
+                      <Text tone="muted">
+                        {onboardingStep.verificationTierLabel} for {organisationName}
+                      </Text>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+                        <Text className="font-semibold text-[var(--mobiris-ink)]">
+                          You are being verified using {onboardingStep.verificationTierLabel}
+                        </Text>
+                        <Text tone="muted">{onboardingStep.verificationTierDescription}</Text>
+                        <Text tone="muted">Included: {tierIncludes.join(', ')}.</Text>
+                        <Text tone="muted">Required: {tierRequires.join(', ')}.</Text>
+                      </div>
+                      {!currentAssignment ? (
+                        <StepProgress
+                          currentStep={currentStep}
+                          verificationTierComponents={onboardingStep.verificationTierComponents}
+                        />
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                  {onboardingPanel}
+                </>
+              ) : currentAssignment?.status === 'driver_action_required' ? (
+                <div id="assignment-workspace">
+                  <AssignmentWorkspace
+                    assignment={currentAssignment}
+                    onRefresh={refreshContext}
+                    token={token}
+                  />
+                </div>
+              ) : currentAssignment?.status === 'active' || currentAssignment?.status === 'accepted' ? (
+                <div className="space-y-4">
+                  <Card className="border-slate-200 bg-white shadow-[0_18px_48px_-26px_rgba(15,23,42,0.28)]">
+                    <CardHeader className="space-y-2">
+                      <CardTitle>Today&apos;s overview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3">
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <Text tone="muted">Vehicle</Text>
+                        <Text className="font-semibold text-[var(--mobiris-ink)]">
+                          {formatVehicleLabel(currentAssignment.vehicle)}
+                        </Text>
+                        <Text tone="muted">
+                          Plate {currentAssignment.vehicle.plate ?? 'Not recorded'}
+                        </Text>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <Text tone="muted">Payment model</Text>
+                        <Text className="font-semibold text-[var(--mobiris-ink)]">
+                          {getDriverAssignmentPaymentModelLabel(currentAssignment)}
+                        </Text>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {activeAssignmentSupportsRemittance ? (
+                    <RemittanceWorkspace
+                      assignment={currentAssignment}
+                      onOpenAssignment={() => setActiveTab('assignment')}
+                      onRefresh={refreshContext}
+                      remittances={remittances}
+                      token={token}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <CompletionStep driver={driver} onboardingStep={onboardingStep} />
+              )}
+            </div>
+          ) : null}
 
-        {currentAssignment ? (
-          <div id="assignment-workspace">
-            <AssignmentWorkspace
-              assignment={currentAssignment}
+          {activeTab === 'assignment' ? (
+            currentAssignment ? (
+              <div className="space-y-4" id="assignment-workspace">
+                <AssignmentWorkspace
+                  assignment={currentAssignment}
+                  onRefresh={refreshContext}
+                  token={token}
+                />
+                {currentAssignment.status === 'active' && assignmentSupportsRemittance(currentAssignment) ? (
+                  <Button
+                    className="h-12 w-full"
+                    onClick={() => setActiveTab('remittance')}
+                    type="button"
+                  >
+                    Record remittance
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <Card className="border-slate-200 bg-white shadow-[0_18px_48px_-26px_rgba(15,23,42,0.28)]">
+                <CardHeader className="space-y-2">
+                  <CardTitle>Assignment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    No assignment yet
+                  </Text>
+                  <Text tone="muted">
+                    Your assignment will appear here as soon as your organisation assigns a vehicle.
+                  </Text>
+                </CardContent>
+              </Card>
+            )
+          ) : null}
+
+          {activeTab === 'remittance' ? (
+            <RemittanceWorkspace
+              assignment={currentAssignment?.status === 'active' ? currentAssignment : currentAssignment}
+              onOpenAssignment={() => setActiveTab('assignment')}
               onRefresh={refreshContext}
+              remittances={remittances}
               token={token}
             />
+          ) : null}
+
+          {activeTab === 'notifications' ? (
+            <Card className="border-slate-200 bg-white shadow-[0_18px_48px_-26px_rgba(15,23,42,0.28)]">
+              <CardHeader className="space-y-2">
+                <CardTitle>Notifications</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {notifications.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <Text className="font-semibold text-[var(--mobiris-ink)]">No notifications yet</Text>
+                    <Text tone="muted">
+                      Assignment changes, verification updates, and remittance reminders will appear here.
+                    </Text>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                      key={notification.id}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Text className="font-semibold text-[var(--mobiris-ink)]">
+                              {notification.title}
+                            </Text>
+                            {!notification.readAt ? <Badge tone="success">New</Badge> : null}
+                          </div>
+                          <Text tone="muted">{notification.body}</Text>
+                          <Text tone="muted">{formatNotificationDate(notification.createdAt)}</Text>
+                        </div>
+                        <Button
+                          onClick={() => void handleNotificationOpen(notification)}
+                          type="button"
+                          variant="secondary"
+                        >
+                          {notificationAssignmentId(notification) ? 'Open' : 'Mark read'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {activeTab === 'profile' ? (
+            <div className="space-y-4">
+              <Card className="border-slate-200 bg-white shadow-[0_18px_48px_-26px_rgba(15,23,42,0.28)]">
+                <CardHeader className="space-y-2">
+                  <CardTitle>Your profile</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 grid-cols-2">
+                  <div className="space-y-1">
+                    <Text tone="muted">Full name</Text>
+                    <Text>{driverDisplayName}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Phone</Text>
+                    <Text>{formatProfileValue(driver.phone)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Email</Text>
+                    <Text>{formatProfileValue(driver.email)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Date of birth</Text>
+                    <Text>{formatShortDate(driver.dateOfBirth)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Nationality</Text>
+                    <Text>{formatProfileValue(driver.nationality)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">NIN</Text>
+                    <Text>{maskNin(driver.identityProfile?.ninIdNumber)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">Address</Text>
+                    <Text>{formatProfileValue(driver.operationalProfile?.address)}</Text>
+                  </div>
+                  <div className="space-y-1">
+                    <Text tone="muted">State</Text>
+                    <Text>{formatProfileValue(driver.operationalProfile?.state)}</Text>
+                  </div>
+                  <div className="col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <Text className="font-semibold text-[var(--mobiris-ink)]">
+                      Verified identity
+                    </Text>
+                    <Text tone="muted">
+                      {onboardingStep.verificationTierLabel} · {driver.verificationStatus ?? driver.identityStatus}
+                    </Text>
+                    <Text tone="muted">
+                      Included checks: {tierIncludes.join(', ')}.
+                    </Text>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {onboardingIncomplete && currentStep === 'profile' ? onboardingPanel : null}
+            </div>
+          ) : null}
+        </div>
+
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
+          <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
+            {tabs.map((tab) => (
+              <button
+                className={`relative flex min-h-[60px] flex-col items-center justify-center rounded-2xl px-2 py-2 text-center text-xs font-medium transition ${
+                  activeTab === tab.key
+                    ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_18px_35px_-20px_rgba(37,99,235,0.8)]'
+                    : 'bg-slate-50 text-slate-600'
+                }`}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                type="button"
+              >
+                <span>{tab.label}</span>
+                {tab.badge ? (
+                  <span className="absolute right-2 top-2 min-w-[18px] rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {tab.badge}
+                  </span>
+                ) : null}
+              </button>
+            ))}
           </div>
-        ) : null}
-
-        {currentStep === 'account' ? (
-          <AccountSetupStep driver={driver} onComplete={refreshContext} token={token} />
-        ) : null}
-
-        {currentStep === 'profile' ? (
-          <OperationalProfileStep
-            driver={driver}
-            onboardingStep={onboardingStep}
-            onComplete={refreshContext}
-            token={token}
-          />
-        ) : null}
-
-        {currentStep === 'consent' ? (
-          <ConsentStep token={token} onComplete={refreshContext} />
-        ) : null}
-
-        {currentStep === 'payment' ? (
-          <PaymentStep
-            driver={driver}
-            token={token}
-            onboardingStep={onboardingStep}
-            onRefresh={refreshContext}
-          />
-        ) : null}
-
-        {currentStep === 'identity_verification' ? (
-          <DriverIdentityVerification
-            defaultCountryCode={driver.nationality ?? null}
-            driver={driver}
-            key={verificationKey}
-            mode="self_service"
-            onVerificationSubmitted={(result) => {
-              setLastVerificationResult(result);
-              setRefreshingAfterVerification(true);
-              setPostSubmitRefreshError(null);
-              void refreshContext()
-                .then(() => {
-                  setVerificationKey((k) => k + 1);
-                })
-                .catch((error: unknown) => {
-                  setPostSubmitRefreshError(
-                    error instanceof Error
-                      ? error.message
-                      : 'Unable to refresh onboarding status right now.',
-                  );
-                })
-                .finally(() => setRefreshingAfterVerification(false));
-            }}
-            selfServiceToken={token}
-            {...(driver.enabledDriverIdentifierTypes
-              ? { enabledIdentifierTypes: driver.enabledDriverIdentifierTypes }
-              : {})}
-            {...(driver.requiredDriverIdentifierTypes
-              ? { requiredIdentifierTypes: driver.requiredDriverIdentifierTypes }
-              : {})}
-          />
-        ) : null}
-
-        {currentStep === 'document_verification' ? (
-          <DocumentVerificationStep
-            driver={driver}
-            token={token}
-            onboardingStep={onboardingStep}
-            onComplete={refreshContext}
-          />
-        ) : null}
-
-        {currentStep === 'guarantor' ? (
-          <GuarantorStep
-            driver={driver}
-            token={token}
-            onboardingStep={onboardingStep}
-            onComplete={refreshContext}
-          />
-        ) : null}
-
-        {currentStep === 'manual_review' ? (
-          <ManualReviewStep
-            {...(onboardingStep.identityStatus
-              ? { identityStatus: onboardingStep.identityStatus }
-              : {})}
-            {...(onboardingStep.reason ? { reason: onboardingStep.reason } : {})}
-          />
-        ) : null}
-
-        {currentStep === 'complete' && !currentAssignment ? (
-          <CompletionStep driver={driver} onboardingStep={onboardingStep} />
-        ) : null}
+        </nav>
       </div>
     </main>
   );
@@ -2484,7 +3014,7 @@ function DriverSelfServiceInner() {
     );
   }
 
-  return <DriverVerificationFlow token={token} />;
+  return <DriverVerificationFlow initialAssignmentId={assignmentId} token={token} />;
 }
 
 export default function DriverSelfServicePage() {

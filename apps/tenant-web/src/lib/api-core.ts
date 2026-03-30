@@ -2715,6 +2715,27 @@ export async function declineDriverSelfServiceAssignment(
   );
 }
 
+export async function listDriverSelfServiceRemittance(
+  token: string,
+): Promise<RemittanceRecord[]> {
+  return apiCoreFetch<RemittanceRecord[]>('/driver-self-service/remittance/list', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+    cache: 'no-store',
+  });
+}
+
+export async function recordDriverSelfServiceRemittance(
+  token: string,
+  input: RecordRemittanceInput,
+): Promise<RemittanceRecord> {
+  return apiCoreFetch<RemittanceRecord>('/driver-self-service/remittance', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
 export async function updateDriverSelfServiceProfile(
   token: string,
   profile: {

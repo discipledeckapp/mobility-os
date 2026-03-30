@@ -20,6 +20,7 @@ import { NavLinks } from './nav-links';
 import { NotificationCenter } from './notification-center';
 import { LogoutButton } from './logout-button';
 import { GlobalSearch } from './global-search';
+import { Modal } from './modal';
 
 interface TenantShellChromeProps {
   eyebrow: string;
@@ -39,6 +40,7 @@ export function TenantShellChrome({
   children,
 }: TenantShellChromeProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [billingSummary, setBillingSummary] = useState<TenantBillingSummaryRecord | null>(null);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function TenantShellChrome({
   return (
     <AppShell>
       <div className="flex min-h-screen">
-        <Sidebar className={`flex flex-col px-4 py-6 transition-all ${collapsed ? 'w-24' : 'w-72'}`}>
+        <Sidebar className={`hidden flex-col px-4 py-6 transition-all lg:flex ${collapsed ? 'w-24' : 'w-72'}`}>
           <div className="mb-6 flex items-start justify-between gap-3 px-2">
             <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
               <div className="flex h-8 w-8 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] shadow-[0_8px_20px_-8px_rgba(37,99,235,0.8)]">
@@ -116,7 +118,49 @@ export function TenantShellChrome({
         </Sidebar>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <Header>
+          <div className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
+                  {eyebrow}
+                </p>
+                <Heading className="mt-0.5 text-xl leading-tight" size="h3">
+                  {title}
+                </Heading>
+                <Text className="line-clamp-2 text-sm" tone="muted">
+                  {description}
+                </Text>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <GlobalSearch />
+                <NotificationCenter initialNotifications={notifications} />
+                <button
+                  aria-label="Open navigation menu"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  onClick={() => setMobileMenuOpen(true)}
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="18"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                    viewBox="0 0 24 24"
+                    width="18"
+                  >
+                    <line x1="4" x2="20" y1="7" y2="7" />
+                    <line x1="4" x2="20" y1="12" y2="12" />
+                    <line x1="4" x2="20" y1="17" y2="17" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <Header className="hidden lg:flex">
             <div className="flex min-w-0 items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
@@ -170,25 +214,38 @@ export function TenantShellChrome({
             </div>
           ) : null}
 
-          <div className="border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
-            <div className="mb-3">
-              <NavLinks variant="mobile" />
-            </div>
-            <div className="flex items-center gap-3">
-              <GlobalSearch />
-              <NotificationCenter initialNotifications={notifications} />
-              <LogoutButton
-                className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-                mobile
-              />
-            </div>
-          </div>
-
-          <Content>
+          <Content className="pb-24 lg:pb-8">
             <ContentSection>{children}</ContentSection>
           </Content>
         </div>
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-3 py-3 backdrop-blur lg:hidden">
+        <div className="mx-auto max-w-md">
+          <NavLinks variant="bottom" />
+        </div>
+      </div>
+
+      <Modal
+        description="Move between drivers, vehicles, assignments, billing, and settings from one place."
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+        title={organisationName}
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <Text className="font-semibold text-[var(--mobiris-ink)]">Menu</Text>
+            <Text tone="muted">Choose a workspace or account action.</Text>
+          </div>
+          <NavLinks variant="mobile" />
+          <div className="border-t border-slate-200 pt-4">
+            <LogoutButton
+              className="inline-flex h-11 w-full items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+              mobile
+            />
+          </div>
+        </div>
+      </Modal>
     </AppShell>
   );
 }

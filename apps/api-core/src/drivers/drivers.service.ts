@@ -31,6 +31,7 @@ import { buildCsv, parseCsv } from '../common/csv-utils';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { resolveAssignmentPaymentModel } from '../assignments/financial-contract';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -2923,7 +2924,7 @@ export class DriversService {
       driverId: assignment.driverId,
       vehicleId: assignment.vehicleId,
       fleetId: assignment.fleetId,
-      paymentModel: null,
+      paymentModel: resolveAssignmentPaymentModel(assignment),
       remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
       remittanceCurrency: assignment.remittanceCurrency,
       remittanceFrequency: assignment.remittanceFrequency,

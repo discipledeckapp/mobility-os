@@ -153,12 +153,12 @@ export function TenantDashboardShell({
       title="Dashboard"
     >
       {organisationDisplayName ? (
-        <Card className="mb-6 border-slate-200 bg-white shadow-[0_4px_16px_-8px_rgba(15,23,42,0.12)]">
-          <CardContent className="flex items-center gap-4 px-5 py-4">
+        <Card className="mb-5 border-slate-200 bg-white shadow-[0_4px_16px_-8px_rgba(15,23,42,0.12)]">
+          <CardContent className="flex items-center gap-3 px-4 py-4 sm:px-5">
             {organisationLogoUrl ? (
               <img
                 alt={`${organisationDisplayName} logo`}
-                className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+                className="h-11 w-11 rounded-xl border border-slate-200 object-cover"
                 src={organisationLogoUrl}
               />
             ) : null}
@@ -189,7 +189,7 @@ export function TenantDashboardShell({
       ) : null}
 
       {/* Metric cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {summary.map((item) => {
           const href = summaryHrefs[item.label];
           const inner = (
@@ -214,7 +214,7 @@ export function TenantDashboardShell({
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                   {item.label}
                 </p>
-                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
+                <p className="text-2xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)] sm:text-3xl">
                   {item.value}
                 </p>
                 {item.detail ? <p className="text-xs text-slate-400">{item.detail}</p> : null}
@@ -260,7 +260,7 @@ export function TenantDashboardShell({
                     <p className="mt-0.5 text-xs text-slate-500">{item.description}</p>
                   </div>
                   <Link
-                    className="shrink-0 text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                    className="shrink-0 rounded-full bg-[var(--mobiris-primary-tint)] px-3 py-1.5 text-xs font-semibold text-[var(--mobiris-primary-dark)]"
                     href={item.href}
                   >
                     Fix →
@@ -272,10 +272,10 @@ export function TenantDashboardShell({
         </Card>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
         {/* Remittance summary */}
         <Card className="border-slate-200 bg-white shadow-[0_4px_20px_-10px_rgba(15,23,42,0.14)]">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Remittance summary</CardTitle>
               <CardDescription>
@@ -292,11 +292,11 @@ export function TenantDashboardShell({
             {remittanceSummary.length === 0 ? (
               <Text tone="muted">No remittance summary available yet.</Text>
             ) : (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-3">
                 {remittanceSummary.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#eef5ff)] p-4 space-y-2"
+                    className="space-y-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#eef5ff)] p-4"
                   >
                     <p className="text-xs text-slate-500">{item.label}</p>
                     <p className="text-lg font-semibold tracking-[-0.02em] text-[var(--mobiris-ink)]">
@@ -312,7 +312,7 @@ export function TenantDashboardShell({
 
         {/* Recent activity — compact feed */}
         <Card className="border-slate-200 bg-white shadow-[0_4px_20px_-10px_rgba(15,23,42,0.14)]">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Recent activity</CardTitle>
               <CardDescription>Latest records across all operational areas.</CardDescription>
@@ -343,7 +343,7 @@ export function TenantDashboardShell({
                         })}
                       </p>
                     </div>
-                    <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                    <div className="flex flex-shrink-0 flex-col items-end gap-2">
                       {item.status ? (
                         <Badge
                           tone={
@@ -355,7 +355,7 @@ export function TenantDashboardShell({
                         </Badge>
                       ) : null}
                       <Link href={item.href}>
-                        <span className="text-xs font-semibold text-[var(--mobiris-primary-dark)] hover:underline">
+                        <span className="rounded-full bg-[var(--mobiris-primary-tint)] px-3 py-1.5 text-xs font-semibold text-[var(--mobiris-primary-dark)]">
                           Open
                         </span>
                       </Link>
@@ -370,7 +370,7 @@ export function TenantDashboardShell({
 
       {/* Work areas with icons */}
       <Card className="border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_4px_20px_-10px_rgba(15,23,42,0.12)]">
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle>Work areas</CardTitle>
             <CardDescription>Jump straight into the main operational workflows.</CardDescription>
@@ -387,11 +387,11 @@ export function TenantDashboardShell({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {featureCards.map((card) => (
               <Link href={card.href} key={card.href}>
                 <Card className="group h-full border-slate-200 bg-white shadow-none transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--mobiris-primary)]/30 hover:shadow-[0_8px_24px_-12px_rgba(37,99,235,0.22)]">
-                  <CardContent className="flex flex-col gap-3 px-5 py-5">
+                  <CardContent className="flex flex-col gap-3 px-4 py-4 sm:px-5 sm:py-5">
                     <div className="flex h-10 w-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary-tint)] text-[var(--mobiris-primary-dark)] transition-colors group-hover:bg-[var(--mobiris-primary)] group-hover:text-white">
                       {featureCardIcons[card.href] ?? (
                         <svg
