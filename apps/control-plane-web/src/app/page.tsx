@@ -13,6 +13,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -50,25 +51,60 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 
 export default async function HomePage() {
   const token = await getPlatformApiToken().catch(() => undefined);
+  const dataWarnings: string[] = [];
   const [
-    tenants,
-    subscriptions,
-    invoices,
-    wallets,
-    flags,
-    ledger,
-    operationsOverview,
-    governanceOverview,
-  ] = await Promise.all([
-    listTenants(token),
-    listSubscriptions(token),
-    listInvoices(token),
-    listPlatformWallets(token),
-    listFeatureFlags(token),
-    listPlatformWalletLedger({ page: 1, limit: 8 }, token),
-    getOperationalOversight(token).catch(() => null),
-    getGovernanceOversight(token).catch(() => null),
-  ]);
+    tenantsResult,
+    subscriptionsResult,
+    invoicesResult,
+    walletsResult,
+    flagsResult,
+    ledgerResult,
+    operationsOverviewResult,
+    governanceOverviewResult,
+  ] = token
+    ? await Promise.allSettled([
+        listTenants(token),
+        listSubscriptions(token),
+        listInvoices(token),
+        listPlatformWallets(token),
+        listFeatureFlags(token),
+        listPlatformWalletLedger({ page: 1, limit: 8 }, token),
+        getOperationalOversight(token),
+        getGovernanceOversight(token),
+      ])
+    : await Promise.allSettled([
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve({ data: [] }),
+        Promise.resolve(null),
+        Promise.resolve(null),
+      ]);
+
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
+  const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
+  const wallets = walletsResult.status === 'fulfilled' ? walletsResult.value : [];
+  const flags = flagsResult.status === 'fulfilled' ? flagsResult.value : [];
+  const ledger = ledgerResult.status === 'fulfilled' ? ledgerResult.value : { data: [] };
+  const operationsOverview =
+    operationsOverviewResult.status === 'fulfilled' ? operationsOverviewResult.value : null;
+  const governanceOverview =
+    governanceOverviewResult.status === 'fulfilled' ? governanceOverviewResult.value : null;
+
+  if (!token) {
+    dataWarnings.push('Your platform session could not be read on this request, so dashboard data is limited.');
+  }
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation registry could not be loaded.');
+  if (subscriptionsResult.status !== 'fulfilled') dataWarnings.push('Subscription posture is temporarily unavailable.');
+  if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice exposure could not be loaded.');
+  if (walletsResult.status !== 'fulfilled') dataWarnings.push('Platform wallet balances could not be loaded.');
+  if (flagsResult.status !== 'fulfilled') dataWarnings.push('Feature flag posture is temporarily unavailable.');
+  if (ledgerResult.status !== 'fulfilled') dataWarnings.push('Recent platform wallet transactions could not be loaded.');
+  if (operationsOverviewResult.status !== 'fulfilled') dataWarnings.push('Operations oversight is temporarily unavailable.');
+  if (governanceOverviewResult.status !== 'fulfilled') dataWarnings.push('Governance oversight is temporarily unavailable.');
 
   const tenantLookup = buildTenantLookup(tenants);
   const atRiskSubscriptions = subscriptions.filter((item) =>
@@ -90,6 +126,12 @@ export default async function HomePage() {
       title="Control plane dashboard"
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Dashboard loaded with partial platform data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${tenants.length} organisations`, tone: 'neutral' },

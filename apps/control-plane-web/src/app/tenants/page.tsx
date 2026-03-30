@@ -18,6 +18,7 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { SelectField } from '../../features/shared/select-field';
+import { ControlPlaneDataNotice } from '../../features/shared/control-plane-page-patterns';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listTenants } from '../../lib/api-control-plane';
 
@@ -69,7 +70,11 @@ type TenantsPageProps = {
 
 export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   const params = (await searchParams) ?? {};
-  const tenants = await listTenants();
+  const tenants = await listTenants().catch(() => []);
+  const dataWarning =
+    tenants.length === 0
+      ? 'The organisation registry could not be loaded from the platform API on this request, so this page is showing an honest empty state instead of crashing.'
+      : null;
   const query = params.q?.trim().toLowerCase() ?? '';
   const statusFilter = params.status?.trim().toLowerCase() ?? '';
   const filteredTenants = tenants.filter((tenant) => {
@@ -88,6 +93,7 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
       title="Organisations"
     >
       <div className="space-y-6">
+        {dataWarning ? <ControlPlaneDataNotice description={dataWarning} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <form className="flex flex-wrap gap-3" method="get">
             <Input

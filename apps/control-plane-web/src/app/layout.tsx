@@ -1,6 +1,6 @@
-import { mobirisBrand } from '@mobility-os/ui';
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
+import { mobirisBrand } from '../../../../packages/ui/brand/mobiris-brand';
 import './globals.css';
 
 export const metadata: Metadata = {

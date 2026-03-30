@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -50,12 +51,29 @@ function getDisputeTone(status: string): 'success' | 'warning' | 'neutral' | 'da
 
 export default async function BillingOperationsPage() {
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [invoices, disputes, documents, tenants] = await Promise.all([
-    listInvoices(token),
-    listControlPlaneDisputes(undefined, token),
-    listControlPlaneDocuments(undefined, token),
-    listTenants(token),
-  ]);
+  const dataWarnings: string[] = [];
+  const [invoicesResult, disputesResult, documentsResult, tenantsResult] = token
+    ? await Promise.allSettled([
+        listInvoices(token),
+        listControlPlaneDisputes(undefined, token),
+        listControlPlaneDocuments(undefined, token),
+        listTenants(token),
+      ])
+    : await Promise.allSettled([
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve([]),
+        Promise.resolve([]),
+      ]);
+  const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
+  const disputes = disputesResult.status === 'fulfilled' ? disputesResult.value : [];
+  const documents = documentsResult.status === 'fulfilled' ? documentsResult.value : [];
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
+  if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice registry is temporarily unavailable.');
+  if (disputesResult.status !== 'fulfilled') dataWarnings.push('Dispute registry could not be loaded.');
+  if (documentsResult.status !== 'fulfilled') dataWarnings.push('Issued billing documents could not be loaded.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
   const tenantLookup = buildTenantLookup(tenants);
   const openInvoices = invoices.filter((invoice) => invoice.status === 'open');
   const overdueExposure = openInvoices.reduce(
@@ -72,6 +90,12 @@ export default async function BillingOperationsPage() {
       title="Billing operations"
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Billing operations loaded with partial platform data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${openInvoices.length} open invoices`, tone: openInvoices.length ? 'warning' : 'success' },

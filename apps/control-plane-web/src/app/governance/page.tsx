@@ -10,6 +10,7 @@ import {
 } from '@mobility-os/ui';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -30,7 +31,53 @@ function statusTone(
 }
 
 export default async function GovernancePage() {
-  const [overview, tenants] = await Promise.all([getGovernanceOversight(), listTenants().catch(() => [])]);
+  const dataWarnings: string[] = [];
+  const [overviewResult, tenantsResult] = await Promise.allSettled([
+    getGovernanceOversight(),
+    listTenants(),
+  ]);
+  const overview =
+    overviewResult.status === 'fulfilled'
+      ? overviewResult.value
+      : {
+          privacy: {
+            totals: {
+              openRequests: 0,
+              pendingReviewRequests: 0,
+              closedRequests: 0,
+              consentEventsLast30Days: 0,
+              tenantsWithOpenPrivacyRequests: 0,
+            },
+            tenantSummaries: [],
+            requests: [],
+            consents: [],
+            support: {
+              supportEmail: 'support@mobiris.ng',
+              supportPhonePrimary: null,
+              supportPhoneSecondary: null,
+              privacyPolicyVersion: 'unknown',
+              termsVersion: 'unknown',
+            },
+          },
+          notifications: {
+            totals: {
+              notificationsLast30Days: 0,
+              unreadNotifications: 0,
+              pushDevices: 0,
+              pushEnabledUsers: 0,
+              tenantsWithUnreadNotifications: 0,
+              verificationNotifications: 0,
+              remittanceNotifications: 0,
+              assignmentNotifications: 0,
+              complianceRiskNotifications: 0,
+            },
+            tenantSummaries: [],
+            notifications: [],
+          },
+        };
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  if (overviewResult.status !== 'fulfilled') dataWarnings.push('Governance oversight could not be loaded from the platform API.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
   const tenantLookup = buildTenantLookup(tenants);
   const mergedTenantIds = new Set([
     ...overview.privacy.tenantSummaries.map((item) => item.tenantId),
@@ -44,6 +91,12 @@ export default async function GovernancePage() {
       description="Track privacy requests, consent posture, and notification delivery health across tenants so platform support can respond before issues turn into compliance debt."
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Governance loaded with partial platform data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${overview.privacy.totals.openRequests} privacy requests`, tone: overview.privacy.totals.openRequests ? 'warning' : 'success' },

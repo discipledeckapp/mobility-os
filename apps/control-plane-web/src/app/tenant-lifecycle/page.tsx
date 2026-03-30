@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -29,11 +30,22 @@ function getTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
 }
 
 export default async function TenantLifecyclePage() {
-  const [subscriptions, tenants] = await Promise.all([listSubscriptions(), listTenants()]);
+  const dataWarnings: string[] = [];
+  const [subscriptionsResult, tenantsResult] = await Promise.allSettled([
+    listSubscriptions(),
+    listTenants(),
+  ]);
+  const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  if (subscriptionsResult.status !== 'fulfilled') dataWarnings.push('Subscription-backed lifecycle registry could not be loaded.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
   const tenantLookup = buildTenantLookup(tenants);
   const lifecycleEvents = await Promise.all(
     subscriptions.map(async (subscription) => {
-      const events = await listTenantLifecycleEvents(subscription.tenantId);
+      const events = await listTenantLifecycleEvents(subscription.tenantId).catch(() => {
+        dataWarnings.push(`Lifecycle history is unavailable for tenant ${subscription.tenantId}.`);
+        return [];
+      });
       return [subscription.tenantId, events] as const;
     }),
   );
@@ -57,6 +69,12 @@ export default async function TenantLifecyclePage() {
       title="Tenant lifecycle"
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={Array.from(new Set(dataWarnings)).join(' ')}
+            title="Lifecycle loaded with partial platform data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${subscriptions.length} tracked`, tone: 'neutral' },

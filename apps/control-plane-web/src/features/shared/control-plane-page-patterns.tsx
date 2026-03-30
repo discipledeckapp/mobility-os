@@ -125,6 +125,21 @@ export function ControlPlaneToolbarPanel({ children }: { children: React.ReactNo
   );
 }
 
+export function ControlPlaneDataNotice({
+  title = 'Some platform data is unavailable',
+  description,
+}: {
+  title?: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50/90 px-4 py-3">
+      <p className="text-sm font-semibold text-amber-950">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-amber-900/80">{description}</p>
+    </div>
+  );
+}
+
 export function ControlPlaneEmptyStateCard({
   title,
   description,

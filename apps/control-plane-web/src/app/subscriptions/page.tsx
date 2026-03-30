@@ -13,6 +13,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -41,11 +42,17 @@ type SubscriptionsPageProps = {
 export default async function SubscriptionsPage({ searchParams }: SubscriptionsPageProps) {
   const params = (await searchParams) ?? {};
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [subscriptions, invoices, tenants] = await Promise.all([
-    listSubscriptions(token),
-    listInvoices(token),
-    listTenants(token),
-  ]);
+  const dataWarnings: string[] = [];
+  const [subscriptionsResult, invoicesResult, tenantsResult] = token
+    ? await Promise.allSettled([listSubscriptions(token), listInvoices(token), listTenants(token)])
+    : await Promise.allSettled([Promise.resolve([]), Promise.resolve([]), Promise.resolve([])]);
+  const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
+  const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
+  if (subscriptionsResult.status !== 'fulfilled') dataWarnings.push('Subscription registry is temporarily unavailable.');
+  if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice exposure could not be loaded.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
   const tenantLookup = buildTenantLookup(tenants);
   const planFilter = params.plan?.trim().toLowerCase() ?? '';
   const statusFilter = params.status?.trim().toLowerCase() ?? '';
@@ -73,6 +80,12 @@ export default async function SubscriptionsPage({ searchParams }: SubscriptionsP
       title="Subscriptions"
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Subscriptions loaded with partial billing data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${activeCount} active`, tone: 'success' },

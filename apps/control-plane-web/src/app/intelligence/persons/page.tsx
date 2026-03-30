@@ -14,6 +14,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
   ControlPlaneMetricGrid,
@@ -47,6 +48,10 @@ export default async function IntelligencePersonsPage({
     ...(roleType ? { roleType } : {}),
     ...(reverificationRequired ? { reverificationRequired } : {}),
   }).catch(() => []);
+  const dataWarning =
+    people.length === 0
+      ? 'Canonical identity results could not be loaded for this request, or no people matched the current filters.'
+      : null;
   const watchlistedCount = people.filter((person) => person.isWatchlisted).length;
   const duplicateCount = people.filter((person) => person.hasDuplicateFlag).length;
   const highRiskCount = people.filter((person) => person.riskBand.toLowerCase() === 'high').length;
@@ -58,6 +63,7 @@ export default async function IntelligencePersonsPage({
       title="Verified persons"
     >
       <div className="space-y-6">
+        {dataWarning ? <ControlPlaneDataNotice description={dataWarning} /> : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${people.length} results`, tone: 'neutral' },

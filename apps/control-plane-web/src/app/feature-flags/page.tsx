@@ -1,9 +1,15 @@
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
+import { ControlPlaneDataNotice } from '../../features/shared/control-plane-page-patterns';
 import { listFeatureFlags, listTenants } from '../../lib/api-control-plane';
 import { FeatureFlagsPanel } from './feature-flags-panel';
 
 export default async function FeatureFlagsPage() {
-  const [flags, tenants] = await Promise.all([listFeatureFlags(), listTenants()]);
+  const [flagsResult, tenantsResult] = await Promise.allSettled([listFeatureFlags(), listTenants()]);
+  const flags = flagsResult.status === 'fulfilled' ? flagsResult.value : [];
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  const dataWarnings: string[] = [];
+  if (flagsResult.status !== 'fulfilled') dataWarnings.push('Feature flag registry could not be loaded.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
 
   return (
     <ControlPlaneShell
@@ -11,6 +17,14 @@ export default async function FeatureFlagsPage() {
       eyebrow="Controls"
       title="Feature flags"
     >
+      {dataWarnings.length > 0 ? (
+        <div className="mb-6">
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Feature flags loaded with partial platform data"
+          />
+        </div>
+      ) : null}
       <FeatureFlagsPanel flags={flags} tenants={tenants} />
     </ControlPlaneShell>
   );

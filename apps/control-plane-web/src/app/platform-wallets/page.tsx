@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -35,11 +36,25 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
 
 export default async function PlatformWalletsPage() {
   const token = await getPlatformApiToken().catch(() => undefined);
-  const [wallets, ledger, tenants] = await Promise.all([
-    listPlatformWallets(token),
-    listPlatformWalletLedger({ page: 1, limit: 20 }, token),
-    listTenants(token),
-  ]);
+  const dataWarnings: string[] = [];
+  const [walletsResult, ledgerResult, tenantsResult] = token
+    ? await Promise.allSettled([
+        listPlatformWallets(token),
+        listPlatformWalletLedger({ page: 1, limit: 20 }, token),
+        listTenants(token),
+      ])
+    : await Promise.allSettled([
+        Promise.resolve([]),
+        Promise.resolve({ data: [] }),
+        Promise.resolve([]),
+      ]);
+  const wallets = walletsResult.status === 'fulfilled' ? walletsResult.value : [];
+  const ledger = ledgerResult.status === 'fulfilled' ? ledgerResult.value : { data: [] };
+  const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
+  if (walletsResult.status !== 'fulfilled') dataWarnings.push('Platform wallet balances are temporarily unavailable.');
+  if (ledgerResult.status !== 'fulfilled') dataWarnings.push('Recent platform wallet ledger activity could not be loaded.');
+  if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
   const tenantLookup = buildTenantLookup(tenants);
   const fundedWallets = wallets.filter((wallet) => wallet.balanceMinorUnits > 0).length;
   const balancesByCurrency = wallets.reduce<Record<string, number>>((totals, wallet) => {
@@ -54,6 +69,12 @@ export default async function PlatformWalletsPage() {
       title="Platform wallets"
     >
       <div className="space-y-6">
+        {dataWarnings.length > 0 ? (
+          <ControlPlaneDataNotice
+            description={dataWarnings.join(' ')}
+            title="Platform wallets loaded with partial billing data"
+          />
+        ) : null}
         <ControlPlaneHeroPanel
           badges={[
             { label: `${wallets.length} wallets`, tone: 'neutral' },

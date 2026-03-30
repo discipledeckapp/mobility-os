@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
+  ControlPlaneDataNotice,
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
@@ -34,8 +35,21 @@ function complianceTone(rate: number): 'success' | 'warning' | 'danger' | 'neutr
 }
 
 export default async function OperationsPage() {
-  const overview = await getOperationalOversight();
-  const highestAttention = overview.tenants.slice(0, 8);
+  const overview = await getOperationalOversight().catch(() => null);
+  const dataWarning = !overview
+    ? 'Operational oversight data could not be loaded from the platform API, so this queue is currently showing an honest empty state instead of crashing.'
+    : null;
+  const totals =
+    overview?.totals ?? {
+      tenantsNeedingAttention: 0,
+      driversAwaitingActivation: 0,
+      providerRetryRequired: 0,
+      pendingLicenceReviews: 0,
+      atRiskAssignments: 0,
+      vehiclesAtRisk: 0,
+      criticalMaintenanceCount: 0,
+    };
+  const highestAttention = overview?.tenants.slice(0, 8) ?? [];
 
   return (
     <ControlPlaneShell
@@ -44,11 +58,12 @@ export default async function OperationsPage() {
       description="Work the real platform support queue: activation blockers, licence review pressure, provider-retry issues, remittance risk, and vehicle health across tenants."
     >
       <div className="space-y-6">
+        {dataWarning ? <ControlPlaneDataNotice description={dataWarning} /> : null}
         <ControlPlaneHeroPanel
           badges={[
-            { label: `${overview.totals.tenantsNeedingAttention} tenants need intervention`, tone: overview.totals.tenantsNeedingAttention ? 'warning' : 'success' },
-            { label: `${overview.totals.driversAwaitingActivation} activation blockers`, tone: overview.totals.driversAwaitingActivation ? 'warning' : 'success' },
-            { label: `${overview.totals.providerRetryRequired} provider retries`, tone: overview.totals.providerRetryRequired ? 'warning' : 'neutral' },
+            { label: `${totals.tenantsNeedingAttention} tenants need intervention`, tone: totals.tenantsNeedingAttention ? 'warning' : 'success' },
+            { label: `${totals.driversAwaitingActivation} activation blockers`, tone: totals.driversAwaitingActivation ? 'warning' : 'success' },
+            { label: `${totals.providerRetryRequired} provider retries`, tone: totals.providerRetryRequired ? 'warning' : 'neutral' },
           ]}
           description="This is the support-facing operations queue for issues that cut across tenant boundaries: blocked onboarding, verification failures, expiring licences, and fleet risk indicators that need intervention."
           eyebrow="Cross-tenant intervention queue"
@@ -59,32 +74,32 @@ export default async function OperationsPage() {
           <ControlPlaneMetricCard
             detail="Tenants with operational attention score above zero."
             label="Tenants needing intervention"
-            tone={overview.totals.tenantsNeedingAttention ? 'warning' : 'success'}
-            value={overview.totals.tenantsNeedingAttention}
+            tone={totals.tenantsNeedingAttention ? 'warning' : 'success'}
+            value={totals.tenantsNeedingAttention}
           />
           <ControlPlaneMetricCard
             detail="Onboarding and verification blockers platform support can monitor."
             label="Drivers awaiting activation"
-            tone={overview.totals.driversAwaitingActivation ? 'warning' : 'success'}
-            value={overview.totals.driversAwaitingActivation}
+            tone={totals.driversAwaitingActivation ? 'warning' : 'success'}
+            value={totals.driversAwaitingActivation}
           />
           <ControlPlaneMetricCard
-            detail={`${overview.totals.pendingLicenceReviews} failed verification · ${overview.totals.providerRetryRequired} provider retry`}
+            detail={`${totals.pendingLicenceReviews} failed verification · ${totals.providerRetryRequired} provider retry`}
             label="Licence issue pressure"
-            tone={overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired ? 'warning' : 'success'}
-            value={overview.totals.pendingLicenceReviews + overview.totals.providerRetryRequired}
+            tone={totals.pendingLicenceReviews + totals.providerRetryRequired ? 'warning' : 'success'}
+            value={totals.pendingLicenceReviews + totals.providerRetryRequired}
           />
           <ControlPlaneMetricCard
             detail="Assignments whose readiness or remittance posture suggests support attention."
             label="Assignments at risk"
-            tone={overview.totals.atRiskAssignments ? 'warning' : 'success'}
-            value={overview.totals.atRiskAssignments}
+            tone={totals.atRiskAssignments ? 'warning' : 'success'}
+            value={totals.atRiskAssignments}
           />
           <ControlPlaneMetricCard
-            detail={`${overview.totals.criticalMaintenanceCount} critical maintenance items open.`}
+            detail={`${totals.criticalMaintenanceCount} critical maintenance items open.`}
             label="Fleet risk load"
-            tone={overview.totals.vehiclesAtRisk ? 'warning' : 'success'}
-            value={overview.totals.vehiclesAtRisk}
+            tone={totals.vehiclesAtRisk ? 'warning' : 'success'}
+            value={totals.vehiclesAtRisk}
           />
         </ControlPlaneMetricGrid>
 
