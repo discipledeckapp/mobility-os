@@ -2341,6 +2341,46 @@ function DriverVerificationFlow({
       });
   }, [refreshContext]);
 
+  const currentAssignment =
+    assignments.find((assignment) =>
+      ['driver_action_required', 'pending_driver_confirmation', 'accepted', 'active'].includes(
+        assignment.status,
+      ),
+    ) ?? null;
+  const currentAssignmentId = currentAssignment?.id ?? null;
+  const currentAssignmentStatus = currentAssignment?.status ?? null;
+  const activeAssignmentSupportsRemittance =
+    currentAssignmentStatus === 'active' && currentAssignment
+      ? assignmentSupportsRemittance(currentAssignment)
+      : false;
+
+  useEffect(() => {
+    if (!driver || !onboardingStep) {
+      return;
+    }
+
+    if (initialAssignmentId && currentAssignmentId === initialAssignmentId) {
+      setActiveTab('assignment');
+      return;
+    }
+
+    if (currentAssignmentStatus === 'driver_action_required') {
+      setActiveTab('assignment');
+      return;
+    }
+
+    if (activeAssignmentSupportsRemittance) {
+      setActiveTab((current) => (current === 'home' ? 'home' : current));
+    }
+  }, [
+    activeAssignmentSupportsRemittance,
+    currentAssignmentId,
+    currentAssignmentStatus,
+    driver,
+    initialAssignmentId,
+    onboardingStep,
+  ]);
+
   if (state === 'loading') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4fb_100%)] px-4">
@@ -2431,32 +2471,8 @@ function DriverVerificationFlow({
     ...(tierComponents.includes('drivers_license') ? ["a verified driver's licence"] : []),
     'contact and operational details',
   ];
-  const currentAssignment =
-    assignments.find((assignment) =>
-      ['driver_action_required', 'pending_driver_confirmation', 'accepted', 'active'].includes(
-        assignment.status,
-      ),
-    ) ?? null;
   const onboardingIncomplete = currentStep !== 'complete';
-  const activeAssignmentSupportsRemittance =
-    currentAssignment?.status === 'active' && assignmentSupportsRemittance(currentAssignment);
   const unreadNotifications = notifications.filter((item) => !item.readAt).length;
-
-  useEffect(() => {
-    if (initialAssignmentId && currentAssignment?.id === initialAssignmentId) {
-      setActiveTab('assignment');
-      return;
-    }
-
-    if (currentAssignment?.status === 'driver_action_required') {
-      setActiveTab('assignment');
-      return;
-    }
-
-    if (activeAssignmentSupportsRemittance) {
-      setActiveTab((current) => (current === 'home' ? 'home' : current));
-    }
-  }, [initialAssignmentId, currentAssignment?.id, currentAssignment?.status, activeAssignmentSupportsRemittance]);
 
   async function handleNotificationOpen(notification: UserNotificationRecord) {
     try {
