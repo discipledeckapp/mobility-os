@@ -1,10 +1,12 @@
 import { Badge, Card, CardContent, CardHeader, CardTitle, Text } from '@mobility-os/ui';
 import { ControlPlaneShell } from '../../../features/shared/control-plane-shell';
 import { listPlans } from '../../../lib/api-control-plane';
+import { requirePlatformSession } from '../../../lib/require-platform-session';
 import { ProvisionTenantForm } from '../provision-tenant-form';
 
 export default async function NewTenantPage() {
-  const plans = await listPlans();
+  const token = await requirePlatformSession();
+  const plans = await listPlans(token);
 
   return (
     <ControlPlaneShell

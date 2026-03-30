@@ -1,12 +1,14 @@
 import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listPlatformSettings } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 import { PlatformSettingsPanel } from './platform-settings-panel';
 
 export default async function PlatformSettingsPage() {
   await connection();
 
-  const settings = await listPlatformSettings().catch(() => []);
+  const token = await requirePlatformSession();
+  const settings = await listPlatformSettings(token).catch(() => []);
 
   return (
     <ControlPlaneShell

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listInvoices, listSubscriptions, listTenants } from '../../../lib/api-control-plane';
+import { requirePlatformSession } from '../../../lib/require-platform-session';
 
 type SearchItem = {
   id: string;
@@ -22,10 +23,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    const token = await requirePlatformSession();
     const [organisations, subscriptions, invoices] = await Promise.all([
-      listTenants(),
-      listSubscriptions(),
-      listInvoices(),
+      listTenants(token),
+      listSubscriptions(token),
+      listInvoices(token),
     ]);
 
     const organisationResults = organisations
