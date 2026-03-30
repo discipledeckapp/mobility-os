@@ -2,12 +2,17 @@ import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { ControlPlaneDataNotice } from '../../features/shared/control-plane-page-patterns';
 import { listFeatureFlags, listTenants } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 import { FeatureFlagsPanel } from './feature-flags-panel';
 
 export default async function FeatureFlagsPage() {
   await connection();
 
-  const [flagsResult, tenantsResult] = await Promise.allSettled([listFeatureFlags(), listTenants()]);
+  const token = await requirePlatformSession();
+  const [flagsResult, tenantsResult] = await Promise.allSettled([
+    listFeatureFlags(token),
+    listTenants(token),
+  ]);
   const flags = flagsResult.status === 'fulfilled' ? flagsResult.value : [];
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
   const dataWarnings: string[] = [];

@@ -21,11 +21,11 @@ import {
 } from '../../features/shared/control-plane-page-patterns';
 import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import {
-  getPlatformApiToken,
   listPlatformWalletLedger,
   listPlatformWallets,
   listTenants,
 } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -38,23 +38,16 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
 export default async function PlatformWalletsPage() {
   await connection();
 
-  const token = await getPlatformApiToken().catch(() => undefined);
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
-  const [walletsResult, ledgerResult, tenantsResult] = token
-    ? await Promise.allSettled([
-        listPlatformWallets(token),
-        listPlatformWalletLedger({ page: 1, limit: 20 }, token),
-        listTenants(token),
-      ])
-    : await Promise.allSettled([
-        Promise.resolve([]),
-        Promise.resolve({ data: [] }),
-        Promise.resolve([]),
-      ]);
+  const [walletsResult, ledgerResult, tenantsResult] = await Promise.allSettled([
+    listPlatformWallets(token),
+    listPlatformWalletLedger({ page: 1, limit: 20 }, token),
+    listTenants(token),
+  ]);
   const wallets = walletsResult.status === 'fulfilled' ? walletsResult.value : [];
   const ledger = ledgerResult.status === 'fulfilled' ? ledgerResult.value : { data: [] };
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
-  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
   if (walletsResult.status !== 'fulfilled') dataWarnings.push('Platform wallet balances are temporarily unavailable.');
   if (ledgerResult.status !== 'fulfilled') dataWarnings.push('Recent platform wallet ledger activity could not be loaded.');
   if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');

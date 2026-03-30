@@ -21,6 +21,7 @@ import {
   ControlPlaneSectionShell,
 } from '../../features/shared/control-plane-page-patterns';
 import { getOperationalOversight } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 
 function attentionTone(score: number): 'success' | 'warning' | 'danger' | 'neutral' {
   if (score >= 16) return 'danger';
@@ -38,7 +39,8 @@ function complianceTone(rate: number): 'success' | 'warning' | 'danger' | 'neutr
 export default async function OperationsPage() {
   await connection();
 
-  const overview = await getOperationalOversight().catch(() => null);
+  const token = await requirePlatformSession();
+  const overview = await getOperationalOversight(token).catch(() => null);
   const dataWarning = !overview
     ? 'Operational oversight data could not be loaded from the platform API, so this queue is currently showing an honest empty state instead of crashing.'
     : null;

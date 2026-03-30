@@ -23,6 +23,7 @@ import {
   listPlans,
   listTenantPlatformWalletEntries,
 } from '../../../lib/api-control-plane';
+import { requirePlatformSession } from '../../../lib/require-platform-session';
 import type {
   FeatureFlagRecord,
   PlatformWalletBalanceRecord,
@@ -105,20 +106,21 @@ export default async function TenantDetailPage({
   params: Promise<{ tenantId: string }>;
 }) {
   const { tenantId } = await params;
+  const token = await requirePlatformSession();
   const [tenant, plans, flags, operationalSummary, governanceSummary] = await Promise.all([
-    getTenantDetail(tenantId),
-    listPlans().catch(() => []),
-    listFeatureFlags().catch(() => []),
-    getTenantOperationalSummary(tenantId).catch(() => null),
-    getTenantGovernanceSummary(tenantId).catch(() => null),
+    getTenantDetail(tenantId, token),
+    listPlans(token).catch(() => []),
+    listFeatureFlags(token).catch(() => []),
+    getTenantOperationalSummary(tenantId, token).catch(() => null),
+    getTenantGovernanceSummary(tenantId, token).catch(() => null),
   ]);
 
   let walletBalance: PlatformWalletBalanceRecord | null = null;
   let walletEntries: Awaited<ReturnType<typeof listTenantPlatformWalletEntries>> = [];
   try {
     [walletBalance, walletEntries] = await Promise.all([
-      getTenantPlatformWalletBalance(tenantId),
-      listTenantPlatformWalletEntries(tenantId),
+      getTenantPlatformWalletBalance(tenantId, token),
+      listTenantPlatformWalletEntries(tenantId, token),
     ]);
   } catch {
     walletBalance = null;

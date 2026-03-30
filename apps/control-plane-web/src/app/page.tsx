@@ -25,7 +25,6 @@ import { buildTenantLookup, getTenantLabel } from '../features/shared/tenant-loo
 import {
   getGovernanceOversight,
   getOperationalOversight,
-  getPlatformApiToken,
   listFeatureFlags,
   listInvoices,
   listPlatformWalletLedger,
@@ -33,6 +32,7 @@ import {
   listSubscriptions,
   listTenants,
 } from '../lib/api-control-plane';
+import { requirePlatformSession } from '../lib/require-platform-session';
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -53,7 +53,7 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 export default async function HomePage() {
   await connection();
 
-  const token = await getPlatformApiToken().catch(() => undefined);
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
   const [
     tenantsResult,
@@ -64,27 +64,16 @@ export default async function HomePage() {
     ledgerResult,
     operationsOverviewResult,
     governanceOverviewResult,
-  ] = token
-    ? await Promise.allSettled([
-        listTenants(token),
-        listSubscriptions(token),
-        listInvoices(token),
-        listPlatformWallets(token),
-        listFeatureFlags(token),
-        listPlatformWalletLedger({ page: 1, limit: 8 }, token),
-        getOperationalOversight(token),
-        getGovernanceOversight(token),
-      ])
-    : await Promise.allSettled([
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve({ data: [] }),
-        Promise.resolve(null),
-        Promise.resolve(null),
-      ]);
+  ] = await Promise.allSettled([
+    listTenants(token),
+    listSubscriptions(token),
+    listInvoices(token),
+    listPlatformWallets(token),
+    listFeatureFlags(token),
+    listPlatformWalletLedger({ page: 1, limit: 8 }, token),
+    getOperationalOversight(token),
+    getGovernanceOversight(token),
+  ]);
 
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
   const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
@@ -97,9 +86,6 @@ export default async function HomePage() {
   const governanceOverview =
     governanceOverviewResult.status === 'fulfilled' ? governanceOverviewResult.value : null;
 
-  if (!token) {
-    dataWarnings.push('Your platform session could not be read on this request, so dashboard data is limited.');
-  }
   if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation registry could not be loaded.');
   if (subscriptionsResult.status !== 'fulfilled') dataWarnings.push('Subscription posture is temporarily unavailable.');
   if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice exposure could not be loaded.');

@@ -22,6 +22,7 @@ import { SelectField } from '../../features/shared/select-field';
 import { ControlPlaneDataNotice } from '../../features/shared/control-plane-page-patterns';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listTenants } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'active') return 'success';
@@ -72,8 +73,9 @@ type TenantsPageProps = {
 export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   await connection();
 
+  const token = await requirePlatformSession();
   const params = (await searchParams) ?? {};
-  const tenants = await listTenants().catch(() => []);
+  const tenants = await listTenants(token).catch(() => []);
   const dataWarning =
     tenants.length === 0
       ? 'The organisation registry could not be loaded from the platform API on this request, so this page is showing an honest empty state instead of crashing.'

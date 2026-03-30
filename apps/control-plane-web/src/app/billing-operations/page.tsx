@@ -21,12 +21,12 @@ import {
 } from '../../features/shared/control-plane-page-patterns';
 import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import {
-  getPlatformApiToken,
   listControlPlaneDisputes,
   listControlPlaneDocuments,
   listInvoices,
   listTenants,
 } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 import { RunBillingOpsCard } from './run-billing-ops-card';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
@@ -53,26 +53,19 @@ function getDisputeTone(status: string): 'success' | 'warning' | 'neutral' | 'da
 export default async function BillingOperationsPage() {
   await connection();
 
-  const token = await getPlatformApiToken().catch(() => undefined);
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
-  const [invoicesResult, disputesResult, documentsResult, tenantsResult] = token
-    ? await Promise.allSettled([
-        listInvoices(token),
-        listControlPlaneDisputes(undefined, token),
-        listControlPlaneDocuments(undefined, token),
-        listTenants(token),
-      ])
-    : await Promise.allSettled([
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve([]),
-        Promise.resolve([]),
-      ]);
+  const [invoicesResult, disputesResult, documentsResult, tenantsResult] =
+    await Promise.allSettled([
+      listInvoices(token),
+      listControlPlaneDisputes(undefined, token),
+      listControlPlaneDocuments(undefined, token),
+      listTenants(token),
+    ]);
   const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
   const disputes = disputesResult.status === 'fulfilled' ? disputesResult.value : [];
   const documents = documentsResult.status === 'fulfilled' ? documentsResult.value : [];
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
-  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
   if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice registry is temporarily unavailable.');
   if (disputesResult.status !== 'fulfilled') dataWarnings.push('Dispute registry could not be loaded.');
   if (documentsResult.status !== 'fulfilled') dataWarnings.push('Issued billing documents could not be loaded.');

@@ -20,6 +20,7 @@ import {
 } from '../../features/shared/control-plane-page-patterns';
 import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import { getGovernanceOversight, listTenants } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 
 function statusTone(
   count: number,
@@ -34,10 +35,11 @@ function statusTone(
 export default async function GovernancePage() {
   await connection();
 
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
   const [overviewResult, tenantsResult] = await Promise.allSettled([
-    getGovernanceOversight(),
-    listTenants(),
+    getGovernanceOversight(token),
+    listTenants(token),
   ]);
   const overview =
     overviewResult.status === 'fulfilled'

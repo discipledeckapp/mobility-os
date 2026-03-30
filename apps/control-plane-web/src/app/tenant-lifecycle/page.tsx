@@ -21,6 +21,7 @@ import {
 } from '../../features/shared/control-plane-page-patterns';
 import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
 import { listSubscriptions, listTenantLifecycleEvents, listTenants } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 import { TransitionLifecycleForm } from './transition-lifecycle-form';
 
 function getTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
@@ -33,10 +34,11 @@ function getTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
 export default async function TenantLifecyclePage() {
   await connection();
 
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
   const [subscriptionsResult, tenantsResult] = await Promise.allSettled([
-    listSubscriptions(),
-    listTenants(),
+    listSubscriptions(token),
+    listTenants(token),
   ]);
   const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
@@ -45,7 +47,7 @@ export default async function TenantLifecyclePage() {
   const tenantLookup = buildTenantLookup(tenants);
   const lifecycleEvents = await Promise.all(
     subscriptions.map(async (subscription) => {
-      const events = await listTenantLifecycleEvents(subscription.tenantId).catch(() => {
+      const events = await listTenantLifecycleEvents(subscription.tenantId, token).catch(() => {
         dataWarnings.push(`Lifecycle history is unavailable for tenant ${subscription.tenantId}.`);
         return [];
       });

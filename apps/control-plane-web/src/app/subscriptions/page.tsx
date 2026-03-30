@@ -23,7 +23,8 @@ import {
   ControlPlaneToolbarPanel,
 } from '../../features/shared/control-plane-page-patterns';
 import { buildTenantLookup, getTenantLabel } from '../../features/shared/tenant-lookup';
-import { getPlatformApiToken, listInvoices, listSubscriptions, listTenants } from '../../lib/api-control-plane';
+import { listInvoices, listSubscriptions, listTenants } from '../../lib/api-control-plane';
+import { requirePlatformSession } from '../../lib/require-platform-session';
 
 function formatCurrency(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -44,15 +45,16 @@ export default async function SubscriptionsPage({ searchParams }: SubscriptionsP
   await connection();
 
   const params = (await searchParams) ?? {};
-  const token = await getPlatformApiToken().catch(() => undefined);
+  const token = await requirePlatformSession();
   const dataWarnings: string[] = [];
-  const [subscriptionsResult, invoicesResult, tenantsResult] = token
-    ? await Promise.allSettled([listSubscriptions(token), listInvoices(token), listTenants(token)])
-    : await Promise.allSettled([Promise.resolve([]), Promise.resolve([]), Promise.resolve([])]);
+  const [subscriptionsResult, invoicesResult, tenantsResult] = await Promise.allSettled([
+    listSubscriptions(token),
+    listInvoices(token),
+    listTenants(token),
+  ]);
   const subscriptions = subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
   const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
   const tenants = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
-  if (!token) dataWarnings.push('Your platform session could not be read on this request.');
   if (subscriptionsResult.status !== 'fulfilled') dataWarnings.push('Subscription registry is temporarily unavailable.');
   if (invoicesResult.status !== 'fulfilled') dataWarnings.push('Invoice exposure could not be loaded.');
   if (tenantsResult.status !== 'fulfilled') dataWarnings.push('Organisation labels could not be resolved.');
