@@ -134,6 +134,15 @@ export interface UserNotificationRecord {
   createdAt: string;
 }
 
+export interface PushDeviceRecord {
+  id: string;
+  platform: 'ios' | 'android' | 'web';
+  tokenPreview: string;
+  lastSeenAt: string;
+  registeredAt: string;
+  disabledAt?: string | null;
+}
+
 export interface DataSubjectRequestRecord {
   id: string;
   subjectType: string;
@@ -748,6 +757,10 @@ export interface TeamMemberRecord {
   customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
+  mobileAccessRevoked: boolean;
+  activePushDeviceCount: number;
+  lastPushDeviceSeenAt?: string | null;
+  pushDevices: PushDeviceRecord[];
   createdAt: string;
 }
 
@@ -1386,6 +1399,16 @@ export function registerPushDevice(input: {
   return apiFetch<{ message: string }>(`${API_PATHS.notifications}/push-devices`, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function listPushDevices(): Promise<PushDeviceRecord[]> {
+  return apiFetch<PushDeviceRecord[]>(`${API_PATHS.notifications}/push-devices`);
+}
+
+export function disablePushDevice(deviceId: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`${API_PATHS.notifications}/push-devices/${deviceId}`, {
+    method: 'DELETE',
   });
 }
 
@@ -2237,6 +2260,28 @@ export function updateTeamMemberAccess(
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function updateTeamMemberMobileAccess(
+  userId: string,
+  revoked: boolean,
+): Promise<TeamMemberRecord> {
+  return apiFetch<TeamMemberRecord>(`${API_PATHS.team}/${encodeURIComponent(userId)}/mobile-access`, {
+    method: 'POST',
+    body: JSON.stringify({ revoked }),
+  });
+}
+
+export function disableTeamMemberPushDevice(
+  userId: string,
+  deviceId: string,
+): Promise<TeamMemberRecord> {
+  return apiFetch<TeamMemberRecord>(
+    `${API_PATHS.team}/${encodeURIComponent(userId)}/push-devices/${encodeURIComponent(deviceId)}`,
+    {
+      method: 'DELETE',
+    },
+  );
 }
 
 export function deactivateTeamMember(userId: string): Promise<{ message: string }> {

@@ -2994,7 +2994,21 @@ export class DriversService {
     tenantId: string,
     driverId: string,
   ): Promise<{
-    linkedUser: MobileAccessUserRecord | null;
+    linkedUser:
+      | (MobileAccessUserRecord & {
+          mobileAccessRevoked?: boolean | null;
+          activePushDeviceCount: number;
+          lastPushDeviceSeenAt: Date | null;
+          pushDevices: Array<{
+            id: string;
+            platform: string;
+            deviceToken: string;
+            lastSeenAt: Date;
+            createdAt: Date;
+            disabledAt: Date | null;
+          }>;
+        })
+      | null;
     suggestedUsers: Array<MobileAccessUserRecord & { matchReason?: string | null }>;
   }> {
     const driver = await this.findOne(tenantId, driverId);
@@ -3003,6 +3017,19 @@ export class DriversService {
       where: {
         tenantId,
         driverId: driver.id,
+      },
+      include: {
+        pushDevices: {
+          orderBy: [{ disabledAt: 'asc' }, { lastSeenAt: 'desc' }],
+          select: {
+            id: true,
+            platform: true,
+            deviceToken: true,
+            lastSeenAt: true,
+            createdAt: true,
+            disabledAt: true,
+          },
+        },
       },
     });
 
@@ -3052,7 +3079,17 @@ export class DriversService {
       }));
 
     return {
-      linkedUser,
+      linkedUser: linkedUser
+        ? {
+            ...linkedUser,
+            activePushDeviceCount: linkedUser.pushDevices.filter((device) => !device.disabledAt)
+              .length,
+            lastPushDeviceSeenAt:
+              linkedUser.pushDevices.find((device) => !device.disabledAt)?.lastSeenAt ??
+              linkedUser.pushDevices[0]?.lastSeenAt ??
+              null,
+          }
+        : null,
       suggestedUsers,
     };
   }
@@ -3166,6 +3203,64 @@ export class DriversService {
           },
         ) as Prisma.InputJsonValue,
       },
+    });
+  }
+
+  async updateDriverMobileAccessStatus(
+    tenantId: string,
+    driverId: string,
+    userId: string,
+    revoked: boolean,
+  ): Promise<void> {
+    const driver = await this.findOne(tenantId, driverId);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        tenantId,
+      },
+    });
+
+    if (!user || user.driverId !== driver.id) {
+      throw new NotFoundException('No linked mobile access account was found for this driver.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { mobileAccessRevoked: revoked },
+    });
+  }
+
+  async disableDriverMobileAccessDevice(
+    tenantId: string,
+    driverId: string,
+    userId: string,
+    deviceId: string,
+  ): Promise<void> {
+    const driver = await this.findOne(tenantId, driverId);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        tenantId,
+      },
+      select: { id: true, driverId: true },
+    });
+
+    if (!user || user.driverId !== driver.id) {
+      throw new NotFoundException('No linked mobile access account was found for this driver.');
+    }
+
+    const device = await this.prisma.userPushDevice.findFirst({
+      where: { id: deviceId, tenantId, userId, disabledAt: null },
+      select: { id: true },
+    });
+
+    if (!device) {
+      throw new NotFoundException('Registered device not found.');
+    }
+
+    await this.prisma.userPushDevice.update({
+      where: { id: deviceId },
+      data: { disabledAt: new Date() },
     });
   }
 

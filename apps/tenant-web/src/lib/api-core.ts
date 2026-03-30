@@ -204,6 +204,15 @@ export interface UserNotificationRecord {
   createdAt: string;
 }
 
+export interface PushDeviceRecord {
+  id: string;
+  platform: 'ios' | 'android' | 'web';
+  tokenPreview: string;
+  lastSeenAt: string;
+  registeredAt: string;
+  disabledAt?: string | null;
+}
+
 export interface DataSubjectRequestRecord {
   id: string;
   subjectType: string;
@@ -475,6 +484,10 @@ export interface DriverMobileAccessUserRecord {
   role: string;
   accessMode?: 'tenant_user' | 'driver_mobile' | null;
   isActive: boolean;
+  mobileAccessRevoked?: boolean | null;
+  activePushDeviceCount?: number;
+  lastPushDeviceSeenAt?: string | null;
+  pushDevices?: PushDeviceRecord[];
   driverId?: string | null;
   matchReason?: string | null;
   createdAt: string;
@@ -1977,6 +1990,24 @@ export async function updateNotificationPreferences(
   });
 }
 
+export async function listPushDevices(token?: string): Promise<PushDeviceRecord[]> {
+  return apiCoreFetch<PushDeviceRecord[]>('/notifications/push-devices', {
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function disablePushDevice(
+  deviceId: string,
+  token?: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>(`/notifications/push-devices/${deviceId}`, {
+    method: 'DELETE',
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function syncMaintenanceReminders(token?: string): Promise<{ created: number }> {
   return apiCoreFetch<{ created: number }>('/notifications/maintenance-reminders/sync', {
     method: 'POST',
@@ -2217,6 +2248,39 @@ export async function unlinkDriverMobileAccessUser(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function updateDriverMobileAccessStatus(
+  driverId: string,
+  userId: string,
+  revoked: boolean,
+  token?: string,
+): Promise<{ success: true }> {
+  return apiCoreFetch<{ success: true }>(
+    `/drivers/${driverId}/mobile-access/${encodeURIComponent(userId)}/status`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ revoked }),
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function disableDriverMobileAccessDevice(
+  driverId: string,
+  userId: string,
+  deviceId: string,
+  token?: string,
+): Promise<{ success: true }> {
+  return apiCoreFetch<{ success: true }>(
+    `/drivers/${driverId}/mobile-access/${encodeURIComponent(userId)}/push-devices/${encodeURIComponent(deviceId)}`,
+    {
+      method: 'DELETE',
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function createDriver(
@@ -3685,6 +3749,10 @@ export interface TeamMemberRecord {
   customPermissions: string[];
   isActive: boolean;
   isEmailVerified: boolean;
+  mobileAccessRevoked: boolean;
+  activePushDeviceCount: number;
+  lastPushDeviceSeenAt?: string | null;
+  pushDevices: PushDeviceRecord[];
   createdAt: string;
 }
 
@@ -3734,6 +3802,34 @@ export async function updateTeamMemberAccess(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function updateTeamMemberMobileAccess(
+  userId: string,
+  revoked: boolean,
+  token?: string,
+): Promise<TeamMemberRecord> {
+  return apiCoreFetch<TeamMemberRecord>(`/team/${encodeURIComponent(userId)}/mobile-access`, {
+    method: 'POST',
+    body: JSON.stringify({ revoked }),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function disableTeamMemberPushDevice(
+  userId: string,
+  deviceId: string,
+  token?: string,
+): Promise<TeamMemberRecord> {
+  return apiCoreFetch<TeamMemberRecord>(
+    `/team/${encodeURIComponent(userId)}/push-devices/${encodeURIComponent(deviceId)}`,
+    {
+      method: 'DELETE',
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function deactivateTeamMember(

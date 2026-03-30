@@ -12,6 +12,8 @@ Current scope:
 - offline queueing for assignment and remittance actions
 - lightweight mobile error reporting to `api-core`
 - deep-link routing for assignments, remittance, and profile
+- push-device registration and account-level device visibility
+- operator device-access management for team members
 
 This app stays inside the tenant operations plane and talks only to `api-core`.
 
@@ -125,7 +127,7 @@ Use the exported builders there when notifications or external entry points need
 ## Known Limitations
 
 - Offline queue is action-based and does not yet provide a full local-first cache
-- No push notifications yet
+- Push-device registration and device revocation are live, but broader push-delivery rollout still needs final product enablement and operational validation
 - No camera/selfie capture yet
 - Driver mobile access uses a tenant user account linked explicitly to a driver record
 - Assignment cards can only show fields currently stored in `api-core`; pickup/drop-off is not modeled there yet

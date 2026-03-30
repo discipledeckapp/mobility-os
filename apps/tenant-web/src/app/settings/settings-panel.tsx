@@ -10,9 +10,10 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
 import type {
   FleetRecord,
+  PushDeviceRecord,
   TeamMemberRecord,
   TenantAuthSessionRecord,
   TenantRecord,
@@ -24,6 +25,7 @@ import type {
   PrivacySupportRecord,
   UserNotificationRecord,
 } from '../../lib/api-core';
+import { disablePushDevice } from '../../lib/api-core';
 import {
   type SettingsActionState,
   changePasswordAction,
@@ -118,6 +120,16 @@ function formatMoney(amountMinorUnits: number, currency: string): string {
     currency,
     minimumFractionDigits: 2,
   }).format(amountMinorUnits / 100);
+}
+
+function formatDeviceLabel(platform: PushDeviceRecord['platform']): string {
+  if (platform === 'ios') {
+    return 'iPhone or iPad';
+  }
+  if (platform === 'android') {
+    return 'Android device';
+  }
+  return 'Web browser';
 }
 
 function EyeIcon() {
@@ -279,6 +291,7 @@ export function SettingsPanel({
   tenant,
   notificationPreferences,
   notifications,
+  pushDevices,
   privacySupport,
   members,
   fleets,
@@ -291,6 +304,7 @@ export function SettingsPanel({
   tenant: TenantRecord;
   notificationPreferences: NotificationPreferencesRecord | null;
   notifications: UserNotificationRecord[];
+  pushDevices: PushDeviceRecord[];
   privacySupport: PrivacySupportRecord | null;
   members: TeamMemberRecord[];
   fleets: FleetRecord[];
@@ -300,6 +314,9 @@ export function SettingsPanel({
   dataRequests: DataSubjectRequestRecord[];
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [registeredDevices, setRegisteredDevices] = useState(pushDevices);
+  const [deviceNotice, setDeviceNotice] = useState<SettingsActionState>({});
+  const [devicePending, startDeviceTransition] = useTransition();
 
   const [profileState, profileAction, profilePending] = useActionState(
     updateProfileAction,
@@ -348,6 +365,29 @@ export function SettingsPanel({
     selectedTierPricing.amountMinorUnits,
     selectedTierPricing.currency,
   );
+  const activeRegisteredDeviceCount = registeredDevices.filter((device) => !device.disabledAt).length;
+
+  function handleDisableDevice(deviceId: string) {
+    setDeviceNotice({});
+    startDeviceTransition(async () => {
+      try {
+        const result = await disablePushDevice(deviceId);
+        setRegisteredDevices((current) =>
+          current.map((device) =>
+            device.id === deviceId ? { ...device, disabledAt: new Date().toISOString() } : device,
+          ),
+        );
+        setDeviceNotice({ success: result.message });
+      } catch (error) {
+        setDeviceNotice({
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unable to turn off notifications for this device.',
+        });
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -892,6 +932,64 @@ export function SettingsPanel({
                   {maintenanceReminderState.success ? (
                     <Text tone="success">{maintenanceReminderState.success}</Text>
                   ) : null}
+                </div>
+
+                <div className="space-y-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-700">Registered devices</p>
+                    <Text tone="muted">
+                      Review which browsers and apps can receive alerts for this account.
+                    </Text>
+                  </div>
+                  {deviceNotice.error ? <Text tone="danger">{deviceNotice.error}</Text> : null}
+                  {deviceNotice.success ? <Text tone="success">{deviceNotice.success}</Text> : null}
+                  {registeredDevices.length > 0 ? (
+                    <div className="space-y-3">
+                      {registeredDevices.map((device) => (
+                        <div
+                          className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white px-4 py-3"
+                          key={device.id}
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                              <p className="font-semibold text-[var(--mobiris-ink)]">
+                                {formatDeviceLabel(device.platform)}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                Token: {device.tokenPreview}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                Last seen {new Date(device.lastSeenAt).toLocaleString()}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                {device.disabledAt
+                                  ? `Notifications turned off on ${new Date(device.disabledAt).toLocaleString()}`
+                                  : 'Notifications active'}
+                              </p>
+                            </div>
+                            {!device.disabledAt ? (
+                              <Button
+                                disabled={devicePending}
+                                onClick={() => handleDisableDevice(device.id)}
+                                type="button"
+                                variant="secondary"
+                              >
+                                {devicePending
+                                  ? 'Turning off...'
+                                  : activeRegisteredDeviceCount === 1
+                                    ? 'Turn off this device'
+                                    : 'Turn off notifications here'}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Text tone="muted">
+                      No phones or browsers have registered for push notifications yet.
+                    </Text>
+                  )}
                 </div>
               </CardContent>
             </Card>

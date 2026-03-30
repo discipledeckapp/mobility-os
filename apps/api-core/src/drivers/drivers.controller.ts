@@ -49,6 +49,7 @@ import { DriverDocumentResponseDto } from './dto/driver-document-response.dto';
 import { DriverGuarantorResponseDto } from './dto/driver-guarantor-response.dto';
 import { DriverIdentitySummaryDto } from './dto/driver-identity-summary.dto';
 import {
+  DriverMobileAccessPushDeviceDto,
   DriverMobileAccessResponseDto,
   DriverMobileAccessUserDto,
 } from './dto/driver-mobile-access-response.dto';
@@ -406,6 +407,34 @@ export class DriversController {
     @Param('userId') userId: string,
   ): Promise<{ success: true }> {
     await this.service.unlinkUserFromDriver(ctx.tenantId, id, userId);
+    return { success: true };
+  }
+
+  @Post(':id/mobile-access/:userId/status')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  async updateMobileAccessStatus(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body('revoked') revoked: boolean,
+  ): Promise<{ success: true }> {
+    await this.service.updateDriverMobileAccessStatus(ctx.tenantId, id, userId, revoked);
+    return { success: true };
+  }
+
+  @Delete(':id/mobile-access/:userId/push-devices/:deviceId')
+  @RequirePermissions(Permission.DriversWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: Object })
+  async disableMobileAccessDevice(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Param('deviceId') deviceId: string,
+  ): Promise<{ success: true }> {
+    await this.service.disableDriverMobileAccessDevice(ctx.tenantId, id, userId, deviceId);
     return { success: true };
   }
 
@@ -881,6 +910,17 @@ export class DriversController {
     role: string;
     settings?: unknown;
     isActive: boolean;
+    mobileAccessRevoked?: boolean | null;
+    activePushDeviceCount?: number;
+    lastPushDeviceSeenAt?: Date | null;
+    pushDevices?: Array<{
+      id: string;
+      platform: string;
+      deviceToken: string;
+      lastSeenAt: Date;
+      createdAt: Date;
+      disabledAt: Date | null;
+    }>;
     driverId?: string | null;
     matchReason?: string | null;
     createdAt: Date;
@@ -902,6 +942,23 @@ export class DriversController {
             ? 'driver_mobile'
             : 'tenant_user',
       isActive: user.isActive,
+      mobileAccessRevoked: user.mobileAccessRevoked ?? null,
+      activePushDeviceCount: user.activePushDeviceCount ?? 0,
+      lastPushDeviceSeenAt: user.lastPushDeviceSeenAt?.toISOString() ?? null,
+      pushDevices:
+        user.pushDevices?.map(
+          (device): DriverMobileAccessPushDeviceDto => ({
+            id: device.id,
+            platform: device.platform as DriverMobileAccessPushDeviceDto['platform'],
+            tokenPreview:
+              device.deviceToken.length <= 12
+                ? device.deviceToken
+                : `${device.deviceToken.slice(0, 8)}...${device.deviceToken.slice(-4)}`,
+            lastSeenAt: device.lastSeenAt.toISOString(),
+            registeredAt: device.createdAt.toISOString(),
+            disabledAt: device.disabledAt?.toISOString() ?? null,
+          }),
+        ) ?? [],
       driverId: user.driverId ?? null,
       matchReason: user.matchReason ?? null,
       createdAt: user.createdAt,

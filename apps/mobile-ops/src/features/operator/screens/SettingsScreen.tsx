@@ -6,6 +6,8 @@ import { Alert, StyleSheet, Switch, Text } from 'react-native';
 import {
   createDataSubjectRequest,
   deactivateTeamMember,
+  disablePushDevice,
+  disableTeamMemberPushDevice,
   changeTenantBillingPlan,
   getPrivacySupport,
   getNotificationPreferences,
@@ -16,12 +18,14 @@ import {
   listVehicles,
   listTenantBillingPlans,
   inviteTeamMember,
+  listPushDevices,
   listTeamMembers,
   listUserNotifications,
   resendTeamInvite,
   syncMaintenanceReminders,
   syncRemittanceReminders,
   updateTeamMemberAccess,
+  updateTeamMemberMobileAccess,
   updateNotificationPreferences,
   updateProfile,
   updateTenantSettings,
@@ -118,6 +122,10 @@ export function SettingsScreen() {
     queryKey: ['operator-settings', 'prefs'],
     queryFn: getNotificationPreferences,
   });
+  const pushDevicesQuery = useQuery({
+    queryKey: ['operator-settings', 'push-devices'],
+    queryFn: listPushDevices,
+  });
   const privacySupportQuery = useQuery({
     queryKey: ['operator-settings', 'privacy-support'],
     queryFn: getPrivacySupport,
@@ -184,6 +192,37 @@ export function SettingsScreen() {
     },
     onError: (error) => {
       Alert.alert('Team', error instanceof Error ? error.message : 'Unable to deactivate this team member.');
+    },
+  });
+  const memberMobileAccessMutation = useMutation({
+    mutationFn: (input: { userId: string; revoked: boolean }) =>
+      updateTeamMemberMobileAccess(input.userId, input.revoked),
+    onSuccess: async (_, input) => {
+      await teamQuery.refetch();
+      Alert.alert(
+        'Team',
+        input.revoked ? 'Mobile access paused.' : 'Mobile access restored.',
+      );
+    },
+    onError: (error) => {
+      Alert.alert(
+        'Team',
+        error instanceof Error ? error.message : 'Unable to update mobile access.',
+      );
+    },
+  });
+  const memberDeviceMutation = useMutation({
+    mutationFn: (input: { userId: string; deviceId: string }) =>
+      disableTeamMemberPushDevice(input.userId, input.deviceId),
+    onSuccess: async () => {
+      await teamQuery.refetch();
+      Alert.alert('Team', 'Device notifications turned off.');
+    },
+    onError: (error) => {
+      Alert.alert(
+        'Team',
+        error instanceof Error ? error.message : 'Unable to turn off this device.',
+      );
     },
   });
   const resendMutation = useMutation({
@@ -271,6 +310,19 @@ export function SettingsScreen() {
     },
     onError: (error) => {
       Alert.alert('Maintenance reminders', error instanceof Error ? error.message : 'Unable to refresh reminders.');
+    },
+  });
+  const disableDeviceMutation = useMutation({
+    mutationFn: (deviceId: string) => disablePushDevice(deviceId),
+    onSuccess: async (result) => {
+      await pushDevicesQuery.refetch();
+      Alert.alert('Notifications', result.message);
+    },
+    onError: (error) => {
+      Alert.alert(
+        'Notifications',
+        error instanceof Error ? error.message : 'Unable to turn off this device.',
+      );
     },
   });
 
@@ -465,6 +517,43 @@ export function SettingsScreen() {
             <Text style={styles.meta}>{notification.readAt ? 'Read' : 'New'}</Text>
           </Card>
         ))}
+        <Card style={styles.innerCard}>
+          <Text style={styles.memberName}>Registered devices</Text>
+          <Text style={styles.meta}>
+            Review which phones and browsers can receive alerts for this account.
+          </Text>
+          {(pushDevicesQuery.data ?? []).length === 0 ? (
+            <Text style={styles.meta}>No registered devices yet.</Text>
+          ) : null}
+          {(pushDevicesQuery.data ?? []).map((device) => (
+            <Card key={device.id} style={styles.innerCard}>
+              <Text style={styles.memberName}>
+                {device.platform === 'ios'
+                  ? 'iPhone or iPad'
+                  : device.platform === 'android'
+                    ? 'Android device'
+                    : 'Web browser'}
+              </Text>
+              <Text style={styles.meta}>Token: {device.tokenPreview}</Text>
+              <Text style={styles.meta}>
+                Last seen: {new Date(device.lastSeenAt).toLocaleString()}
+              </Text>
+              <Text style={styles.meta}>
+                {device.disabledAt
+                  ? `Notifications turned off on ${new Date(device.disabledAt).toLocaleString()}`
+                  : 'Notifications active'}
+              </Text>
+              {!device.disabledAt ? (
+                <Button
+                  label="Turn off notifications on this device"
+                  variant="secondary"
+                  loading={disableDeviceMutation.isPending}
+                  onPress={() => disableDeviceMutation.mutate(device.id)}
+                />
+              ) : null}
+            </Card>
+          ))}
+        </Card>
       </Card>
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Privacy and data rights</Text>
@@ -589,8 +678,63 @@ export function SettingsScreen() {
                   : `${member.assignedFleetIds.length} fleets`}
             </Text>
             <Text style={styles.meta}>{member.isActive ? 'Active' : 'Inactive'}</Text>
+            <Text style={styles.meta}>
+              Mobile access: {member.mobileAccessRevoked ? 'Paused' : 'Enabled'}
+            </Text>
+            <Text style={styles.meta}>
+              Active devices: {member.activePushDeviceCount}
+            </Text>
+            {member.lastPushDeviceSeenAt ? (
+              <Text style={styles.meta}>
+                Last device seen: {new Date(member.lastPushDeviceSeenAt).toLocaleString()}
+              </Text>
+            ) : null}
+            {member.pushDevices.map((device) => (
+              <Card key={device.id} style={styles.innerCard}>
+                <Text style={styles.memberName}>
+                  {device.platform === 'ios'
+                    ? 'iPhone or iPad'
+                    : device.platform === 'android'
+                      ? 'Android device'
+                      : 'Web browser'}
+                </Text>
+                <Text style={styles.meta}>Token: {device.tokenPreview}</Text>
+                <Text style={styles.meta}>
+                  Last seen: {new Date(device.lastSeenAt).toLocaleString()}
+                </Text>
+                <Text style={styles.meta}>
+                  {device.disabledAt
+                    ? `Notifications turned off on ${new Date(device.disabledAt).toLocaleString()}`
+                    : 'Notifications active'}
+                </Text>
+                {!device.disabledAt ? (
+                  <Button
+                    label="Turn off this device"
+                    variant="secondary"
+                    loading={memberDeviceMutation.isPending}
+                    onPress={() =>
+                      memberDeviceMutation.mutate({
+                        userId: member.id,
+                        deviceId: device.id,
+                      })
+                    }
+                  />
+                ) : null}
+              </Card>
+            ))}
             {member.role !== 'TENANT_OWNER' && member.isActive ? (
               <>
+                <Button
+                  label={member.mobileAccessRevoked ? 'Restore mobile access' : 'Pause mobile access'}
+                  variant="secondary"
+                  loading={memberMobileAccessMutation.isPending}
+                  onPress={() =>
+                    memberMobileAccessMutation.mutate({
+                      userId: member.id,
+                      revoked: !member.mobileAccessRevoked,
+                    })
+                  }
+                />
                 <Button
                   label="Grant all fleet access"
                   variant="secondary"

@@ -5,10 +5,12 @@ import {
   createDataSubjectRequest,
   changeTenantPassword,
   deactivateTeamMember,
+  disableTeamMemberPushDevice,
   resendTeamInvite,
   syncMaintenanceReminders,
   syncRemittanceReminders,
   inviteTeamMember,
+  updateTeamMemberMobileAccess,
   updateTeamMemberAccess,
   updateNotificationPreferences,
   updateTenantProfile,
@@ -352,6 +354,52 @@ export async function deactivateTeamMemberAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unable to deactivate team member.',
+    };
+  }
+}
+
+export async function updateTeamMemberMobileAccessAction(
+  _previousState: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const userId = String(formData.get('userId') ?? '').trim();
+  const revoked = String(formData.get('revoked') ?? '').trim() === 'true';
+
+  if (!userId) {
+    return { error: 'User ID is required.' };
+  }
+
+  try {
+    await updateTeamMemberMobileAccess(userId, revoked);
+    revalidatePath('/settings');
+    return {
+      success: revoked ? 'Mobile access paused.' : 'Mobile access restored.',
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to update mobile access.',
+    };
+  }
+}
+
+export async function disableTeamMemberPushDeviceAction(
+  _previousState: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const userId = String(formData.get('userId') ?? '').trim();
+  const deviceId = String(formData.get('deviceId') ?? '').trim();
+
+  if (!userId || !deviceId) {
+    return { error: 'User and device IDs are required.' };
+  }
+
+  try {
+    await disableTeamMemberPushDevice(userId, deviceId);
+    revalidatePath('/settings');
+    return { success: 'Device notifications turned off.' };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unable to turn off this device.',
     };
   }
 }

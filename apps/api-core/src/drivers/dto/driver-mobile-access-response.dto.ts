@@ -1,5 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class DriverMobileAccessPushDeviceDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({ enum: ['ios', 'android', 'web'] })
+  platform!: 'ios' | 'android' | 'web';
+
+  @ApiProperty()
+  tokenPreview!: string;
+
+  @ApiProperty()
+  lastSeenAt!: string;
+
+  @ApiProperty()
+  registeredAt!: string;
+
+  @ApiPropertyOptional()
+  disabledAt?: string | null;
+}
+
 export class DriverMobileAccessUserDto {
   @ApiProperty()
   id!: string;
@@ -21,6 +41,18 @@ export class DriverMobileAccessUserDto {
 
   @ApiProperty()
   isActive!: boolean;
+
+  @ApiPropertyOptional()
+  mobileAccessRevoked?: boolean | null;
+
+  @ApiPropertyOptional()
+  activePushDeviceCount?: number;
+
+  @ApiPropertyOptional()
+  lastPushDeviceSeenAt?: string | null;
+
+  @ApiPropertyOptional({ type: [DriverMobileAccessPushDeviceDto] })
+  pushDevices?: DriverMobileAccessPushDeviceDto[];
 
   @ApiPropertyOptional()
   driverId?: string | null;

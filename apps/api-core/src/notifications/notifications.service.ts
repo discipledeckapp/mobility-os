@@ -1,5 +1,11 @@
 import { TenantRole } from '@mobility-os/authz-model';
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
 import type { Prisma, User, UserNotification, UserPushDevice } from '@prisma/client';
@@ -32,6 +38,15 @@ type NotificationPayload = {
   body: string;
   actionUrl?: string | null;
   metadata?: Record<string, unknown>;
+};
+
+type PushDeviceSummary = {
+  id: string;
+  platform: 'ios' | 'android' | 'web';
+  tokenPreview: string;
+  lastSeenAt: string;
+  registeredAt: string;
+  disabledAt: string | null;
 };
 
 @Injectable()
@@ -104,6 +119,25 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         </div>
       </div>
     `.trim();
+  }
+
+  private maskPushToken(token: string): string {
+    if (token.length <= 12) {
+      return token;
+    }
+
+    return `${token.slice(0, 8)}...${token.slice(-4)}`;
+  }
+
+  private mapPushDevice(device: UserPushDevice): PushDeviceSummary {
+    return {
+      id: device.id,
+      platform: device.platform as PushDeviceSummary['platform'],
+      tokenPreview: this.maskPushToken(device.deviceToken),
+      lastSeenAt: device.lastSeenAt.toISOString(),
+      registeredAt: device.createdAt.toISOString(),
+      disabledAt: device.disabledAt?.toISOString() ?? null,
+    };
   }
 
   private async sendPushDevices(
@@ -501,6 +535,37 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     });
 
     return { message: 'Push device registered.' };
+  }
+
+  async listPushDevices(tenantId: string, userId: string): Promise<PushDeviceSummary[]> {
+    const devices = await this.prisma.userPushDevice.findMany({
+      where: { tenantId, userId },
+      orderBy: [{ disabledAt: 'asc' }, { lastSeenAt: 'desc' }],
+    });
+
+    return devices.map((device) => this.mapPushDevice(device));
+  }
+
+  async disablePushDevice(
+    tenantId: string,
+    userId: string,
+    deviceId: string,
+  ): Promise<{ message: string }> {
+    const device = await this.prisma.userPushDevice.findFirst({
+      where: { id: deviceId, tenantId, userId, disabledAt: null },
+      select: { id: true },
+    });
+
+    if (!device) {
+      throw new NotFoundException('Push device not found.');
+    }
+
+    await this.prisma.userPushDevice.update({
+      where: { id: deviceId },
+      data: { disabledAt: new Date() },
+    });
+
+    return { message: 'Device notifications turned off.' };
   }
 
   async getPreferences(tenantId: string, userId: string): Promise<NotificationPreferenceMap> {

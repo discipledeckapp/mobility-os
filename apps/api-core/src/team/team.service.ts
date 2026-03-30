@@ -14,6 +14,7 @@ import { readUserSettings, writeUserSettings } from '../auth/user-settings';
 import { getDefaultLanguageForCountry } from '../tenants/tenant-settings';
 import { SubscriptionEntitlementsService } from '../tenant-billing/subscription-entitlements.service';
 import type { InviteTeamMemberDto } from './dto/invite-team-member.dto';
+import type { TeamMemberPushDeviceResponseDto } from './dto/team-member-push-device-response.dto';
 import type { TeamMemberResponseDto } from './dto/team-member-response.dto';
 import type { UpdateTeamMemberAccessDto } from './dto/update-team-member-access.dto';
 
@@ -25,6 +26,32 @@ export class TeamService {
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
   ) {}
 
+  private maskPushToken(token: string): string {
+    if (token.length <= 12) {
+      return token;
+    }
+
+    return `${token.slice(0, 8)}...${token.slice(-4)}`;
+  }
+
+  private mapPushDevice(input: {
+    id: string;
+    platform: string;
+    deviceToken: string;
+    lastSeenAt: Date;
+    createdAt: Date;
+    disabledAt: Date | null;
+  }): TeamMemberPushDeviceResponseDto {
+    return {
+      id: input.id,
+      platform: input.platform as TeamMemberPushDeviceResponseDto['platform'],
+      tokenPreview: this.maskPushToken(input.deviceToken),
+      lastSeenAt: input.lastSeenAt.toISOString(),
+      registeredAt: input.createdAt.toISOString(),
+      disabledAt: input.disabledAt?.toISOString() ?? null,
+    };
+  }
+
   private async mapTeamMember(user: {
     id: string;
     tenantId: string;
@@ -34,18 +61,44 @@ export class TeamService {
     role: string;
     isActive: boolean;
     isEmailVerified: boolean;
+    mobileAccessRevoked?: boolean;
     createdAt: Date;
     settings?: unknown;
+  }, context?: {
+    tenantCountry?: string | null;
+    pushDevices?: Array<{
+      id: string;
+      platform: string;
+      deviceToken: string;
+      lastSeenAt: Date;
+      createdAt: Date;
+      disabledAt: Date | null;
+    }>;
   }): Promise<TeamMemberResponseDto> {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: user.tenantId },
-      select: { country: true },
-    });
     const settings = readUserSettings(user.settings, {
-      preferredLanguage: getDefaultLanguageForCountry(tenant?.country),
+      preferredLanguage: getDefaultLanguageForCountry(context?.tenantCountry),
       role: user.role,
       hasLinkedDriver: false,
     });
+    const pushDevices =
+      context?.pushDevices ??
+      (await this.prisma.userPushDevice.findMany({
+        where: { tenantId: user.tenantId, userId: user.id },
+        orderBy: [{ disabledAt: 'asc' }, { lastSeenAt: 'desc' }],
+        select: {
+          id: true,
+          platform: true,
+          deviceToken: true,
+          lastSeenAt: true,
+          createdAt: true,
+          disabledAt: true,
+        },
+      }));
+    const activePushDeviceCount = pushDevices.filter((device) => !device.disabledAt).length;
+    const lastPushDeviceSeenAt =
+      pushDevices.find((device) => !device.disabledAt)?.lastSeenAt ??
+      pushDevices[0]?.lastSeenAt ??
+      null;
 
     return {
       id: user.id,
@@ -59,6 +112,10 @@ export class TeamService {
       customPermissions: settings.customPermissions,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
+      mobileAccessRevoked: user.mobileAccessRevoked ?? false,
+      activePushDeviceCount,
+      lastPushDeviceSeenAt: lastPushDeviceSeenAt?.toISOString() ?? null,
+      pushDevices: pushDevices.map((device) => this.mapPushDevice(device)),
       createdAt: user.createdAt.toISOString(),
     };
   }
@@ -78,13 +135,56 @@ export class TeamService {
   }
 
   async listMembers(tenantId: string): Promise<TeamMemberResponseDto[]> {
-    const users = await this.prisma.user.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: 'asc' },
-    });
+    const [tenant, users, pushDevices] = await Promise.all([
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { country: true },
+      }),
+      this.prisma.user.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.userPushDevice.findMany({
+        where: { tenantId },
+        orderBy: [{ disabledAt: 'asc' }, { lastSeenAt: 'desc' }],
+        select: {
+          id: true,
+          userId: true,
+          platform: true,
+          deviceToken: true,
+          lastSeenAt: true,
+          createdAt: true,
+          disabledAt: true,
+        },
+      }),
+    ]);
+
+    const pushDevicesByUserId = new Map<
+      string,
+      Array<{
+        id: string;
+        platform: string;
+        deviceToken: string;
+        lastSeenAt: Date;
+        createdAt: Date;
+        disabledAt: Date | null;
+      }>
+    >();
+    for (const device of pushDevices) {
+      const current = pushDevicesByUserId.get(device.userId) ?? [];
+      current.push(device);
+      pushDevicesByUserId.set(device.userId, current);
+    }
 
     return Promise.all(
-      users.filter((user) => this.isOperatorUser(user)).map((user) => this.mapTeamMember(user)),
+      users
+        .filter((user) => this.isOperatorUser(user))
+        .map((user) =>
+          this.mapTeamMember(user, {
+            tenantCountry: tenant?.country ?? null,
+            pushDevices: pushDevicesByUserId.get(user.id) ?? [],
+          }),
+        ),
     );
   }
 
@@ -214,6 +314,69 @@ export class TeamService {
     });
 
     return this.mapTeamMember(updated);
+  }
+
+  async updateMobileAccess(
+    tenantId: string,
+    userId: string,
+    revoked: boolean,
+  ): Promise<TeamMemberResponseDto> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+    });
+
+    if (!user || !this.isOperatorUser(user)) {
+      throw new NotFoundException('Team member not found.');
+    }
+
+    if (user.role === 'TENANT_OWNER') {
+      throw new ConflictException('The tenant owner account cannot have mobile access changed here.');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { mobileAccessRevoked: revoked },
+    });
+
+    return this.mapTeamMember(updated);
+  }
+
+  async disablePushDevice(
+    tenantId: string,
+    userId: string,
+    deviceId: string,
+  ): Promise<TeamMemberResponseDto> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+    });
+
+    if (!user || !this.isOperatorUser(user)) {
+      throw new NotFoundException('Team member not found.');
+    }
+
+    const device = await this.prisma.userPushDevice.findFirst({
+      where: { id: deviceId, tenantId, userId, disabledAt: null },
+      select: { id: true },
+    });
+
+    if (!device) {
+      throw new NotFoundException('Registered device not found.');
+    }
+
+    await this.prisma.userPushDevice.update({
+      where: { id: deviceId },
+      data: { disabledAt: new Date() },
+    });
+
+    const refreshedUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!refreshedUser) {
+      throw new NotFoundException('Team member not found.');
+    }
+
+    return this.mapTeamMember(refreshedUser);
   }
 
   async deactivateMember(tenantId: string, userId: string): Promise<{ message: string }> {

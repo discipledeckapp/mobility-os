@@ -13,6 +13,7 @@ import {
   createDriverSelfServiceLivenessSession,
   createGuarantorSelfServiceLivenessSession,
   createOrUpdateDriverGuarantor,
+  disableDriverMobileAccessDevice,
   getTenantBillingSummary,
   getTenantMe,
   importDriversCsv,
@@ -26,6 +27,7 @@ import {
   sendDriverSelfServiceLink,
   sendGuarantorSelfServiceLink,
   unlinkDriverMobileAccessUser,
+  updateDriverMobileAccessStatus,
   updateDriverStatus,
   uploadDriverDocument,
   uploadDriverSelfServiceDocument,
@@ -835,6 +837,62 @@ export async function unlinkDriverMobileAccessAction(
   revalidatePath(`/drivers/${driverId}`);
   return {
     success: 'Mobile access disconnected successfully.',
+  };
+}
+
+export async function updateDriverMobileAccessStatusAction(
+  _prevState: DriverMobileAccessActionState,
+  formData: FormData,
+): Promise<DriverMobileAccessActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const userId = getOptionalTrimmedValue(formData, 'userId');
+  const revoked = getOptionalTrimmedValue(formData, 'revoked') === 'true';
+
+  if (!driverId || !userId) {
+    return { error: 'No linked organisation user was selected.' };
+  }
+
+  try {
+    await updateDriverMobileAccessStatus(driverId, userId, revoked);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Unable to update mobile access status.',
+    };
+  }
+
+  revalidatePath('/drivers');
+  revalidatePath(`/drivers/${driverId}`);
+  return {
+    success: revoked ? 'Mobile access paused successfully.' : 'Mobile access restored successfully.',
+  };
+}
+
+export async function disableDriverMobileAccessDeviceAction(
+  _prevState: DriverMobileAccessActionState,
+  formData: FormData,
+): Promise<DriverMobileAccessActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const userId = getOptionalTrimmedValue(formData, 'userId');
+  const deviceId = getOptionalTrimmedValue(formData, 'deviceId');
+
+  if (!driverId || !userId || !deviceId) {
+    return { error: 'Driver, user, and device are required.' };
+  }
+
+  try {
+    await disableDriverMobileAccessDevice(driverId, userId, deviceId);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Unable to turn off this device.',
+    };
+  }
+
+  revalidatePath('/drivers');
+  revalidatePath(`/drivers/${driverId}`);
+  return {
+    success: 'Device notifications turned off successfully.',
   };
 }
 

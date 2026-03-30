@@ -19,6 +19,7 @@ import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import { InviteTeamMemberDto } from './dto/invite-team-member.dto';
 import { TeamMemberResponseDto } from './dto/team-member-response.dto';
 import { UpdateTeamMemberAccessDto } from './dto/update-team-member-access.dto';
+import { UpdateTeamMemberMobileAccessDto } from './dto/update-team-member-mobile-access.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TeamService } from './team.service';
 
@@ -55,6 +56,28 @@ export class TeamController {
     @Body() dto: UpdateTeamMemberAccessDto,
   ): Promise<TeamMemberResponseDto> {
     return this.teamService.updateAccess(ctx.tenantId, userId, dto);
+  }
+
+  @Post(':userId/mobile-access')
+  @RequirePermissions(Permission.TenantsWrite)
+  @ApiOkResponse({ type: TeamMemberResponseDto })
+  updateMobileAccess(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateTeamMemberMobileAccessDto,
+  ): Promise<TeamMemberResponseDto> {
+    return this.teamService.updateMobileAccess(ctx.tenantId, userId, dto.revoked);
+  }
+
+  @Delete(':userId/push-devices/:deviceId')
+  @RequirePermissions(Permission.TenantsWrite)
+  @ApiOkResponse({ type: TeamMemberResponseDto })
+  disablePushDevice(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('userId') userId: string,
+    @Param('deviceId') deviceId: string,
+  ): Promise<TeamMemberResponseDto> {
+    return this.teamService.disablePushDevice(ctx.tenantId, userId, deviceId);
   }
 
   @Delete(':userId')

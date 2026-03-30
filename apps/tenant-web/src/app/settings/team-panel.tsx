@@ -24,8 +24,10 @@ import type { FleetRecord, TeamMemberRecord, VehicleRecord } from '../../lib/api
 import {
   type TeamActionState,
   deactivateTeamMemberAction,
+  disableTeamMemberPushDeviceAction,
   inviteTeamMemberAction,
   resendTeamInviteAction,
+  updateTeamMemberMobileAccessAction,
   updateTeamMemberAccessAction,
 } from './actions';
 
@@ -80,6 +82,14 @@ export function TeamPanel({
   );
   const [accessState, accessAction, accessPending] = useActionState(
     updateTeamMemberAccessAction,
+    initialState,
+  );
+  const [mobileAccessState, mobileAccessAction, mobileAccessPending] = useActionState(
+    updateTeamMemberMobileAccessAction,
+    initialState,
+  );
+  const [deviceState, deviceAction, devicePending] = useActionState(
+    disableTeamMemberPushDeviceAction,
     initialState,
   );
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -220,6 +230,10 @@ export function TeamPanel({
         {resendState.success ? <Text tone="success">{resendState.success}</Text> : null}
         {accessState.error ? <Text tone="danger">{accessState.error}</Text> : null}
         {accessState.success ? <Text tone="success">{accessState.success}</Text> : null}
+        {mobileAccessState.error ? <Text tone="danger">{mobileAccessState.error}</Text> : null}
+        {mobileAccessState.success ? <Text tone="success">{mobileAccessState.success}</Text> : null}
+        {deviceState.error ? <Text tone="danger">{deviceState.error}</Text> : null}
+        {deviceState.success ? <Text tone="success">{deviceState.success}</Text> : null}
 
         <TableViewport>
           <Table>
@@ -229,6 +243,7 @@ export function TeamPanel({
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Fleet scope</TableHead>
+                <TableHead>Mobile</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && <TableHead />}
               </TableRow>
@@ -247,6 +262,17 @@ export function TeamPanel({
                       : member.assignedFleetIds.length === 0
                         ? 'All company fleets'
                         : `${member.assignedFleetIds.length} fleet${member.assignedFleetIds.length === 1 ? '' : 's'}`}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <Badge tone={member.mobileAccessRevoked ? 'danger' : 'success'}>
+                        {member.mobileAccessRevoked ? 'Paused' : 'Enabled'}
+                      </Badge>
+                      <p className="text-xs text-slate-500">
+                        {member.activePushDeviceCount} active device
+                        {member.activePushDeviceCount === 1 ? '' : 's'}
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {member.isActive ? (
@@ -333,6 +359,87 @@ export function TeamPanel({
                               </Button>
                             </form>
                           </details>
+                          <details className="min-w-[18rem] rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                              Mobile access
+                            </summary>
+                            <div className="mt-3 space-y-3">
+                              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                                <p className="text-sm font-medium text-slate-700">
+                                  {member.mobileAccessRevoked ? 'Mobile access is paused' : 'Mobile access is enabled'}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {member.lastPushDeviceSeenAt
+                                    ? `Last active device seen ${new Date(member.lastPushDeviceSeenAt).toLocaleString()}`
+                                    : 'No active device session has been seen yet.'}
+                                </p>
+                                <form action={mobileAccessAction} className="mt-3">
+                                  <input name="userId" type="hidden" value={member.id} />
+                                  <input
+                                    name="revoked"
+                                    type="hidden"
+                                    value={member.mobileAccessRevoked ? 'false' : 'true'}
+                                  />
+                                  <Button
+                                    disabled={mobileAccessPending}
+                                    type="submit"
+                                    variant="secondary"
+                                  >
+                                    {member.mobileAccessRevoked
+                                      ? 'Restore mobile access'
+                                      : 'Pause mobile access'}
+                                  </Button>
+                                </form>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                  Registered devices
+                                </p>
+                                {member.pushDevices.length > 0 ? (
+                                  member.pushDevices.map((device) => (
+                                    <div
+                                      key={device.id}
+                                      className="rounded-lg border border-slate-200 bg-white p-3"
+                                    >
+                                      <p className="text-sm font-medium text-slate-700">
+                                        {device.platform === 'ios'
+                                          ? 'iPhone or iPad'
+                                          : device.platform === 'android'
+                                            ? 'Android device'
+                                            : 'Web browser'}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500">
+                                        Token: {device.tokenPreview}
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        Last seen {new Date(device.lastSeenAt).toLocaleString()}
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        {device.disabledAt
+                                          ? `Notifications turned off on ${new Date(device.disabledAt).toLocaleString()}`
+                                          : 'Notifications active'}
+                                      </p>
+                                      {!device.disabledAt ? (
+                                        <form action={deviceAction} className="mt-3">
+                                          <input name="userId" type="hidden" value={member.id} />
+                                          <input name="deviceId" type="hidden" value={device.id} />
+                                          <Button
+                                            disabled={devicePending}
+                                            type="submit"
+                                            variant="secondary"
+                                          >
+                                            Turn off this device
+                                          </Button>
+                                        </form>
+                                      ) : null}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <Text tone="muted">No devices have registered yet.</Text>
+                                )}
+                              </div>
+                            </div>
+                          </details>
                           <form action={resendAction}>
                             <input name="userId" type="hidden" value={member.id} />
                             <Button disabled={resendPending} type="submit" variant="secondary">
@@ -353,7 +460,7 @@ export function TeamPanel({
               ))}
               {members.length === 0 && (
                 <TableRow>
-                  <TableCell className="py-8 text-center text-slate-400" colSpan={canManage ? 6 : 5}>
+                  <TableCell className="py-8 text-center text-slate-400" colSpan={canManage ? 7 : 6}>
                     No team members found.
                   </TableCell>
                 </TableRow>

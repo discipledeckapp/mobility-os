@@ -7,6 +7,7 @@ import {
   getTenantSession,
   listDataSubjectRequests,
   listFleets,
+  listPushDevices,
   listTeamMembers,
   listUserNotifications,
   listVehicles,
@@ -37,7 +38,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initialSection = getSection(resolvedSearchParams.section);
   const token = await getTenantApiToken().catch(() => undefined);
-  const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, privacySupport, dataRequests] = await Promise.all([
+  const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, pushDevices, privacySupport, dataRequests] = await Promise.all([
     getTenantMe(token),
     getTenantSession(token),
     listTeamMembers(token).catch(() => []),
@@ -45,6 +46,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     listVehicles({ limit: 200 }, token).catch(() => ({ data: [], total: 0, page: 1, limit: 200 })),
     getNotificationPreferences(token).catch(() => null),
     listUserNotifications(token).catch(() => []),
+    listPushDevices(token).catch(() => []),
     getPrivacySupport(token).catch(() => null),
     listDataSubjectRequests(token).catch(() => []),
   ]);
@@ -63,6 +65,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         members={members}
         notificationPreferences={notificationPreferences ?? session.notificationPreferences ?? null}
         notifications={notifications}
+        pushDevices={pushDevices}
         privacySupport={privacySupport}
         session={session}
         tenant={tenant}
