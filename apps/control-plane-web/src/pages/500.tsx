@@ -5,11 +5,9 @@ export default function Custom500Page() {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
           Control plane
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Something went wrong
-        </h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Control plane error</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          The platform console hit an internal error while rendering this page.
+          The platform console hit an unexpected error while rendering this page.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <a
