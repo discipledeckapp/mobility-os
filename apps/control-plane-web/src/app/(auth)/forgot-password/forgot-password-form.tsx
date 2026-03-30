@@ -12,13 +12,16 @@ import {
   Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { forgotPasswordAction, type ForgotPasswordActionState } from './actions';
 
 const initialState: ForgotPasswordActionState = {};
 
 export function ForgotPasswordForm() {
-  const [state, formAction, pending] = useActionState(forgotPasswordAction, initialState);
+  const [state, formAction, pending] = useServerActionState(
+    forgotPasswordAction,
+    initialState,
+  );
 
   return (
     <Card className="w-full max-w-md border-slate-200/80 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]">

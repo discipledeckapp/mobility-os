@@ -17,7 +17,7 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import { SelectField } from '../../features/shared/select-field';
 import type { PlanRecord } from '../../lib/api-control-plane';
 import { type ProvisionTenantActionState, provisionTenantAction } from './actions';
@@ -29,7 +29,10 @@ interface ProvisionTenantFormProps {
 }
 
 export function ProvisionTenantForm({ plans }: ProvisionTenantFormProps) {
-  const [state, formAction, isPending] = useActionState(provisionTenantAction, initialState);
+  const [state, formAction, isPending] = useServerActionState(
+    provisionTenantAction,
+    initialState,
+  );
 
   const businessModels = getAllBusinessModelSlugs();
   const supportedCountries = getSupportedCountryCodes().map((countryCode) => ({

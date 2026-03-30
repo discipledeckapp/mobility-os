@@ -27,20 +27,22 @@ export function GlobalSearch() {
     }
 
     const controller = new AbortController();
-    startTransition(async () => {
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        if (!response.ok) {
+    startTransition(() => {
+      void (async () => {
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            setResults([]);
+            return;
+          }
+          setResults((await response.json()) as SearchResult[]);
+        } catch {
           setResults([]);
-          return;
         }
-        setResults((await response.json()) as SearchResult[]);
-      } catch {
-        setResults([]);
-      }
+      })();
     });
 
     return () => controller.abort();

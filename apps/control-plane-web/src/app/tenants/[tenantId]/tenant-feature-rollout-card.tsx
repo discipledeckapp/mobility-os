@@ -11,7 +11,8 @@ import {
   InlineLoadingState,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import {
   addTenantFeatureOverrideAction,
   removeTenantFeatureOverrideAction,
@@ -33,7 +34,7 @@ export function TenantFeatureRolloutCard({
     tenantOverrideId?: string;
   }>;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     addTenantFeatureOverrideAction.bind(null, tenantId),
     initialState,
   );
@@ -116,13 +117,14 @@ export function TenantFeatureRolloutCard({
                   {flag.tenantOverrideId ? (
                     <Button
                       onClick={() => {
-                        startTransition(async () => {
-                          const result = await removeTenantFeatureOverrideAction(
+                        startTransition(() => {
+                          void removeTenantFeatureOverrideAction(
                             tenantId,
                             flag.tenantOverrideId ?? '',
-                          );
-                          setError(result.error ?? null);
-                          setFeedback(result.success ?? null);
+                          ).then((result) => {
+                            setError(result.error ?? null);
+                            setFeedback(result.success ?? null);
+                          });
                         });
                       }}
                       type="button"

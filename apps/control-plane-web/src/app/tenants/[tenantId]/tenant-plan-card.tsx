@@ -10,7 +10,7 @@ import {
   InlineLoadingState,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import type { PlanRecord, TenantDetailRecord } from '../../../lib/api-control-plane';
 import { assignTenantPlanAction, type TenantDetailActionState } from './actions';
 
@@ -23,7 +23,7 @@ export function TenantPlanCard({
   tenant: TenantDetailRecord;
   plans: PlanRecord[];
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     assignTenantPlanAction.bind(null, tenant.id, Boolean(tenant.subscription)),
     initialState,
   );

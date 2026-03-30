@@ -22,10 +22,21 @@ export default function ControlPlaneServerErrorPage() {
           textAlign: 'center',
         }}
       >
-        <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1d4ed8' }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: '#1d4ed8',
+          }}
+        >
           Control plane
         </p>
-        <h1 style={{ margin: '0.8rem 0 0', fontSize: '1.75rem' }}>Platform page could not load</h1>
+        <h1 style={{ margin: '0.8rem 0 0', fontSize: '1.75rem' }}>
+          Platform page could not load
+        </h1>
         <p style={{ margin: '0.9rem 0 0', color: '#475569', lineHeight: 1.6 }}>
           A server-side exception interrupted this platform-admin page. Please retry shortly.
         </p>

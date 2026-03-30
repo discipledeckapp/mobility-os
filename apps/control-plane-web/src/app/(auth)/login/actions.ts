@@ -8,6 +8,7 @@ import { PLATFORM_AUTH_COOKIE_NAME } from '../../../lib/auth';
 
 export interface LoginActionState {
   error?: string;
+  redirectTo?: string;
 }
 
 function normalizeLoginError(error: unknown): string {
@@ -58,7 +59,7 @@ export async function loginAction(
     };
   }
 
-  redirect('/tenants');
+  return { redirectTo: '/tenants' };
 }
 
 export async function logoutAction(): Promise<void> {

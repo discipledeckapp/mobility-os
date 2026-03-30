@@ -11,7 +11,7 @@ import {
   Input,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { type TenantDetailActionState, transitionTenantAction } from './actions';
 
 const initialState: TenantDetailActionState = {};
@@ -70,7 +70,7 @@ export function TransitionTenantCard({
   tenantId: string;
   currentStatus: string;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     transitionTenantAction.bind(null, tenantId),
     initialState,
   );

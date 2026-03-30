@@ -11,8 +11,8 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
 import type { PlatformWalletBalanceRecord } from '../../../lib/api-control-plane';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { type CreditWalletActionState, creditTenantWalletAction } from './actions';
 
 export function TenantWalletCard({
@@ -24,7 +24,7 @@ export function TenantWalletCard({
 }) {
   const boundAction = creditTenantWalletAction.bind(null, tenantId);
   const initialState: CreditWalletActionState = {};
-  const [state, formAction, pending] = useActionState(boundAction, initialState);
+  const [state, formAction, pending] = useServerActionState(boundAction, initialState);
 
   return (
     <Card>

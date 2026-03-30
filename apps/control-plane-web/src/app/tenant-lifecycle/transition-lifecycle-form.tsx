@@ -1,8 +1,9 @@
 'use client';
 
 import { Button, Input, Label, Text } from '@mobility-os/ui';
-import { type FormEvent, useActionState } from 'react';
+import { type FormEvent } from 'react';
 import { SelectField } from '../../features/shared/select-field';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import { type TransitionLifecycleActionState, transitionTenantLifecycleAction } from './actions';
 
 const initialState: TransitionLifecycleActionState = {};
@@ -20,7 +21,7 @@ const lifecycleStatuses = [
 ] as const;
 
 export function TransitionLifecycleForm({ tenantId }: { tenantId: string }) {
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending] = useServerActionState(
     transitionTenantLifecycleAction,
     initialState,
   );

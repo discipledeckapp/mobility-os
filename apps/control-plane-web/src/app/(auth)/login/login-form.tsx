@@ -2,6 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Button,
   Card,
@@ -13,7 +14,8 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { type LoginActionState, loginAction } from './actions';
 
 const initialState: LoginActionState = {};
@@ -57,10 +59,17 @@ function EyeOffIcon() {
 }
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+  const router = useRouter();
+  const [state, formAction, isPending] = useServerActionState(loginAction, initialState);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (state.redirectTo) {
+      router.replace(state.redirectTo as Route);
+    }
+  }, [router, state.redirectTo]);
 
   return (
     <Card className="w-full max-w-md border-slate-200/80 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]">

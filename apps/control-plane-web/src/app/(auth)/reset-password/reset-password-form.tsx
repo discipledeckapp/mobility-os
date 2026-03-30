@@ -13,7 +13,7 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useActionState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { resetPasswordAction, type ResetPasswordActionState } from './actions';
 
 const initialState: ResetPasswordActionState = {};
@@ -21,7 +21,7 @@ const initialState: ResetPasswordActionState = {};
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') ?? '';
-  const [state, formAction, pending] = useActionState(resetPasswordAction, initialState);
+  const [state, formAction, pending] = useServerActionState(resetPasswordAction, initialState);
 
   return (
     <Card className="w-full max-w-md border-slate-200/80 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]">

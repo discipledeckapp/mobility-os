@@ -19,7 +19,7 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import {
   ControlPlaneEmptyStateCard,
   ControlPlaneHeroPanel,
@@ -29,6 +29,7 @@ import {
   ControlPlaneToolbarPanel,
 } from '../../features/shared/control-plane-page-patterns';
 import type { FeatureFlagRecord, TenantListItemRecord } from '../../lib/api-control-plane';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import {
   type FeatureFlagActionState,
   createFeatureFlagOverrideAction,
@@ -47,7 +48,7 @@ function OverrideModal({
   tenants: TenantListItemRecord[];
   onClose: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     createFeatureFlagOverrideAction.bind(null, flagKey),
     initialState,
   );
@@ -250,12 +251,13 @@ export function FeatureFlagsPanel({
                                 <button
                                   className="text-[var(--mobiris-primary)]"
                                   onClick={() => {
-                                    startTransition(async () => {
-                                      const result = await removeFeatureFlagOverrideAction(
-                                        override.id,
+                                    startTransition(() => {
+                                      void removeFeatureFlagOverrideAction(override.id).then(
+                                        (result) => {
+                                          setError(result.error ?? null);
+                                          setFeedback(result.success ?? null);
+                                        },
                                       );
-                                      setError(result.error ?? null);
-                                      setFeedback(result.success ?? null);
                                     });
                                   }}
                                   type="button"
@@ -274,13 +276,13 @@ export function FeatureFlagsPanel({
                             <Button
                               disabled={pending}
                               onClick={() => {
-                                startTransition(async () => {
-                                  const result = await toggleFeatureFlagAction(
-                                    flag.key,
-                                    !flag.isEnabled,
+                                startTransition(() => {
+                                  void toggleFeatureFlagAction(flag.key, !flag.isEnabled).then(
+                                    (result) => {
+                                      setError(result.error ?? null);
+                                      setFeedback(result.success ?? null);
+                                    },
                                   );
-                                  setError(result.error ?? null);
-                                  setFeedback(result.success ?? null);
                                 });
                               }}
                               type="button"

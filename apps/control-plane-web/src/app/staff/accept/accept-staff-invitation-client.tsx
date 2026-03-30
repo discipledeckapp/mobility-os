@@ -13,7 +13,8 @@ import {
 } from '@mobility-os/ui';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useServerActionState } from '../../../lib/use-server-action-state';
 import { completeStaffInvitationAction, type StaffActionState } from '../actions';
 
 type StaffInvitationPreviewRecord = {
@@ -38,7 +39,7 @@ export function AcceptStaffInvitationClient() {
   const [invitation, setInvitation] = useState<StaffInvitationPreviewRecord | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     completeStaffInvitationAction,
     initialState,
   );

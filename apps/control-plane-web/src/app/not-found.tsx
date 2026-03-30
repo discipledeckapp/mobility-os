@@ -1,4 +1,4 @@
-export default function ControlPlaneNotFoundPage() {
+export default function ControlPlaneNotFound() {
   return (
     <main
       style={{

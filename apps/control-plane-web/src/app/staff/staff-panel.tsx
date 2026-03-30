@@ -19,12 +19,13 @@ import {
   TableViewport,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
 import {
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
   ControlPlaneMetricGrid,
 } from '../../features/shared/control-plane-page-patterns';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import { SelectField } from '../../features/shared/select-field';
 import type { StaffMemberRecord } from '../../lib/api-control-plane';
 import {
@@ -46,11 +47,11 @@ function roleLabel(role: string): string {
 const initialState: StaffActionState = {};
 
 export function StaffPanel({ members }: { members: StaffMemberRecord[] }) {
-  const [createState, createAction, createPending] = useActionState(
+  const [createState, createAction, createPending] = useServerActionState(
     createStaffInvitationAction,
     initialState,
   );
-  const [deactivateState, deactivateAction, deactivatePending] = useActionState(
+  const [deactivateState, deactivateAction, deactivatePending] = useServerActionState(
     deactivateStaffMemberAction,
     initialState,
   );

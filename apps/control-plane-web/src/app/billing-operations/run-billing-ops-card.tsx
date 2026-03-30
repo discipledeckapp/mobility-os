@@ -9,7 +9,8 @@ import {
   CardTitle,
   Text,
 } from '@mobility-os/ui';
-import { type FormEvent, useActionState } from 'react';
+import { type FormEvent } from 'react';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import {
   type BillingOperationsActionState,
   runBillingCycleAction,
@@ -20,15 +21,18 @@ import {
 const initialState: BillingOperationsActionState = {};
 
 export function RunBillingOpsCard() {
-  const [billingState, billingAction, billingPending] = useActionState(
+  const [billingState, billingAction, billingPending] = useServerActionState(
     runBillingCycleAction,
     initialState,
   );
-  const [collectionsState, collectionsAction, collectionsPending] = useActionState(
+  const [collectionsState, collectionsAction, collectionsPending] = useServerActionState(
     runCollectionsCycleAction,
     initialState,
   );
-  const [seedState, seedAction, seedPending] = useActionState(seedStandardPlansAction, initialState);
+  const [seedState, seedAction, seedPending] = useServerActionState(
+    seedStandardPlansAction,
+    initialState,
+  );
 
   function handleBillingSubmit(event: FormEvent<HTMLFormElement>) {
     if (

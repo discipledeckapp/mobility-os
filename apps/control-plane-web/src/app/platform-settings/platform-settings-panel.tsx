@@ -9,13 +9,13 @@ import {
   CardTitle,
   Text,
 } from '@mobility-os/ui';
-import { useActionState } from 'react';
 import {
   ControlPlaneHeroPanel,
   ControlPlaneMetricCard,
   ControlPlaneMetricGrid,
 } from '../../features/shared/control-plane-page-patterns';
 import type { PlatformSettingRecord } from '../../lib/api-control-plane';
+import { useServerActionState } from '../../lib/use-server-action-state';
 import {
   type PlatformSettingsActionState,
   upsertPlatformSettingAction,
@@ -36,7 +36,10 @@ function SettingEditor({
   helper: string;
   currentSetting?: PlatformSettingRecord | null;
 }) {
-  const [state, formAction, pending] = useActionState(upsertPlatformSettingAction, initialState);
+  const [state, formAction, pending] = useServerActionState(
+    upsertPlatformSettingAction,
+    initialState,
+  );
 
   return (
     <Card>
