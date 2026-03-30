@@ -8,6 +8,7 @@ import {
   TableRow,
   TableViewport,
 } from '@mobility-os/ui';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -31,6 +32,8 @@ function statusTone(
 }
 
 export default async function GovernancePage() {
+  await connection();
+
   const dataWarnings: string[] = [];
   const [overviewResult, tenantsResult] = await Promise.allSettled([
     getGovernanceOversight(),

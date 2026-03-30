@@ -1,22 +1,34 @@
-export default function Custom500Page() {
+export default function ControlPlaneServerErrorPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#eff6ff_0%,#f8fafc_100%)] px-4 py-10">
-      <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-10 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: '#f8fafc',
+        color: '#0f172a',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        padding: '2rem',
+      }}
+    >
+      <div
+        style={{
+          width: 'min(32rem, 100%)',
+          borderRadius: '1rem',
+          border: '1px solid rgba(148, 163, 184, 0.35)',
+          background: '#fff',
+          padding: '2rem',
+          boxShadow: '0 24px 60px -32px rgba(15,23,42,0.24)',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1d4ed8' }}>
           Control plane
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Control plane error</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          The platform console hit an unexpected error while rendering this page.
+        <h1 style={{ margin: '0.8rem 0 0', fontSize: '1.75rem' }}>Platform page could not load</h1>
+        <p style={{ margin: '0.9rem 0 0', color: '#475569', lineHeight: 1.6 }}>
+          A server-side exception interrupted this platform-admin page. Please retry shortly.
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <a
-            className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-5 text-sm font-medium text-white"
-            href="/"
-          >
-            Go to dashboard
-          </a>
-        </div>
       </div>
     </main>
   );

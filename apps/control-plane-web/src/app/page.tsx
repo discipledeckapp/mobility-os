@@ -11,6 +11,7 @@ import {
 } from '@mobility-os/ui';
 import type { Route } from 'next';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -50,6 +51,8 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 }
 
 export default async function HomePage() {
+  await connection();
+
   const token = await getPlatformApiToken().catch(() => undefined);
   const dataWarnings: string[] = [];
   const [
@@ -272,7 +275,7 @@ export default async function HomePage() {
                 { href: '/tenants', label: 'Organisation oversight', detail: 'Lifecycle, plan posture, and owner context.' },
                 { href: '/subscriptions', label: 'Subscriptions and invoices', detail: 'Billing pressure, renewals, and collections.' },
                 { href: '/governance', label: 'Governance and notifications', detail: 'Privacy queue, notification load, and delivery posture.' },
-                { href: '/intelligence/review-cases', label: 'Identity review cases', detail: 'Fraud, duplicates, and adjudication work.' },
+                { href: '/operations', label: 'Operations queue', detail: 'Activation blockers, provider retries, and fleet risk across tenants.' },
               ].map((item) => (
                 <Link
                   className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 px-4 py-3 transition hover:border-[var(--mobiris-primary-light)] hover:bg-blue-50/40"

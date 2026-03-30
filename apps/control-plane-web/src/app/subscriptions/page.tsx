@@ -11,6 +11,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -40,6 +41,8 @@ type SubscriptionsPageProps = {
 };
 
 export default async function SubscriptionsPage({ searchParams }: SubscriptionsPageProps) {
+  await connection();
+
   const params = (await searchParams) ?? {};
   const token = await getPlatformApiToken().catch(() => undefined);
   const dataWarnings: string[] = [];

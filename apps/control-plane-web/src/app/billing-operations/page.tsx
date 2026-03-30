@@ -9,6 +9,7 @@ import {
   TableViewport,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -50,6 +51,8 @@ function getDisputeTone(status: string): 'success' | 'warning' | 'neutral' | 'da
 }
 
 export default async function BillingOperationsPage() {
+  await connection();
+
   const token = await getPlatformApiToken().catch(() => undefined);
   const dataWarnings: string[] = [];
   const [invoicesResult, disputesResult, documentsResult, tenantsResult] = token

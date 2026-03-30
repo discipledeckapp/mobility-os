@@ -1,42 +1,95 @@
 'use client';
 
 export default function GlobalError({
-  error: _error,
+  error,
   reset,
 }: {
-  error: Error;
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[linear-gradient(180deg,#eff6ff_0%,#f8fafc_100%)]">
-        <main className="flex min-h-screen items-center justify-center px-4 py-10">
-          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-10 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
-              Control plane
+      <body
+        style={{
+          margin: 0,
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#f8fafc',
+          color: '#0f172a',
+          fontFamily:
+            'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}
+      >
+        <main
+          style={{
+            width: 'min(32rem, calc(100vw - 2rem))',
+            borderRadius: '1rem',
+            border: '1px solid rgba(148, 163, 184, 0.35)',
+            background: 'rgba(255,255,255,0.96)',
+            padding: '2rem',
+            boxShadow: '0 24px 60px -32px rgba(15,23,42,0.25)',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: '#1d4ed8',
+            }}
+          >
+            Control plane
+          </p>
+          <h1
+            style={{
+              margin: '0.75rem 0 0',
+              fontSize: '1.75rem',
+              lineHeight: 1.15,
+            }}
+          >
+            This platform page could not load
+          </h1>
+          <p
+            style={{
+              margin: '0.9rem 0 0',
+              color: '#475569',
+              lineHeight: 1.6,
+            }}
+          >
+            A server-side exception interrupted the page. Reload the screen to retry. If the
+            issue persists, platform support should inspect the current deployment logs.
+          </p>
+          {error.digest ? (
+            <p
+              style={{
+                margin: '1rem 0 0',
+                fontSize: '0.85rem',
+                color: '#64748b',
+              }}
+            >
+              Digest: {error.digest}
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Control plane error
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              The platform console hit an unexpected error while rendering this page.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-5 text-sm font-medium text-white"
-                onClick={() => reset()}
-                type="button"
-              >
-                Retry
-              </button>
-              <a
-                className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700"
-                href="/"
-              >
-                Go to dashboard
-              </a>
-            </div>
-          </div>
+          ) : null}
+          <button
+            onClick={reset}
+            style={{
+              marginTop: '1.25rem',
+              height: '2.75rem',
+              border: 'none',
+              borderRadius: '0.85rem',
+              background: '#2563eb',
+              color: '#fff',
+              fontWeight: 600,
+              padding: '0 1rem',
+              cursor: 'pointer',
+            }}
+            type="button"
+          >
+            Try again
+          </button>
         </main>
       </body>
     </html>

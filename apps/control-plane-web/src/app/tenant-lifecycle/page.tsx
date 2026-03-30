@@ -9,6 +9,7 @@ import {
   TableViewport,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -30,6 +31,8 @@ function getTone(status: string): 'success' | 'warning' | 'neutral' | 'danger' {
 }
 
 export default async function TenantLifecyclePage() {
+  await connection();
+
   const dataWarnings: string[] = [];
   const [subscriptionsResult, tenantsResult] = await Promise.allSettled([
     listSubscriptions(),

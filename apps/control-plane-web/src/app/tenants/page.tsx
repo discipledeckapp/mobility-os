@@ -17,6 +17,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { SelectField } from '../../features/shared/select-field';
 import { ControlPlaneDataNotice } from '../../features/shared/control-plane-page-patterns';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
@@ -69,6 +70,8 @@ type TenantsPageProps = {
 };
 
 export default async function TenantsPage({ searchParams }: TenantsPageProps) {
+  await connection();
+
   const params = (await searchParams) ?? {};
   const tenants = await listTenants().catch(() => []);
   const dataWarning =

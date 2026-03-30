@@ -1,8 +1,11 @@
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import { listStaffMembers } from '../../lib/api-control-plane';
 import { StaffPanel } from './staff-panel';
 
 export default async function StaffPage() {
+  await connection();
+
   const members = await listStaffMembers().catch(() => []);
 
   return (

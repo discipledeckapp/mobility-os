@@ -10,6 +10,7 @@ import {
   TableViewport,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -35,6 +36,8 @@ function complianceTone(rate: number): 'success' | 'warning' | 'danger' | 'neutr
 }
 
 export default async function OperationsPage() {
+  await connection();
+
   const overview = await getOperationalOversight().catch(() => null);
   const dataWarning = !overview
     ? 'Operational oversight data could not be loaded from the platform API, so this queue is currently showing an honest empty state instead of crashing.'

@@ -9,6 +9,7 @@ import {
   TableViewport,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ControlPlaneShell } from '../../features/shared/control-plane-shell';
 import {
   ControlPlaneDataNotice,
@@ -35,6 +36,8 @@ function formatCurrency(amountMinorUnits: number, currency: string): string {
 }
 
 export default async function PlatformWalletsPage() {
+  await connection();
+
   const token = await getPlatformApiToken().catch(() => undefined);
   const dataWarnings: string[] = [];
   const [walletsResult, ledgerResult, tenantsResult] = token

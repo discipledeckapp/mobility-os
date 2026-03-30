@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { PLATFORM_AUTH_COOKIE_NAME, isPlatformJwtUsable } from './lib/auth';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(PLATFORM_AUTH_COOKIE_NAME)?.value;
   const hasUsableSession = isPlatformJwtUsable(authCookie);

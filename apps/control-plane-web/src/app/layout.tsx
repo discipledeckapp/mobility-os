@@ -1,12 +1,6 @@
-import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { mobirisBrand } from '../../../../packages/ui/brand/mobiris-brand';
 import './globals.css';
-
-export const metadata: Metadata = {
-  title: 'Mobility OS Control Plane',
-  description: 'Platform operator console for Mobility OS staff.',
-};
 
 export default function RootLayout({
   children,
