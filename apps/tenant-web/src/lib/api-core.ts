@@ -923,6 +923,29 @@ export interface VehicleInspectionRecord {
   createdAt: string;
 }
 
+export interface TenantInspectionRecord {
+  id: string;
+  vehicleId: string;
+  templateId: string;
+  inspectionType: string;
+  status: string;
+  summary?: string | null;
+  odometerKm?: number | null;
+  startedAt: string;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  results: Array<{
+    id: string;
+    checklistItemId: string;
+    result: string;
+    notes?: string | null;
+  }>;
+  latestScore?: {
+    score: number;
+    riskLevel: string;
+  } | null;
+}
+
 export interface VehicleMaintenanceScheduleRecord {
   id: string;
   vehicleId: string;
@@ -951,6 +974,39 @@ export interface VehicleMaintenanceEventRecord {
   currency?: string | null;
   vendor?: string | null;
   createdAt: string;
+}
+
+export interface WorkOrderRecord {
+  id: string;
+  vehicleId: string;
+  issueDescription: string;
+  priority: string;
+  status: string;
+  vendorId?: string | null;
+  totalCostMinorUnits?: number | null;
+  currency?: string | null;
+  createdAt: string;
+}
+
+export interface CreateWorkOrderInput {
+  vehicleId: string;
+  maintenanceRecordId?: string;
+  inspectionId?: string;
+  triggerType?: string;
+  severity?: string;
+  recordType?: string;
+  issueDescription: string;
+  priority: string;
+  vendorId?: string;
+  vendorName?: string;
+  partsCostMinorUnits?: number;
+  labourCostMinorUnits?: number;
+  currency?: string;
+  notes?: string;
+}
+
+export interface UpdateWorkOrderInput extends Partial<CreateWorkOrderInput> {
+  status?: string;
 }
 
 export interface VehicleIncidentRecord {
@@ -1157,6 +1213,19 @@ export interface DriverSelfServiceAssignmentRecord {
     systemVehicleCode?: string | null;
     status: string;
   };
+}
+
+export interface AuditLogRecord {
+  id: string;
+  tenantId: string;
+  actorId: string | null;
+  entityType: string;
+  entityId: string;
+  action: string;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
 }
 
 export interface CreateAssignmentInput {
@@ -2624,6 +2693,75 @@ export async function getOperationalReadinessReport(
   });
 }
 
+export async function listTenantInspections(
+  input: PaginationParams = {},
+  token?: string,
+): Promise<PaginatedApiResponse<TenantInspectionRecord>> {
+  const params = new URLSearchParams();
+  if (typeof input.page === 'number') {
+    params.set('page', String(input.page));
+  }
+  if (typeof input.limit === 'number') {
+    params.set('limit', String(input.limit));
+  }
+  const query = params.toString();
+
+  return apiCoreFetch<PaginatedApiResponse<TenantInspectionRecord>>(
+    `/inspections${query ? `?${query}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function listTenantWorkOrders(
+  input: PaginationParams = {},
+  token?: string,
+): Promise<PaginatedApiResponse<WorkOrderRecord>> {
+  const params = new URLSearchParams();
+  if (typeof input.page === 'number') {
+    params.set('page', String(input.page));
+  }
+  if (typeof input.limit === 'number') {
+    params.set('limit', String(input.limit));
+  }
+  const query = params.toString();
+
+  return apiCoreFetch<PaginatedApiResponse<WorkOrderRecord>>(
+    `/maintenance/work-orders${query ? `?${query}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function createWorkOrder(
+  input: CreateWorkOrderInput,
+  token?: string,
+): Promise<WorkOrderRecord> {
+  return apiCoreFetch<WorkOrderRecord>('/maintenance/work-orders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
+export async function updateWorkOrder(
+  workOrderId: string,
+  input: UpdateWorkOrderInput,
+  token?: string,
+): Promise<WorkOrderRecord> {
+  return apiCoreFetch<WorkOrderRecord>(`/maintenance/work-orders/${workOrderId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function getReportsOverview(
   input: { dateFrom?: string; dateTo?: string } = {},
   token?: string,
@@ -2633,6 +2771,40 @@ export async function getReportsOverview(
   if (input.dateTo) params.set('dateTo', input.dateTo);
   return apiCoreFetch<ReportsOverviewRecord>(
     `/reports/overview${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function listAuditLog(
+  input: PaginationParams & {
+    entityType?: string;
+    action?: string;
+    actorId?: string;
+  } = {},
+  token?: string,
+): Promise<PaginatedApiResponse<AuditLogRecord>> {
+  const params = new URLSearchParams();
+  if (input.entityType) {
+    params.set('entityType', input.entityType);
+  }
+  if (input.action) {
+    params.set('action', input.action);
+  }
+  if (input.actorId) {
+    params.set('actorId', input.actorId);
+  }
+  if (typeof input.page === 'number') {
+    params.set('page', String(input.page));
+  }
+  if (typeof input.limit === 'number') {
+    params.set('limit', String(input.limit));
+  }
+
+  return apiCoreFetch<PaginatedApiResponse<AuditLogRecord>>(
+    `/audit${params.toString() ? `?${params.toString()}` : ''}`,
     {
       cache: 'no-store',
       token: await getTenantApiToken(token),

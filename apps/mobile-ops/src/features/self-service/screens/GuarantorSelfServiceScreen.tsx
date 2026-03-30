@@ -7,12 +7,17 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Platform,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {
+  isYouVerifyLivenessAvailable,
+  startYouVerifyLiveness,
+} from '../../../../modules/youverify-liveness';
 import {
   type DriverIdentityResolutionResult,
   type DriverLivenessSessionRecord,
@@ -30,6 +35,7 @@ import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
 import { FullScreenBlockingLoader } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
+import { mobileEnv } from '../../../config/env';
 import { STORAGE_KEYS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
 import type { ScreenProps } from '../../../navigation/types';
@@ -59,6 +65,9 @@ export function GuarantorSelfServiceScreen({
   const [selfiePreviewUri, setSelfiePreviewUri] = useState<string | null>(null);
   const [selfieBase64, setSelfieBase64] = useState('');
   const [livenessSession, setLivenessSession] = useState<DriverLivenessSessionRecord | null>(null);
+  const [livenessFeedback, setLivenessFeedback] = useState<string | null>(null);
+  const [nativeLivenessPassed, setNativeLivenessPassed] = useState<boolean | null>(null);
+  const [nativeLivenessFaceB64, setNativeLivenessFaceB64] = useState<string | undefined>(undefined);
   const [identityResult, setIdentityResult] = useState<DriverIdentityResolutionResult | null>(null);
   const [submittingIdentity, setSubmittingIdentity] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -78,6 +87,7 @@ export function GuarantorSelfServiceScreen({
       : savingProfile
         ? 'Updating the guarantor profile and syncing the latest onboarding details.'
         : 'Checking secure access and restoring the guarantor onboarding flow.';
+  const nativeLivenessSupported = isYouVerifyLivenessAvailable();
 
   const loadContext = useCallback(async (nextToken: string) => {
     const nextContext = await getGuarantorSelfServiceContext(nextToken);
@@ -262,6 +272,8 @@ export function GuarantorSelfServiceScreen({
 
       setSelfieBase64(imageBase64);
       setSelfiePreviewUri(asset.uri);
+      setNativeLivenessPassed(null);
+      setNativeLivenessFaceB64(undefined);
       if (token) {
         const sessionRecord = await createGuarantorSelfServiceLivenessSession(
           token,
@@ -274,8 +286,79 @@ export function GuarantorSelfServiceScreen({
     }
   };
 
+  const openBrowserFallback = async () => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      await Linking.openURL(
+        `${mobileEnv.tenantWebUrl}/guarantor-self-service?token=${encodeURIComponent(token)}`,
+      );
+      setLivenessFeedback(
+        'Continue in your browser to finish guarantor live verification, then return here and submit.',
+      );
+    } catch (error) {
+      Alert.alert(
+        'Live verification',
+        error instanceof Error ? error.message : 'Unable to open the secure browser fallback.',
+      );
+    }
+  };
+
+  const startNativeLiveness = async () => {
+    if (!token) {
+      return;
+    }
+
+    if (!nativeLivenessSupported) {
+      await openBrowserFallback();
+      return;
+    }
+
+    try {
+      const sessionRecord =
+        livenessSession ??
+        (await createGuarantorSelfServiceLivenessSession(
+          token,
+          countryCode.trim() || undefined,
+        ));
+      setLivenessSession(sessionRecord);
+
+      if (!sessionRecord.clientAuthToken) {
+        throw new Error('The secure liveness token is unavailable right now. Please try again.');
+      }
+
+      const result = await startYouVerifyLiveness({
+        sessionId: sessionRecord.sessionId,
+        sessionToken: sessionRecord.clientAuthToken,
+        sandbox: __DEV__,
+      });
+
+      if (result.passed) {
+        setNativeLivenessPassed(true);
+        setNativeLivenessFaceB64(result.faceImageB64);
+        setLivenessFeedback('Live verification passed. You can submit guarantor verification now.');
+      } else {
+        setNativeLivenessPassed(false);
+        setLivenessFeedback(
+          result.errorMessage ??
+            'Live verification did not pass. Check your lighting and try again.',
+        );
+      }
+    } catch (error) {
+      setLivenessFeedback(
+        error instanceof Error ? error.message : 'Unable to start live verification right now.',
+      );
+      Alert.alert(
+        'Live verification',
+        error instanceof Error ? error.message : 'Unable to start live verification right now.',
+      );
+    }
+  };
+
   const submitIdentity = async () => {
-    if (!token || !selfieBase64 || !livenessSession) {
+    if (!token || !(nativeLivenessFaceB64 || selfieBase64) || !livenessSession) {
       Alert.alert(
         'Verification',
         'Capture a live selfie before submitting guarantor verification.',
@@ -310,7 +393,7 @@ export function GuarantorSelfServiceScreen({
             countryCode: countryCode.trim().toUpperCase(),
           },
         ],
-        selfieImageBase64: selfieBase64,
+        selfieImageBase64: nativeLivenessFaceB64 ?? selfieBase64,
         livenessCheck: {
           provider: livenessSession.providerName,
           sessionId: livenessSession.sessionId,
@@ -398,6 +481,13 @@ export function GuarantorSelfServiceScreen({
           You are onboarding as guarantor for {context.driverName}. Complete account setup, confirm
           your details, and finish live identity verification.
         </Text>
+        <View style={styles.helperCard}>
+          <Text style={styles.helperTitle}>Your steps</Text>
+          <Text style={styles.copy}>
+            Create or confirm your account, save your profile details, then complete live identity
+            verification for this invite.
+          </Text>
+        </View>
       </Card>
 
       {!hasAccount ? (
@@ -451,6 +541,18 @@ export function GuarantorSelfServiceScreen({
             onPress={() => void captureSelfie()}
             variant="secondary"
           />
+          <Button
+            label={
+              nativeLivenessPassed === true
+                ? 'Redo secure liveness'
+                : nativeLivenessSupported
+                  ? 'Start secure liveness'
+                  : 'Continue in browser'
+            }
+            onPress={() => void startNativeLiveness()}
+            variant={nativeLivenessPassed === true ? 'secondary' : 'primary'}
+          />
+          {livenessFeedback ? <Text style={styles.feedbackText}>{livenessFeedback}</Text> : null}
           <Button
             label="Submit verification"
             loading={submittingIdentity}
@@ -538,10 +640,28 @@ const styles = StyleSheet.create({
   card: {
     gap: tokens.spacing.md,
   },
+  helperCard: {
+    gap: tokens.spacing.xs,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#F8FAFC',
+    padding: tokens.spacing.sm,
+  },
+  helperTitle: {
+    color: tokens.colors.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   sectionTitle: {
     color: tokens.colors.ink,
     fontSize: 18,
     fontWeight: '700',
+  },
+  feedbackText: {
+    color: tokens.colors.inkSoft,
+    fontSize: 13,
+    lineHeight: 18,
   },
   preview: {
     borderRadius: 18,

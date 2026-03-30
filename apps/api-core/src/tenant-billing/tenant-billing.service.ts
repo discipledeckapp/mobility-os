@@ -393,6 +393,7 @@ export class TenantBillingService {
       currency: plan.currency,
       isActive: plan.isActive,
       features: plan.features,
+      customTerms: plan.customTerms ?? null,
     }));
   }
 

@@ -17,6 +17,8 @@ import {
   listDrivers,
   listFleets,
   listVehicles,
+  type DriverRecord,
+  type VehicleRecord,
 } from '../../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
 
@@ -32,6 +34,19 @@ function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
   }
   if (status === 'inactive') {
     return 'warning';
+  }
+  return 'neutral';
+}
+
+function getDriverStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'active') {
+    return 'success';
+  }
+  if (status === 'suspended') {
+    return 'warning';
+  }
+  if (status === 'terminated') {
+    return 'danger';
   }
   return 'neutral';
 }
@@ -56,6 +71,14 @@ export default async function OperatingUnitDetailPage({
   const unitAssignments = assignmentsPage.data.filter((assignment) => assignment.operatingUnitId === id);
   const parentEntity =
     businessEntities.find((entity) => entity.id === operatingUnit.businessEntityId) ?? null;
+  const activeAssignments = unitAssignments.filter((assignment) => assignment.status === 'active');
+  const pendingAssignments = unitAssignments.filter((assignment) =>
+    ['pending_driver_confirmation', 'driver_action_required', 'pending'].includes(
+      assignment.status,
+    ),
+  );
+  const driverLookup = new Map<string, DriverRecord>(drivers.map((driver) => [driver.id, driver]));
+  const vehicleLookup = new Map<string, VehicleRecord>(vehicles.map((vehicle) => [vehicle.id, vehicle]));
 
   return (
     <TenantAppShell
@@ -146,11 +169,7 @@ export default async function OperatingUnitDetailPage({
                 </Text>
                 <Text tone="muted">
                   {drivers.length} drivers · {vehicles.length} vehicles ·{' '}
-                  {unitAssignments.filter((assignment) =>
-                    ['pending_driver_confirmation', 'driver_action_required', 'pending'].includes(
-                      assignment.status,
-                    ),
-                  ).length}{' '}
+                  {pendingAssignments.length}{' '}
                   assignments needing attention.
                 </Text>
               </div>
@@ -167,6 +186,185 @@ export default async function OperatingUnitDetailPage({
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Staffing and vehicle coverage</CardTitle>
+              <CardDescription>
+                The roster that currently gives this operating unit execution capacity.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-3">
+                <Text tone="strong">Driver roster</Text>
+                {drivers.length > 0 ? (
+                  drivers.slice(0, 6).map((driver) => (
+                    <div
+                      className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-3"
+                      key={driver.id}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Link
+                            className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                            href={`/drivers/${driver.id}` as Route}
+                          >
+                            {`${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim() || driver.id}
+                          </Link>
+                          <Text tone="muted">
+                            {driver.assignmentReadiness === 'ready'
+                              ? 'Ready for assignment'
+                              : driver.assignmentReadinessReasons[0] ?? 'Needs attention'}
+                          </Text>
+                        </div>
+                        <Badge tone={getDriverStatusTone(driver.status)}>{driver.status}</Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <Text tone="muted">No drivers are linked to this operating unit yet.</Text>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <Text tone="strong">Vehicle roster</Text>
+                {vehicles.length > 0 ? (
+                  vehicles.slice(0, 6).map((vehicle) => (
+                    <div
+                      className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-3"
+                      key={vehicle.id}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Link
+                            className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
+                            href={`/vehicles/${vehicle.id}` as Route}
+                          >
+                            {getVehiclePrimaryLabel(vehicle)}
+                          </Link>
+                          <Text tone="muted">
+                            {vehicle.make} {vehicle.model} · {vehicle.status}
+                          </Text>
+                        </div>
+                        <Badge tone={getStatusTone(vehicle.status)}>{vehicle.status}</Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <Text tone="muted">No vehicles are linked to this operating unit yet.</Text>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Next actions</CardTitle>
+                <CardDescription>
+                  The fastest ways to turn this operating unit into a healthier execution zone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link
+                  className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  href={'/drivers/new' as Route}
+                >
+                  Add driver
+                  <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                </Link>
+                <Link
+                  className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  href={'/vehicles/new' as Route}
+                >
+                  Add vehicle
+                  <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                </Link>
+                <Link
+                  className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  href={'/assignments/new' as Route}
+                >
+                  Create assignment
+                  <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                </Link>
+                <Link
+                  className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  href={`/business-entities/${operatingUnit.businessEntityId}` as Route}
+                >
+                  Open parent entity
+                  <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Assignment pressure</CardTitle>
+                <CardDescription>
+                  The latest assignment work linked to this operating unit.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {activeAssignments.length > 0 ? (
+                  activeAssignments.slice(0, 5).map((assignment) => {
+                    const driver = driverLookup.get(assignment.driverId);
+                    const vehicle = vehicleLookup.get(assignment.vehicleId);
+
+                    return (
+                      <div
+                        className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-3"
+                        key={assignment.id}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Text tone="strong">
+                              {driver
+                                ? `${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim() || assignment.driverId
+                                : assignment.driverId}
+                            </Text>
+                            <Text tone="muted">
+                              {vehicle ? getVehiclePrimaryLabel(vehicle) : assignment.vehicleId}
+                            </Text>
+                          </div>
+                          <Badge tone="success">{assignment.status}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : pendingAssignments.length > 0 ? (
+                  pendingAssignments.slice(0, 5).map((assignment) => {
+                    const driver = driverLookup.get(assignment.driverId);
+                    const vehicle = vehicleLookup.get(assignment.vehicleId);
+
+                    return (
+                      <div
+                        className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-3"
+                        key={assignment.id}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Text tone="strong">
+                              {driver
+                                ? `${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim() || assignment.driverId
+                                : assignment.driverId}
+                            </Text>
+                            <Text tone="muted">
+                              {vehicle ? getVehiclePrimaryLabel(vehicle) : assignment.vehicleId}
+                            </Text>
+                          </div>
+                          <Badge tone="warning">{assignment.status}</Badge>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <Text tone="muted">No assignment activity is linked to this operating unit right now.</Text>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </TenantAppShell>

@@ -230,6 +230,26 @@ const ReportsIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
+const InspectionsIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <rect height="11" rx="1.5" width="9" x="3.5" y="2.5" />
+    <path d="M6 2.5V1.6M10 2.5V1.6M5.5 6h5M5.5 8.5h3" />
+    <path d="m8 11.2 1 1 2-2.2" />
+  </svg>
+);
+
 const RecordsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -246,6 +266,25 @@ const RecordsIcon: NavIcon = ({ className }) => (
   >
     <rect height="11" rx="1.5" width="10" x="3" y="2.5" />
     <path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" />
+  </svg>
+);
+
+const AuditIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <path d="M8 1.8 3 3.6v3.7c0 3.2 2 5.9 5 6.9 3-1 5-3.7 5-6.9V3.6L8 1.8Z" />
+    <path d="M6.2 7.9 7.4 9l2.5-2.6" />
   </svg>
 );
 
@@ -284,6 +323,7 @@ const navigationSections = [
       { href: '/drivers', label: 'Drivers', Icon: DriversIcon },
       { href: '/vehicles', label: 'Vehicles', Icon: VehiclesIcon },
       { href: '/maintenance' as Route, label: 'Maintenance', Icon: VehiclesIcon },
+      { href: '/inspections' as Route, label: 'Inspections', Icon: InspectionsIcon },
       { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
       { href: '/remittance', label: 'Remittance', Icon: RemittanceIcon },
     ],
@@ -303,6 +343,7 @@ const navigationSections = [
       { href: '/wallet', label: 'Operational wallet', Icon: WalletIcon },
       { href: '/verification-funding' as Route, label: 'Verification funding', Icon: WalletIcon },
       { href: '/records' as Route, label: 'Records', Icon: RecordsIcon },
+      { href: '/audit' as Route, label: 'Audit', Icon: AuditIcon },
       { href: '/reports' as Route, label: 'Operations Insights', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],

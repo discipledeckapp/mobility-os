@@ -72,6 +72,9 @@ export class TenantBillingPlanDto {
 
   @ApiProperty()
   features!: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  customTerms?: Record<string, unknown> | null;
 }
 
 export class TenantBillingInvoiceDto {

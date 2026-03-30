@@ -12,7 +12,7 @@ import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
-import { buildDriverOnboardingSteps } from '../verification-flow';
+import { buildDriverOnboardingSteps, resolveNextDriverAction } from '../verification-flow';
 
 export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServiceReadiness'>) {
   const { showToast } = useToast();
@@ -129,6 +129,11 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
   const mobileAccessLabel = formatMobileAccessLabel(driver.mobileAccessStatus);
   const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
   const onboardingSteps = buildDriverOnboardingSteps(driver).filter((step) => step.key !== 'account');
+  const nextAction = resolveNextDriverAction(driver, documents.length);
+
+  const openNextAction = () => {
+    navigation.navigate(nextAction.target);
+  };
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
@@ -410,6 +415,13 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           </View>
         </Card>
       )}
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Next best action</Text>
+        <Text style={styles.label}>{nextAction.title}</Text>
+        <Text style={styles.copy}>{nextAction.description}</Text>
+        <Button label={nextAction.cta} onPress={openNextAction} />
+      </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Recommended next action</Text>

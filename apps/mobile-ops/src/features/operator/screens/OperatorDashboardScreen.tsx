@@ -155,7 +155,19 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
           <Button
             label="Maintenance queue"
             variant="secondary"
-            onPress={() => navigation.navigate('OperatorVehicles')}
+            onPress={() => navigation.navigate('OperatorMaintenance')}
+          />
+        </View>
+        <View style={styles.actionGrid}>
+          <Button
+            label="Inspections"
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorInspections')}
+          />
+          <Button
+            label="Compliance"
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorCompliance')}
           />
         </View>
       </Card>

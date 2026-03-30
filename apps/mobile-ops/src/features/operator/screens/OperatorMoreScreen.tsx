@@ -18,6 +18,31 @@ export function OperatorMoreScreen({ navigation }: ScreenProps<'OperatorMore'>) 
           label="Organisation setup"
           onPress={() => navigation.navigate('OperatorBusinessEntities')}
         />
+        <Button
+          label="Inspections"
+          variant="secondary"
+          onPress={() => navigation.navigate('OperatorInspections')}
+        />
+        <Button
+          label="Maintenance"
+          variant="secondary"
+          onPress={() => navigation.navigate('OperatorMaintenance')}
+        />
+        <Button
+          label="Compliance queues"
+          variant="secondary"
+          onPress={() => navigation.navigate('OperatorCompliance')}
+        />
+        <Button
+          label="Audit trail"
+          variant="secondary"
+          onPress={() => navigation.navigate('OperatorAudit')}
+        />
+        <Button
+          label="Offline queue"
+          variant="secondary"
+          onPress={() => navigation.navigate('OfflineQueue')}
+        />
         <Button label="Vehicles" onPress={() => navigation.navigate('OperatorVehicles')} />
         <Button label="Reports" variant="secondary" onPress={() => navigation.navigate('OperatorReports')} />
         <Button label="Wallet" variant="secondary" onPress={() => navigation.navigate('OperatorWallet')} />

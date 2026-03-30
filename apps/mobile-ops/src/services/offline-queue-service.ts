@@ -71,6 +71,17 @@ export async function getQueuedActions() {
   return readQueue();
 }
 
+export async function removeQueuedAction(actionId: string) {
+  const queue = await readQueue();
+  const nextQueue = queue.filter((action) => action.id !== actionId);
+  await writeQueue(nextQueue);
+  return nextQueue;
+}
+
+export async function clearOfflineQueue() {
+  await writeQueue([]);
+}
+
 export async function enqueueOfflineAction(action: Omit<OfflineAction, 'id' | 'createdAt'>) {
   const queue = await readQueue();
   const nextAction: OfflineAction = {

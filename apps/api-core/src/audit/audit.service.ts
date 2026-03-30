@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../database/prisma.service';
 
 type AuditInput = {
@@ -36,5 +37,41 @@ export class AuditService {
           : {}),
       },
     });
+  }
+
+  async listTenantAuditLog(
+    tenantId: string,
+    query: PaginationQueryDto & {
+      entityType?: string;
+      action?: string;
+      actorId?: string;
+    },
+  ) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+    const where = {
+      tenantId,
+      ...(query.entityType ? { entityType: query.entityType } : {}),
+      ...(query.action ? { action: query.action } : {}),
+      ...(query.actorId ? { actorId: query.actorId } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.operationalAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.operationalAuditLog.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 }

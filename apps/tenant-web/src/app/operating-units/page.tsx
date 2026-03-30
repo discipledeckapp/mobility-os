@@ -240,6 +240,9 @@ export default async function OperatingUnitsPage({
                       ? `${item.pendingAssignmentCount} assignment${item.pendingAssignmentCount > 1 ? 's' : ''} still need attention.`
                       : 'No pending assignment pressure right now.'}
                   </Text>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mobiris-primary-dark)]">
+                    Open command center
+                  </span>
                 </div>
               </Link>
             ))}

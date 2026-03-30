@@ -84,6 +84,25 @@ export class InspectionRepository {
     });
   }
 
+  listTenantInspections(tenantId: string, skip = 0, take = 50) {
+    return this.prisma.inspection.findMany({
+      where: { tenantId },
+      include: {
+        results: true,
+        scorecards: { orderBy: { calculatedAt: 'desc' }, take: 1 },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+  }
+
+  countTenantInspections(tenantId: string) {
+    return this.prisma.inspection.count({
+      where: { tenantId },
+    });
+  }
+
   async replaceInspectionResults(
     tenantId: string,
     inspectionId: string,

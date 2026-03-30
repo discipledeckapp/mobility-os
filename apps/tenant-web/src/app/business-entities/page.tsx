@@ -315,6 +315,9 @@ export default async function BusinessEntitiesPage({
                   <Badge tone={item.inactiveFleets > 0 ? 'warning' : 'neutral'}>
                     {item.inactiveFleets > 0 ? `${item.inactiveFleets} fleets inactive` : 'All fleets active'}
                   </Badge>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mobiris-primary-dark)]">
+                    Open command center
+                  </span>
                 </div>
               </Link>
             ))}
@@ -500,6 +503,13 @@ export default async function BusinessEntitiesPage({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <Link
+                      className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                      href={`/business-entities/${selectedEntityCard.entity.id}` as Route}
+                    >
+                      Open entity command center
+                      <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                    </Link>
                     <Link
                       className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
                       href={'/operating-units/new' as Route}

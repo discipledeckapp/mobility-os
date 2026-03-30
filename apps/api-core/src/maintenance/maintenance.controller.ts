@@ -1,6 +1,6 @@
 import { Permission } from '@mobility-os/authz-model';
 import type { TenantContext } from '@mobility-os/tenancy-domain';
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -8,6 +8,8 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import { assertFleetAccess, assertVehicleAccess } from '../auth/tenant-access';
+import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { WorkOrderResponseDto } from './dto/maintenance-response.dto';
@@ -41,6 +43,21 @@ export class MaintenanceController {
     private readonly maintenanceService: MaintenanceService,
     private readonly vehiclesService: VehiclesService,
   ) {}
+
+  @Get('work-orders')
+  @RequirePermissions(Permission.MaintenanceRead)
+  @UseGuards(PermissionsGuard)
+  @ApiOkResponse({ type: [WorkOrderResponseDto] })
+  async listTenantMaintenance(
+    @CurrentTenant() ctx: TenantContext,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<WorkOrderResponseDto>> {
+    const result = await this.maintenanceService.listTenantMaintenance(ctx.tenantId, query);
+    return {
+      ...result,
+      data: result.data.map((item) => toResponse(item)),
+    };
+  }
 
   @Post('work-orders')
   @RequirePermissions(Permission.MaintenanceWrite)

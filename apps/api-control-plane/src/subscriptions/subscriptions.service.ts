@@ -275,6 +275,18 @@ export class SubscriptionsService {
       throw new BadRequestException(`Plan '${newPlanId}' is not active`);
     }
 
+    const assistedUpgradeOnly =
+      newPlan.customTerms != null ||
+      (typeof newPlan.features === 'object' &&
+        newPlan.features !== null &&
+        (newPlan.features as Record<string, unknown>).assistedUpgradeOnly === true);
+
+    if (assistedUpgradeOnly) {
+      throw new BadRequestException(
+        `Plan '${newPlan.name}' requires assisted upgrade. Contact platform support to activate it.`,
+      );
+    }
+
     if (sub.planId === newPlanId) {
       throw new BadRequestException(`Tenant '${tenantId}' is already on plan '${newPlanId}'`);
     }

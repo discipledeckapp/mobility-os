@@ -26,4 +26,20 @@ export class MaintenanceRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  listTenantWorkOrders(tenantId: string, skip = 0, take = 50) {
+    return this.prisma.workOrder.findMany({
+      where: { tenantId },
+      include: { costs: true },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+  }
+
+  countTenantWorkOrders(tenantId: string) {
+    return this.prisma.workOrder.count({
+      where: { tenantId },
+    });
+  }
 }

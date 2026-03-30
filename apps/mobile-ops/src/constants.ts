@@ -67,6 +67,8 @@ export const API_PATHS = {
   drivers: '/drivers',
   assignments: '/assignments',
   remittance: '/remittance',
+  inspections: '/inspections',
+  maintenance: '/maintenance',
   vehicles: '/vehicles',
   fleets: '/fleets',
   businessEntities: '/business-entities',

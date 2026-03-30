@@ -440,6 +440,45 @@ export interface DriverSelfServiceDocumentRecord {
   rejectionReason?: string | null;
 }
 
+export interface DriverDocumentReviewQueueRecord extends DriverSelfServiceDocumentRecord {
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
+}
+
+export interface DriverLicenceReviewQueueRecord {
+  id: string;
+  tenantId: string;
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  driverStatus: string;
+  fleetId: string;
+  status: string;
+  validity: 'valid' | 'invalid' | 'unknown' | null;
+  expiryDate: string | null;
+  linkageDecision: 'auto_pass' | 'pending_human_review' | 'fail';
+  overallLinkageScore: number | null;
+  riskImpact: 'low' | 'medium' | 'high' | 'critical';
+  reviewCaseId: string | null;
+  createdAt: string;
+  verifiedAt?: string | null;
+}
+
+export interface AuditLogRecord {
+  id: string;
+  tenantId: string;
+  actorId: string | null;
+  entityType: string;
+  entityId: string;
+  action: string;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
 export interface DriverSelfServiceTokenExchangeResponse {
   token: string;
 }
@@ -625,6 +664,29 @@ export interface VehicleInspectionRecord {
   createdAt: string;
 }
 
+export interface TenantInspectionRecord {
+  id: string;
+  vehicleId: string;
+  templateId: string;
+  inspectionType: string;
+  status: string;
+  summary?: string | null;
+  odometerKm?: number | null;
+  startedAt: string;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  results: Array<{
+    id: string;
+    checklistItemId: string;
+    result: string;
+    notes?: string | null;
+  }>;
+  latestScore?: {
+    score: number;
+    riskLevel: string;
+  } | null;
+}
+
 export interface VehicleMaintenanceScheduleRecord {
   id: string;
   vehicleId: string;
@@ -652,6 +714,18 @@ export interface VehicleMaintenanceEventRecord {
   costMinorUnits?: number | null;
   currency?: string | null;
   vendor?: string | null;
+  createdAt: string;
+}
+
+export interface WorkOrderRecord {
+  id: string;
+  vehicleId: string;
+  issueDescription: string;
+  priority: string;
+  status: string;
+  vendorId?: string | null;
+  totalCostMinorUnits?: number | null;
+  currency?: string | null;
   createdAt: string;
 }
 
@@ -2148,6 +2222,16 @@ export function createVehicleInspection(
   });
 }
 
+export function listTenantInspections(input: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  inspectionType?: string;
+  vehicleId?: string;
+} = {}): Promise<PaginatedResponse<TenantInspectionRecord>> {
+  return apiFetch<PaginatedResponse<TenantInspectionRecord>>(buildQuery(API_PATHS.inspections, input));
+}
+
 export function upsertVehicleMaintenanceSchedule(
   vehicleId: string,
   input: {
@@ -2191,6 +2275,18 @@ export function createVehicleMaintenanceEvent(
       method: 'POST',
       body: JSON.stringify(input),
     },
+  );
+}
+
+export function listTenantWorkOrders(input: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  priority?: string;
+  vehicleId?: string;
+} = {}): Promise<PaginatedResponse<WorkOrderRecord>> {
+  return apiFetch<PaginatedResponse<WorkOrderRecord>>(
+    buildQuery(`${API_PATHS.maintenance}/work-orders`, input),
   );
 }
 
@@ -2239,6 +2335,37 @@ export function updateDriverStatus(driverId: string, status: string): Promise<Dr
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+export function listDriverDocumentReviewQueue(input: {
+  page?: number;
+  limit?: number;
+  status?: 'pending' | 'rejected' | 'expired';
+  q?: string;
+} = {}): Promise<PaginatedResponse<DriverDocumentReviewQueueRecord>> {
+  return apiFetch<PaginatedResponse<DriverDocumentReviewQueueRecord>>(
+    buildQuery(`${API_PATHS.drivers}/documents/review-queue`, input),
+  );
+}
+
+export function listDriverLicenceReviewQueue(input: {
+  page?: number;
+  limit?: number;
+  q?: string;
+} = {}): Promise<PaginatedResponse<DriverLicenceReviewQueueRecord>> {
+  return apiFetch<PaginatedResponse<DriverLicenceReviewQueueRecord>>(
+    buildQuery(`${API_PATHS.drivers}/licence-verifications/review-queue`, input),
+  );
+}
+
+export function listAuditLog(input: {
+  page?: number;
+  limit?: number;
+  entityType?: string;
+  action?: string;
+  actorId?: string;
+} = {}): Promise<PaginatedResponse<AuditLogRecord>> {
+  return apiFetch<PaginatedResponse<AuditLogRecord>>(buildQuery('/audit', input));
 }
 
 export function listTeamMembers(): Promise<TeamMemberRecord[]> {

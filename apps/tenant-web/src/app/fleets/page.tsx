@@ -338,6 +338,9 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
                   <Badge tone={item.disputedRemittances > 0 ? 'warning' : 'neutral'}>
                     {item.remittanceHealth}
                   </Badge>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mobiris-primary-dark)]">
+                    Open command center
+                  </span>
                 </div>
               </Link>
             ))}
@@ -531,6 +534,13 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
                   <CardContent className="space-y-3">
                     <Link
                       className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                      href={`/fleets/${selectedFleetCard.fleet.id}` as Route}
+                    >
+                      Open fleet command center
+                      <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                    </Link>
+                    <Link
+                      className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
                       href={'/drivers/new' as Route}
                     >
                       Add driver
@@ -548,6 +558,13 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
                       href={'/vehicles/new' as Route}
                     >
                       Add vehicle
+                      <span className="text-[var(--mobiris-primary-dark)]">Open</span>
+                    </Link>
+                    <Link
+                      className="flex min-h-12 items-center justify-between rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                      href={selectedFleetCard.operatingUnit ? (`/operating-units/${selectedFleetCard.operatingUnit.id}` as Route) : ('/operating-units' as Route)}
+                    >
+                      Review operating unit
                       <span className="text-[var(--mobiris-primary-dark)]">Open</span>
                     </Link>
                     <Link

@@ -1,7 +1,36 @@
-import type { LinkingOptions } from '@react-navigation/native';
+import { getStateFromPath as getNavigationStateFromPath, type LinkingOptions } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
 
-export const MOBILE_LINK_PREFIXES = ['mobiris-mobile-ops://', 'mobiris://'] as const;
+export const MOBILE_LINK_PREFIXES = [
+  'mobiris-mobile-ops://',
+  'mobiris://',
+  'https://app.mobiris.ng',
+] as const;
+
+function normalizeIncomingPath(path: string) {
+  const [rawPath, rawQuery = ''] = path.split('?');
+  const normalizedPath = rawPath.replace(/^\/+/, '');
+  const query = new URLSearchParams(rawQuery);
+
+  if (normalizedPath === 'driver-self-service') {
+    const token = query.get('token');
+    return token ? `self-service/${encodeURIComponent(token)}` : 'self-service';
+  }
+
+  if (normalizedPath === 'guarantor-self-service') {
+    const token = query.get('token');
+    return token
+      ? `guarantor-self-service/${encodeURIComponent(token)}`
+      : 'guarantor-self-service';
+  }
+
+  if (normalizedPath === 'reset-password') {
+    const email = query.get('email');
+    return email ? `reset-password?email=${encodeURIComponent(email)}` : 'reset-password';
+  }
+
+  return path;
+}
 
 export const mobileLinking: LinkingOptions<RootStackParamList> = {
   prefixes: [...MOBILE_LINK_PREFIXES],
@@ -28,6 +57,10 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
       OperatorVehicles: 'operator/vehicles',
       OperatorVehicleCreate: 'operator/vehicles/new',
       OperatorVehicleDetail: 'operator/vehicles/:vehicleId',
+      OperatorInspections: 'operator/inspections',
+      OperatorMaintenance: 'operator/maintenance',
+      OperatorCompliance: 'operator/compliance',
+      OperatorAudit: 'operator/audit',
       OperatorBusinessEntities: 'operator/business-entities',
       OperatorBusinessEntityDetail: 'operator/business-entities/:businessEntityId?',
       OperatorOperatingUnits: 'operator/operating-units/:businessEntityId?',
@@ -38,12 +71,16 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
       OperatorWallet: 'operator/wallet',
       OperatorSettings: 'operator/settings',
       OperatorMore: 'operator/more',
+      OfflineQueue: 'offline-queue',
       Home: '',
       AssignmentDetail: 'assignment/:assignmentId',
       RemittanceHistory: 'remittance/history',
       Remittance: 'remittance/:assignmentId?',
       Profile: 'profile',
     },
+  },
+  getStateFromPath(path, options) {
+    return getNavigationStateFromPath(normalizeIncomingPath(path), options);
   },
 };
 

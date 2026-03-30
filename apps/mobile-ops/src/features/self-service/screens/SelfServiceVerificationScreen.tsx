@@ -243,6 +243,7 @@ export function SelfServiceVerificationScreen({
   const [savingProfile, setSavingProfile] = useState(false);
   const [recordingConsent, setRecordingConsent] = useState(false);
   const previousCountryCodeRef = useRef(countryCode);
+  const pendingExternalContinuationRef = useRef<null | 'payment' | 'browser_liveness'>(null);
   const [firstName, setFirstName] = useState(driver?.firstName ?? '');
   const [lastName, setLastName] = useState(driver?.lastName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(driver?.dateOfBirth ?? '');
@@ -517,13 +518,42 @@ export function SelfServiceVerificationScreen({
     [identifierTypes, identifierValues],
   );
 
-  const nativeLivenessSupported = Platform.OS !== 'android' || isYouVerifyLivenessAvailable();
+  const nativeLivenessSupported = isYouVerifyLivenessAvailable();
   const biometricReady = !biometricVerificationRequired || nativeLivenessPassed === true;
   const canSubmitIdentity = useMemo(
     () =>
       verificationLifecycle !== 'completed' && Boolean(token && identifiersReady && biometricReady),
     [biometricReady, identifiersReady, token, verificationLifecycle],
   );
+
+  const refreshVerificationStatus = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    await refreshSelfService();
+
+    if (!biometricVerificationRequired) {
+      return;
+    }
+
+    try {
+      const readiness = await getDriverSelfServiceLivenessReadiness(token, { countryCode });
+      setLivenessReadiness(readiness);
+    } catch (error) {
+      setLivenessReadiness({
+        countryCode,
+        ready: false,
+        status: 'temporarily_unavailable',
+        configuredProviders: [],
+        checkedAt: new Date().toISOString(),
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Live verification is temporarily unavailable right now.',
+      });
+    }
+  }, [biometricVerificationRequired, countryCode, refreshSelfService, token]);
 
   const openBrowserLivenessFallback = useCallback(async () => {
     if (!token) return;
@@ -537,8 +567,9 @@ export function SelfServiceVerificationScreen({
       if (!supported) {
         throw new Error('This device cannot open the browser verification flow right now.');
       }
+      pendingExternalContinuationRef.current = 'browser_liveness';
       setLivenessFeedback(
-        'Continue in your browser to finish the secure face verification step. Return here afterwards and refresh your progress.',
+        'Continue in your browser to finish the secure face verification step. Return here afterwards and your progress will refresh automatically.',
       );
       await Linking.openURL(browserUrl);
     } catch (error) {
@@ -699,6 +730,9 @@ export function SelfServiceVerificationScreen({
       if (result.passed) {
         setNativeLivenessPassed(true);
         setNativeLivenessFaceB64(result.faceImageB64);
+        setLivenessSession((current) =>
+          current ? { ...current, sessionId: result.sessionId } : current,
+        );
         setLivenessFeedback(
           'Face verification passed. Review the details below, then submit your identity check.',
         );
@@ -881,6 +915,7 @@ export function SelfServiceVerificationScreen({
         setCurrentStep('identity');
         return;
       }
+      pendingExternalContinuationRef.current = 'payment';
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
       Alert.alert(
@@ -914,7 +949,7 @@ export function SelfServiceVerificationScreen({
           ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
         }),
       ]);
-      await refreshSelfService();
+      await refreshVerificationStatus();
       showToast('Details confirmed.', 'success');
       setCurrentStep('documents');
     } catch (error) {
@@ -951,8 +986,32 @@ export function SelfServiceVerificationScreen({
   useFocusEffect(
     useCallback(() => {
       if (!token || !needsVerificationPayment) return;
-      refreshSelfService().catch(() => undefined);
-    }, [token, needsVerificationPayment, refreshSelfService]),
+      if (pendingExternalContinuationRef.current) {
+        const source = pendingExternalContinuationRef.current;
+        pendingExternalContinuationRef.current = null;
+        refreshVerificationStatus()
+          .then(() => {
+            showToast(
+              source === 'payment'
+                ? 'Payment status refreshed.'
+                : 'Verification progress refreshed.',
+              'success',
+            );
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (needsVerificationPayment) {
+        refreshSelfService().catch(() => undefined);
+      }
+    }, [
+      token,
+      needsVerificationPayment,
+      refreshSelfService,
+      refreshVerificationStatus,
+      showToast,
+    ]),
   );
 
   useEffect(() => {
@@ -1002,13 +1061,13 @@ export function SelfServiceVerificationScreen({
         buildSelfServiceVerificationDeepLink(),
       );
       if (checkout.status === 'already_paid' || !checkout.checkoutUrl) {
-        await refreshSelfService();
+        await refreshVerificationStatus();
         showToast('Payment confirmed — continuing to verification.', 'success');
         setCurrentStep('identity');
         return;
       }
       // Payment genuinely not found yet — refresh state and stay on step.
-      await refreshSelfService();
+      await refreshVerificationStatus();
       showToast(
         'Payment not confirmed yet. If you completed payment, wait a moment and try again.',
         'info',
@@ -1058,7 +1117,7 @@ export function SelfServiceVerificationScreen({
 
       // Brief delay so the server write is visible before we re-fetch.
       await new Promise((resolve) => setTimeout(resolve, 800));
-      await refreshSelfService();
+      await refreshVerificationStatus();
       showToast('Document uploaded.', 'success');
     } catch (error) {
       Alert.alert(
@@ -1075,7 +1134,7 @@ export function SelfServiceVerificationScreen({
     try {
       setRemovingDocumentId(documentId);
       await removeDriverSelfServiceDocument(token, documentId);
-      await refreshSelfService();
+      await refreshVerificationStatus();
       showToast('Document removed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -1635,6 +1694,32 @@ export function SelfServiceVerificationScreen({
                   <Text style={styles.warningText}>{livenessReadiness.message}</Text>
                 </View>
               ) : null}
+              {livenessReadiness ? (
+                <View style={styles.statusCard}>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Provider readiness</Text>
+                    <Badge
+                      label={livenessReadiness.ready ? 'Ready' : formatStatusLabel(livenessReadiness.status)}
+                      tone={livenessReadiness.ready ? 'success' : 'warning'}
+                    />
+                  </View>
+                  <Text style={styles.meta}>
+                    Checked {new Date(livenessReadiness.checkedAt).toLocaleString()}
+                  </Text>
+                  {livenessReadiness.activeProvider ? (
+                    <Text style={styles.meta}>
+                      Active provider: {formatStatusLabel(livenessReadiness.activeProvider)}
+                    </Text>
+                  ) : null}
+                  {!identitySubmitted ? (
+                    <Button
+                      label="Refresh liveness status"
+                      variant="secondary"
+                      onPress={() => void refreshVerificationStatus()}
+                    />
+                  ) : null}
+                </View>
+              ) : null}
               {nativeLivenessPassed === true ? (
                 <View style={styles.successRow}>
                   <Badge label="Face verification passed" tone="success" />
@@ -2140,6 +2225,10 @@ function formatIdentityLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function formatDecisionLabel(decision: string) {
   if (decision === 'verified') return 'Verified';
   if (decision === 'review_needed') return 'Under review';
@@ -2202,6 +2291,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  label: { color: tokens.colors.ink, fontSize: 14, fontWeight: '600', flex: 1 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.xs },
   successRow: {
     flexDirection: 'row',
@@ -2223,6 +2319,14 @@ const styles = StyleSheet.create({
     color: '#9a3412',
     fontSize: 13,
     lineHeight: 18,
+  },
+  statusCard: {
+    gap: tokens.spacing.xs,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#f8fafc',
+    padding: tokens.spacing.sm,
   },
   chipRow: { gap: tokens.spacing.xs },
   chip: {

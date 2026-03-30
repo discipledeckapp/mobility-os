@@ -20,6 +20,10 @@ function formatMajorAmount(amountMinorUnits: number): string {
   });
 }
 
+function isCustomPlan(plan: TenantBillingPlanRecord): boolean {
+  return plan.tier === 'enterprise' || Boolean(plan.customTerms);
+}
+
 function getPlanNumericFeature(
   plan: TenantBillingPlanRecord,
   key: string,
@@ -49,6 +53,7 @@ function formatCap(value: number | null, suffix: string): string {
 
 function getPlanHighlights(plan: TenantBillingPlanRecord): string[] {
   const highlights = [
+    formatCap(getPlanNumericFeature(plan, 'operatingUnitCap'), 'operating units'),
     formatCap(getPlanNumericFeature(plan, 'driverCap'), 'drivers'),
     formatCap(getPlanNumericFeature(plan, 'vehicleCap'), 'vehicles'),
     formatCap(getPlanNumericFeature(plan, 'seatLimit'), 'seats'),
@@ -80,6 +85,14 @@ function getPlanHighlights(plan: TenantBillingPlanRecord): string[] {
   }
 
   return highlights;
+}
+
+function getPlanPriceLabel(plan: TenantBillingPlanRecord): string {
+  if (isCustomPlan(plan)) {
+    return 'Custom pricing';
+  }
+
+  return `${plan.currency} ${formatMajorAmount(plan.basePriceMinorUnits)} / ${plan.billingInterval}`;
 }
 
 export function SubscriptionManagementPanel({
@@ -209,11 +222,17 @@ export function SubscriptionManagementPanel({
           <div className="grid gap-3">
             {availablePlans.map((plan) => {
               const isCurrent = plan.id === summary.subscription.planId;
-              const price = formatMajorAmount(plan.basePriceMinorUnits);
+              const customPlan = isCustomPlan(plan);
               const planHighlights = getPlanHighlights(plan);
               const isUpgrade =
                 currentPlanPrice != null && plan.basePriceMinorUnits > currentPlanPrice;
-              const actionLabel = isCurrent ? 'Current plan' : isUpgrade ? 'Upgrade' : 'Switch plan';
+              const actionLabel = isCurrent
+                ? 'Current plan'
+                : customPlan
+                  ? 'Talk to support'
+                  : isUpgrade
+                    ? 'Upgrade'
+                    : 'Switch plan';
 
               return (
                 <form
@@ -234,16 +253,27 @@ export function SubscriptionManagementPanel({
                             {plan.name}
                           </p>
                           <Badge tone={isCurrent || !isUpgrade ? 'neutral' : 'success'}>
-                            {isCurrent ? 'Active' : isUpgrade ? 'Upgrade option' : 'Alternative'}
+                            {isCurrent
+                              ? 'Active'
+                              : customPlan
+                                ? 'Assisted plan'
+                                : isUpgrade
+                                  ? 'Upgrade option'
+                                  : 'Alternative'}
                           </Badge>
                         </div>
                         <p className="mt-1 text-sm text-slate-500">
-                          {plan.currency} {price} / {plan.billingInterval}
+                          {getPlanPriceLabel(plan)}
                         </p>
+                        {customPlan ? (
+                          <p className="mt-2 text-xs text-slate-500">
+                            Enterprise onboarding is handled with custom commercial terms and platform support.
+                          </p>
+                        ) : null}
                       </div>
                       <Button
                         className="shrink-0"
-                        disabled={planPending || isCurrent}
+                        disabled={planPending || isCurrent || customPlan}
                         type="submit"
                         variant={isCurrent ? 'secondary' : isUpgrade ? 'primary' : 'secondary'}
                       >

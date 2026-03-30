@@ -19,14 +19,19 @@ import { ProfileScreen } from '../features/drivers/screens/ProfileScreen';
 import { BusinessEntitiesScreen } from '../features/operator/screens/BusinessEntitiesScreen';
 import { BusinessEntityDetailScreen } from '../features/operator/screens/BusinessEntityDetailScreen';
 import { CreateAssignmentScreen } from '../features/operator/screens/CreateAssignmentScreen';
+import { OfflineQueueScreen } from '../features/operator/screens/OfflineQueueScreen';
+import { OperatorAuditScreen } from '../features/operator/screens/OperatorAuditScreen';
 import { DriverDetailScreen } from '../features/operator/screens/DriverDetailScreen';
 import { DriversScreen } from '../features/operator/screens/DriversScreen';
 import { FleetDetailScreen } from '../features/operator/screens/FleetDetailScreen';
 import { FleetsScreen } from '../features/operator/screens/FleetsScreen';
+import { OperatorComplianceScreen } from '../features/operator/screens/OperatorComplianceScreen';
 import { OperatingUnitDetailScreen } from '../features/operator/screens/OperatingUnitDetailScreen';
 import { OperatingUnitsScreen } from '../features/operator/screens/OperatingUnitsScreen';
 import { OperatorAssignmentsScreen } from '../features/operator/screens/OperatorAssignmentsScreen';
 import { OperatorDashboardScreen } from '../features/operator/screens/OperatorDashboardScreen';
+import { OperatorInspectionsScreen } from '../features/operator/screens/OperatorInspectionsScreen';
+import { OperatorMaintenanceScreen } from '../features/operator/screens/OperatorMaintenanceScreen';
 import { OperatorMoreScreen } from '../features/operator/screens/OperatorMoreScreen';
 import { OperatorRemittanceDetailScreen } from '../features/operator/screens/OperatorRemittanceDetailScreen';
 import { OperatorRemittanceScreen } from '../features/operator/screens/OperatorRemittanceScreen';
@@ -221,6 +226,11 @@ export function RootNavigator() {
               component={ProfileScreen}
               options={{ title: 'Verification status' }}
             />
+            <Stack.Screen
+              name="OfflineQueue"
+              component={OfflineQueueScreen}
+              options={{ title: 'Offline queue' }}
+            />
             {!requiresSelfServiceContinuation && isDriverMobileMode ? (
               <>
                 <Stack.Screen
@@ -257,6 +267,11 @@ export function RootNavigator() {
                 name="OperatorDashboard"
                 component={OperatorDashboardScreen}
                 options={{ title: 'Dashboard' }}
+              />
+              <Stack.Screen
+                name="OfflineQueue"
+                component={OfflineQueueScreen}
+                options={{ title: 'Offline queue' }}
               />
               <Stack.Screen
                 name="OperatorDrivers"
@@ -302,6 +317,26 @@ export function RootNavigator() {
                 name="OperatorVehicleDetail"
                 component={VehicleDetailScreen}
                 options={{ title: 'Vehicle detail' }}
+              />
+              <Stack.Screen
+                name="OperatorInspections"
+                component={OperatorInspectionsScreen}
+                options={{ title: 'Inspections' }}
+              />
+              <Stack.Screen
+                name="OperatorMaintenance"
+                component={OperatorMaintenanceScreen}
+                options={{ title: 'Maintenance' }}
+              />
+              <Stack.Screen
+                name="OperatorCompliance"
+                component={OperatorComplianceScreen}
+                options={{ title: 'Compliance queues' }}
+              />
+              <Stack.Screen
+                name="OperatorAudit"
+                component={OperatorAuditScreen}
+                options={{ title: 'Audit trail' }}
               />
               <Stack.Screen
                 name="OperatorBusinessEntities"

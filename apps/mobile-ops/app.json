@@ -29,7 +29,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mobiris.mobileops"
+      "bundleIdentifier": "com.mobiris.mobileops",
+      "associatedDomains": [
+        "applinks:app.mobiris.ng"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +40,34 @@
         "backgroundColor": "#0F172A"
       },
       "package": "com.mobiris.mobileops",
-      "versionCode": 4
+      "versionCode": 4,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.mobiris.ng",
+              "pathPrefix": "/driver-self-service"
+            },
+            {
+              "scheme": "https",
+              "host": "app.mobiris.ng",
+              "pathPrefix": "/guarantor-self-service"
+            },
+            {
+              "scheme": "https",
+              "host": "app.mobiris.ng",
+              "pathPrefix": "/reset-password"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "extra": {
       "apiUrl": "https://api.mobiris.ng/api/v1",

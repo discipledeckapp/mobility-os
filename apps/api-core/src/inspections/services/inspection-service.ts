@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import type { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { VehicleRiskService } from '../../vehicle-risk/services/vehicle-risk.service';
 import { InspectionRepository } from '../repositories/inspection.repository';
@@ -343,5 +344,23 @@ export class InspectionService {
 
   async listVehicleInspections(tenantId: string, vehicleId: string) {
     return this.repository.listVehicleInspections(tenantId, vehicleId);
+  }
+
+  async listTenantInspections(tenantId: string, query: PaginationQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.repository.listTenantInspections(tenantId, skip, limit),
+      this.repository.countTenantInspections(tenantId),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 }

@@ -22,6 +22,7 @@ import type { ScreenProps } from '../../../navigation/types';
 import type { AssignmentRecord, DriverRecord } from '../../../api';
 import type { AssignmentFilter } from '../../../services/assignment-service';
 import { tokens } from '../../../theme/tokens';
+import { resolveNextDriverAction } from '../../self-service/verification-flow';
 
 const FILTER_OPTIONS: Array<{ label: string; value: AssignmentFilter }> = [
   { label: 'All', value: 'all' },
@@ -122,6 +123,10 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
     () => pickCurrentAssignment(assignments),
     [assignments],
   );
+  const nextDriverAction = useMemo(
+    () => (driver ? resolveNextDriverAction(driver, 0) : null),
+    [driver],
+  );
   const canRecordAnyRemittance = assignments.some(
     (assignment) =>
       assignment.status === 'active' &&
@@ -219,6 +224,18 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                 />
               </View>
               <Text style={styles.muted}>{readinessSummary(driver)}</Text>
+              {nextDriverAction ? (
+                <Card style={styles.nextActionCard}>
+                  <Text style={styles.nextActionTitle}>{nextDriverAction.title}</Text>
+                  <Text style={styles.muted}>{nextDriverAction.description}</Text>
+                  <Button
+                    accessibilityHint="Open the next required onboarding action"
+                    label={nextDriverAction.cta}
+                    variant="secondary"
+                    onPress={() => navigation.navigate(nextDriverAction.target)}
+                  />
+                </Card>
+              ) : null}
               {selfServiceToken ? (
                 <Button
                   accessibilityHint="Open the onboarding readiness checklist for this driver"
@@ -571,6 +588,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+  },
+  nextActionCard: {
+    gap: tokens.spacing.sm,
+    backgroundColor: '#F8FAFC',
+  },
+  nextActionTitle: {
+    color: tokens.colors.ink,
+    fontSize: 16,
+    fontWeight: '700',
   },
   filterRow: {
     gap: tokens.spacing.sm,

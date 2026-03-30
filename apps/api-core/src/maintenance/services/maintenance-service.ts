@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import type { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { VehicleRiskService } from '../../vehicle-risk/services/vehicle-risk.service';
 import type { CreateWorkOrderDto } from '../dto/create-work-order.dto';
@@ -132,6 +133,24 @@ export class MaintenanceService {
 
   async listVehicleMaintenance(tenantId: string, vehicleId: string) {
     return this.repository.listVehicleWorkOrders(tenantId, vehicleId);
+  }
+
+  async listTenantMaintenance(tenantId: string, query: PaginationQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.repository.listTenantWorkOrders(tenantId, skip, limit),
+      this.repository.countTenantWorkOrders(tenantId),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   async updateWorkOrder(tenantId: string, actorId: string | null | undefined, workOrderId: string, dto: UpdateWorkOrderDto) {

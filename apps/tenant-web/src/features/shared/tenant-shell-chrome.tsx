@@ -44,17 +44,6 @@ export function TenantShellChrome({
   const [billingSummary, setBillingSummary] = useState<TenantBillingSummaryRecord | null>(null);
 
   useEffect(() => {
-    const stored = globalThis.localStorage?.getItem('tenant-shell-collapsed');
-    if (stored === '1') {
-      setCollapsed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    globalThis.localStorage?.setItem('tenant-shell-collapsed', collapsed ? '1' : '0');
-  }, [collapsed]);
-
-  useEffect(() => {
     let mounted = true;
     void getTenantBillingSummary()
       .then((summary) => {
@@ -84,7 +73,7 @@ export function TenantShellChrome({
             collapsed ? 'w-[5.5rem] px-2' : 'w-72 px-4'
           }`}
         >
-          <div className={`mb-6 flex items-start ${collapsed ? 'justify-center' : 'justify-between'} gap-3 px-2`}>
+          <div className="mb-6 flex flex-col gap-3 px-2">
             <div className={`relative flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
               <div className="flex h-8 w-8 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] shadow-[0_8px_20px_-8px_rgba(37,99,235,0.8)]">
                 <span className="text-sm font-bold tracking-tight text-white">M</span>
@@ -108,15 +97,17 @@ export function TenantShellChrome({
                 </div>
               ) : null}
             </div>
-            <button
-              className={`rounded-[var(--mobiris-radius-button)] p-2 text-blue-50/60 transition hover:bg-white/8 hover:text-white ${
-                collapsed ? 'absolute left-1/2 top-20 hidden -translate-x-1/2 group-hover/sidebar:block' : ''
-              }`}
-              onClick={() => setCollapsed((value) => !value)}
-              type="button"
-            >
-              {collapsed ? '»' : '«'}
-            </button>
+            <div className={`flex ${collapsed ? 'justify-center' : 'justify-end'}`}>
+              <button
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-white/10 bg-white/5 text-blue-50/70 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                onClick={() => setCollapsed((value) => !value)}
+                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                type="button"
+              >
+                {collapsed ? '»' : '«'}
+              </button>
+            </div>
           </div>
 
           {!collapsed ? (

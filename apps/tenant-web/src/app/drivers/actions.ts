@@ -1072,6 +1072,8 @@ export async function reviewDriverDocumentAction(
 
   revalidatePath(`/drivers/${driverId}`);
   revalidatePath('/drivers');
+  revalidatePath('/drivers/review-queue');
+  revalidatePath('/records');
 
   return {
     success:

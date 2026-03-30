@@ -25,6 +25,7 @@ export type RootStackParamList = {
   Remittance: { assignmentId?: string };
   RemittanceHistory: undefined;
   Profile: undefined;
+  OfflineQueue: undefined;
   OperatorDashboard: undefined;
   OperatorDrivers: undefined;
   OperatorDriverDetail: { driverId: string };
@@ -35,6 +36,10 @@ export type RootStackParamList = {
   OperatorVehicles: undefined;
   OperatorVehicleCreate: undefined;
   OperatorVehicleDetail: { vehicleId: string };
+  OperatorInspections: undefined;
+  OperatorMaintenance: undefined;
+  OperatorCompliance: undefined;
+  OperatorAudit: undefined;
   OperatorBusinessEntities: undefined;
   OperatorBusinessEntityDetail: { businessEntityId?: string } | undefined;
   OperatorOperatingUnits: { businessEntityId?: string } | undefined;

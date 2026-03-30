@@ -9,6 +9,7 @@ import {
   Text,
 } from '@mobility-os/ui';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { TenantAppShell } from '../../../../features/shared/tenant-app-shell';
 import { getDriver, getTenantMe } from '../../../../lib/api-core';
 import { getDriverIdentityLabel, getDriverIdentityTone } from '../../../../lib/driver-identity';
@@ -98,6 +99,38 @@ export default async function DriverReviewPage({
                 <Text>{driver.identityVerificationConfidence ?? 'Not provided'}</Text>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Decision handoff</CardTitle>
+            <CardDescription>
+              Use this page to inspect evidence, then jump back into the owning workflow to continue the broader document or licence decision.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            <Link
+              className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
+              href={`/drivers/${driver.id}` as Route}
+            >
+              <Text tone="strong">Driver profile</Text>
+              <Text tone="muted">Return to the main driver record for broader status and document actions.</Text>
+            </Link>
+            <Link
+              className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
+              href={'/drivers/review-queue' as Route}
+            >
+              <Text tone="strong">Document review queue</Text>
+              <Text tone="muted">Go back to the next pending document when you are working through submissions in sequence.</Text>
+            </Link>
+            <Link
+              className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
+              href={'/drivers/licence-review' as Route}
+            >
+              <Text tone="strong">Licence review queue</Text>
+              <Text tone="muted">Step into the wider licence backlog when this case is part of a provider-verification watchlist.</Text>
+            </Link>
           </CardContent>
         </Card>
 

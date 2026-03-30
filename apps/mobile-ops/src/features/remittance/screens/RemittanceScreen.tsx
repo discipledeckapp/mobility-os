@@ -276,6 +276,15 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         <Text style={styles.muted}>
           Select the assignment this payment belongs to, then record the amount and date.
         </Text>
+        <View style={styles.headerRow}>
+          <Button
+            accessibilityHint="Review queued offline actions waiting to sync"
+            containerStyle={styles.historyButton}
+            label="Offline queue"
+            variant="secondary"
+            onPress={() => navigation.navigate('OfflineQueue')}
+          />
+        </View>
       </Card>
 
       <Card style={styles.section}>
