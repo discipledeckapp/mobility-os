@@ -1,5 +1,7 @@
 import {
   TENANT_AUTH_COOKIE_NAME,
+  TENANT_FORWARDED_AUTH_HEADER,
+  TENANT_FORWARDED_REFRESH_HEADER,
   TENANT_REFRESH_COOKIE_NAME,
   isTenantJwtUsable,
   parseTenantJwtPayload,
@@ -1500,6 +1502,16 @@ export interface TenantBillingSummaryRecord {
       initialReference?: string | null;
     } | null;
   };
+  billingPaymentMethod?: {
+    provider: string;
+    last4: string;
+    brand: string;
+    status: string;
+    active: boolean;
+    autopayEnabled: boolean;
+    createdAt: string;
+    initialReference?: string | null;
+  } | null;
   customerEmail: string;
   customerName: string;
 }
@@ -1594,13 +1606,21 @@ export async function getTenantApiToken(explicitToken?: string): Promise<string>
   }
 
   const { cookies } = await import('next/headers');
+  const { headers } = await import('next/headers');
+  const headerStore = await headers();
+  const forwardedAccessToken = headerStore.get(TENANT_FORWARDED_AUTH_HEADER) ?? undefined;
+  if (isTenantJwtUsable(forwardedAccessToken)) {
+    return forwardedAccessToken as string;
+  }
+
+  const forwardedRefreshToken = headerStore.get(TENANT_FORWARDED_REFRESH_HEADER) ?? undefined;
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(TENANT_AUTH_COOKIE_NAME)?.value;
   if (isTenantJwtUsable(cookieToken)) {
     return cookieToken as string;
   }
 
-  const refreshToken = cookieStore.get(TENANT_REFRESH_COOKIE_NAME)?.value;
+  const refreshToken = forwardedRefreshToken ?? cookieStore.get(TENANT_REFRESH_COOKIE_NAME)?.value;
   if (refreshToken) {
     const tokens = await refreshTenantTokens(refreshToken);
     return tokens.accessToken;
@@ -2098,6 +2118,21 @@ export async function initializeTenantInvoiceCheckout(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function initializeTenantSubscriptionBillingSetupCheckout(
+  input: { provider?: string; amountMinorUnits?: number },
+  token?: string,
+): Promise<TenantPaymentCheckoutRecord> {
+  return apiCoreFetch<TenantPaymentCheckoutRecord>(
+    '/tenant-billing/subscription/payment-method/checkout',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 export async function verifyAndApplyTenantPayment(

@@ -1,5 +1,7 @@
 export const TENANT_AUTH_COOKIE_NAME = 'mobility_os_tenant_jwt';
 export const TENANT_REFRESH_COOKIE_NAME = 'mobility_os_refresh';
+export const TENANT_FORWARDED_AUTH_HEADER = 'x-mobility-os-tenant-access-token';
+export const TENANT_FORWARDED_REFRESH_HEADER = 'x-mobility-os-tenant-refresh-token';
 
 type TenantCookieOptions = {
   httpOnly: boolean;

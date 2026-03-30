@@ -8,6 +8,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { TenantAuthGuard } from '../auth/guards/tenant-auth.guard';
 import { TenantLifecycleGuard } from '../auth/guards/tenant-lifecycle.guard';
 import { InitializeCardSetupCheckoutDto } from './dto/initialize-card-setup-checkout.dto';
+import { InitializeSubscriptionBillingSetupDto } from './dto/initialize-subscription-billing-setup.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeTenantInvoicePaymentDto } from './dto/initialize-tenant-invoice-payment.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
@@ -89,6 +90,21 @@ export class TenantBillingController {
     @Body() dto: InitializeTenantInvoicePaymentDto,
   ): Promise<TenantPaymentCheckoutDto> {
     return this.tenantBillingService.initializeInvoicePayment(ctx.tenantId, ctx.userId, dto);
+  }
+
+  @Post('subscription/payment-method/checkout')
+  @RequirePermissions(Permission.TenantsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: TenantPaymentCheckoutDto })
+  initializeSubscriptionBillingSetupCheckout(
+    @CurrentTenant() ctx: TenantContext,
+    @Body() dto: InitializeSubscriptionBillingSetupDto,
+  ): Promise<TenantPaymentCheckoutDto> {
+    return this.tenantBillingService.initializeSubscriptionBillingSetupCheckout(
+      ctx.tenantId,
+      ctx.userId,
+      dto,
+    );
   }
 
   @Post('payments/verify-and-apply')

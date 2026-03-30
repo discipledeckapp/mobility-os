@@ -28,6 +28,17 @@ type FleetsPageProps = {
   }>;
 };
 
+type ResolvedFleetsPageData = {
+  fleets: Awaited<ReturnType<typeof listFleets>>;
+  operatingUnits: Awaited<ReturnType<typeof listOperatingUnits>>;
+  entities: Awaited<ReturnType<typeof listBusinessEntities>>;
+  drivers: Awaited<ReturnType<typeof listDrivers>>['data'];
+  vehicles: Awaited<ReturnType<typeof listVehicles>>['data'];
+  assignments: Awaited<ReturnType<typeof listAssignments>>['data'];
+  remittances: Awaited<ReturnType<typeof listRemittances>>['data'];
+  degraded: boolean;
+};
+
 function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
   if (status === 'active') return 'success';
   if (status === 'inactive') return 'warning';
@@ -87,23 +98,62 @@ function getRemittanceHealth(input: {
   return 'Collections on track';
 }
 
+async function resolveFleetsPageData(): Promise<ResolvedFleetsPageData> {
+  const [
+    fleetsResult,
+    operatingUnitsResult,
+    entitiesResult,
+    driversResult,
+    vehiclesResult,
+    assignmentsResult,
+    remittancesResult,
+  ] = await Promise.allSettled([
+    listFleets(),
+    listOperatingUnits(),
+    listBusinessEntities(),
+    listDrivers({ limit: 500 }),
+    listVehicles({ limit: 500 }),
+    listAssignments({ limit: 500 }),
+    listRemittances({ limit: 500 }),
+  ]);
+
+  if (fleetsResult.status === 'rejected') {
+    throw fleetsResult.reason;
+  }
+
+  return {
+    fleets: fleetsResult.value,
+    operatingUnits:
+      operatingUnitsResult.status === 'fulfilled' ? operatingUnitsResult.value : [],
+    entities: entitiesResult.status === 'fulfilled' ? entitiesResult.value : [],
+    drivers: driversResult.status === 'fulfilled' ? driversResult.value.data : [],
+    vehicles: vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [],
+    assignments:
+      assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [],
+    remittances:
+      remittancesResult.status === 'fulfilled' ? remittancesResult.value.data : [],
+    degraded:
+      operatingUnitsResult.status === 'rejected' ||
+      entitiesResult.status === 'rejected' ||
+      driversResult.status === 'rejected' ||
+      vehiclesResult.status === 'rejected' ||
+      assignmentsResult.status === 'rejected' ||
+      remittancesResult.status === 'rejected',
+  };
+}
+
 export default async function FleetsPage({ searchParams }: FleetsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const [fleets, operatingUnits, entities, driversResult, vehiclesResult, assignmentsResult, remittancesResult] =
-    await Promise.all([
-      listFleets(),
-      listOperatingUnits(),
-      listBusinessEntities(),
-      listDrivers({ limit: 500 }),
-      listVehicles({ limit: 500 }),
-      listAssignments({ limit: 500 }),
-      listRemittances({ limit: 500 }),
-    ]);
-
-  const drivers = driversResult.data;
-  const vehicles = vehiclesResult.data;
-  const assignments = assignmentsResult.data;
-  const remittances = remittancesResult.data;
+  const {
+    fleets,
+    operatingUnits,
+    entities,
+    drivers,
+    vehicles,
+    assignments,
+    remittances,
+    degraded,
+  } = await resolveFleetsPageData();
   const selectedFleetId = resolvedSearchParams.fleetId ?? fleets[0]?.id ?? null;
 
   const fleetCards = fleets.map((fleet) => {
@@ -194,6 +244,11 @@ export default async function FleetsPage({ searchParams }: FleetsPageProps) {
           <Text tone="muted">
             See which fleets are staffed, which ones need assignments, and where collections or risk signals need attention.
           </Text>
+          {degraded ? (
+            <Text className="text-amber-700">
+              Some linked roster, assignment, or remittance signals are temporarily unavailable, so a few fleet metrics may be incomplete right now.
+            </Text>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-3">
           <Link

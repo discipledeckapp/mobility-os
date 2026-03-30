@@ -100,6 +100,17 @@ export interface TenantPaymentApplication {
   };
 }
 
+export interface TenantBillingPaymentMethodSummary {
+  provider: string;
+  last4: string;
+  brand: string;
+  status: string;
+  active: boolean;
+  autopayEnabled: boolean;
+  createdAt: string;
+  initialReference?: string | null;
+}
+
 @Injectable()
 export class ControlPlaneBillingClient {
   constructor(private readonly configService: ConfigService) {}
@@ -148,6 +159,12 @@ export class ControlPlaneBillingClient {
 
   async listPlatformWalletEntries(tenantId: string): Promise<TenantPlatformWalletEntry[]> {
     return this.request(`/internal/platform-wallets/tenant/${tenantId}/entries`);
+  }
+
+  async getBillingPaymentMethod(
+    tenantId: string,
+  ): Promise<TenantBillingPaymentMethodSummary> {
+    return this.request(`/internal/payments/tenant/${tenantId}/billing-payment-method`);
   }
 
   async initializeWalletTopUp(input: {
@@ -224,6 +241,21 @@ export class ControlPlaneBillingClient {
     redirectUrl: string;
   }): Promise<TenantPaymentCheckout> {
     return this.request('/internal/payments/card-authorization-setups', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async initializeSubscriptionBillingSetup(input: {
+    tenantId: string;
+    provider: string;
+    amountMinorUnits: number;
+    currency: string;
+    customerEmail: string;
+    customerName?: string;
+    redirectUrl: string;
+  }): Promise<TenantPaymentCheckout> {
+    return this.request('/internal/payments/subscription-billing-setups', {
       method: 'POST',
       body: JSON.stringify(input),
     });

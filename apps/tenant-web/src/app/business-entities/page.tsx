@@ -28,6 +28,17 @@ type BusinessEntitiesPageProps = {
   }>;
 };
 
+type ResolvedPageData = {
+  entities: Awaited<ReturnType<typeof listBusinessEntities>>;
+  operatingUnits: Awaited<ReturnType<typeof listOperatingUnits>>;
+  fleets: Awaited<ReturnType<typeof listFleets>>;
+  drivers: Awaited<ReturnType<typeof listDrivers>>['data'];
+  vehicles: Awaited<ReturnType<typeof listVehicles>>['data'];
+  assignments: Awaited<ReturnType<typeof listAssignments>>['data'];
+  remittances: Awaited<ReturnType<typeof listRemittances>>['data'];
+  degraded: boolean;
+};
+
 function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
   if (status === 'active') return 'success';
   if (status === 'inactive') return 'warning';
@@ -70,25 +81,66 @@ function formatDate(date: string | null | undefined, locale: string): string {
   return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString(locale, { dateStyle: 'medium' });
 }
 
+async function resolveBusinessEntityPageData(): Promise<ResolvedPageData> {
+  const [
+    entitiesResult,
+    operatingUnitsResult,
+    fleetsResult,
+    driversResult,
+    vehiclesResult,
+    assignmentsResult,
+    remittancesResult,
+  ] = await Promise.allSettled([
+    listBusinessEntities(),
+    listOperatingUnits(),
+    listFleets(),
+    listDrivers({ limit: 500 }),
+    listVehicles({ limit: 500 }),
+    listAssignments({ limit: 500 }),
+    listRemittances({ limit: 500 }),
+  ]);
+
+  if (entitiesResult.status === 'rejected') {
+    throw entitiesResult.reason;
+  }
+
+  const degraded =
+    operatingUnitsResult.status === 'rejected' ||
+    fleetsResult.status === 'rejected' ||
+    driversResult.status === 'rejected' ||
+    vehiclesResult.status === 'rejected' ||
+    assignmentsResult.status === 'rejected' ||
+    remittancesResult.status === 'rejected';
+
+  return {
+    entities: entitiesResult.value,
+    operatingUnits:
+      operatingUnitsResult.status === 'fulfilled' ? operatingUnitsResult.value : [],
+    fleets: fleetsResult.status === 'fulfilled' ? fleetsResult.value : [],
+    drivers: driversResult.status === 'fulfilled' ? driversResult.value.data : [],
+    vehicles: vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [],
+    assignments:
+      assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [],
+    remittances:
+      remittancesResult.status === 'fulfilled' ? remittancesResult.value.data : [],
+    degraded,
+  };
+}
+
 export default async function BusinessEntitiesPage({
   searchParams,
 }: BusinessEntitiesPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
-  const [entities, operatingUnits, fleets, driversResult, vehiclesResult, assignmentsResult, remittancesResult] =
-    await Promise.all([
-      listBusinessEntities(),
-      listOperatingUnits(),
-      listFleets(),
-      listDrivers({ limit: 500 }),
-      listVehicles({ limit: 500 }),
-      listAssignments({ limit: 500 }),
-      listRemittances({ limit: 500 }),
-    ]);
-
-  const drivers = driversResult.data;
-  const vehicles = vehiclesResult.data;
-  const assignments = assignmentsResult.data;
-  const remittances = remittancesResult.data;
+  const {
+    entities,
+    operatingUnits,
+    fleets,
+    drivers,
+    vehicles,
+    assignments,
+    remittances,
+    degraded,
+  } = await resolveBusinessEntityPageData();
   const selectedEntityId = resolvedSearchParams.entityId ?? entities[0]?.id ?? null;
   const locale = 'en-NG';
 
@@ -161,6 +213,11 @@ export default async function BusinessEntitiesPage({
           <Text tone="muted">
             Compare entities by active fleets, staffing coverage, and live assignment pressure before drilling into the next action.
           </Text>
+          {degraded ? (
+            <Text className="text-amber-700">
+              Some linked operational signals are temporarily unavailable, so a few counts may be incomplete right now.
+            </Text>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-3">
           <Link

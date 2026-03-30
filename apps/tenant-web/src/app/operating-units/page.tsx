@@ -25,6 +25,16 @@ type OperatingUnitsPageProps = {
   }>;
 };
 
+type ResolvedOperatingUnitsPageData = {
+  operatingUnits: Awaited<ReturnType<typeof listOperatingUnits>>;
+  businessEntities: Awaited<ReturnType<typeof listBusinessEntities>>;
+  fleets: Awaited<ReturnType<typeof listFleets>>;
+  drivers: Awaited<ReturnType<typeof listDrivers>>['data'];
+  vehicles: Awaited<ReturnType<typeof listVehicles>>['data'];
+  assignments: Awaited<ReturnType<typeof listAssignments>>['data'];
+  degraded: boolean;
+};
+
 function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
   if (status === 'active') {
     return 'success';
@@ -35,24 +45,63 @@ function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
   return 'neutral';
 }
 
+async function resolveOperatingUnitsPageData(
+  selectedBusinessEntityId?: string,
+): Promise<ResolvedOperatingUnitsPageData> {
+  const [
+    operatingUnitsResult,
+    businessEntitiesResult,
+    fleetsResult,
+    driversResult,
+    vehiclesResult,
+    assignmentsResult,
+  ] = await Promise.allSettled([
+    listOperatingUnits(
+      selectedBusinessEntityId ? { businessEntityId: selectedBusinessEntityId } : {},
+    ),
+    listBusinessEntities(),
+    listFleets(),
+    listDrivers({ limit: 500 }),
+    listVehicles({ limit: 500 }),
+    listAssignments({ limit: 500 }),
+  ]);
+
+  if (operatingUnitsResult.status === 'rejected') {
+    throw operatingUnitsResult.reason;
+  }
+
+  return {
+    operatingUnits: operatingUnitsResult.value,
+    businessEntities:
+      businessEntitiesResult.status === 'fulfilled' ? businessEntitiesResult.value : [],
+    fleets: fleetsResult.status === 'fulfilled' ? fleetsResult.value : [],
+    drivers: driversResult.status === 'fulfilled' ? driversResult.value.data : [],
+    vehicles: vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [],
+    assignments:
+      assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [],
+    degraded:
+      businessEntitiesResult.status === 'rejected' ||
+      fleetsResult.status === 'rejected' ||
+      driversResult.status === 'rejected' ||
+      vehiclesResult.status === 'rejected' ||
+      assignmentsResult.status === 'rejected',
+  };
+}
+
 export default async function OperatingUnitsPage({
   searchParams,
 }: OperatingUnitsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const selectedBusinessEntityId = resolvedSearchParams.businessEntityId;
-  const [operatingUnits, businessEntities, fleets, driversPage, vehiclesPage, assignmentsPage] =
-    await Promise.all([
-      listOperatingUnits(selectedBusinessEntityId ? { businessEntityId: selectedBusinessEntityId } : {}),
-      listBusinessEntities(),
-      listFleets(),
-      listDrivers({ limit: 500 }),
-      listVehicles({ limit: 500 }),
-      listAssignments({ limit: 500 }),
-    ]);
-
-  const drivers = driversPage.data;
-  const vehicles = vehiclesPage.data;
-  const assignments = assignmentsPage.data;
+  const {
+    operatingUnits,
+    businessEntities,
+    fleets,
+    drivers,
+    vehicles,
+    assignments,
+    degraded,
+  } = await resolveOperatingUnitsPageData(selectedBusinessEntityId);
   const entityNameById = new Map(businessEntities.map((entity) => [entity.id, entity.name]));
   const cards = operatingUnits.map((unit) => {
     const unitFleets = fleets.filter((fleet) => fleet.operatingUnitId === unit.id);
@@ -89,6 +138,11 @@ export default async function OperatingUnitsPage({
               <Text tone="muted">
                 Use operating units to separate depots, local execution teams, or city-level dispatch structure before fleets and assignments are attached.
               </Text>
+              {degraded ? (
+                <Text className="text-amber-700">
+                  Some linked fleet and staffing signals are temporarily unavailable, so a few counts may be incomplete right now.
+                </Text>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-3">
               <Link

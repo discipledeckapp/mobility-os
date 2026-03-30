@@ -6,11 +6,12 @@ import type { TenantBillingPlanRecord, TenantBillingSummaryRecord } from '../../
 import {
   changePlanAction,
   initializeOutstandingInvoiceCheckoutAction,
-  type WalletCheckoutActionState,
-} from '../wallet/actions';
+  initializeSubscriptionBillingSetupAction,
+  type SubscriptionActionState,
+} from './actions';
 import { SelectField } from '../../features/shared/select-field';
 
-const initialState: WalletCheckoutActionState = {};
+const initialState: SubscriptionActionState = {};
 
 function formatMajorAmount(amountMinorUnits: number): string {
   return (amountMinorUnits / 100).toLocaleString('en-NG', {
@@ -93,6 +94,10 @@ export function SubscriptionManagementPanel({
     initialState,
   );
   const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
+  const [billingMethodState, billingMethodAction, billingMethodPending] = useActionState(
+    initializeSubscriptionBillingSetupAction,
+    initialState,
+  );
   const enforcement = summary.subscription.enforcement;
   const currentPlanPrice = plans.find((plan) => plan.id === summary.subscription.planId)?.basePriceMinorUnits;
   const currentPlan = plans.find((plan) => plan.id === summary.subscription.planId) ?? null;
@@ -103,6 +108,12 @@ export function SubscriptionManagementPanel({
       window.location.href = invoiceState.checkoutUrl;
     }
   }, [invoiceState.checkoutUrl]);
+
+  useEffect(() => {
+    if (billingMethodState.checkoutUrl) {
+      window.location.href = billingMethodState.checkoutUrl;
+    }
+  }, [billingMethodState.checkoutUrl]);
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
@@ -294,6 +305,78 @@ export function SubscriptionManagementPanel({
           ) : (
             <Text>No open subscription invoice needs payment right now.</Text>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)] xl:col-span-2">
+        <CardHeader>
+          <CardTitle>Billing payment method</CardTitle>
+          <CardDescription>
+            Save a card specifically for subscription billing. This payment method is separate from
+            verification funding and will be used for future billing collections once autopay is enabled.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 p-4">
+            {summary.billingPaymentMethod ? (
+              <div className="space-y-2 text-sm text-slate-600">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={summary.billingPaymentMethod.active ? 'success' : 'warning'}>
+                    {summary.billingPaymentMethod.active ? 'Active' : summary.billingPaymentMethod.status}
+                  </Badge>
+                  <Badge tone="neutral">
+                    {summary.billingPaymentMethod.autopayEnabled ? 'Autopay enabled' : 'Autopay not enabled'}
+                  </Badge>
+                </div>
+                <p className="font-medium text-slate-900">
+                  {summary.billingPaymentMethod.brand} ending in {summary.billingPaymentMethod.last4}
+                </p>
+                <p>
+                  Provider: {summary.billingPaymentMethod.provider}. Added on{' '}
+                  {new Date(summary.billingPaymentMethod.createdAt).toLocaleDateString('en-NG', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                  .
+                </p>
+              </div>
+            ) : (
+              <Text className="text-sm text-slate-600">
+                No billing payment method has been saved yet. Subscription invoices can still be paid
+                manually until a billing card is added.
+              </Text>
+            )}
+          </div>
+          <form action={billingMethodAction} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="billing-method-provider">Payment provider</Label>
+              <SelectField
+                defaultValue="paystack"
+                id="billing-method-provider"
+                name="provider"
+              >
+                <option value="paystack">Paystack</option>
+                <option value="flutterwave">Flutterwave</option>
+              </SelectField>
+            </div>
+            <Button
+              disabled={billingMethodPending || Boolean(billingMethodState.checkoutUrl)}
+              type="submit"
+            >
+              {billingMethodPending || billingMethodState.checkoutUrl
+                ? 'Redirecting to provider...'
+                : summary.billingPaymentMethod
+                  ? 'Replace billing payment method'
+                  : 'Add billing payment method'}
+            </Button>
+            {billingMethodState.error ? (
+              <Text className="text-rose-700">{billingMethodState.error}</Text>
+            ) : null}
+            {billingMethodState.success ? (
+              <Text className="text-emerald-700">{billingMethodState.success}</Text>
+            ) : null}
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -35,6 +35,10 @@ describe('PaymentsService', () => {
     assertWebhookAuthentic: jest.fn(),
     extractWebhookReference: jest.fn(),
   };
+  const billingPaymentMethodsService = {
+    getSummary: jest.fn(),
+    saveAuthorizedPaymentMethod: jest.fn(),
+  };
   const configService = {
     get: jest.fn(),
   };
@@ -52,6 +56,7 @@ describe('PaymentsService', () => {
       configService as never,
       tenantLifecycleService as never,
       staffNotificationService as never,
+      billingPaymentMethodsService as never,
     );
     configService.get.mockReturnValue('https://tenant.example.com/payments/return');
     prisma.cpPaymentAttempt.findFirst.mockResolvedValue(null);

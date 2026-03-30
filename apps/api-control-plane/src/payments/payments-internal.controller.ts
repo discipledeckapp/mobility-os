@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { InternalServiceAuthGuard } from '../auth/guards/internal-service-auth.guard';
 import { InitializeCardAuthorizationSetupDto } from './dto/initialize-card-authorization-setup.dto';
@@ -8,6 +8,7 @@ import { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payme
 import { InitializeIdentityVerificationPaymentDto } from './dto/initialize-identity-verification-payment.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
+import { InitializeSubscriptionBillingSetupDto } from './dto/initialize-subscription-billing-setup.dto';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
 import type { PaymentApplicationResponseDto } from './dto/payment-application-response.dto';
@@ -44,6 +45,13 @@ export class PaymentsInternalController {
     return this.paymentsService.initializeCardAuthorizationSetup(dto);
   }
 
+  @Post('subscription-billing-setups')
+  initializeSubscriptionBillingSetup(
+    @Body() dto: InitializeSubscriptionBillingSetupDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    return this.paymentsService.initializeSubscriptionBillingSetup(dto);
+  }
+
   @Post('driver-kyc-checkouts')
   initializeDriverKycPayment(
     @Body() dto: InitializeDriverKycPaymentDto,
@@ -63,5 +71,10 @@ export class PaymentsInternalController {
     @Body() dto: VerifyAndApplyPaymentDto,
   ): Promise<PaymentApplicationResponseDto> {
     return this.paymentsService.verifyAndApplyPayment(dto);
+  }
+
+  @Get('tenant/:tenantId/billing-payment-method')
+  getBillingPaymentMethod(@Param('tenantId') tenantId: string) {
+    return this.paymentsService.getBillingPaymentMethodSummary(tenantId);
   }
 }

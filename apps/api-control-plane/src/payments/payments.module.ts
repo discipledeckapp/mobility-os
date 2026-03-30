@@ -5,6 +5,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PlatformWalletsModule } from '../platform-wallets/platform-wallets.module';
 import { ControlPlaneRecordsModule } from '../records/records.module';
 import { TenantLifecycleModule } from '../tenant-lifecycle/tenant-lifecycle.module';
+import { BillingPaymentMethodsService } from './billing-payment-methods.service';
+import { PaymentTokenEncryptionService } from './payment-token-encryption.service';
 import { PaymentProvidersService } from './payment-providers.service';
 import { PaymentsInternalController } from './payments-internal.controller';
 import { PaymentsWebhooksController } from './payments-webhooks.controller';
@@ -21,7 +23,12 @@ import { PaymentsService } from './payments.service';
     TenantLifecycleModule,
   ],
   controllers: [PaymentsController, PaymentsInternalController, PaymentsWebhooksController],
-  providers: [PaymentProvidersService, PaymentsService],
+  providers: [
+    BillingPaymentMethodsService,
+    PaymentProvidersService,
+    PaymentsService,
+    PaymentTokenEncryptionService,
+  ],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

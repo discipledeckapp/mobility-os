@@ -94,6 +94,39 @@ function splitVerifiedName(fullName?: string) {
   };
 }
 
+function isLivenessSessionStillUsable(session: DriverLivenessSessionRecord | null): boolean {
+  if (!session?.clientAuthToken) {
+    return false;
+  }
+
+  if (!session.expiresAt) {
+    return true;
+  }
+
+  const expiresAt = new Date(session.expiresAt);
+  if (Number.isNaN(expiresAt.getTime())) {
+    return true;
+  }
+
+  return expiresAt.getTime() - Date.now() > 45_000;
+}
+
+function isRetryableLivenessStartupFailure(input: {
+  errorCode?: string | null;
+  errorMessage?: string | null;
+}): boolean {
+  const code = input.errorCode?.toLowerCase() ?? '';
+  const message = input.errorMessage?.toLowerCase() ?? '';
+
+  return (
+    code.includes('session_expired') ||
+    code.includes('timeout') ||
+    message.includes('session expired') ||
+    message.includes('timed out') ||
+    message.includes('timeout')
+  );
+}
+
 async function captureSelfieAsset(): Promise<ImagePicker.ImagePickerAsset | null> {
   if (Platform.OS === 'web') {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -611,27 +644,57 @@ export function SelfServiceVerificationScreen({
     setNativeLivenessFaceB64(undefined);
     setLivenessRunning(true);
     try {
-      const session = await createDriverSelfServiceLivenessSession(token, { countryCode });
-      setLivenessSession(session);
+      const prepareSession = async (forceRefresh = false) => {
+        if (!forceRefresh && livenessSession && isLivenessSessionStillUsable(livenessSession)) {
+          return livenessSession;
+        }
 
-      const { clientAuthToken } = session;
-      if (!clientAuthToken) {
-        setLivenessFeedback(
-          'The verification session could not be prepared. You can try again in a moment.',
-        );
-        Alert.alert(
-          'Face verification',
-          'The server did not return a liveness token. The YouVerify provider may be unavailable.',
-        );
+        const nextSession = await createDriverSelfServiceLivenessSession(token, { countryCode });
+        setLivenessSession(nextSession);
+        return nextSession;
+      };
+
+      const runLivenessAttempt = async (forceRefresh = false) => {
+        const session = await prepareSession(forceRefresh);
+        const { clientAuthToken } = session;
+        if (!clientAuthToken) {
+          setLivenessFeedback(
+            'The verification session could not be prepared. You can try again in a moment.',
+          );
+          Alert.alert(
+            'Face verification',
+            'The server did not return a liveness token. The YouVerify provider may be unavailable.',
+          );
+          return null;
+        }
+
+        return startYouVerifyLiveness({
+          sessionId: session.sessionId,
+          sessionToken: clientAuthToken,
+          sandbox: __DEV__,
+        });
+      };
+
+      let result = await runLivenessAttempt();
+      if (!result) {
         return;
       }
 
-      const result = await startYouVerifyLiveness({
-        sessionId: session.sessionId,
-        sessionToken: clientAuthToken,
-        // __DEV__ is true in Expo dev/preview builds, false in production builds.
-        sandbox: __DEV__,
-      });
+      if (
+        !result.passed &&
+        isRetryableLivenessStartupFailure({
+          errorCode: result.errorCode,
+          errorMessage: result.errorMessage,
+        })
+      ) {
+        setLivenessFeedback(
+          'The secure face verification session expired before capture could begin. We are reopening a fresh session now.',
+        );
+        result = await runLivenessAttempt(true);
+        if (!result) {
+          return;
+        }
+      }
 
       if (result.passed) {
         setNativeLivenessPassed(true);
@@ -648,6 +711,19 @@ export function SelfServiceVerificationScreen({
             'Face verification was cancelled before completion. Restart it when you are ready.',
           );
           showToast('Face verification cancelled.', 'info');
+        } else if (
+          isRetryableLivenessStartupFailure({
+            errorCode: result.errorCode,
+            errorMessage: result.errorMessage,
+          })
+        ) {
+          setLivenessFeedback(
+            'Face verification timed out before capture could complete. Try again in a well-lit area and keep the phone steady as soon as the secure camera opens.',
+          );
+          Alert.alert(
+            'Face verification',
+            'The secure face verification session expired before capture completed. A fresh session will be requested automatically when you retry.',
+          );
         } else {
           setLivenessFeedback(`${msg} Check your lighting and face position, then try again.`);
           Alert.alert('Face verification', `${msg} You can try again.`);

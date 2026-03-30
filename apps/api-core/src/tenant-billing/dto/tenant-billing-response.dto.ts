@@ -195,6 +195,32 @@ export class TenantSavedCardDto {
   initialReference?: string | null;
 }
 
+export class TenantBillingPaymentMethodDto {
+  @ApiProperty()
+  provider!: string;
+
+  @ApiProperty()
+  last4!: string;
+
+  @ApiProperty()
+  brand!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  active!: boolean;
+
+  @ApiProperty()
+  autopayEnabled!: boolean;
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiPropertyOptional()
+  initialReference?: string | null;
+}
+
 export class TenantVerificationSpendDto {
   @ApiProperty()
   currency!: string;
@@ -245,6 +271,9 @@ export class TenantBillingSummaryDto {
 
   @ApiProperty({ type: TenantVerificationSpendDto })
   verificationSpend!: TenantVerificationSpendDto;
+
+  @ApiPropertyOptional({ type: TenantBillingPaymentMethodDto })
+  billingPaymentMethod?: TenantBillingPaymentMethodDto | null;
 
   @ApiProperty()
   customerEmail!: string;

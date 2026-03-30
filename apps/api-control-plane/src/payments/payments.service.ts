@@ -17,10 +17,13 @@ import type { InitializeCardAuthorizationSetupDto } from './dto/initialize-card-
 import type { InitializeDriverKycPaymentDto } from './dto/initialize-driver-kyc-payment.dto';
 import type { InitializeIdentityVerificationPaymentDto } from './dto/initialize-identity-verification-payment.dto';
 import type { InitializeInvoicePaymentDto } from './dto/initialize-invoice-payment.dto';
+import type { InitializeSubscriptionBillingSetupDto } from './dto/initialize-subscription-billing-setup.dto';
 import type { InitializeWalletTopUpDto } from './dto/initialize-wallet-top-up.dto';
 import type { PaymentApplicationResponseDto } from './dto/payment-application-response.dto';
 import type { PaymentCheckoutResponseDto } from './dto/payment-checkout-response.dto';
 import type { VerifyAndApplyPaymentDto } from './dto/verify-and-apply-payment.dto';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
+import { BillingPaymentMethodsService } from './billing-payment-methods.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PaymentProvidersService } from './payment-providers.service';
 
@@ -29,6 +32,7 @@ type PaymentPurpose =
   | 'platform_wallet_topup'
   | 'identity_verification'
   | 'card_authorization_setup'
+  | 'subscription_billing_setup'
   | 'driver_kyc';
 
 function getVerificationTierLabel(
@@ -54,6 +58,7 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly tenantLifecycleService: TenantLifecycleService,
     private readonly staffNotificationService: StaffNotificationService,
+    private readonly billingPaymentMethodsService: BillingPaymentMethodsService,
   ) {}
 
   async initializeInvoicePayment(
@@ -198,6 +203,51 @@ export class PaymentsService {
     };
   }
 
+  async initializeSubscriptionBillingSetup(
+    dto: InitializeSubscriptionBillingSetupDto,
+  ): Promise<PaymentCheckoutResponseDto> {
+    const reference = this.buildReference('subscription_billing_setup', dto.tenantId, dto.provider);
+    const redirectUrl = this.resolveRedirectUrl(dto.redirectUrl);
+    const initialized = await this.paymentProvidersService.initializePayment({
+      provider: dto.provider,
+      reference,
+      amountMinorUnits: dto.amountMinorUnits,
+      currency: dto.currency,
+      redirectUrl,
+      customerEmail: dto.customerEmail,
+      ...(dto.customerName ? { customerName: dto.customerName } : {}),
+      description: `Mobiris subscription billing payment method setup for tenant ${dto.tenantId}`,
+      metadata: {
+        purpose: 'subscription_billing_setup',
+        tenantId: dto.tenantId,
+      },
+    });
+
+    await this.prisma.cpPaymentAttempt.create({
+      data: {
+        provider: dto.provider,
+        reference,
+        purpose: 'subscription_billing_setup',
+        tenantId: dto.tenantId,
+        status: 'checkout_initialized',
+        amountMinorUnits: dto.amountMinorUnits,
+        currency: dto.currency,
+        customerEmail: dto.customerEmail,
+        customerName: dto.customerName ?? null,
+        checkoutUrl: initialized.checkoutUrl,
+        accessCode: initialized.accessCode ?? null,
+      },
+    });
+
+    return {
+      provider: initialized.provider,
+      reference,
+      checkoutUrl: initialized.checkoutUrl,
+      ...(initialized.accessCode ? { accessCode: initialized.accessCode } : {}),
+      purpose: 'subscription_billing_setup',
+    };
+  }
+
   private normalizePurpose(purpose: string): PaymentPurpose {
     if (purpose === 'driver_kyc') {
       return 'identity_verification';
@@ -317,7 +367,8 @@ export class PaymentsService {
 
     if (attempt?.status === 'applied') {
       const recoveredPaymentMethod =
-        attempt.purpose === 'card_authorization_setup'
+        attempt.purpose === 'card_authorization_setup' ||
+        attempt.purpose === 'subscription_billing_setup'
           ? this.extractPaymentMethodFromPayload(attempt.providerPayload)
           : undefined;
       return {
@@ -539,6 +590,56 @@ export class PaymentsService {
       };
     }
 
+    if (purpose === 'subscription_billing_setup') {
+      if (!tenantId) {
+        throw new BadRequestException(
+          'tenantId is required for subscription_billing_setup payment application',
+        );
+      }
+      if (
+        !verified.paymentMethod?.authorizationCode ||
+        !verified.paymentMethod.customerCode ||
+        !verified.paymentMethod.last4 ||
+        !verified.paymentMethod.brand
+      ) {
+        throw new BadRequestException(
+          'The payment provider did not return a reusable billing payment method.',
+        );
+      }
+
+      await this.billingPaymentMethodsService.saveAuthorizedPaymentMethod({
+        tenantId,
+        provider: dto.provider,
+        authorizationCode: verified.paymentMethod.authorizationCode,
+        customerCode: verified.paymentMethod.customerCode,
+        last4: verified.paymentMethod.last4,
+        brand: verified.paymentMethod.brand,
+        initialReference: dto.reference,
+        metadata: {
+          setupPurpose: 'subscription_billing_setup',
+        },
+      });
+
+      await this.prisma.cpPaymentAttempt.updateMany({
+        where: { reference: dto.reference },
+        data: {
+          status: 'applied',
+          appliedAt: new Date(),
+        },
+      });
+
+      return {
+        provider: dto.provider,
+        reference: dto.reference,
+        purpose,
+        status: 'applied',
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        tenantId,
+        ...(verified.paymentMethod ? { paymentMethod: verified.paymentMethod } : {}),
+      };
+    }
+
     if (!tenantId) {
       throw new BadRequestException(
         'tenantId is required for platform_wallet_topup payment application',
@@ -636,10 +737,20 @@ export class PaymentsService {
         | 'invoice_settlement'
         | 'platform_wallet_topup'
         | 'identity_verification'
-        | 'card_authorization_setup',
+        | 'card_authorization_setup'
+        | 'subscription_billing_setup',
       ...(attempt.invoiceId ? { invoiceId: attempt.invoiceId } : {}),
       ...(attempt.tenantId ? { tenantId: attempt.tenantId } : {}),
     });
+  }
+
+  async getBillingPaymentMethodSummary(tenantId: string) {
+    const paymentMethod = await this.billingPaymentMethodsService.getSummary(tenantId);
+    if (!paymentMethod) {
+      throw new NotFoundException(`Billing payment method for tenant '${tenantId}' was not found`);
+    }
+
+    return paymentMethod;
   }
 
   async settleInvoiceFromPlatformWallet(invoiceId: string): Promise<PaymentApplicationResponseDto> {
@@ -678,7 +789,8 @@ export class PaymentsService {
       | 'invoice_settlement'
       | 'platform_wallet_topup'
       | 'identity_verification'
-      | 'card_authorization_setup',
+      | 'card_authorization_setup'
+      | 'subscription_billing_setup',
     targetId: string,
     provider: string,
   ): string {

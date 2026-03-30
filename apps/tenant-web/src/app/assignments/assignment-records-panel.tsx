@@ -76,6 +76,67 @@ function formatDateTime(value?: string | null): string {
   }).format(date);
 }
 
+function getDriverPrimaryLabel(driver: DriverRecord): string {
+  const fullName = [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  if (driver.organisationName?.trim()) {
+    return driver.organisationName.trim();
+  }
+
+  if (driver.identityProfile?.fullName?.trim()) {
+    return driver.identityProfile.fullName.trim();
+  }
+
+  if (driver.phone?.trim()) {
+    return driver.phone.trim();
+  }
+
+  if (driver.email?.trim()) {
+    return driver.email.trim();
+  }
+
+  return 'Driver record';
+}
+
+function getDriverSecondaryLabel(driver: DriverRecord): string | null {
+  if (driver.phone?.trim()) {
+    return driver.phone.trim();
+  }
+
+  if (driver.email?.trim()) {
+    return driver.email.trim();
+  }
+
+  return null;
+}
+
+function getAssignmentPrimaryLabel(input: {
+  driverLabel?: string | undefined;
+  vehicleLabel?: string | undefined;
+  fleetLabel?: string | undefined;
+}): string {
+  if (input.driverLabel && input.vehicleLabel) {
+    return `${input.driverLabel} on ${input.vehicleLabel}`;
+  }
+
+  if (input.driverLabel) {
+    return input.driverLabel;
+  }
+
+  if (input.vehicleLabel) {
+    return input.vehicleLabel;
+  }
+
+  if (input.fleetLabel) {
+    return `${input.fleetLabel} assignment`;
+  }
+
+  return 'Assignment record';
+}
+
 export function AssignmentRecordsPanel({
   assignments,
   drivers,
@@ -96,15 +157,26 @@ export function AssignmentRecordsPanel({
   const [pageSize, setPageSize] = useState(10);
 
   const driverLabels = useMemo(
-    () =>
-      new Map(
-        drivers.map((driver) => [driver.id, `${driver.firstName} ${driver.lastName}`]),
-      ),
+    () => new Map(drivers.map((driver) => [driver.id, getDriverPrimaryLabel(driver)])),
+    [drivers],
+  );
+  const driverSecondaryLabels = useMemo(
+    () => new Map(drivers.map((driver) => [driver.id, getDriverSecondaryLabel(driver)])),
     [drivers],
   );
   const vehicleLabels = useMemo(
     () =>
       new Map(vehicles.map((vehicle) => [vehicle.id, getVehiclePrimaryLabel(vehicle)])),
+    [vehicles],
+  );
+  const vehicleSecondaryLabels = useMemo(
+    () =>
+      new Map(
+        vehicles.map((vehicle) => [
+          vehicle.id,
+          [vehicle.plate, vehicle.make, vehicle.model].filter(Boolean).join(' • ') || null,
+        ]),
+      ),
     [vehicles],
   );
   const fleetLabels = useMemo(
@@ -124,7 +196,9 @@ export function AssignmentRecordsPanel({
       const haystack = [
         assignment.id,
         driverLabels.get(assignment.driverId),
+        driverSecondaryLabels.get(assignment.driverId),
         vehicleLabels.get(assignment.vehicleId),
+        vehicleSecondaryLabels.get(assignment.vehicleId),
         fleetLabels.get(assignment.fleetId),
         assignment.notes,
       ]
@@ -134,7 +208,17 @@ export function AssignmentRecordsPanel({
 
       return haystack.includes(normalizedQuery);
     });
-  }, [assignments, driverLabels, fleetId, fleetLabels, searchQuery, status, vehicleLabels]);
+  }, [
+    assignments,
+    driverLabels,
+    driverSecondaryLabels,
+    fleetId,
+    fleetLabels,
+    searchQuery,
+    status,
+    vehicleLabels,
+    vehicleSecondaryLabels,
+  ]);
 
   useEffect(() => {
     setPage(1);
@@ -282,12 +366,32 @@ export function AssignmentRecordsPanel({
               <TableRow className="group hover:bg-slate-50/80" key={assignment.id}>
                 <TableCell>
                   <div className="space-y-1">
+                    {(() => {
+                      const driverLabel = driverLabels.get(assignment.driverId);
+                      const vehicleLabel = vehicleLabels.get(assignment.vehicleId);
+                      const fleetLabel = fleetLabels.get(assignment.fleetId);
+                      const assignmentLabel = getAssignmentPrimaryLabel({
+                        driverLabel,
+                        vehicleLabel,
+                        fleetLabel,
+                      });
+
+                      return (
+                        <>
                     <Link
                       className="font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
                       href={`/assignments/${assignment.id}`}
                     >
-                      {assignment.id}
+                      {assignmentLabel}
                     </Link>
+                    <Text tone="muted">
+                      {fleetLabel
+                        ? `${fleetLabel} · ${formatStatusLabel(assignment.status)}`
+                        : formatStatusLabel(assignment.status)}
+                    </Text>
+                        </>
+                      );
+                    })()}
                     <Text tone="muted">{assignment.notes ?? 'No assignment note added'}</Text>
                   </div>
                 </TableCell>
@@ -299,20 +403,24 @@ export function AssignmentRecordsPanel({
                 <TableCell>
                   <div className="space-y-1">
                     <p className="font-medium text-[var(--mobiris-ink)]">
-                      {driverLabels.get(assignment.driverId) ?? assignment.driverId}
+                      {driverLabels.get(assignment.driverId) ?? 'Driver record'}
                     </p>
-                    <p className="text-xs text-slate-500">{assignment.driverId}</p>
+                    <p className="text-xs text-slate-500">
+                      {driverSecondaryLabels.get(assignment.driverId) ?? 'Assigned driver'}
+                    </p>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
                     <p className="font-medium text-[var(--mobiris-ink)]">
-                      {vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}
+                      {vehicleLabels.get(assignment.vehicleId) ?? 'Vehicle record'}
                     </p>
-                    <p className="text-xs text-slate-500">{assignment.vehicleId}</p>
+                    <p className="text-xs text-slate-500">
+                      {vehicleSecondaryLabels.get(assignment.vehicleId) ?? 'Assigned vehicle'}
+                    </p>
                   </div>
                 </TableCell>
-                <TableCell>{fleetLabels.get(assignment.fleetId) ?? assignment.fleetId}</TableCell>
+                <TableCell>{fleetLabels.get(assignment.fleetId) ?? 'Fleet record'}</TableCell>
                 <TableCell>
                   <Badge tone={getStatusTone(assignment.status)}>
                     {formatStatusLabel(assignment.status)}

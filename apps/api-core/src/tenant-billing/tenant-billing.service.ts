@@ -7,6 +7,7 @@ import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
 import type { InitializeCardSetupCheckoutDto } from './dto/initialize-card-setup-checkout.dto';
+import type { InitializeSubscriptionBillingSetupDto } from './dto/initialize-subscription-billing-setup.dto';
 import type { InitializeTenantInvoicePaymentDto } from './dto/initialize-tenant-invoice-payment.dto';
 import type { InitializeTenantWalletTopUpDto } from './dto/initialize-tenant-wallet-top-up.dto';
 import type {
@@ -68,13 +69,31 @@ export class TenantBillingService {
     let invoices: Awaited<ReturnType<ControlPlaneBillingClient['listInvoices']>> = [];
     let balance: Awaited<ReturnType<ControlPlaneBillingClient['getPlatformWalletBalance']>> | null = null;
     let entries: Awaited<ReturnType<ControlPlaneBillingClient['listPlatformWalletEntries']>> = [];
+    let billingPaymentMethod: Awaited<
+      ReturnType<ControlPlaneBillingClient['getBillingPaymentMethod']>
+    > | null = null;
 
     try {
-      [subscription, invoices, balance, entries] = await Promise.all([
+      [subscription, invoices, balance, entries, billingPaymentMethod] = await Promise.all([
         this.controlPlaneBillingClient.getSubscription(tenantId),
         this.controlPlaneBillingClient.listInvoices(tenantId),
         this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId),
         this.controlPlaneBillingClient.listPlatformWalletEntries(tenantId),
+        this.controlPlaneBillingClient.getBillingPaymentMethod(tenantId).catch((error) => {
+          if (
+            error instanceof ServiceUnavailableException &&
+            String(error.message).includes('404')
+          ) {
+            return null;
+          }
+          if (error instanceof ServiceUnavailableException) {
+            this.logger.warn(
+              `Billing payment method lookup degraded for tenant '${tenantId}': ${error.message}`,
+            );
+            return null;
+          }
+          throw error;
+        }),
       ]);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
@@ -135,6 +154,7 @@ export class TenantBillingService {
           verificationLedgerEntryCount: 0,
         },
         verificationSpend: await this.verificationSpendService.getSpendSummary(tenantId, currency),
+        billingPaymentMethod: null,
         customerEmail: user.email,
         customerName: user.name,
       };
@@ -221,6 +241,7 @@ export class TenantBillingService {
         verificationLedgerEntryCount: entries.length,
       },
       verificationSpend,
+      billingPaymentMethod,
       customerEmail: user.email,
       customerName: user.name,
     };
@@ -289,6 +310,27 @@ export class TenantBillingService {
     });
   }
 
+  async initializeSubscriptionBillingSetupCheckout(
+    tenantId: string,
+    userId: string,
+    dto: InitializeSubscriptionBillingSetupDto,
+  ): Promise<TenantPaymentCheckoutDto> {
+    const summary = await this.getSummary(tenantId, userId);
+    const provider = dto.provider ?? 'paystack';
+    const amountMinorUnits = dto.amountMinorUnits ?? 10_000;
+    const redirectUrl = this.buildReturnUrl(provider, 'subscription_billing_setup');
+
+    return this.controlPlaneBillingClient.initializeSubscriptionBillingSetup({
+      tenantId,
+      provider,
+      amountMinorUnits,
+      currency: summary.subscription.currency,
+      customerEmail: summary.customerEmail,
+      customerName: summary.customerName,
+      redirectUrl,
+    });
+  }
+
   async verifyAndApply(
     tenantId: string,
     dto: VerifyTenantPaymentDto,
@@ -298,7 +340,9 @@ export class TenantBillingService {
       reference: dto.reference,
       purpose: dto.purpose,
       ...(dto.invoiceId ? { invoiceId: dto.invoiceId } : {}),
-      ...(dto.purpose === 'platform_wallet_topup' || dto.purpose === 'card_authorization_setup'
+      ...(dto.purpose === 'platform_wallet_topup' ||
+      dto.purpose === 'card_authorization_setup' ||
+      dto.purpose === 'subscription_billing_setup'
         ? { tenantId }
         : {}),
     });
@@ -358,11 +402,19 @@ export class TenantBillingService {
 
   private buildReturnUrl(
     provider: string,
-    purpose: 'invoice_settlement' | 'platform_wallet_topup' | 'card_authorization_setup',
+    purpose:
+      | 'invoice_settlement'
+      | 'platform_wallet_topup'
+      | 'card_authorization_setup'
+      | 'subscription_billing_setup',
     invoiceId?: string,
   ): string {
     const tenantWebUrl = this.configService.getOrThrow<string>('TENANT_WEB_URL');
-    const url = new URL('/wallet/payment-return', tenantWebUrl);
+    const path =
+      purpose === 'invoice_settlement' || purpose === 'subscription_billing_setup'
+        ? '/subscription/payment-return'
+        : '/verification-funding/payment-return';
+    const url = new URL(path, tenantWebUrl);
     url.searchParams.set('provider', provider);
     url.searchParams.set('purpose', purpose);
     if (invoiceId) {

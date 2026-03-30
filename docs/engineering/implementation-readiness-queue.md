@@ -43,9 +43,11 @@ Goal:
 
 Ready artifacts:
 - [financial-terminology-decision.md](/Users/seyiadelaju/mobility-os/docs/platform/financial-terminology-decision.md)
+- [subscription-payment-method-separation-plan.md](/Users/seyiadelaju/mobility-os/docs/engineering/subscription-payment-method-separation-plan.md)
 
 Implementation readiness:
 - ready for IA and route decision work before UI refactors
+- ready for billing-payment-method separation work
 
 ## 2. P1: Operator Product Completion
 
@@ -134,6 +136,7 @@ Implementation readiness:
 
 - trust pipeline hardening
 - wallet/verification/subscription IA execution
+- subscription payment method separation
 - mobile-first parity cleanup
 
 ### Wave 4

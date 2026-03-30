@@ -6,6 +6,7 @@ const PAYMENT_PURPOSES = [
   'invoice_settlement',
   'platform_wallet_topup',
   'card_authorization_setup',
+  'subscription_billing_setup',
 ] as const;
 
 export class VerifyTenantPaymentDto {

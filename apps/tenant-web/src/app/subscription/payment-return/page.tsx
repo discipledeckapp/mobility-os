@@ -23,17 +23,18 @@ type PaymentVerificationResult = {
   provider: string;
   purpose: string;
   reference: string;
+  invoiceId?: string;
   paymentMethod?: {
     last4?: string | null;
     brand?: string | null;
   };
 };
 
-function mapFundingSafeError(message?: string) {
+function mapSubscriptionSafeError(message?: string) {
   const normalized = message?.toLowerCase() ?? '';
 
   if (normalized.includes('already_applied') || normalized.includes('already applied')) {
-    return 'Your payment was already confirmed and applied to verification funding.';
+    return 'This payment outcome was already confirmed and applied to subscription billing.';
   }
 
   if (
@@ -45,14 +46,10 @@ function mapFundingSafeError(message?: string) {
     normalized.includes('gateway') ||
     normalized.includes('bad request')
   ) {
-    return 'We could not finish confirming this payment yet. Retry verification now or refresh the page in a moment.';
+    return 'We could not finish confirming this billing payment yet. Retry verification now or refresh the page in a moment.';
   }
 
-  if (normalized.includes('method not allowed')) {
-    return 'This payment gateway did not complete the return flow correctly. Please restart the funding flow and try the alternate gateway if needed.';
-  }
-
-  return 'We could not finish confirming this payment yet. Retry verification now or refresh the page in a moment.';
+  return 'We could not finish confirming this billing payment yet. Retry verification now or refresh the page in a moment.';
 }
 
 function PaymentReturnInner() {
@@ -81,7 +78,7 @@ function PaymentReturnInner() {
     if (!provider || !purpose || !reference) {
       called.current = true;
       setState('error');
-      setError('This checkout return is incomplete. Please restart the funding flow and try again.');
+      setError('This billing return is incomplete. Please restart the billing flow and try again.');
       return;
     }
 
@@ -112,19 +109,20 @@ function PaymentReturnInner() {
           return;
         }
 
-        const paymentMethod = response.paymentMethod
-          ? {
-              ...(response.paymentMethod.last4 ? { last4: response.paymentMethod.last4 } : {}),
-              ...(response.paymentMethod.brand ? { brand: response.paymentMethod.brand } : {}),
-            }
-          : undefined;
-
         setResult({
           status: response.status,
           provider: response.provider,
           purpose: response.purpose,
           reference: response.reference,
-          ...(paymentMethod ? { paymentMethod } : {}),
+          ...(response.invoiceId ? { invoiceId: response.invoiceId } : {}),
+          ...(response.paymentMethod
+            ? {
+                paymentMethod: {
+                  ...(response.paymentMethod.last4 ? { last4: response.paymentMethod.last4 } : {}),
+                  ...(response.paymentMethod.brand ? { brand: response.paymentMethod.brand } : {}),
+                },
+              }
+            : {}),
         });
         setState('success');
       } catch (verificationError) {
@@ -154,7 +152,7 @@ function PaymentReturnInner() {
         }
 
         setState('error');
-        setError(mapFundingSafeError(message));
+        setError(mapSubscriptionSafeError(message));
       }
     }
 
@@ -165,28 +163,30 @@ function PaymentReturnInner() {
     };
   }, [attempt, invoiceId, provider, purpose, reference, status]);
 
+  const isBillingMethodSetup = result?.purpose === 'subscription_billing_setup' || purpose === 'subscription_billing_setup';
+
   return (
     <TenantAppShell
-      description="Confirm the verification funding outcome and return to the verification funding page."
-      eyebrow="Verification Funding"
-      title="Funding return"
+      description="Confirm the subscription billing payment outcome and return to the subscription page."
+      eyebrow="Subscription"
+      title="Billing return"
     >
       <div className="max-w-3xl">
         {state === 'loading' ? (
           <ProcessingStateCard
             activeStep={1}
-            message="We are confirming the provider response, applying the payment to verification funding, and refreshing the funding state."
-            progressLabel="Verifying your payment"
+            message="We are confirming the provider response, applying it to the right subscription billing purpose, and refreshing your billing state."
+            progressLabel="Verifying your billing payment"
             steps={[
               'Confirming transaction status',
               'Applying payment to the correct billing purpose',
-              'Returning you to verification funding',
+              'Returning you to subscription billing',
             ]}
             tips={[
               'Provider callbacks can take a moment to settle after checkout closes.',
-              'Applied payments update verification funding and saved card state automatically.',
+              'Saved billing cards and invoice settlements refresh on the subscription page automatically.',
             ]}
-            title="Confirming your payment"
+            title="Confirming your billing payment"
             variant="payment"
           />
         ) : state === 'success' && result ? (
@@ -195,9 +195,11 @@ function PaymentReturnInner() {
               <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
                 Payment confirmed
               </Text>
-              <CardTitle>Verification funding updated</CardTitle>
+              <CardTitle>
+                {isBillingMethodSetup ? 'Billing payment method updated' : 'Subscription invoice settled'}
+              </CardTitle>
               <CardDescription>
-                The provider response was confirmed and applied to the correct billing purpose.
+                The provider response was confirmed and applied to the correct subscription billing purpose.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -208,21 +210,22 @@ function PaymentReturnInner() {
                 <Text>Provider: {result.provider}</Text>
                 <Text>Purpose: {result.purpose.replace(/_/g, ' ')}</Text>
                 <Text>Reference: {result.reference}</Text>
-                {result.purpose === 'card_authorization_setup' ? (
+                {result.invoiceId ? <Text>Invoice: {result.invoiceId}</Text> : null}
+                {isBillingMethodSetup ? (
                   <Text>
-                    Saved card:{' '}
+                    Billing card:{' '}
                     {result.paymentMethod?.brand && result.paymentMethod?.last4
                       ? `${result.paymentMethod.brand} ending in ${result.paymentMethod.last4}`
-                      : 'Card activated'}
+                      : 'Payment method saved'}
                   </Text>
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
                   className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
-                  href={'/verification-funding' as Route}
+                  href={'/subscription' as Route}
                 >
-                  Return to verification funding
+                  Return to subscription
                 </Link>
               </div>
             </CardContent>
@@ -260,10 +263,11 @@ function PaymentReturnInner() {
                 >
                   Retry verification
                 </Button>
-                <Link href={'/verification-funding' as Route}>
-                  <Button type="button" variant="secondary">
-                    Return to verification funding
-                  </Button>
+                <Link
+                  className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+                  href={'/subscription' as Route}
+                >
+                  Return to subscription
                 </Link>
               </div>
             </CardContent>
@@ -274,20 +278,26 @@ function PaymentReturnInner() {
   );
 }
 
-export default function VerificationFundingPaymentReturnPage() {
+export default function SubscriptionPaymentReturnPage() {
   return (
     <Suspense
       fallback={
         <TenantAppShell
-          description="Confirm the verification funding outcome and return to the verification funding page."
-          eyebrow="Verification Funding"
-          title="Funding return"
+          description="Confirm the subscription billing payment outcome and return to the subscription page."
+          eyebrow="Subscription"
+          title="Billing return"
         >
           <div className="max-w-3xl">
             <ProcessingStateCard
-              compact
-              message="Preparing the payment callback and loading the latest provider response."
-              title="Loading payment status"
+              activeStep={1}
+              message="We are opening your billing confirmation details."
+              progressLabel="Preparing payment confirmation"
+              steps={[
+                'Loading return context',
+                'Preparing verification state',
+                'Opening the subscription result',
+              ]}
+              title="Preparing billing confirmation"
               variant="payment"
             />
           </div>
