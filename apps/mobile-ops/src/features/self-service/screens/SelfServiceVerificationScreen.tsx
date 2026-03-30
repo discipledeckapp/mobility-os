@@ -286,7 +286,7 @@ export function SelfServiceVerificationScreen({
           : 'Saving your profile details and preserving your onboarding progress.';
 
   const profileComplete = Boolean(firstName.trim() && lastName.trim() && dateOfBirth.trim());
-  const organisationName = driver?.organisationName ?? 'your organisation';
+  const organisationName = driver?.organisationName?.trim() || 'Mobiris operator';
 
   const verificationLifecycle = useMemo<VerificationLifecycleState>(() => {
     if (!identityVerificationRequired) {
@@ -1421,8 +1421,8 @@ export function SelfServiceVerificationScreen({
               ? driver?.verificationPaymentMessage ??
                 `${organisationName} requires payment for ${verificationTierLabel} before identity checks can begin. This charge is tied to this onboarding flow and will not be charged twice once confirmed.`
               : companyFundingReady
-                ? `This ${verificationTierLabel} verification will be covered by your organisation.`
-                : `Verification requires confirmation from your organisation before ${verificationTierLabel} can continue.`}
+                ? `This ${verificationTierLabel} verification will be covered by ${organisationName}.`
+                : `Verification requires confirmation from ${organisationName} before ${verificationTierLabel} can continue.`}
           </Text>
 
           <View style={styles.breakdownCard}>
@@ -1462,14 +1462,14 @@ export function SelfServiceVerificationScreen({
               <View style={styles.optionCard}>
                 <Text style={styles.optionTitle}>Continue with driver payment</Text>
                 <Text style={styles.optionText}>
-                  If your organisation allows driver-paid verification, they can switch this flow
+                  If {organisationName} allows driver-paid verification, they can switch this flow
                   and you can pay {verificationAmountLabel ?? 'the required amount'} yourself.
                 </Text>
               </View>
               <View style={styles.optionCard}>
                 <Text style={styles.optionTitle}>Wait for organisation</Text>
                 <Text style={styles.optionText}>
-                  Your progress is saved. You can return after your organisation completes the
+                  Your progress is saved. You can return after {organisationName} completes the
                   required setup.
                 </Text>
               </View>

@@ -69,7 +69,9 @@ export function TenantShellChrome({
   }, []);
 
   const organisationName =
-    session?.organisationDisplayName || session?.tenantName || 'Organisation workspace';
+    session?.organisationDisplayName?.trim() ||
+    session?.tenantName?.trim() ||
+    'Mobiris workspace';
   const enforcement = billingSummary?.subscription.enforcement;
   const blockedFeatures = enforcement?.blockedFeatures ?? [];
   const showLifecycleBanner = enforcement?.stage === 'grace' || enforcement?.stage === 'expired';
@@ -77,9 +79,13 @@ export function TenantShellChrome({
   return (
     <AppShell>
       <div className="flex min-h-screen">
-        <Sidebar className={`hidden flex-col px-4 py-6 transition-all lg:flex ${collapsed ? 'w-24' : 'w-72'}`}>
-          <div className="mb-6 flex items-start justify-between gap-3 px-2">
-            <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
+        <Sidebar
+          className={`group/sidebar hidden flex-col py-6 transition-all lg:flex ${
+            collapsed ? 'w-[5.5rem] px-2' : 'w-72 px-4'
+          }`}
+        >
+          <div className={`mb-6 flex items-start ${collapsed ? 'justify-center' : 'justify-between'} gap-3 px-2`}>
+            <div className={`relative flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
               <div className="flex h-8 w-8 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] shadow-[0_8px_20px_-8px_rgba(37,99,235,0.8)]">
                 <span className="text-sm font-bold tracking-tight text-white">M</span>
               </div>
@@ -93,9 +99,19 @@ export function TenantShellChrome({
                   </p>
                 </div>
               ) : null}
+              {collapsed ? (
+                <div className="pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-[0_20px_35px_-24px_rgba(15,23,42,0.45)] group-hover/sidebar:block">
+                  <p className="text-sm font-semibold text-slate-950">Mobiris</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                    {organisationName}
+                  </p>
+                </div>
+              ) : null}
             </div>
             <button
-              className="rounded-[var(--mobiris-radius-button)] p-2 text-blue-50/60 transition hover:bg-white/8 hover:text-white"
+              className={`rounded-[var(--mobiris-radius-button)] p-2 text-blue-50/60 transition hover:bg-white/8 hover:text-white ${
+                collapsed ? 'absolute left-1/2 top-20 hidden -translate-x-1/2 group-hover/sidebar:block' : ''
+              }`}
               onClick={() => setCollapsed((value) => !value)}
               type="button"
             >
@@ -113,7 +129,18 @@ export function TenantShellChrome({
 
           <div className="mt-auto">
             <div className="mb-3 border-t border-white/8" />
-            <LogoutButton className="flex w-full items-center gap-2.5 rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium text-blue-50/50 transition-all hover:bg-white/8 hover:text-white" />
+            <div className="relative">
+              <LogoutButton
+                className={`flex w-full items-center rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-medium text-blue-50/50 transition-all hover:bg-white/8 hover:text-white ${
+                  collapsed ? 'justify-center' : 'gap-2.5'
+                }`}
+              />
+              {collapsed ? (
+                <div className="pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_20px_35px_-24px_rgba(15,23,42,0.45)] group-hover/sidebar:block">
+                  Sign out
+                </div>
+              ) : null}
+            </div>
           </div>
         </Sidebar>
 

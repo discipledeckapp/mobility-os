@@ -2456,7 +2456,7 @@ function DriverVerificationFlow({
     driver.firstName && driver.lastName
       ? `${driver.firstName} ${driver.lastName}`
       : (driver.email ?? 'Welcome');
-  const organisationName = driver.organisationName ?? 'your organisation';
+  const organisationName = driver.organisationName?.trim() || 'Mobiris operator';
   const tierComponents = onboardingStep.verificationTierComponents ?? ['identity'];
   const tierIncludes = [
     'identity verification',

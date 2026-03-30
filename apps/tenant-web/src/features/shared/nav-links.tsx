@@ -371,23 +371,29 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
           {section.items.map(({ href, label, Icon }) => {
             const isActive = href === '/' ? pathname === '/' : (pathname ?? '').startsWith(href);
             return (
-              <Link
-                className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
-                  isActive
-                    ? isMobile
-                      ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_14px_28px_-18px_rgba(37,99,235,0.55)]'
-                      : 'bg-[var(--mobiris-primary)] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)]'
-                    : isMobile
-                      ? 'border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
-                      : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
-                }`}
-                href={href as Route}
-                key={href}
-                title={collapsed && !isMobile ? label : undefined}
-              >
-                <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />
-                {!collapsed || isMobile ? label : null}
-              </Link>
+              <div className="group/nav relative" key={href}>
+                <Link
+                  className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
+                    isActive
+                      ? isMobile
+                        ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_14px_28px_-18px_rgba(37,99,235,0.55)]'
+                        : 'bg-[var(--mobiris-primary)] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)]'
+                      : isMobile
+                        ? 'border border-slate-200 bg-white text-slate-600 hover:border-[var(--mobiris-primary-light)] hover:text-[var(--mobiris-primary-dark)]'
+                        : 'text-blue-50/70 hover:bg-white/8 hover:text-white'
+                  }`}
+                  href={href as Route}
+                  title={collapsed && !isMobile ? label : undefined}
+                >
+                  <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />
+                  {!collapsed || isMobile ? label : null}
+                </Link>
+                {collapsed && !isMobile ? (
+                  <div className="pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 z-20 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_20px_35px_-24px_rgba(15,23,42,0.45)] group-hover/nav:block">
+                    {label}
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </div>
