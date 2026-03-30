@@ -57,6 +57,7 @@ import {
   isDriverScopedSession,
 } from '../utils/roles';
 import { mobileLinking } from './linking';
+import { rootNavigationRef } from './navigation-ref';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -151,7 +152,7 @@ export function RootNavigator() {
         : 'RoleSelection';
 
   return (
-    <NavigationContainer linking={mobileLinking}>
+    <NavigationContainer linking={mobileLinking} ref={rootNavigationRef}>
       <Stack.Navigator
         initialRouteName={initialRouteName}
         screenOptions={{

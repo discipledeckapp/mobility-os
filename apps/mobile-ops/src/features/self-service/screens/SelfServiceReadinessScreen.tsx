@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Alert, Linking, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { initiateDriverKycCheckout, notifyDriverSelfServiceOrganisation } from '../../../api';
 import { Badge } from '../../../components/badge';
@@ -7,15 +8,18 @@ import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
 import { Screen } from '../../../components/screen';
+import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import { buildSelfServiceVerificationDeepLink } from '../../../navigation/linking';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { isDriverMobileSession } from '../../../utils/roles';
 import { buildDriverOnboardingSteps, resolveNextDriverAction } from '../verification-flow';
 
 export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServiceReadiness'>) {
   const { showToast } = useToast();
+  const { session } = useAuth();
   const {
     token,
     driver,
@@ -79,6 +83,18 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     }
   };
 
+  const driverWorkspaceReady =
+    !!driver &&
+    isDriverMobileSession(session) &&
+    driver.authenticationAccess === 'ready' &&
+    driver.activationReadiness === 'ready';
+
+  useEffect(() => {
+    if (driverWorkspaceReady) {
+      navigation.replace('Home');
+    }
+  }, [driverWorkspaceReady, navigation]);
+
   if (isLoading || !token || !driver) {
     return (
       <Screen contentContainerStyle={styles.centered}>
@@ -139,9 +155,9 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <Card style={styles.section}>
         <Text style={styles.kicker}>Mobiris Fleet OS</Text>
-        <Text style={styles.title}>Driver onboarding checklist</Text>
+        <Text style={styles.title}>Your next driver step</Text>
         <Text style={styles.copy}>
-          Follow the steps required for {driver.verificationTierLabel ?? 'your organisation’s verification level'}.
+          We only show the steps needed for {driver.verificationTierLabel ?? 'your organisation’s verification level'}.
         </Text>
         <View style={styles.badgeRow}>
           <Badge
@@ -161,6 +177,13 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
           />
         </View>
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Do this next</Text>
+        <Text style={styles.label}>{nextAction.title}</Text>
+        <Text style={styles.copy}>{nextAction.description}</Text>
+        <Button label={nextAction.cta} onPress={openNextAction} />
       </Card>
 
       <Card style={styles.section}>
@@ -207,84 +230,6 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             </View>
           </View>
         ))}
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Status summary</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Sign-in access</Text>
-          <Badge
-            label={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}
-            tone={readinessTone(driver.authenticationAccess ?? 'not_ready')}
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Mobile account status</Text>
-          <Badge label={mobileAccessLabel} tone={mobileAccessTone} />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Identity verification</Text>
-          <Badge
-            label={formatIdentityStatus(driver.identityStatus)}
-            tone={identityTone(driver.identityStatus)}
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Approved licence</Text>
-          <Badge
-            label={
-              requiresLicenceStep
-                ? driver.hasApprovedLicence
-                  ? 'Available'
-                  : 'Missing'
-                : 'Not required'
-            }
-            tone={
-              requiresLicenceStep
-                ? driver.hasApprovedLicence
-                  ? 'success'
-                  : 'warning'
-                : 'neutral'
-            }
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Activation readiness</Text>
-          <Badge
-            label={formatReadinessLabel(driver.activationReadiness ?? 'not_ready')}
-            tone={readinessTone(driver.activationReadiness ?? 'not_ready')}
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Assignment readiness</Text>
-          <Badge
-            label={formatReadinessLabel(driver.assignmentReadiness ?? 'not_ready')}
-            tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Remittance readiness</Text>
-          <Badge
-            label={formatReadinessLabel(driver.remittanceReadiness ?? 'not_ready')}
-            tone={readinessTone(driver.remittanceReadiness ?? 'not_ready')}
-          />
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Uploaded documents</Text>
-          <Text style={styles.meta}>{documents.length}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Pending documents</Text>
-          <Text style={styles.meta}>{driver.pendingDocumentCount}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Rejected documents</Text>
-          <Text style={styles.meta}>{driver.rejectedDocumentCount}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Expired documents</Text>
-          <Text style={styles.meta}>{driver.expiredDocumentCount}</Text>
-        </View>
       </Card>
 
       <Card style={styles.section}>
@@ -417,23 +362,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
       )}
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Next best action</Text>
-        <Text style={styles.label}>{nextAction.title}</Text>
-        <Text style={styles.copy}>{nextAction.description}</Text>
-        <Button label={nextAction.cta} onPress={openNextAction} />
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Recommended next action</Text>
-        <Text style={styles.copy}>
-          {recommendedAction({
-            authenticationAccess: driver.authenticationAccess ?? 'not_ready',
-            mobileAccessStatus: driver.mobileAccessStatus ?? null,
-            identityStatus: driver.identityStatus,
-            hasDocumentBlockers,
-            signInReady,
-          })}
-        </Text>
+        <Text style={styles.sectionTitle}>More actions</Text>
         {canResumeVerification ? (
           <Button
             label="Open verification tasks"
@@ -509,40 +438,6 @@ function mobileAccessStatusTone(
   if (status === 'revoked') return 'danger';
   if (status === 'inactive') return 'warning';
   return 'neutral';
-}
-
-function recommendedAction(input: {
-  authenticationAccess: string;
-  mobileAccessStatus?: string | null;
-  identityStatus: string;
-  hasDocumentBlockers: boolean;
-  signInReady: boolean;
-}) {
-  if (!input.mobileAccessStatus || input.mobileAccessStatus === 'missing') {
-    return 'Set up your sign-in account first so you can access the app while the rest of your onboarding continues.';
-  }
-  if (input.authenticationAccess !== 'ready') {
-    return 'Your account exists, but access is not active yet. Refresh this screen or contact your operator if the restriction should already be cleared.';
-  }
-  if (input.signInReady && input.identityStatus !== 'verified') {
-    return 'You can sign in already, but you still need to finish identity verification before operational approval can move forward.';
-  }
-  if (input.signInReady && input.hasDocumentBlockers) {
-    return 'You can sign in already. Next, upload or replace the required documents so activation and assignment approval can continue.';
-  }
-  if (input.signInReady) {
-    return 'Your app access is ready. Sign in now, then monitor this checklist for any remaining operational restrictions.';
-  }
-  if (input.identityStatus === 'review_needed') {
-    return 'Your verification is under manual review. Refresh this screen for updates or contact your fleet manager if the delay continues.';
-  }
-  if (input.identityStatus !== 'verified') {
-    return 'Complete the identity section and live selfie capture before operations can continue.';
-  }
-  if (input.hasDocumentBlockers) {
-    return 'Upload or replace the required driver documents so the organisation can approve your readiness.';
-  }
-  return 'Refresh the checklist after your organisation updates your readiness state.';
 }
 
 const styles = StyleSheet.create({

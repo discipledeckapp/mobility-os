@@ -4,16 +4,17 @@ import * as Notifications from 'expo-notifications';
 import * as SystemUI from 'expo-system-ui';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Animated } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LaunchSplashScreen, createSplashFadeAnimation } from './src/components/launch-splash-screen';
 import { AppEntryProvider, useAppEntry } from './src/contexts/app-entry-context';
 import { ErrorBoundary } from './src/components/error-boundary';
 import { registerPushDevice } from './src/api';
 import { AuthProvider, useAuth } from './src/contexts/auth-context';
-import { SelfServiceProvider } from './src/contexts/self-service-context';
+import { SelfServiceProvider, useSelfService } from './src/contexts/self-service-context';
 import { ToastProvider, useToast } from './src/contexts/toast-context';
 import { mobileQueryClient, mobileQueryPersister } from './src/lib/query-client';
 import { RootNavigator } from './src/navigation/root-navigator';
+import { resetToRoleSelection } from './src/navigation/navigation-ref';
 import {
   flushOfflineQueue,
   subscribeToNetworkReconnect,
@@ -66,7 +67,7 @@ function AppShell() {
       createSplashFadeAnimation(splashOpacity).start(() => {
         setShowSplash(false);
       });
-    }, 650);
+    }, 380);
 
     return () => {
       clearTimeout(timer);
@@ -167,6 +168,23 @@ function AppShell() {
   );
 }
 
+function RecoverableAppBoundary({ children }: { children: ReactNode }) {
+  const { logout } = useAuth();
+  const { clearSelfService } = useSelfService();
+  const { clearSelectedRole } = useAppEntry();
+
+  return (
+    <ErrorBoundary
+      onStartOver={async () => {
+        await Promise.allSettled([clearSelfService(), logout(), clearSelectedRole()]);
+        resetToRoleSelection();
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(tokens.colors.background).catch(() => {
@@ -175,24 +193,24 @@ export default function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <PersistQueryClientProvider
-        client={mobileQueryClient}
-        persistOptions={{
-          persister: mobileQueryPersister,
-          maxAge: 1000 * 60 * 60 * 24,
-        }}
-      >
-        <AuthProvider>
-          <AppEntryProvider>
-            <SelfServiceProvider>
-              <ToastProvider>
+    <PersistQueryClientProvider
+      client={mobileQueryClient}
+      persistOptions={{
+        persister: mobileQueryPersister,
+        maxAge: 1000 * 60 * 60 * 24,
+      }}
+    >
+      <AuthProvider>
+        <AppEntryProvider>
+          <SelfServiceProvider>
+            <ToastProvider>
+              <RecoverableAppBoundary>
                 <AppShell />
-              </ToastProvider>
-            </SelfServiceProvider>
-          </AppEntryProvider>
-        </AuthProvider>
-      </PersistQueryClientProvider>
-    </ErrorBoundary>
+              </RecoverableAppBoundary>
+            </ToastProvider>
+          </SelfServiceProvider>
+        </AppEntryProvider>
+      </AuthProvider>
+    </PersistQueryClientProvider>
   );
 }

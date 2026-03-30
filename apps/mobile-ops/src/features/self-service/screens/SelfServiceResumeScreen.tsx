@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { ActivityIndicator } from 'react-native';
+import { useAuth } from '../../../contexts/auth-context';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
@@ -12,10 +13,12 @@ import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+import { isDriverMobileSession } from '../../../utils/roles';
 import { buildDriverOnboardingSteps, resolveNextDriverAction } from '../verification-flow';
 
 export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'SelfServiceResume'>) {
   const { showToast } = useToast();
+  const { session } = useAuth();
   const {
     token,
     driver,
@@ -44,6 +47,18 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       navigation.replace('SelfServiceOtp');
     });
   }, [bootstrapToken, driver, navigation, route.params?.token, token]);
+
+  const driverWorkspaceReady =
+    !!driver &&
+    isDriverMobileSession(session) &&
+    driver.authenticationAccess === 'ready' &&
+    driver.activationReadiness === 'ready';
+
+  useEffect(() => {
+    if (driverWorkspaceReady) {
+      navigation.replace('Home');
+    }
+  }, [driverWorkspaceReady, navigation]);
 
   const onRefresh = async () => {
     try {
@@ -86,6 +101,9 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
 
   const nextStep = resolveNextDriverAction(driver, documents.length);
   const onboardingSteps = buildDriverOnboardingSteps(driver);
+  const pendingSteps = onboardingSteps.filter(
+    (step) => step.required && step.status === 'pending' && step.key !== 'account',
+  );
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
@@ -96,7 +114,7 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
         </Text>
         <Text style={styles.copy}>
           {driver.organisationName ?? 'Your organisation'} invited you to continue onboarding.
-          Finish the next required step and keep moving.
+          We will keep this simple and take you to the next thing that matters.
         </Text>
         <View style={styles.badgeRow}>
           <Badge label={formatIdentityStatus(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
@@ -105,28 +123,29 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {driver.verificationTierLabel ?? 'Verification level'}
-        </Text>
-        <Text style={styles.copy}>
-          {driver.verificationTierDescription ??
-            'Your onboarding steps follow the verification level selected by your organisation.'}
-        </Text>
+        <Text style={styles.sectionTitle}>What happens next</Text>
+        <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
+        <Text style={styles.copy}>{nextStep.description}</Text>
+        <Button label={nextStep.cta} onPress={() => navigation.navigate(nextStep.target)} />
+        <Button label="Refresh" variant="secondary" onPress={() => void onRefresh()} />
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Current status</Text>
+        <Text style={styles.sectionTitle}>Quick status</Text>
         <View style={styles.metricRow}>
           <Metric label="Account" value={driver.hasMobileAccess ? 'Ready' : 'Pending'} />
           <Metric label="Identity" value={formatIdentityStatus(driver.identityStatus)} />
           <Metric label="Documents" value={String(documents.length)} />
-          <Metric label="Sign in" value={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')} />
+          <Metric
+            label="Remaining"
+            value={pendingSteps.length > 0 ? String(pendingSteps.length) : 'Done'}
+          />
         </View>
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Your onboarding steps</Text>
-        {onboardingSteps.map((step) => (
+        <Text style={styles.sectionTitle}>Your steps</Text>
+        {onboardingSteps.filter((step) => step.required).map((step) => (
           <View key={step.key} style={styles.stepRow}>
             <View
               style={[
@@ -164,14 +183,7 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
         ))}
       </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Next step</Text>
-        <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
-        <Text style={styles.copy}>{nextStep.description}</Text>
-        <Button label={nextStep.cta} onPress={() => navigation.navigate(nextStep.target)} />
-        <Button label="Refresh" variant="secondary" onPress={() => void onRefresh()} />
-        <Button label="Use another invite" variant="secondary" onPress={() => void onClear()} />
-      </Card>
+      <Button label="Use another invite" variant="secondary" onPress={() => void onClear()} />
     </Screen>
   );
 }

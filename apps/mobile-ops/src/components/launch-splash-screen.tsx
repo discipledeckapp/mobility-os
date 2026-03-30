@@ -9,24 +9,7 @@ export function LaunchSplashScreen({ opacity }: { opacity: Animated.Value }) {
         <Text style={styles.logoMark}>M</Text>
       </View>
       <Text style={styles.title}>Mobiris Fleet OS</Text>
-      <Text style={styles.subtitle}>Fleet & Driver Operations Platform</Text>
-      <View style={styles.progressTrack}>
-        <Animated.View
-          style={[
-            styles.progressBar,
-            {
-              transform: [
-                {
-                  scaleX: opacity.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.82, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-      </View>
+      <Text style={styles.subtitle}>Guided onboarding for drivers, guarantors, and fleet teams</Text>
     </Animated.View>
   );
 }
@@ -34,7 +17,7 @@ export function LaunchSplashScreen({ opacity }: { opacity: Animated.Value }) {
 export function createSplashFadeAnimation(value: Animated.Value) {
   return Animated.timing(value, {
     toValue: 0,
-    duration: 240,
+    duration: 180,
     easing: Easing.out(Easing.ease),
     useNativeDriver: true,
   });
@@ -76,30 +59,17 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   title: {
-    marginTop: tokens.spacing.lg,
+    marginTop: tokens.spacing.md,
     color: tokens.colors.ink,
     fontSize: 30,
     fontWeight: '800',
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: tokens.spacing.sm,
+    marginTop: tokens.spacing.xs,
     color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-  },
-  progressTrack: {
-    marginTop: tokens.spacing.lg,
-    width: 144,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.18)',
-    overflow: 'hidden',
-  },
-  progressBar: {
-    flex: 1,
-    borderRadius: 999,
-    backgroundColor: tokens.colors.primary,
   },
 });

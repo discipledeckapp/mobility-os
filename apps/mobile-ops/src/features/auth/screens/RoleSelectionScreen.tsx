@@ -43,10 +43,9 @@ export function RoleSelectionScreen({ navigation }: ScreenProps<'RoleSelection'>
           <Text style={styles.logoMark}>M</Text>
         </View>
         <Text style={styles.productName}>Mobiris Fleet OS</Text>
-        <Text style={styles.title}>What are you here to do?</Text>
-        <Text style={styles.subtitle}>
-          Pick your role so we can show the right steps and keep your next visit faster.
-        </Text>
+        <Text style={styles.stepLabel}>Step 1 of 2</Text>
+        <Text style={styles.title}>Choose your path</Text>
+        <Text style={styles.subtitle}>We will only show the steps that match this role.</Text>
       </View>
 
       <View style={styles.optionList}>
@@ -115,16 +114,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
   },
+  stepLabel: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
   title: {
     color: tokens.colors.ink,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
     textAlign: 'center',
   },
   subtitle: {
     color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
   },
   optionList: {

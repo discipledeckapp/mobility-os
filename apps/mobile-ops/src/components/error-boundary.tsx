@@ -1,18 +1,25 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { reportMobileLog } from '../services/mobile-log-service';
 import { tokens } from '../theme/tokens';
 import { Button } from './button';
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  message: string | null;
+  recovering: boolean;
 }
 
-export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  onStartOver?: () => Promise<void> | void;
+}
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, message: null, recovering: false };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error.message, recovering: false };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -25,16 +32,51 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
     });
   }
 
+  private async recoverWith(action?: () => Promise<void> | void) {
+    try {
+      this.setState({ recovering: true });
+      await action?.();
+    } finally {
+      this.setState({ hasError: false, message: null, recovering: false });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
+      const message = this.state.message?.trim();
+      const likelyNetworkIssue =
+        Boolean(message) &&
+        /(network|request|fetch|timed out|offline|internet|connection)/i.test(message ?? '');
+
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.message}>
-            Restart this screen and try again. If the issue continues, sign in again or contact
-            support.
+          <View style={styles.iconWrap}>
+            <Text style={styles.icon}>{likelyNetworkIssue ? '↺' : '!'}</Text>
+          </View>
+          <Text style={styles.title}>
+            {likelyNetworkIssue ? 'Connection interrupted' : 'We hit a snag'}
           </Text>
-          <Button label="Restart app view" onPress={() => this.setState({ hasError: false })} />
+          <Text style={styles.message}>
+            {likelyNetworkIssue
+              ? 'Your session is still here. Retry now, or reopen sign-in if the connection keeps failing.'
+              : 'This screen did not finish loading. Retry now, or restart from sign-in without losing your place.'}
+          </Text>
+          {message ? <Text style={styles.detail}>{message}</Text> : null}
+          {this.state.recovering ? (
+            <View style={styles.loaderRow}>
+              <ActivityIndicator color={tokens.colors.primary} />
+              <Text style={styles.loaderText}>Recovering your app…</Text>
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              <Button label="Try again" onPress={() => void this.recoverWith()} />
+              <Button
+                label="Restart from sign in"
+                variant="secondary"
+                onPress={() => void this.recoverWith(this.props.onStartOver)}
+              />
+            </View>
+          )}
         </View>
       );
     }
@@ -48,9 +90,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: tokens.spacing.sm,
+    gap: tokens.spacing.md,
     padding: tokens.spacing.lg,
     backgroundColor: tokens.colors.background,
+  },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+  },
+  icon: {
+    color: tokens.colors.primary,
+    fontSize: 28,
+    fontWeight: '800',
   },
   title: {
     color: tokens.colors.ink,
@@ -61,5 +116,25 @@ const styles = StyleSheet.create({
     color: tokens.colors.inkSoft,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  detail: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  actions: {
+    width: '100%',
+    gap: tokens.spacing.sm,
+  },
+  loaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  loaderText: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

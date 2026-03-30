@@ -156,30 +156,31 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           <Text style={styles.wordmark}>M</Text>
         </View>
         <Text style={styles.productName}>Mobiris Fleet OS</Text>
+        <Text style={styles.stepLabel}>Step 2 of 2</Text>
         <Text style={styles.title}>
           {selectedRole === 'operator'
-            ? 'Run fleet operations with less friction'
+            ? 'Run your fleet from one place'
             : selectedRole === 'guarantor'
-              ? 'Complete guarantor verification'
-              : 'Continue driver onboarding'}
+              ? 'Open your guarantor journey'
+              : 'Get back into driver onboarding'}
         </Text>
         <Text style={styles.subtitle}>
           {selectedRole === 'operator'
-            ? 'Create your organisation, add vehicles, add drivers, and keep operations moving.'
+            ? 'Create your organisation or sign in to continue operations.'
             : selectedRole === 'guarantor'
-              ? 'Use your invitation, confirm your role, and complete verification in a few guided steps.'
-              : 'Use your invitation, verify your details, and finish the next required step quickly.'}
+              ? 'Use your invite or sign in if you already started before.'
+              : 'Use your invite or sign in if you already created your account.'}
         </Text>
       </View>
 
-      <Card style={styles.entryRuleCard}>
-        <Text style={styles.entryRuleTitle}>{roleLabel}</Text>
-        <Text style={styles.entryRuleCopy}>
+      <Card style={styles.entryHintCard}>
+        <Text style={styles.entryHintTitle}>{roleLabel}</Text>
+        <Text style={styles.entryHintCopy}>
           {selectedRole === 'operator'
-            ? 'The operator flow starts with organisation setup, then moves into adding a vehicle, adding a driver, and verifying the driver.'
+            ? 'New here? Create your organisation. Returning? Sign in.'
             : selectedRole === 'guarantor'
-              ? 'Guarantor access usually starts from an organisation invite. Sign in only if you already created an account before.'
-              : 'Driver access usually starts from an organisation invite. Sign in only if you already created your account before.'}
+              ? 'Most guarantors start from an invitation. Sign in only if you already created an account.'
+              : 'Most drivers start from an invitation. Sign in only if you already created an account.'}
         </Text>
       </Card>
 
@@ -214,25 +215,6 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
             variant="secondary"
             onPress={() => navigation.navigate('SelfServiceVerification')}
           />
-        </Card>
-      ) : null}
-
-      {selectedRole === 'driver' ? (
-        <Card style={styles.pathCard}>
-          <Text style={styles.pathTitle}>Driver path</Text>
-          <Text style={styles.pathCopy}>
-            Your steps are driven by your organisation&apos;s verification level. Identity, guarantor,
-            and licence only appear when required for your onboarding.
-          </Text>
-        </Card>
-      ) : null}
-
-      {selectedRole === 'operator' ? (
-        <Card style={styles.pathCard}>
-          <Text style={styles.pathTitle}>Operator path</Text>
-          <Text style={styles.pathCopy}>
-            Start with organisation setup, then add a vehicle, add a driver, and verify the driver.
-          </Text>
         </Card>
       ) : null}
 
@@ -388,6 +370,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
+  stepLabel: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   title: {
     color: tokens.colors.ink,
     fontSize: 28,
@@ -397,8 +386,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
     maxWidth: 320,
   },
@@ -407,17 +396,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FBFF',
     borderColor: '#BFDBFE',
   },
-  entryRuleCard: {
+  entryHintCard: {
     gap: tokens.spacing.sm,
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FED7AA',
+    backgroundColor: '#F8FAFC',
   },
-  entryRuleTitle: {
+  entryHintTitle: {
     color: tokens.colors.ink,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  entryRuleCopy: {
+  entryHintCopy: {
     color: tokens.colors.inkSoft,
     fontSize: 14,
     lineHeight: 20,
@@ -452,20 +440,6 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.xs,
   },
   resumeSummary: {
-    color: tokens.colors.inkSoft,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  pathCard: {
-    gap: tokens.spacing.sm,
-    backgroundColor: '#F8FAFC',
-  },
-  pathTitle: {
-    color: tokens.colors.ink,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  pathCopy: {
     color: tokens.colors.inkSoft,
     fontSize: 14,
     lineHeight: 20,

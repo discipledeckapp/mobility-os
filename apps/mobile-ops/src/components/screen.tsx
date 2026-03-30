@@ -1,4 +1,11 @@
-import { ScrollView, type ScrollViewProps, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  type ScrollViewProps,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '../theme/tokens';
 
@@ -16,17 +23,26 @@ export function Screen({
 }: ScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          padded ? styles.padded : null,
-          contentContainerStyle,
-        ]}
-        {...props}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+        style={styles.flex}
       >
-        <View style={styles.inner}>{children}</View>
-      </ScrollView>
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={[
+            styles.content,
+            padded ? styles.padded : null,
+            contentContainerStyle,
+          ]}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+          {...props}
+        >
+          <View style={styles.inner}>{children}</View>
+        </ScrollView>
+        {footer ? <View style={styles.footer}>{footer}</View> : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -36,11 +52,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: tokens.colors.background,
   },
+  flex: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
   },
   padded: {
-    padding: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.md,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing.xl * 1.5,
   },
   inner: {
     gap: tokens.spacing.md,

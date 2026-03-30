@@ -1307,12 +1307,11 @@ export function SelfServiceVerificationScreen({
           >
             <View style={[styles.checkbox, consentAccepted ? styles.checkboxActive : null]} />
             <Text style={styles.consentText}>
-              I understand Mobiris Fleet OS will use my ID number, live selfie, and identity match result,
-              and that wrong details will fail verification.
+              I agree to use my ID details and live selfie for this verification check.
             </Text>
           </Pressable>
           <Text style={styles.legalText}>
-            By continuing you agree to the Mobiris Fleet OS Terms of Use and Privacy Policy.
+            Continuing means you accept the Terms and Privacy Policy.
           </Text>
           <View style={styles.legalLinkRow}>
             <Pressable onPress={() => navigation.navigate('LegalDocument', { document: 'terms' })}>

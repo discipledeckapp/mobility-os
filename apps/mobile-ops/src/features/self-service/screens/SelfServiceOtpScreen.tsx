@@ -13,6 +13,7 @@ import { tokens } from '../../../theme/tokens';
 
 export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp'>) {
   const { bootstrapToken, exchangeOtpCode, loginWithPassword } = useSelfService();
+  const [mode, setMode] = useState<'code' | 'link' | 'signin'>('code');
   const [otpCode, setOtpCode] = useState('');
   const [directToken, setDirectToken] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -97,72 +98,107 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
   return (
     <Screen contentContainerStyle={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Driver invite</Text>
-        <Text style={styles.title}>Start with your invitation</Text>
-        <Text style={styles.copy}>
-          Drivers and guarantors should begin with the invitation from their organisation. Sign in
-          only after your account has already been created.
-        </Text>
+        <Text style={styles.kicker}>Driver onboarding</Text>
+        <Text style={styles.title}>Choose how you want to continue</Text>
+        <Text style={styles.copy}>Most drivers start with an invite. Returning drivers can sign in.</Text>
       </View>
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Invitation code</Text>
-        <Input
-          autoCapitalize="characters"
-          autoCorrect={false}
-          label="Code"
-          onChangeText={setOtpCode}
-          placeholder="Enter your code"
-          value={otpCode}
-        />
-        <Button label="Continue" loading={submittingOtp} onPress={onSubmitOtp} />
-      </Card>
+      <View style={styles.modeRow}>
+        <Pressable
+          onPress={() => setMode('code')}
+          style={[styles.modeChip, mode === 'code' ? styles.modeChipActive : null]}
+        >
+          <Text style={[styles.modeChipText, mode === 'code' ? styles.modeChipTextActive : null]}>
+            Code
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setMode('link')}
+          style={[styles.modeChip, mode === 'link' ? styles.modeChipActive : null]}
+        >
+          <Text style={[styles.modeChipText, mode === 'link' ? styles.modeChipTextActive : null]}>
+            Invite link
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setMode('signin')}
+          style={[styles.modeChip, mode === 'signin' ? styles.modeChipActive : null]}
+        >
+          <Text
+            style={[styles.modeChipText, mode === 'signin' ? styles.modeChipTextActive : null]}
+          >
+            Sign in
+          </Text>
+        </Pressable>
+      </View>
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Already opened a link?</Text>
-        <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Invite token"
-          onChangeText={setDirectToken}
-          placeholder="Paste token"
-          value={directToken}
-        />
-        <Button
-          label="Open invite"
-          loading={submittingToken}
-          variant="secondary"
-          onPress={onSubmitToken}
-        />
-      </Card>
+      {mode === 'code' ? (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Use invitation code</Text>
+          <Text style={styles.sectionHint}>Enter the short code shared by your organisation.</Text>
+          <Input
+            autoCapitalize="characters"
+            autoCorrect={false}
+            label="Invitation code"
+            onChangeText={setOtpCode}
+            placeholder="Enter your code"
+            value={otpCode}
+          />
+          <Button label="Continue" loading={submittingOtp} onPress={onSubmitOtp} />
+        </Card>
+      ) : null}
 
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Returning driver</Text>
-        <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          label="Email or phone number"
-          onChangeText={setIdentifier}
-          placeholder="Enter your email or phone"
-          value={identifier}
-        />
-        <Input
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Password"
-          onChangeText={setPassword}
-          placeholder="Enter your password"
-          secureTextEntry
-          value={password}
-        />
-        <Button
-          label="Sign in"
-          loading={submittingPassword}
-          variant="secondary"
-          onPress={onSubmitPassword}
-        />
-      </Card>
+      {mode === 'link' ? (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Open invite link</Text>
+          <Text style={styles.sectionHint}>Paste the secure token from your email or message.</Text>
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            label="Invite token"
+            onChangeText={setDirectToken}
+            placeholder="Paste token"
+            value={directToken}
+          />
+          <Button
+            label="Open invite"
+            loading={submittingToken}
+            variant="secondary"
+            onPress={onSubmitToken}
+          />
+        </Card>
+      ) : null}
+
+      {mode === 'signin' ? (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Sign in</Text>
+          <Text style={styles.sectionHint}>Use this only if you already created your account.</Text>
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            label="Email or phone number"
+            onChangeText={setIdentifier}
+            placeholder="Enter your email or phone"
+            value={identifier}
+          />
+          <Input
+            autoCapitalize="none"
+            autoCorrect={false}
+            label="Password"
+            onChangeText={setPassword}
+            placeholder="Enter your password"
+            secureTextEntry
+            value={password}
+          />
+          <Button
+            label="Sign in"
+            loading={submittingPassword}
+            variant="secondary"
+            onPress={onSubmitPassword}
+          />
+        </Card>
+      ) : null}
 
       <Pressable onPress={() => navigation.navigate('GuarantorSelfServiceOtp')}>
         <Text style={styles.secondaryText}>Joining as a guarantor? Open guarantor access.</Text>
@@ -210,10 +246,41 @@ const styles = StyleSheet.create({
   card: {
     gap: tokens.spacing.md,
   },
+  modeRow: {
+    flexDirection: 'row',
+    gap: tokens.spacing.xs,
+  },
+  modeChip: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  modeChipActive: {
+    borderColor: tokens.colors.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  modeChipText: {
+    color: tokens.colors.inkSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modeChipTextActive: {
+    color: tokens.colors.primary,
+  },
   sectionTitle: {
     color: tokens.colors.ink,
     fontSize: 18,
     fontWeight: '700',
+  },
+  sectionHint: {
+    color: tokens.colors.inkSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
   backText: {
     color: tokens.colors.primary,
