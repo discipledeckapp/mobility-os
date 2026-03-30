@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../generated/prisma';
 import { PrismaService } from '../database/prisma.service';
 import { PaymentTokenEncryptionService } from './payment-token-encryption.service';
 
