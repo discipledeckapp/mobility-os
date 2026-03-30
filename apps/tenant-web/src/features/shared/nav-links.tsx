@@ -260,7 +260,7 @@ const navigationSections = [
     items: [
       { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
       { href: '/wallet', label: 'Verification Wallet', Icon: WalletIcon },
-      { href: '/reports' as Route, label: 'Reports', Icon: ReportsIcon },
+      { href: '/reports' as Route, label: 'Operations Insights', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],
   },

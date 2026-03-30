@@ -12,6 +12,8 @@ import {
 export interface RecordRemittanceActionState {
   error?: string;
   success?: string;
+  remittanceId?: string;
+  assignmentId?: string;
 }
 
 export interface RemittanceResolutionActionState {
@@ -61,7 +63,15 @@ export async function recordRemittanceAction(
   }
 
   try {
-    await recordRemittance(payload);
+    const remittance = await recordRemittance(payload);
+    revalidatePath('/remittance');
+    revalidatePath(`/assignments/${payload.assignmentId}`);
+    revalidatePath('/');
+    return {
+      success: 'Remittance recorded successfully.',
+      remittanceId: remittance.id,
+      assignmentId: remittance.assignmentId,
+    };
   } catch (error) {
     return {
       error:
@@ -70,11 +80,6 @@ export async function recordRemittanceAction(
           : 'Unable to record remittance at this time.',
     };
   }
-
-  revalidatePath('/remittance');
-  return {
-    success: 'Remittance recorded successfully.',
-  };
 }
 
 export async function confirmRemittanceAction(

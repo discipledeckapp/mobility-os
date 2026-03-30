@@ -21,7 +21,7 @@ import {
 } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { JwtService } from '@nestjs/jwt';
-import { type Driver, Prisma } from '@prisma/client';
+import { type Driver, Prisma, type UserNotification } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { AuditService } from '../audit/audit.service';
 import { generateOtpCode, hashAuthSecret } from '../auth/auth-token-utils';
@@ -2941,6 +2941,52 @@ export class DriversService {
         status: vehicleById.get(assignment.vehicleId)?.status ?? 'assigned',
       },
     }));
+  }
+
+  async listNotificationsFromSelfService(token: string): Promise<UserNotification[]> {
+    const payload = await this.verifySelfServiceToken(token);
+    const userIds = await this.listLinkedUserIdsForDriver(payload.tenantId, payload.driverId);
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    return this.prisma.userNotification.findMany({
+      where: {
+        tenantId: payload.tenantId,
+        userId: { in: userIds },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 50,
+    });
+  }
+
+  async markNotificationReadFromSelfService(
+    token: string,
+    notificationId: string,
+  ): Promise<UserNotification> {
+    const payload = await this.verifySelfServiceToken(token);
+    const userIds = await this.listLinkedUserIdsForDriver(payload.tenantId, payload.driverId);
+    if (userIds.length === 0) {
+      throw new NotFoundException('Notification not found.');
+    }
+
+    const notification = await this.prisma.userNotification.findFirst({
+      where: {
+        id: notificationId,
+        tenantId: payload.tenantId,
+        userId: { in: userIds },
+      },
+      select: { id: true },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found.');
+    }
+
+    return this.prisma.userNotification.update({
+      where: { id: notification.id },
+      data: { readAt: new Date() },
+    });
   }
 
   async getMobileAccess(
@@ -8242,6 +8288,23 @@ export class DriversService {
     }
 
     throw new Error('OTP generation failed');
+  }
+
+  private async listLinkedUserIdsForDriver(
+    tenantId: string,
+    driverId: string,
+  ): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        driverId,
+        isActive: true,
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return users.map((user) => user.id);
   }
 
   private async verifySelfServiceToken(

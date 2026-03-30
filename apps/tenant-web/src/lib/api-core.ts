@@ -2568,6 +2568,30 @@ export async function listDriverSelfServiceDocuments(
   });
 }
 
+export async function listDriverSelfServiceNotifications(
+  selfServiceToken: string,
+): Promise<UserNotificationRecord[]> {
+  return apiCoreFetch<UserNotificationRecord[]>('/driver-self-service/notifications', {
+    method: 'POST',
+    body: JSON.stringify({ token: selfServiceToken }),
+    cache: 'no-store',
+  });
+}
+
+export async function markDriverSelfServiceNotificationRead(
+  selfServiceToken: string,
+  notificationId: string,
+): Promise<UserNotificationRecord> {
+  return apiCoreFetch<UserNotificationRecord>(
+    `/driver-self-service/notifications/${notificationId}/read`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ token: selfServiceToken }),
+      cache: 'no-store',
+    },
+  );
+}
+
 export async function uploadDriverSelfServiceDocument(
   selfServiceToken: string,
   input: {

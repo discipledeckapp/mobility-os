@@ -170,11 +170,19 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
               onPress={() => navigation.navigate('Profile')}
             />
             {canRecordAnyRemittance ? (
-              <Button
-                accessibilityHint="Open the remittance recording form"
-                label="Record remittance"
-                onPress={() => navigation.navigate('Remittance', {})}
-              />
+              <>
+                <Button
+                  accessibilityHint="Open the remittance recording form"
+                  label="Record remittance"
+                  onPress={() => navigation.navigate('Remittance', {})}
+                />
+                <Button
+                  accessibilityHint="Open the remittance history for this account"
+                  label="Remittance history"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('RemittanceHistory')}
+                />
+              </>
             ) : null}
           </View>
           <Button
@@ -285,6 +293,13 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
                         assignmentId: currentAssignment.id,
                       })
                     }
+                  />
+                ) : null}
+                {currentAssignment.status === 'active' ? (
+                  <Button
+                    label="View remittance history"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('RemittanceHistory')}
                   />
                 ) : null}
               </View>
@@ -402,7 +417,7 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'ended') {
+  if (status === 'ended' || status === 'active') {
     return 'success';
   }
   if (status === 'cancelled' || status === 'declined') {

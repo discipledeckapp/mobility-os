@@ -11,6 +11,7 @@ export interface WalletCheckoutActionState {
   error?: string;
   success?: string;
   checkoutUrl?: string;
+  recommendedProvider?: 'paystack' | 'flutterwave';
 }
 
 function getTrimmedValue(formData: FormData, key: string): string {
@@ -54,6 +55,67 @@ function parseAmountToMinorUnits(amountRaw: string, currencyMinorUnitRaw: string
   return Number.isFinite(amountMinorUnits) ? amountMinorUnits : null;
 }
 
+function sanitizeCheckoutError(
+  error: unknown,
+  context: 'wallet_top_up' | 'card_setup' | 'invoice_payment',
+  provider?: string,
+): WalletCheckoutActionState {
+  console.error(`[verification-funding] ${context} failed`, error);
+
+  const message = error instanceof Error ? error.message : '';
+  const isFlutterwave = provider === 'flutterwave';
+  const providerFallback = isFlutterwave ? 'paystack' : 'flutterwave';
+
+  if (/405|method not allowed/i.test(message)) {
+    return {
+      error: isFlutterwave
+        ? 'Flutterwave could not open a hosted checkout right now. Switch to Paystack to continue funding.'
+        : 'That funding option is temporarily unavailable. Try the other provider.',
+      recommendedProvider: providerFallback,
+    };
+  }
+
+  if (/502|503|504|bad gateway|service unavailable/i.test(message)) {
+    return {
+      error:
+        'Verification funding is temporarily unavailable right now. Please try again in a moment.',
+      ...(providerFallback ? { recommendedProvider: providerFallback } : {}),
+    };
+  }
+
+  if (/flutterwave/i.test(message)) {
+    return {
+      error: 'Flutterwave could not start checkout right now. Try Paystack instead.',
+      recommendedProvider: 'paystack',
+    };
+  }
+
+  if (/paystack/i.test(message)) {
+    return {
+      error: 'Paystack could not start checkout right now. Try Flutterwave instead.',
+      recommendedProvider: 'flutterwave',
+    };
+  }
+
+  if (context === 'card_setup') {
+    return {
+      error:
+        'We could not start saved payment method setup right now. Please try again shortly.',
+    };
+  }
+
+  if (context === 'invoice_payment') {
+    return {
+      error: 'We could not start invoice payment right now. Please try again shortly.',
+    };
+  }
+
+  return {
+    error:
+      'We could not start verification funding right now. Please try again shortly.',
+  };
+}
+
 export async function initializeVerificationWalletTopUpAction(
   _prevState: WalletCheckoutActionState,
   formData: FormData,
@@ -63,12 +125,12 @@ export async function initializeVerificationWalletTopUpAction(
   const currencyMinorUnitRaw = getTrimmedValue(formData, 'currencyMinorUnit');
 
   if (!provider || !amountRaw) {
-    return { error: 'Payment provider and amount are required.' };
+    return { error: 'Choose a payment provider and enter an amount to continue.' };
   }
 
   const amountMinorUnits = parseAmountToMinorUnits(amountRaw, currencyMinorUnitRaw);
   if (!amountMinorUnits || amountMinorUnits <= 0) {
-    return { error: 'Enter a valid amount to fund the verification wallet.' };
+    return { error: 'Enter an amount greater than zero to fund the verification wallet.' };
   }
 
   try {
@@ -78,10 +140,7 @@ export async function initializeVerificationWalletTopUpAction(
     });
     return { checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
-    return {
-      error:
-        error instanceof Error ? error.message : 'Unable to initialize wallet funding checkout.',
-    };
+    return sanitizeCheckoutError(error, 'wallet_top_up', provider);
   }
 }
 
@@ -103,32 +162,25 @@ export async function initializeOutstandingInvoiceCheckoutAction(
     });
     return { checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : 'Unable to initialize invoice checkout.',
-    };
+    return sanitizeCheckoutError(error, 'invoice_payment', provider);
   }
 }
 
 export async function initializeCardSetupCheckoutAction(
   _prevState: WalletCheckoutActionState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<WalletCheckoutActionState> {
-  const provider = getTrimmedValue(formData, 'provider');
-  const amountRaw = getTrimmedValue(formData, 'amountMinorUnits');
-  const amountMinorUnits = amountRaw ? Number.parseInt(amountRaw, 10) : 10_000;
+  const provider = 'paystack';
+  const amountMinorUnits = 10_000;
 
   try {
     const checkout = await initializeTenantCardSetupCheckout({
-      ...(provider ? { provider } : {}),
-      ...(Number.isFinite(amountMinorUnits) && amountMinorUnits > 0
-        ? { amountMinorUnits }
-        : {}),
+      provider,
+      amountMinorUnits,
     });
     return { checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : 'Unable to initialize card setup checkout.',
-    };
+    return sanitizeCheckoutError(error, 'card_setup', provider);
   }
 }
 
@@ -146,8 +198,9 @@ export async function changePlanAction(
     await changeTenantBillingPlan(planId);
     return { success: 'Plan updated successfully. Refresh to view the new billing status.' };
   } catch (error) {
+    console.error('[verification-funding] change plan failed', error);
     return {
-      error: error instanceof Error ? error.message : 'Unable to change plan right now.',
+      error: 'We could not change the subscription plan right now. Please try again shortly.',
     };
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { computeNextRemittanceDueDate, describeRemittanceSchedule } from '@mobility-os/domain-config';
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionPendingButtonState,
   Button,
@@ -24,6 +24,7 @@ import {
   recordRemittanceAction,
   type RecordRemittanceActionState,
 } from './actions';
+import { useRouter } from 'next/navigation';
 
 const initialState: RecordRemittanceActionState = {};
 
@@ -42,6 +43,8 @@ export function CreateRemittanceForm({
   drivers,
   vehicles,
   helperNote,
+  initialAssignmentId,
+  initialFleetId,
 }: {
   fleets: FleetRecord[];
   fleetError?: string | null;
@@ -49,13 +52,17 @@ export function CreateRemittanceForm({
   drivers: DriverRecord[];
   vehicles: VehicleRecord[];
   helperNote?: string | null;
+  initialAssignmentId?: string | null;
+  initialFleetId?: string | null;
 }) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     recordRemittanceAction,
     initialState,
   );
-  const [fleetId, setFleetId] = useState('');
-  const [assignmentId, setAssignmentId] = useState('');
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [fleetId, setFleetId] = useState(initialFleetId ?? '');
+  const [assignmentId, setAssignmentId] = useState(initialAssignmentId ?? '');
   const hasActiveAssignments = activeAssignments.length > 0;
   const selectableFleets = useMemo(
     () => fleets.filter((fleet) => fleet.status !== 'inactive'),
@@ -134,6 +141,17 @@ export function CreateRemittanceForm({
     }
   }, [assignmentId, fleetAssignments]);
 
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    formRef.current?.reset();
+    setAssignmentId(initialAssignmentId ?? '');
+    setFleetId(initialFleetId ?? '');
+    router.refresh();
+  }, [initialAssignmentId, initialFleetId, router, state.success]);
+
   return (
     <Card>
       <CardHeader>
@@ -168,7 +186,7 @@ export function CreateRemittanceForm({
             ) : null}
           </div>
         ) : (
-        <form action={formAction} className="grid gap-4 md:grid-cols-2">
+        <form action={formAction} className="grid gap-4 md:grid-cols-2" ref={formRef}>
           <FleetSelectField
             fleetError={fleetError}
             fleets={fleets}
@@ -371,6 +389,7 @@ export function CreateRemittanceForm({
               label="Record remittance"
               pending={isPending}
               pendingLabel="Recording remittance"
+              type="submit"
               className={
                 selectableFleets.length === 0 || !fleetId || !assignmentId
                   ? 'pointer-events-none opacity-55'
@@ -396,7 +415,25 @@ export function CreateRemittanceForm({
         ) : null}
 
         {state.success ? (
-          <Text className="mt-4" tone="success">{state.success}</Text>
+          <div className="mt-4 space-y-2 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+            <Text tone="success">{state.success}</Text>
+            <div className="flex flex-wrap gap-3">
+              <a
+                className="inline-flex text-sm font-medium text-emerald-700 underline"
+                href="/remittance"
+              >
+                View remittance history
+              </a>
+              {state.assignmentId ? (
+                <a
+                  className="inline-flex text-sm font-medium text-emerald-700 underline"
+                  href={`/assignments/${state.assignmentId}`}
+                >
+                  Return to assignment
+                </a>
+              ) : null}
+            </div>
+          </div>
         ) : null}
 
         {helperNote ? (

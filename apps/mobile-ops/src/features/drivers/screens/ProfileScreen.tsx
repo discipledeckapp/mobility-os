@@ -1,8 +1,13 @@
 'use client';
 
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  listUserNotifications,
+  markUserNotificationRead,
+  type UserNotificationRecord,
+} from '../../../api';
 import { Badge } from '../../../components/badge';
 import { BottomNav } from '../../../components/bottom-nav';
 import { Button } from '../../../components/button';
@@ -26,13 +31,24 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
     Boolean(session?.linkedDriverId),
   );
   const { assignments, refreshAssignments } = useAssignments(Boolean(session?.linkedDriverId));
+  const [notifications, setNotifications] = useState<UserNotificationRecord[]>([]);
   const licenceRequired = session?.requiredDriverDocumentSlugs?.includes('drivers-license') ?? true;
   const currentAssignment = useMemo(() => pickCurrentAssignment(assignments), [assignments]);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!session?.linkedDriverId) {
+      setNotifications([]);
+      return [];
+    }
+    const nextNotifications = await listUserNotifications();
+    setNotifications(nextNotifications);
+    return nextNotifications;
+  }, [session?.linkedDriverId]);
 
   const onRefresh = async () => {
     try {
       await refreshSession();
-      await Promise.all([refreshDriver(), refreshAssignments()]);
+      await Promise.all([refreshDriver(), refreshAssignments(), refreshNotifications()]);
       showToast('Verification status refreshed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -44,10 +60,39 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
   useFocusEffect(
     useCallback(() => {
-      void Promise.all([refreshDriver(), refreshAssignments()]).catch(() => {
+      void Promise.all([refreshDriver(), refreshAssignments(), refreshNotifications()]).catch(() => {
         // Pull-to-refresh surfaces visible errors when needed.
       });
-    }, [refreshAssignments, refreshDriver]),
+    }, [refreshAssignments, refreshDriver, refreshNotifications]),
+  );
+
+  const handleNotificationOpen = useCallback(
+    async (notification: UserNotificationRecord) => {
+      try {
+        if (!notification.readAt) {
+          const updated = await markUserNotificationRead(notification.id);
+          setNotifications((current) =>
+            current.map((item) => (item.id === notification.id ? updated : item)),
+          );
+        }
+      } catch {
+        // Keep navigation available even if mark-read fails.
+      }
+
+      const assignmentId = extractNotificationAssignmentId(notification);
+      if (assignmentId) {
+        navigation.navigate('AssignmentDetail', { assignmentId });
+        return;
+      }
+
+      if (notification.topic.startsWith('remittance_')) {
+        navigation.navigate('RemittanceHistory');
+        return;
+      }
+
+      Alert.alert(notification.title, notification.body);
+    },
+    [navigation],
   );
 
   if (loading) {
@@ -148,6 +193,17 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         </Text>
       </Card>
 
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Profile information</Text>
+        <Text style={styles.meta}>Organisation: {driver.organisationName ?? 'Not available'}</Text>
+        <Text style={styles.meta}>Date of birth: {formatDateOnly(driver.dateOfBirth)}</Text>
+        <Text style={styles.meta}>Gender: {formatProfileValue(driver.gender)}</Text>
+        <Text style={styles.meta}>Nationality: {formatProfileValue(driver.nationality)}</Text>
+        <Text style={styles.meta}>
+          Driver account status: {formatIdentityStatus(driver.status)}
+        </Text>
+      </Card>
+
       {currentAssignment ? (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Current assignment</Text>
@@ -181,6 +237,44 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           </View>
         </Card>
       ) : null}
+
+      <Card style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          {notifications.filter((item) => !item.readAt).length > 0 ? (
+            <Badge
+              label={`${notifications.filter((item) => !item.readAt).length} new`}
+              tone="warning"
+            />
+          ) : null}
+        </View>
+        {notifications.length === 0 ? (
+          <Text style={styles.muted}>
+            Driver updates, assignment changes, and remittance alerts will appear here.
+          </Text>
+        ) : (
+          notifications.slice(0, 5).map((notification) => (
+            <View key={notification.id} style={styles.notificationCard}>
+              <View style={styles.notificationCopy}>
+                <View style={styles.notificationTitleRow}>
+                  <Text style={styles.notificationTitle}>{notification.title}</Text>
+                  {!notification.readAt ? <Badge label="New" tone="success" /> : null}
+                </View>
+                <Text style={styles.muted}>{notification.body}</Text>
+                <Text style={styles.notificationTime}>
+                  {formatDateTime(notification.createdAt, session?.formattingLocale)}
+                </Text>
+              </View>
+              <Button
+                accessibilityHint="Open this notification and mark it as read"
+                label={extractNotificationAssignmentId(notification) ? 'Open' : 'View'}
+                variant="secondary"
+                onPress={() => void handleNotificationOpen(notification)}
+              />
+            </View>
+          ))
+        )}
+      </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Eligibility</Text>
@@ -279,6 +373,23 @@ function formatDateTime(value: string, locale?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function formatDateOnly(value?: string | null, locale?: string | null) {
+  if (!value) {
+    return 'Not available';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(locale ?? undefined, {
+    dateStyle: 'medium',
+  }).format(date);
+}
+
+function formatProfileValue(value?: string | null) {
+  return value?.trim() ? value : 'Not available';
 }
 
 function getDriverDisplayName(
@@ -393,8 +504,29 @@ function assignmentGuidance(status: string) {
   return 'This assignment is no longer active.';
 }
 
+function extractNotificationAssignmentId(notification: UserNotificationRecord) {
+  const metadataAssignmentId =
+    notification.metadata && typeof notification.metadata.assignmentId === 'string'
+      ? notification.metadata.assignmentId
+      : null;
+  if (metadataAssignmentId) {
+    return metadataAssignmentId;
+  }
+
+  const actionUrl = notification.actionUrl ?? '';
+  const assignmentMatch =
+    actionUrl.match(/[?&]assignmentId=([^&]+)/)?.[1] ?? actionUrl.match(/\/assignments\/([^/?#]+)/)?.[1];
+  return assignmentMatch ? decodeURIComponent(assignmentMatch) : null;
+}
+
 const styles = StyleSheet.create({
   section: {
+    gap: tokens.spacing.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: tokens.spacing.sm,
   },
   statusPanel: {
@@ -432,6 +564,33 @@ const styles = StyleSheet.create({
   meta: {
     color: tokens.colors.ink,
     lineHeight: 20,
+  },
+  notificationCard: {
+    gap: tokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: tokens.colors.card,
+    padding: tokens.spacing.md,
+  },
+  notificationCopy: {
+    gap: tokens.spacing.xs,
+  },
+  notificationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacing.sm,
+  },
+  notificationTitle: {
+    flex: 1,
+    color: tokens.colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  notificationTime: {
+    color: tokens.colors.inkSoft,
+    fontSize: 12,
   },
 });
 

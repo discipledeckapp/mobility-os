@@ -78,7 +78,13 @@ function supportsRemittance(paymentModel?: string | null): boolean {
   return !paymentModel || paymentModel === 'remittance' || paymentModel === 'hire_purchase';
 }
 
-export default async function RemittancePage() {
+export default async function RemittancePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ assignmentId?: string }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const preselectedAssignmentId = resolvedSearchParams?.assignmentId ?? null;
   let remittances: RemittanceRecord[] = [];
   let assignments: AssignmentRecord[] = [];
   let drivers: DriverRecord[] = [];
@@ -165,6 +171,10 @@ export default async function RemittancePage() {
   const showExportCard = remittances.length > 0;
   const showSecondarySections =
     disputes.length > 0 || documents.length > 0;
+  const preselectedAssignment =
+    (preselectedAssignmentId
+      ? activeAssignments.find((assignment) => assignment.id === preselectedAssignmentId)
+      : null) ?? null;
 
   const expectedTodayMinorUnits = activeAssignments.reduce(
     (sum, assignment) => sum + (assignment.remittanceAmountMinorUnits ?? 0),
@@ -244,6 +254,8 @@ export default async function RemittancePage() {
           fleetError={fleetError}
           fleets={fleets}
           helperNote={helperNote}
+          initialAssignmentId={preselectedAssignment?.id ?? null}
+          initialFleetId={preselectedAssignment?.fleetId ?? null}
           vehicles={vehicles}
         />
       ) : null}

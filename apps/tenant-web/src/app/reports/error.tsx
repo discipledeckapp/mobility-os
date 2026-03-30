@@ -11,12 +11,12 @@ export default function ReportsError({
 }) {
   return (
     <RouteErrorState
-      description="Operational readiness and compliance visibility across drivers and vehicles."
-      eyebrow="Reports"
+      description="We could not load the latest operations insight queues right now."
+      eyebrow="Insights"
       error={error}
-      heading="Unable to load reports"
+      heading="Unable to load operations insights"
       reset={reset}
-      title="Reports"
+      title="Operations Insights"
     />
   );
 }

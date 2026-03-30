@@ -58,7 +58,7 @@ export default async function ReadinessReportPage() {
   return (
     <TenantAppShell
       title="Readiness report"
-      eyebrow="Reports"
+      eyebrow="Insights"
       description="Operational readiness across drivers and vehicles, with licence expiry visibility."
     >
       <div className="space-y-6">

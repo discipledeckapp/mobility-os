@@ -373,9 +373,11 @@ export async function startAssignmentAction(
   }
 
   revalidatePath('/assignments');
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath('/remittance');
   revalidatePath('/');
   return {
-    success: 'Assignment activation checked.',
+    success: 'Assignment is now active and the driver has been notified.',
   };
 }
 

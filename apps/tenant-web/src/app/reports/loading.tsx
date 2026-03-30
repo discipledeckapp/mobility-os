@@ -3,11 +3,11 @@ import { RouteLoadingState } from '../../features/shared/route-state';
 export default function ReportsLoading() {
   return (
     <RouteLoadingState
-      description="Operational readiness and compliance visibility across drivers and vehicles."
-      eyebrow="Reports"
+      description="Loading remittance health, driver readiness, assignment utilization, and risk queues."
+      eyebrow="Insights"
       summaryCount={3}
       tableRows={6}
-      title="Reports"
+      title="Operations Insights"
     />
   );
 }

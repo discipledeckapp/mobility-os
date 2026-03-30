@@ -19,6 +19,21 @@ function firstQueryValue(value: string | string[] | undefined): string | undefin
   return value;
 }
 
+function getSafePaymentReturnError(error: unknown): string {
+  console.error('[verification-funding] payment return failed', error);
+  const message = error instanceof Error ? error.message : '';
+
+  if (/405|method not allowed/i.test(message)) {
+    return 'This payment gateway did not complete the return flow correctly. Please go back and try the other gateway.';
+  }
+
+  if (/502|503|504|bad gateway|service unavailable/i.test(message)) {
+    return 'We could not confirm this payment right now. Please refresh in a moment or contact support if this keeps happening.';
+  }
+
+  return 'We could not confirm this payment yet. Please refresh shortly or contact support if the status does not update.';
+}
+
 export default async function PaymentReturnPage({ searchParams }: PaymentReturnPageProps) {
   const resolved = searchParams ? await searchParams : {};
   const provider = firstQueryValue(resolved.provider);
@@ -42,9 +57,9 @@ export default async function PaymentReturnPage({ searchParams }: PaymentReturnP
   let error: string | null = null;
 
   if (!provider || !purpose || !reference) {
-    error = 'The payment return URL did not include enough information to verify this payment.';
+    error = 'This checkout return is incomplete. Please restart the funding flow and try again.';
   } else if (status === 'cancelled') {
-    error = 'The payment was cancelled before completion.';
+    error = 'The checkout was cancelled before payment completed.';
   } else {
     try {
       const response = await verifyAndApplyTenantPayment({
@@ -68,18 +83,15 @@ export default async function PaymentReturnPage({ searchParams }: PaymentReturnP
         ...(paymentMethod ? { paymentMethod } : {}),
       };
     } catch (verifyError) {
-      error =
-        verifyError instanceof Error
-          ? verifyError.message
-          : 'Unable to verify and apply this payment.';
+      error = getSafePaymentReturnError(verifyError);
     }
   }
 
   return (
     <TenantAppShell
-      description="Confirm the provider payment outcome and return to your organisation billing and wallet context."
-      eyebrow="Finance"
-      title="Payment return"
+      description="Confirm the verification funding outcome and return to the verification funding page."
+      eyebrow="Verification Funding"
+      title="Funding return"
     >
       <Card>
         <CardHeader>

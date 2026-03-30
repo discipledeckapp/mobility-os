@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -11,16 +12,57 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { type ChangeEvent, useActionState, useEffect, useState } from 'react';
-import { SelectField } from '../../features/shared/select-field';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
 import {
   initializeCardSetupCheckoutAction,
-  type WalletCheckoutActionState,
   initializeVerificationWalletTopUpAction,
+  type WalletCheckoutActionState,
 } from './actions';
 
 const initialState: WalletCheckoutActionState = {};
+
+function parseFundingAmount(amountRaw: string, currencyMinorUnit: number) {
+  const normalized = amountRaw.replace(/,/g, '').trim();
+  if (!normalized) {
+    return { minorUnits: 0, error: 'Enter an amount to continue.' };
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(normalized)) {
+    return { minorUnits: 0, error: 'Use numbers only, for example 5000 or 5000.50.' };
+  }
+
+  const [wholePart, fractionalPart = ''] = normalized.split('.');
+  if (fractionalPart.length > currencyMinorUnit) {
+    return {
+      minorUnits: 0,
+      error: `Use no more than ${currencyMinorUnit} decimal place${currencyMinorUnit === 1 ? '' : 's'}.`,
+    };
+  }
+
+  const factor = 10 ** currencyMinorUnit;
+  const paddedFraction = `${fractionalPart}${'0'.repeat(currencyMinorUnit)}`.slice(
+    0,
+    currencyMinorUnit,
+  );
+  const whole = Number.parseInt(wholePart ?? '0', 10);
+  const fraction = paddedFraction ? Number.parseInt(paddedFraction, 10) : 0;
+  const minorUnits = whole * factor + fraction;
+
+  if (!Number.isFinite(minorUnits) || minorUnits <= 0) {
+    return { minorUnits: 0, error: 'Enter an amount greater than zero.' };
+  }
+
+  return { minorUnits, error: null };
+}
+
+function formatMoney(amountMinorUnits: number, currency: string, locale = 'en-NG') {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinorUnits / 100);
+}
 
 export function PaymentActionPanel({
   summary,
@@ -29,7 +71,7 @@ export function PaymentActionPanel({
   summary: TenantBillingSummaryRecord;
   currencyMinorUnit: number;
 }) {
-  const [provider, setProvider] = useState<'paystack' | 'flutterwave'>('paystack');
+  const [walletProvider, setWalletProvider] = useState<'paystack' | 'flutterwave'>('paystack');
   const [amountInput, setAmountInput] = useState('');
   const [walletState, walletAction, walletPending] = useActionState(
     initializeVerificationWalletTopUpAction,
@@ -40,7 +82,6 @@ export function PaymentActionPanel({
     initialState,
   );
 
-  // Redirect to payment provider when checkout URL is returned from server action
   useEffect(() => {
     if (walletState.checkoutUrl) {
       window.location.href = walletState.checkoutUrl;
@@ -53,108 +94,153 @@ export function PaymentActionPanel({
     }
   }, [cardState.checkoutUrl]);
 
-  const factor = 10 ** currencyMinorUnit;
-  const normalizedAmount = amountInput.replace(/,/g, '').trim();
-  const enteredAmount = normalizedAmount ? Number(normalizedAmount) : Number.NaN;
-  const amountMinorUnits = Number.isFinite(enteredAmount)
-    ? Math.round(enteredAmount * factor)
-    : 0;
-  const amountInvalid =
-    amountInput.length > 0 && (!Number.isFinite(enteredAmount) || amountMinorUnits <= 0);
-  const walletSubmitDisabled =
-    walletPending || Boolean(walletState.checkoutUrl) || amountMinorUnits <= 0 || amountInvalid;
+  useEffect(() => {
+    if (walletState.recommendedProvider) {
+      setWalletProvider(walletState.recommendedProvider);
+    }
+  }, [walletState.recommendedProvider]);
+
+  const amountState = useMemo(
+    () => parseFundingAmount(amountInput, currencyMinorUnit),
+    [amountInput, currencyMinorUnit],
+  );
+  const fundingDisabled =
+    walletPending ||
+    Boolean(walletState.checkoutUrl) ||
+    amountState.minorUnits <= 0 ||
+    Boolean(amountState.error);
+  const canVerifyNow = summary.verificationSpend.availableSpendMinorUnits > 0;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Card className="border-slate-200/80">
+    <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <Card className="border-slate-200">
         <CardHeader>
-          <CardTitle>Add active card</CardTitle>
+          <CardTitle>Fund verification wallet</CardTitle>
           <CardDescription>
-            Save a reusable card with a small provider-hosted authorization. We only keep masked
-            card details plus the provider authorization token.
+            Add funds with your preferred payment gateway. If one gateway fails, switch to the other and continue.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form action={cardAction} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="card-provider">Payment provider</Label>
-              <SelectField
-                id="card-provider"
-                name="provider"
-                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                  setProvider(event.target.value as 'paystack' | 'flutterwave')
-                }
-                value={provider}
-              >
-                <option value="paystack">Paystack</option>
-                <option value="flutterwave">Flutterwave</option>
-              </SelectField>
+        <CardContent className="space-y-5">
+          <div className="space-y-3">
+            <Label>Choose a funding gateway</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                { id: 'paystack', label: 'Paystack', hint: 'Recommended default' },
+                { id: 'flutterwave', label: 'Flutterwave', hint: 'Use if you prefer an alternate gateway' },
+              ] as const).map((option) => (
+                <button
+                  className={`rounded-[var(--mobiris-radius-card)] border p-4 text-left transition ${
+                    walletProvider === option.id
+                      ? 'border-[var(--mobiris-primary)] bg-[var(--mobiris-primary-tint)]'
+                      : 'border-slate-200 bg-white hover:border-[var(--mobiris-primary-light)]'
+                  }`}
+                  key={option.id}
+                  onClick={() => setWalletProvider(option.id)}
+                  type="button"
+                >
+                  <Text tone="strong">{option.label}</Text>
+                  <Text tone="muted">{option.hint}</Text>
+                </button>
+              ))}
             </div>
-            <input name="amountMinorUnits" type="hidden" value="10000" />
-            <Text className="text-xs text-slate-500">
-              A small NGN 100 authorization will be processed through the hosted modal. Successful
-              setups also count as wallet credit.
-            </Text>
-            <Button disabled={cardPending || Boolean(cardState.checkoutUrl)} type="submit">
-              {cardPending || cardState.checkoutUrl ? 'Opening provider modal...' : 'Add card'}
+          </div>
+
+          <form action={walletAction} className="space-y-4">
+            <input name="provider" type="hidden" value={walletProvider} />
+            <input name="currencyMinorUnit" type="hidden" value={String(currencyMinorUnit)} />
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet-amount">
+                Amount ({summary.verificationWallet.currency})
+              </Label>
+              <Input
+                id="wallet-amount"
+                inputMode="decimal"
+                name="amount"
+                onChange={(event) => setAmountInput(event.target.value)}
+                placeholder="5000"
+                type="text"
+                value={amountInput}
+              />
+              <Text className="text-xs text-slate-500">
+                This exact amount will be sent to checkout.
+              </Text>
+              {amountState.error ? (
+                <Text className="text-xs text-rose-700">{amountState.error}</Text>
+              ) : amountState.minorUnits > 0 ? (
+                <Text className="text-xs text-emerald-700">
+                  You are about to fund{' '}
+                  {formatMoney(amountState.minorUnits, summary.verificationWallet.currency)}.
+                </Text>
+              ) : null}
+            </div>
+
+            <Button disabled={fundingDisabled} type="submit">
+              {walletPending || walletState.checkoutUrl ? 'Redirecting to checkout...' : 'Continue to funding'}
             </Button>
-            {cardState.error ? <Text className="text-rose-700">{cardState.error}</Text> : null}
+
+            {walletState.error ? (
+              <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-3">
+                <Text className="text-sm text-amber-900">{walletState.error}</Text>
+                {walletState.recommendedProvider ? (
+                  <Text className="mt-1 text-xs text-amber-700">
+                    The gateway has been switched to {walletState.recommendedProvider} for your next attempt.
+                  </Text>
+                ) : null}
+              </div>
+            ) : null}
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border-slate-200/80">
+      <Card className="border-slate-200">
         <CardHeader>
-          <CardTitle>Fund verification wallet</CardTitle>
+          <CardTitle>Saved payment method</CardTitle>
           <CardDescription>
-            Add funds to the platform verification wallet used for identity checks and other billed
-            platform services.
+            Add one reusable payment method for card-backed verification credit. This setup flow uses Paystack.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form action={walletAction} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="wallet-provider">Payment provider</Label>
-              <SelectField
-                id="wallet-provider"
-                name="provider"
-                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                  setProvider(event.target.value as 'paystack' | 'flutterwave')
-                }
-                value={provider}
-              >
-                <option value="paystack">Paystack</option>
-                <option value="flutterwave">Flutterwave</option>
-              </SelectField>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="wallet-amount">Amount ({summary.verificationWallet.currency})</Label>
-              <Input
-                id="wallet-amount"
-                inputMode="decimal"
-                min={factor === 1 ? '1' : '0.01'}
-                name="amount"
-                onChange={(event) => setAmountInput(event.target.value)}
-                placeholder="0.00"
-                step="0.01"
-                type="number"
-                value={amountInput}
-              />
-              <input name="currencyMinorUnit" type="hidden" value={String(currencyMinorUnit)} />
-              <Text className="text-xs text-slate-500">
-                Enter the amount you want to fund. Checkout will use this exact amount.
-              </Text>
-              {amountInvalid ? (
-                <Text className="text-xs text-rose-700">
-                  Enter an amount greater than zero before starting payment.
+        <CardContent className="space-y-4">
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <Text tone="strong">
+                  {summary.verificationSpend.savedCard
+                    ? `${summary.verificationSpend.savedCard.brand} ending in ${summary.verificationSpend.savedCard.last4}`
+                    : 'No saved payment method'}
                 </Text>
-              ) : null}
+                <Text tone="muted">
+                  {summary.verificationSpend.savedCard
+                    ? `Status: ${summary.verificationSpend.savedCard.status}`
+                    : 'Add one to unlock card-backed verification credit for higher tiers.'}
+                </Text>
+              </div>
+              <Badge tone={summary.verificationSpend.savedCard?.active ? 'success' : 'warning'}>
+                {summary.verificationSpend.savedCard?.active ? 'Active' : 'Not set up'}
+              </Badge>
             </div>
-            <Button disabled={walletSubmitDisabled} type="submit">
-              {walletPending || walletState.checkoutUrl ? 'Redirecting to payment...' : 'Fund wallet'}
+          </div>
+
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white p-4">
+            <Text tone="strong">What you can do next</Text>
+            <Text tone="muted">
+              {canVerifyNow
+                ? 'You already have spend available for company-paid verification. Add a saved payment method only if you want more flexibility later.'
+                : 'If available spend is too low, either fund the wallet now or add a saved payment method to unlock card-backed credit.'}
+            </Text>
+          </div>
+
+          <form action={cardAction}>
+            <Button disabled={cardPending || Boolean(cardState.checkoutUrl)} type="submit" variant="secondary">
+              {cardPending || cardState.checkoutUrl ? 'Opening setup...' : summary.verificationSpend.savedCard ? 'Replace payment method' : 'Add payment method'}
             </Button>
-            {walletState.error ? <Text className="text-rose-700">{walletState.error}</Text> : null}
           </form>
+
+          {cardState.error ? (
+            <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-3">
+              <Text className="text-sm text-amber-900">{cardState.error}</Text>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

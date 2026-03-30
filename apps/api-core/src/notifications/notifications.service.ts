@@ -847,6 +847,154 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     return { delivered };
   }
 
+  async notifyAssignmentStarted(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+  }): Promise<{ delivered: number; directEmailSent: boolean }> {
+    const [tenantContext, driver, recipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.prisma.driver.findFirst({
+        where: { tenantId: input.tenantId, id: input.driverId },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext || !driver) {
+      return { delivered: 0, directEmailSent: false };
+    }
+
+    const driverName = this.formatDriverName(driver);
+    const title = 'Your assignment is now active';
+    const body = `${input.vehicleLabel} is now active for operations. Open Mobiris Fleet OS to review the assignment, record remittance when required, and manage field actions.`;
+    const actionUrl = `/driver-self-service?assignmentId=${encodeURIComponent(input.assignmentId)}`;
+
+    let delivered = 0;
+    for (const recipient of recipients.driverUsers) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'assignment_changed',
+          title,
+          body,
+          actionUrl,
+          metadata: {
+            assignmentId: input.assignmentId,
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            fleetId: input.fleetId,
+            status: 'active',
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours: 3,
+        },
+      );
+      if (notification) {
+        delivered += 1;
+      }
+    }
+
+    const directEmailSent = recipients.driverUsers.length === 0 && Boolean(driver.email);
+    if (directEmailSent && driver.email) {
+      await this.createDirectDriverEmailNotification({
+        email: driver.email,
+        name: driverName,
+        title,
+        body,
+        organisationName: tenantContext.organisationName,
+        actionUrl,
+      });
+    }
+
+    return { delivered, directEmailSent };
+  }
+
+  async notifyRemittanceRecorded(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    amountMinorUnits: number;
+    currency: string;
+    dueDate: string;
+  }): Promise<{ delivered: number; directEmailSent: boolean }> {
+    const [tenantContext, driver, recipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.prisma.driver.findFirst({
+        where: { tenantId: input.tenantId, id: input.driverId },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext || !driver) {
+      return { delivered: 0, directEmailSent: false };
+    }
+
+    const formattedAmount = new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: input.currency,
+      minimumFractionDigits: 2,
+    }).format(input.amountMinorUnits / 100);
+    const driverName = this.formatDriverName(driver);
+    const title = 'Remittance recorded';
+    const body = `${formattedAmount} was recorded for ${input.vehicleLabel} on ${input.dueDate}. The entry is now pending confirmation.`;
+    const actionUrl = `/driver-self-service?assignmentId=${encodeURIComponent(input.assignmentId)}`;
+
+    let delivered = 0;
+    for (const recipient of [...recipients.operators, ...recipients.driverUsers]) {
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'remittance_reconciled',
+          title,
+          body,
+          actionUrl,
+          metadata: {
+            assignmentId: input.assignmentId,
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            fleetId: input.fleetId,
+            dueDate: input.dueDate,
+            amountMinorUnits: input.amountMinorUnits,
+            currency: input.currency,
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours: 1,
+        },
+      );
+      if (notification) {
+        delivered += 1;
+      }
+    }
+
+    const directEmailSent = recipients.driverUsers.length === 0 && Boolean(driver.email);
+    if (directEmailSent && driver.email) {
+      await this.createDirectDriverEmailNotification({
+        email: driver.email,
+        name: driverName,
+        title,
+        body,
+        organisationName: tenantContext.organisationName,
+        actionUrl,
+      });
+    }
+
+    return { delivered, directEmailSent };
+  }
+
   async notifyAssignmentEnded(input: {
     tenantId: string;
     assignmentId: string;

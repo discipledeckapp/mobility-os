@@ -1360,6 +1360,12 @@ export function listUserNotifications(): Promise<UserNotificationRecord[]> {
   return apiFetch<UserNotificationRecord[]>(API_PATHS.notifications);
 }
 
+export function markUserNotificationRead(notificationId: string): Promise<UserNotificationRecord> {
+  return apiFetch<UserNotificationRecord>(`${API_PATHS.notifications}/${notificationId}/read`, {
+    method: 'PATCH',
+  });
+}
+
 export function getNotificationPreferences(): Promise<NotificationPreferencesRecord> {
   return apiFetch<NotificationPreferencesRecord>(`${API_PATHS.notifications}/preferences`);
 }

@@ -24,6 +24,9 @@ describe('RemittanceService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    vehicle: {
+      findUnique: jest.fn(),
+    },
   };
   const operationalWalletsService = {
     addEntryInTransaction: jest.fn(),
@@ -34,6 +37,9 @@ describe('RemittanceService', () => {
   const recordsService = {
     issueRemittanceReceipt: jest.fn(),
     createDispute: jest.fn(),
+  };
+  const notificationsService = {
+    notifyRemittanceRecorded: jest.fn(),
   };
 
   let service: RemittanceService;
@@ -46,12 +52,25 @@ describe('RemittanceService', () => {
     prisma.remittance.findFirst.mockResolvedValue(null);
     prisma.remittance.findMany.mockResolvedValue([]);
     prisma.assignment.findMany.mockResolvedValue([]);
+    prisma.vehicle.findUnique.mockResolvedValue({
+      id: 'vehicle_1',
+      plate: 'ABC-123',
+      tenantVehicleCode: 'VH-001',
+      systemVehicleCode: 'SYS-001',
+      make: 'Toyota',
+      model: 'Corolla',
+    });
     policyService.evaluateDriverPolicies.mockResolvedValue([]);
+    notificationsService.notifyRemittanceRecorded.mockResolvedValue({
+      delivered: 1,
+      directEmailSent: false,
+    });
     service = new RemittanceService(
       prisma as never,
       operationalWalletsService as never,
       policyService as never,
       recordsService as never,
+      notificationsService as never,
     );
   });
 

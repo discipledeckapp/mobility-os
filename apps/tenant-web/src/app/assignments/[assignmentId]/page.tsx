@@ -433,6 +433,14 @@ export default async function AssignmentDetailPage({
                 Keep the registry as the main operational list. Use this detail page for
                 status changes and to jump into the linked driver or vehicle record.
               </Text>
+              {assignment.status === 'active' && showRemittance ? (
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-[var(--mobiris-radius-button)] bg-[var(--mobiris-primary)] px-4.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+                  href={`/remittance?assignmentId=${assignment.id}`}
+                >
+                  Record remittance
+                </Link>
+              ) : null}
             </CardContent>
           </Card>
         </div>

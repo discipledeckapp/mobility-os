@@ -21,6 +21,7 @@ import { PrismaService } from '../database/prisma.service';
 import { OperationalWalletsService } from '../operational-wallets/operational-wallets.service';
 import { PolicyService } from '../policy/policy.service';
 import { RecordsService } from '../records/records.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   buildRemittanceReconciliation,
   parseFinancialContractSnapshot,
@@ -37,6 +38,7 @@ export class RemittanceService {
     private readonly operationalWalletsService: OperationalWalletsService,
     private readonly policyService: PolicyService,
     private readonly recordsService: RecordsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async enrichRemittances<T extends RemittanceWithWalletEntry>(
@@ -381,6 +383,36 @@ export class RemittanceService {
       },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, assignment.driverId);
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: assignment.vehicleId },
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        plate: true,
+        tenantVehicleCode: true,
+        systemVehicleCode: true,
+      },
+    });
+    const vehicleLabel =
+      vehicle?.plate?.trim() ||
+      vehicle?.tenantVehicleCode?.trim() ||
+      vehicle?.systemVehicleCode?.trim() ||
+      `${vehicle?.make ?? ''} ${vehicle?.model ?? ''}`.trim() ||
+      assignment.vehicleId;
+    await this.notificationsService.notifyRemittanceRecorded({
+      tenantId,
+      assignmentId: assignment.id,
+      driverId: assignment.driverId,
+      fleetId: assignment.fleetId,
+      vehicleId: assignment.vehicleId,
+      vehicleLabel,
+      amountMinorUnits,
+      currency: plannedCurrency,
+      dueDate,
+    }).catch(() => {
+      // Recording the remittance is the primary operation; notification failure should not roll it back.
+    });
     return this.enrichRemittance(created);
   }
 

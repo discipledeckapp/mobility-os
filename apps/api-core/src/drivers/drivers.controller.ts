@@ -22,7 +22,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Driver, Prisma } from '@prisma/client';
+import type { Driver, Prisma, UserNotification } from '@prisma/client';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { RequireTenantLifecycleFeature } from '../auth/decorators/tenant-lifecycle-access.decorator';
 import { CurrentTenant } from '../auth/decorators/tenant-context.decorator';
@@ -55,6 +55,7 @@ import {
 import { DriverResponseDto } from './dto/driver-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { NotificationsService } from '../notifications/notifications.service';
+import { UserNotificationResponseDto } from '../notifications/dto/user-notification-response.dto';
 import { AssignmentsService } from '../assignments/assignments.service';
 // biome-ignore lint/style/useImportType: DTO classes are used by Nest decorators at runtime.
 import { LinkDriverUserDto } from './dto/link-driver-user.dto';
@@ -68,6 +69,22 @@ import { UpdateDriverDocumentReviewDto } from './dto/update-driver-document-revi
 type HeaderWritableResponse = {
   setHeader(name: string, value: string): void;
 };
+
+function mapUserNotification(notification: UserNotification): UserNotificationResponseDto {
+  return {
+    id: notification.id,
+    topic: notification.topic,
+    title: notification.title,
+    body: notification.body,
+    actionUrl: notification.actionUrl ?? null,
+    metadata:
+      notification.metadata && typeof notification.metadata === 'object' && !Array.isArray(notification.metadata)
+        ? (notification.metadata as Record<string, unknown>)
+        : null,
+    readAt: notification.readAt?.toISOString() ?? null,
+    createdAt: notification.createdAt.toISOString(),
+  };
+}
 
 type DriverWithIdentityState = Driver & {
   identityStatus: string;
@@ -1256,6 +1273,34 @@ export class DriverSelfServiceController {
       throw new BadRequestException('token is required');
     }
     return this.service.listAssignmentsFromSelfService(token);
+  }
+
+  @Post('notifications')
+  @ApiCreatedResponse({ type: [UserNotificationResponseDto] })
+  async listNotifications(
+    @Body('token') token: string,
+  ): Promise<UserNotificationResponseDto[]> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    const notifications = await this.service.listNotificationsFromSelfService(token);
+    return notifications.map(mapUserNotification);
+  }
+
+  @Post('notifications/:notificationId/read')
+  @ApiCreatedResponse({ type: UserNotificationResponseDto })
+  async markNotificationRead(
+    @Body('token') token: string,
+    @Param('notificationId') notificationId: string,
+  ): Promise<UserNotificationResponseDto> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    return mapUserNotification(
+      await this.service.markNotificationReadFromSelfService(token, notificationId),
+    );
   }
 
   @Post('assignments/:assignmentId/accept')

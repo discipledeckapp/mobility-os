@@ -243,6 +243,25 @@ export class AssignmentsService {
     }
   }
 
+  private async sendAssignmentStartedNotification(input: {
+    tenantId: string;
+    assignmentId: string;
+    driverId: string;
+    fleetId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+  }) {
+    try {
+      await this.notificationsService.notifyAssignmentStarted(input);
+    } catch (error) {
+      this.logger.warn(
+        `Assignment start notification failed for '${input.assignmentId}': ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
+  }
+
   async list(
     tenantId: string,
     filters: {
@@ -754,6 +773,32 @@ export class AssignmentsService {
     await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_activated', {
       source: 'start_endpoint',
       activatedAt: assignment.driverConfirmedAt.toISOString(),
+    });
+    const vehicleDetails = await this.prisma.vehicle.findUnique({
+      where: { id: assignment.vehicleId },
+      select: {
+        id: true,
+        make: true,
+        model: true,
+        plate: true,
+        tenantVehicleCode: true,
+        systemVehicleCode: true,
+      },
+    });
+    await this.sendAssignmentStartedNotification({
+      tenantId,
+      assignmentId: assignment.id,
+      driverId: assignment.driverId,
+      fleetId: assignment.fleetId,
+      vehicleId: assignment.vehicleId,
+      vehicleLabel: this.buildVehicleLabel({
+        vehicleId: assignment.vehicleId,
+        make: vehicleDetails?.make,
+        model: vehicleDetails?.model,
+        plate: vehicleDetails?.plate,
+        tenantVehicleCode: vehicleDetails?.tenantVehicleCode,
+        systemVehicleCode: vehicleDetails?.systemVehicleCode,
+      }),
     });
     return this.enrichAssignment(updated as Assignment);
   }

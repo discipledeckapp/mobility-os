@@ -19,13 +19,16 @@ import {
   type DriverIdentityResolutionResult,
   type DriverRecord,
   type OnboardingStepRecord,
+  type UserNotificationRecord,
   acceptDriverSelfServiceAssignment,
   createDriverSelfServiceAccount,
   declineDriverSelfServiceAssignment,
   getDriverOnboardingStep,
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
+  listDriverSelfServiceNotifications,
   listDriverSelfServiceAssignments,
+  markDriverSelfServiceNotificationRead,
   loginDriverSelfServiceWithPassword,
   notifyDriverSelfServiceOrganisation,
   recordDriverSelfServiceVerificationConsent,
@@ -486,6 +489,36 @@ function formatVehicleLabel(input: DriverSelfServiceAssignmentRecord['vehicle'])
   return [input.make, input.model].filter(Boolean).join(' ') || input.tenantVehicleCode || 'Assigned vehicle';
 }
 
+function getDriverAssignmentActivationState(
+  assignment: DriverSelfServiceAssignmentRecord,
+): 'awaiting_confirmation' | 'accepted_ready' | 'active' | 'closed' {
+  if (
+    ['driver_action_required', 'pending_driver_confirmation', 'created'].includes(assignment.status)
+  ) {
+    return 'awaiting_confirmation';
+  }
+  if (assignment.status === 'accepted') {
+    return 'accepted_ready';
+  }
+  if (assignment.status === 'active') {
+    return 'active';
+  }
+  return 'closed';
+}
+
+function getDriverAssignmentPaymentModelLabel(assignment: DriverSelfServiceAssignmentRecord): string {
+  if (assignment.paymentModel === 'hire_purchase') {
+    return 'Hire purchase';
+  }
+  if (assignment.paymentModel === 'salary') {
+    return 'Salary';
+  }
+  if (assignment.paymentModel === 'commission') {
+    return 'Commission';
+  }
+  return 'Remittance';
+}
+
 function AssignmentWorkspace({
   token,
   assignment,
@@ -497,6 +530,12 @@ function AssignmentWorkspace({
 }) {
   const [loading, setLoading] = useState<'accept' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const activationState = getDriverAssignmentActivationState(assignment);
+  const supportsRemittance =
+    assignment.paymentModel === null ||
+    assignment.paymentModel === undefined ||
+    assignment.paymentModel === 'remittance' ||
+    assignment.paymentModel === 'hire_purchase';
 
   async function handleAccept() {
     setLoading('accept');
@@ -525,54 +564,91 @@ function AssignmentWorkspace({
   }
 
   return (
-    <Card className="border-blue-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+    <Card className="border-blue-200 bg-white shadow-[0_30px_80px_-34px_rgba(15,23,42,0.42)]">
       <CardHeader className="space-y-2">
-        <CardTitle>Your vehicle assignment</CardTitle>
+        <CardTitle>Driver activation</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+      <CardContent className="space-y-5">
+        <div
+          className={`rounded-2xl p-4 ${
+            activationState === 'awaiting_confirmation'
+              ? 'bg-amber-50 text-amber-950'
+              : activationState === 'active'
+                ? 'bg-emerald-50 text-emerald-950'
+                : activationState === 'closed'
+                  ? 'bg-rose-50 text-rose-950'
+                  : 'bg-blue-50 text-slate-900'
+          }`}
+        >
           <Text className="font-semibold text-[var(--mobiris-ink)]">
             You have been assigned a vehicle. Please accept to begin.
           </Text>
           <Text tone="muted">
-            Status: {formatAssignmentStatus(assignment.status)}
+            Status:{' '}
+            {activationState === 'awaiting_confirmation'
+              ? 'Awaiting your confirmation'
+              : activationState === 'accepted_ready'
+                ? 'Accepted and ready to begin'
+                : activationState === 'active'
+                  ? 'Active'
+                  : formatAssignmentStatus(assignment.status)}
           </Text>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 p-3">
-            <Text tone="muted">Vehicle</Text>
-            <Text>{formatVehicleLabel(assignment.vehicle)}</Text>
-          </div>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <Text tone="muted">Plate</Text>
-            <Text>{assignment.vehicle.plate ?? 'Not recorded'}</Text>
-          </div>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <Text tone="muted">Vehicle code</Text>
-            <Text>{assignment.vehicle.tenantVehicleCode ?? assignment.vehicle.systemVehicleCode ?? 'Not recorded'}</Text>
-          </div>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <Text tone="muted">Payment model</Text>
-            <Text>{assignment.paymentModel ? formatAssignmentStatus(assignment.paymentModel) : 'Not recorded'}</Text>
-          </div>
         </div>
         {assignment.remittanceAmountMinorUnits ? (
-          <Text tone="muted">
-            Expected amount: {formatMinorCurrency(
-              assignment.remittanceAmountMinorUnits,
-              assignment.remittanceCurrency,
-            )}
-            {assignment.remittanceFrequency ? ` · ${formatAssignmentStatus(assignment.remittanceFrequency)}` : ''}
-          </Text>
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <Text tone="muted">Expected amount</Text>
+            <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
+              {formatMinorCurrency(
+                assignment.remittanceAmountMinorUnits,
+                assignment.remittanceCurrency,
+              )}
+            </p>
+            {assignment.remittanceFrequency ? (
+              <Text className="font-semibold text-[var(--mobiris-primary-dark)]">
+                {formatAssignmentStatus(assignment.remittanceFrequency)}
+              </Text>
+            ) : null}
+          </div>
         ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <Text tone="muted">Vehicle</Text>
+            <Text className="font-semibold text-[var(--mobiris-ink)]">
+              {formatVehicleLabel(assignment.vehicle)}
+            </Text>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <Text tone="muted">Plate</Text>
+            <Text className="font-semibold text-[var(--mobiris-ink)]">
+              {assignment.vehicle.plate ?? 'Not recorded'}
+            </Text>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <Text tone="muted">Vehicle code</Text>
+            <Text className="font-semibold text-[var(--mobiris-ink)]">
+              {assignment.vehicle.tenantVehicleCode ?? assignment.vehicle.systemVehicleCode ?? 'Not recorded'}
+            </Text>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <Text tone="muted">Payment model</Text>
+            <Text className="font-semibold text-[var(--mobiris-ink)]">
+              {getDriverAssignmentPaymentModelLabel(assignment)}
+            </Text>
+          </div>
+        </div>
         {assignment.notes ? <Text tone="muted">{assignment.notes}</Text> : null}
-        {(assignment.status === 'driver_action_required' ||
-          assignment.status === 'pending_driver_confirmation') ? (
-          <div className="flex flex-wrap gap-3">
-            <Button disabled={loading !== null} onClick={() => void handleAccept()} type="button">
+        {activationState === 'awaiting_confirmation' ? (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              className="h-12 w-full text-base shadow-[0_18px_35px_-18px_rgba(37,99,235,0.75)] sm:w-auto"
+              disabled={loading !== null}
+              onClick={() => void handleAccept()}
+              type="button"
+            >
               {loading === 'accept' ? 'Accepting…' : 'Accept assignment'}
             </Button>
             <Button
+              className="h-12 w-full border-slate-300 bg-white text-base sm:w-auto"
               disabled={loading !== null}
               onClick={() => void handleReject()}
               type="button"
@@ -582,6 +658,18 @@ function AssignmentWorkspace({
             </Button>
           </div>
         ) : null}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <Text className="font-semibold text-[var(--mobiris-ink)]">What happens next</Text>
+          <Text tone="muted">
+            {activationState === 'awaiting_confirmation'
+              ? 'Accept this assignment to confirm that you are taking this vehicle. After that, operations can begin.'
+              : activationState === 'accepted_ready'
+                ? 'Your assignment has been accepted. Your organisation may begin the assignment, and remittance actions will appear once the assignment is active.'
+                : activationState === 'active' && supportsRemittance
+                  ? 'Your assignment is active. Record remittance whenever required and keep track of your history from the assignment workspace.'
+                  : 'Your assignment is active. Use the assignment workspace for the next operational action.'}
+          </Text>
+        </div>
         {error ? <Text tone="danger">{error}</Text> : null}
       </CardContent>
     </Card>
@@ -1155,6 +1243,46 @@ function maskNin(value?: string | null): string {
     return trimmed || 'Not returned';
   }
   return `${'*'.repeat(Math.max(0, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
+
+function formatProfileValue(value?: string | null): string {
+  const trimmed = value?.trim() ?? '';
+  return trimmed || 'Not provided';
+}
+
+function formatShortDate(value?: string | null): string {
+  if (!value) {
+    return 'Not provided';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium' }).format(date);
+}
+
+function formatNotificationDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat('en-NG', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function notificationAssignmentId(notification: UserNotificationRecord): string | null {
+  if (typeof notification.metadata?.assignmentId === 'string') {
+    return notification.metadata.assignmentId;
+  }
+
+  const actionUrl = notification.actionUrl ?? '';
+  const assignmentId =
+    actionUrl.match(/[?&]assignmentId=([^&]+)/)?.[1] ??
+    actionUrl.match(/\/assignments\/([^/?#]+)/)?.[1] ??
+    null;
+  return assignmentId ? decodeURIComponent(assignmentId) : null;
 }
 
 function Field({
@@ -1873,6 +2001,7 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStepRecord | null>(null);
   const [assignments, setAssignments] = useState<DriverSelfServiceAssignmentRecord[]>([]);
+  const [notifications, setNotifications] = useState<UserNotificationRecord[]>([]);
   const [state, setState] = useState<'loading' | 'expired' | 'error' | 'ready'>('loading');
   const [refreshingAfterVerification, setRefreshingAfterVerification] = useState(false);
   const [postSubmitRefreshError, setPostSubmitRefreshError] = useState<string | null>(null);
@@ -1885,14 +2014,16 @@ function DriverVerificationFlow({ token }: { token: string }) {
   const loaded = useRef(false);
 
   const refreshContext = useCallback(async () => {
-    const [nextDriver, nextStep, nextAssignments] = await Promise.all([
+    const [nextDriver, nextStep, nextAssignments, nextNotifications] = await Promise.all([
       getDriverSelfServiceContext(token),
       getDriverOnboardingStep(token),
       listDriverSelfServiceAssignments(token),
+      listDriverSelfServiceNotifications(token).catch(() => []),
     ]);
     setDriver(nextDriver);
     setOnboardingStep(nextStep);
     setAssignments(nextAssignments);
+    setNotifications(nextNotifications);
   }, [token]);
 
   useEffect(() => {
@@ -2004,6 +2135,24 @@ function DriverVerificationFlow({ token }: { token: string }) {
       ),
     ) ?? null;
 
+  async function handleNotificationOpen(notification: UserNotificationRecord) {
+    try {
+      if (!notification.readAt) {
+        const updated = await markDriverSelfServiceNotificationRead(token, notification.id);
+        setNotifications((current) =>
+          current.map((item) => (item.id === notification.id ? updated : item)),
+        );
+      }
+    } catch {
+      // Keep the action available even if mark-read fails.
+    }
+
+    const assignmentId = notificationAssignmentId(notification);
+    if (assignmentId && currentAssignment?.id === assignmentId) {
+      document.getElementById('assignment-workspace')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_28%,#f8fbff_62%,#ffffff_100%)] px-4 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -2044,6 +2193,119 @@ function DriverVerificationFlow({ token }: { token: string }) {
               ) : null}
             </div>
           </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <Card className="border-slate-200 bg-white shadow-[0_18px_50px_-24px_rgba(15,23,42,0.28)]">
+            <CardHeader>
+              <CardTitle>Your profile information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Text tone="muted">Full name</Text>
+                <Text>{driverDisplayName}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Phone</Text>
+                <Text>{formatProfileValue(driver.phone)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Email</Text>
+                <Text>{formatProfileValue(driver.email)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Date of birth</Text>
+                <Text>{formatShortDate(driver.dateOfBirth)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Gender</Text>
+                <Text>{formatProfileValue(driver.gender)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Nationality</Text>
+                <Text>{formatProfileValue(driver.nationality)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">NIN</Text>
+                <Text>{maskNin(driver.identityProfile?.ninIdNumber)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Mobile access</Text>
+                <Text>{driver.hasMobileAccess ? 'Enabled' : 'Not enabled yet'}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Address</Text>
+                <Text>{formatProfileValue(driver.operationalProfile?.address)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">State</Text>
+                <Text>{formatProfileValue(driver.operationalProfile?.state)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Next of kin</Text>
+                <Text>{formatProfileValue(driver.operationalProfile?.nextOfKinName)}</Text>
+              </div>
+              <div className="space-y-1">
+                <Text tone="muted">Emergency contact</Text>
+                <Text>{formatProfileValue(driver.operationalProfile?.emergencyContactName)}</Text>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white shadow-[0_18px_50px_-24px_rgba(15,23,42,0.28)]">
+            <CardHeader>
+              <CardTitle>
+                Notifications
+                {notifications.filter((item) => !item.readAt).length > 0
+                  ? ` · ${notifications.filter((item) => !item.readAt).length} new`
+                  : ''}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {notifications.length === 0 ? (
+                <Text tone="muted">
+                  Assignment changes, verification updates, and remittance alerts will appear here.
+                </Text>
+              ) : (
+                notifications.slice(0, 5).map((notification) => (
+                  <div
+                    className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                    key={notification.id}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Text className="font-semibold text-[var(--mobiris-ink)]">
+                            {notification.title}
+                          </Text>
+                          {!notification.readAt ? <Badge tone="success">New</Badge> : null}
+                        </div>
+                        <Text tone="muted">{notification.body}</Text>
+                        <Text tone="muted">{formatNotificationDate(notification.createdAt)}</Text>
+                      </div>
+                      {notificationAssignmentId(notification) ? (
+                        <Button
+                          onClick={() => void handleNotificationOpen(notification)}
+                          type="button"
+                          variant="secondary"
+                        >
+                          Open
+                        </Button>
+                      ) : !notification.readAt ? (
+                        <Button
+                          onClick={() => void handleNotificationOpen(notification)}
+                          type="button"
+                          variant="secondary"
+                        >
+                          Mark read
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
         </section>
 
         {postSubmitRefreshError ? (
@@ -2089,17 +2351,21 @@ function DriverVerificationFlow({ token }: { token: string }) {
           </Card>
         ) : null}
 
-        <StepProgress
-          currentStep={currentStep}
-          verificationTierComponents={onboardingStep.verificationTierComponents}
-        />
+        {!currentAssignment && currentStep !== 'complete' ? (
+          <StepProgress
+            currentStep={currentStep}
+            verificationTierComponents={onboardingStep.verificationTierComponents}
+          />
+        ) : null}
 
         {currentAssignment ? (
-          <AssignmentWorkspace
-            assignment={currentAssignment}
-            onRefresh={refreshContext}
-            token={token}
-          />
+          <div id="assignment-workspace">
+            <AssignmentWorkspace
+              assignment={currentAssignment}
+              onRefresh={refreshContext}
+              token={token}
+            />
+          </div>
         ) : null}
 
         {currentStep === 'account' ? (

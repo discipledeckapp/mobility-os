@@ -32,7 +32,7 @@ interface TenantDashboardShellProps {
 
 const summaryHrefs: Record<string, Route> = {
   'Total drivers': '/drivers',
-  'Active drivers': '/reports/readiness',
+  'Active drivers': '/reports',
   'Total vehicles': '/vehicles',
   'Active assignments': '/assignments',
   'Pending remittances': '/remittance',
@@ -477,9 +477,9 @@ export function TenantDashboardShell({
                   Review pending documents, identity readiness, and missing mobile access before activation.
                 </Text>
                 <div className="mt-3">
-                  <Link href="/reports/readiness">
+                  <Link href="/reports">
                     <Button size="sm" variant="secondary">
-                      Open readiness queue
+                      Open insights
                     </Button>
                   </Link>
                 </div>

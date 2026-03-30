@@ -46,6 +46,7 @@ describe('AssignmentsService', () => {
   const notificationsService = {
     notifyAssignmentIssued: jest.fn(),
     notifyAssignmentAccepted: jest.fn(),
+    notifyAssignmentStarted: jest.fn(),
     notifyAssignmentEnded: jest.fn(),
   };
 
