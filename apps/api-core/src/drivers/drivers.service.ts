@@ -210,6 +210,25 @@ type DriverOperationalProfile = {
   emergencyContactRelationship?: string;
 };
 
+type DriverGuarantorCapacityAssessment = {
+  matched: boolean;
+  matchedBy: Array<'phone' | 'email'>;
+  guarantorName: string | null;
+  guarantorPhone: string | null;
+  guarantorEmail: string | null;
+  activeDriverCount: number;
+  organisationLimit: number;
+  eligible: boolean;
+  linkedToCurrentDriver: boolean;
+  message: string;
+};
+
+type VerifiedContactBindingConflict = {
+  entityType: 'driver' | 'guarantor';
+  contactType: 'email' | 'phone';
+  personId: string | null;
+};
+
 const DRIVER_OPERATIONAL_FIELD_LABELS: Record<keyof DriverOperationalProfile, string> = {
   phoneNumber: 'Phone number',
   address: 'Address',
@@ -579,6 +598,20 @@ const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
 
 @Injectable()
 export class DriversService {
+  private static readonly guarantorInvitationMessages = {
+    sent: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+    already_verified: 'Guarantor saved. This guarantor is already verified.',
+    missing_email:
+      'Guarantor saved, but no email address was provided for the verification link yet.',
+    operator_action_required:
+      'Guarantor saved. Your operator will send the guarantor verification link.',
+    queued_until_driver_verified:
+      'Guarantor saved. The verification link will be sent after your identity verification is completed.',
+    failed:
+      'Guarantor saved, but we could not send the verification link right now. Please ask your operator to retry.',
+    not_ready: 'Guarantor saved.',
+  } as const;
+
   private readonly logger = new Logger(DriversService.name);
 
   private normalizeVerificationDocumentType(input: string): {
@@ -2725,6 +2758,7 @@ export class DriversService {
     guarantorEmail?: string | null;
     guarantorCountryCode?: string | null;
     guarantorRelationship?: string | null;
+    guarantorStatus?: string | null;
   }> {
     const payload = await this.verifySelfServiceToken(token);
     const [driver, settings] = await Promise.all([
@@ -2906,6 +2940,7 @@ export class DriversService {
           guarantorEmail: guarantorRecord?.email ?? null,
           guarantorCountryCode: guarantorRecord?.countryCode ?? null,
           guarantorRelationship: guarantorRecord?.relationship ?? null,
+          guarantorStatus: guarantorRecord?.status ?? null,
         };
       }
     }
@@ -2983,6 +3018,7 @@ export class DriversService {
       requiresGuarantor,
       guarantorBlocking,
       guarantorVerified,
+      guarantorStatus: guarantorRecord?.status ?? null,
     };
   }
 
@@ -3545,7 +3581,18 @@ export class DriversService {
     tenantId: string,
     driverId: string,
     reason: 'guarantor_updated' | 'driver_verified',
-  ): Promise<void> {
+  ): Promise<{
+    status:
+      | 'sent'
+      | 'already_verified'
+      | 'missing_email'
+      | 'operator_action_required'
+      | 'queued_until_driver_verified'
+      | 'failed'
+      | 'not_ready';
+    message: string;
+    destination?: string;
+  }> {
     const [driver, tenant] = await Promise.all([
       this.findOne(tenantId, driverId),
       this.prisma.tenant.findUnique({
@@ -3556,25 +3603,47 @@ export class DriversService {
     const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
 
     if (settings.operations.requireGuarantorVerification !== true) {
-      return;
+      return {
+        status: 'operator_action_required',
+        message: DriversService.guarantorInvitationMessages.operator_action_required,
+      };
     }
 
     if (driver.identityStatus !== 'verified') {
-      return;
+      return {
+        status: 'queued_until_driver_verified',
+        message: DriversService.guarantorInvitationMessages.queued_until_driver_verified,
+      };
     }
 
     const guarantor = await this.driverGuarantors.findUnique({ where: { driverId } });
     if (
       !guarantor ||
-      guarantor.disconnectedAt !== null ||
-      guarantor.status === 'verified' ||
-      !guarantor.email
+      guarantor.disconnectedAt !== null
     ) {
-      return;
+      return {
+        status: 'not_ready',
+        message: DriversService.guarantorInvitationMessages.not_ready,
+      };
+    }
+
+    if (guarantor.status === 'verified') {
+      return {
+        status: 'already_verified',
+        message: DriversService.guarantorInvitationMessages.already_verified,
+        ...(guarantor.email ? { destination: guarantor.email } : {}),
+      };
+    }
+
+    if (!guarantor.email) {
+      return {
+        status: 'missing_email',
+        message: DriversService.guarantorInvitationMessages.missing_email,
+      };
     }
 
     try {
-      await this.sendGuarantorSelfServiceLink(tenantId, driverId);
+      const delivery = await this.sendGuarantorSelfServiceLink(tenantId, driverId);
       this.logger.log(
         JSON.stringify({
           event: 'guarantor_self_service_link_auto_sent',
@@ -3584,6 +3653,11 @@ export class DriversService {
           reason,
         }),
       );
+      return {
+        status: 'sent',
+        message: DriversService.guarantorInvitationMessages.sent,
+        destination: delivery.destination,
+      };
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -3595,6 +3669,11 @@ export class DriversService {
           error: error instanceof Error ? error.message : 'unknown error',
         }),
       );
+      return {
+        status: 'failed',
+        message: DriversService.guarantorInvitationMessages.failed,
+        ...(guarantor.email ? { destination: guarantor.email } : {}),
+      };
     }
   }
 
@@ -4533,16 +4612,190 @@ export class DriversService {
     return guarantor;
   }
 
+  private buildGuarantorCapacityMessage(input: {
+    matched: boolean;
+    activeDriverCount: number;
+    organisationLimit: number;
+    eligible: boolean;
+    linkedToCurrentDriver: boolean;
+  }): string {
+    if (!input.matched) {
+      return `No existing guarantor match was found in this organisation yet. A guarantor can support up to ${input.organisationLimit} active driver${input.organisationLimit === 1 ? '' : 's'}.`;
+    }
+
+    if (!input.eligible) {
+      return `This guarantor already supports ${input.activeDriverCount} active driver${input.activeDriverCount === 1 ? '' : 's'}. Your organisation allows a maximum of ${input.organisationLimit}.`;
+    }
+
+    if (input.linkedToCurrentDriver) {
+      return `Existing guarantor found. They currently support ${input.activeDriverCount} active driver${input.activeDriverCount === 1 ? '' : 's'}, including this relationship. Your organisation allows up to ${input.organisationLimit}.`;
+    }
+
+    return `Existing guarantor found. They currently support ${input.activeDriverCount} active driver${input.activeDriverCount === 1 ? '' : 's'}. Your organisation allows up to ${input.organisationLimit}, so this guarantor is still eligible.`;
+  }
+
+  private async assessDriverGuarantorCapacity(
+    tenantId: string,
+    currentDriverId: string,
+    input: {
+      phone?: string;
+      email?: string;
+      countryCode?: string | null;
+    },
+  ): Promise<DriverGuarantorCapacityAssessment> {
+    const normalizedPhone = input.phone?.trim()
+      ? this.normalizePhoneNumber(input.phone, input.countryCode?.trim().toUpperCase() || null)
+      : null;
+    const normalizedEmail = input.email?.trim() ? input.email.trim().toLowerCase() : null;
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { metadata: true, country: true },
+    });
+    const organisationLimit = readOrganisationSettings(tenant?.metadata, tenant?.country).operations
+      .guarantorMaxActiveDrivers;
+
+    if (!normalizedPhone && !normalizedEmail) {
+      return {
+        matched: false,
+        matchedBy: [],
+        guarantorName: null,
+        guarantorPhone: normalizedPhone,
+        guarantorEmail: normalizedEmail,
+        activeDriverCount: 0,
+        organisationLimit,
+        eligible: true,
+        linkedToCurrentDriver: false,
+        message: this.buildGuarantorCapacityMessage({
+          matched: false,
+          activeDriverCount: 0,
+          organisationLimit,
+          eligible: true,
+          linkedToCurrentDriver: false,
+        }),
+      };
+    }
+
+    const matches = await (
+      this.prisma as never as {
+        driverGuarantor: {
+          findMany(args: {
+            where: {
+              tenantId: string;
+              disconnectedAt: null;
+              OR: Array<{ phone: string } | { email: string }>;
+            };
+            orderBy: { createdAt: 'asc' };
+          }): Promise<DriverGuarantorRecord[]>;
+        };
+      }
+    ).driverGuarantor.findMany({
+      where: {
+        tenantId,
+        disconnectedAt: null,
+        OR: [
+          ...(normalizedPhone ? ([{ phone: normalizedPhone }] as const) : []),
+          ...(normalizedEmail ? ([{ email: normalizedEmail }] as const) : []),
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const matchedDrivers = matches.map((record) => record.driverId);
+    const activeDrivers =
+      matchedDrivers.length > 0
+        ? await this.prisma.driver.findMany({
+            where: {
+              tenantId,
+              id: { in: matchedDrivers },
+              status: 'active',
+              archivedAt: null,
+            },
+            select: { id: true },
+          })
+        : [];
+    const activeDriverIds = new Set(activeDrivers.map((driver) => driver.id));
+    const activeMatchedDriverIds = Array.from(
+      new Set(matches.map((record) => record.driverId).filter((driverId) => activeDriverIds.has(driverId))),
+    );
+    const linkedToCurrentDriver = activeMatchedDriverIds.includes(currentDriverId);
+    const activeDriverCount = activeMatchedDriverIds.length;
+    const effectiveCountForEligibility = linkedToCurrentDriver
+      ? Math.max(activeDriverCount - 1, 0)
+      : activeDriverCount;
+    const eligible = effectiveCountForEligibility < organisationLimit;
+    const primaryMatch = matches[0] ?? null;
+    const matchedBy: Array<'phone' | 'email'> = [];
+    if (primaryMatch && normalizedPhone && primaryMatch.phone === normalizedPhone) {
+      matchedBy.push('phone');
+    }
+    if (primaryMatch && normalizedEmail && primaryMatch.email === normalizedEmail) {
+      matchedBy.push('email');
+    }
+
+    return {
+      matched: Boolean(primaryMatch),
+      matchedBy,
+      guarantorName: primaryMatch?.name ?? null,
+      guarantorPhone: primaryMatch?.phone ?? normalizedPhone,
+      guarantorEmail: primaryMatch?.email ?? normalizedEmail,
+      activeDriverCount,
+      organisationLimit,
+      eligible,
+      linkedToCurrentDriver,
+      message: this.buildGuarantorCapacityMessage({
+        matched: Boolean(primaryMatch),
+        activeDriverCount,
+        organisationLimit,
+        eligible,
+        linkedToCurrentDriver,
+      }),
+    };
+  }
+
+  async assessGuarantorCapacityFromSelfService(
+    token: string,
+    input: {
+      phone?: string;
+      email?: string;
+      countryCode?: string | null;
+    },
+  ): Promise<DriverGuarantorCapacityAssessment> {
+    const payload = await this.verifySelfServiceToken(token);
+    return this.assessDriverGuarantorCapacity(payload.tenantId, payload.driverId, input);
+  }
+
   async createOrUpdateGuarantor(
     tenantId: string,
     id: string,
     dto: CreateOrUpdateDriverGuarantorDto,
+    options?: { triggerInvitation?: boolean },
   ): Promise<DriverGuarantorRecord> {
     const driver = await this.findOne(tenantId, id);
+    const existingGuarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: driver.id },
+    });
     const normalizedPhone = this.normalizePhoneNumber(
       dto.phone,
       dto.countryCode?.trim().toUpperCase() || null,
     );
+    const capacityAssessment = await this.assessDriverGuarantorCapacity(tenantId, driver.id, {
+      phone: normalizedPhone,
+      ...(dto.email ? { email: dto.email } : {}),
+      countryCode: dto.countryCode ?? null,
+    });
+
+    if (!capacityAssessment.eligible) {
+      throw new ConflictException(capacityAssessment.message);
+    }
+
+    await this.assertVerifiedIdentityContactAvailable(tenantId, {
+      ...(dto.email?.trim() ? { email: dto.email.trim().toLowerCase() } : {}),
+      phone: normalizedPhone,
+      ...(dto.countryCode?.trim() ? { phoneCountryCode: dto.countryCode.trim().toUpperCase() } : {}),
+      currentGuarantorDriverId: driver.id,
+      currentPersonId: existingGuarantor?.personId ?? null,
+    });
 
     const guarantor = await this.driverGuarantors.upsert({
       where: { driverId: driver.id },
@@ -4580,11 +4833,9 @@ export class DriversService {
       },
     });
 
-    await this.maybeSendGuarantorSelfServiceLinkIfEligible(
-      tenantId,
-      driver.id,
-      'guarantor_updated',
-    );
+    if (options?.triggerInvitation !== false) {
+      await this.maybeSendGuarantorSelfServiceLinkIfEligible(tenantId, driver.id, 'guarantor_updated');
+    }
 
     return guarantor;
   }
@@ -4729,6 +4980,16 @@ export class DriversService {
       `guarantor-provider-${driver.id}-${Date.now()}`,
     );
     const verifiedProfileUpdate = this.buildVerifiedGuarantorProfileUpdate(result);
+
+    if (result.personId) {
+      await this.assertVerifiedIdentityContactAvailable(tenantId, {
+        ...(guarantor.email ? { email: guarantor.email } : {}),
+        phone: guarantor.phone,
+        ...(resolvedCountryCode ? { phoneCountryCode: resolvedCountryCode } : {}),
+        currentGuarantorDriverId: driver.id,
+        currentPersonId: result.personId,
+      });
+    }
 
     await this.driverGuarantors.update({
       where: { driverId: driver.id },
@@ -6040,6 +6301,13 @@ export class DriversService {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    await this.assertVerifiedIdentityContactAvailable(payload.tenantId, {
+      email: normalizedEmail,
+      ...(driver.phone ? { phone: driver.phone } : {}),
+      ...(driver.nationality ? { phoneCountryCode: driver.nationality } : {}),
+      currentDriverId: driver.id,
+      currentPersonId: driver.personId,
+    });
     const existingEmailUser = await this.prisma.user.findFirst({
       where: { tenantId: payload.tenantId, email: normalizedEmail },
     });
@@ -6119,6 +6387,13 @@ export class DriversService {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    await this.assertVerifiedIdentityContactAvailable(payload.tenantId, {
+      email: normalizedEmail,
+      phone: guarantor.phone,
+      ...(guarantor.countryCode ? { phoneCountryCode: guarantor.countryCode } : {}),
+      currentGuarantorDriverId: driver.id,
+      ...(guarantor.personId !== undefined ? { currentPersonId: guarantor.personId } : {}),
+    });
     const existingEmailUser = await this.prisma.user.findFirst({
       where: { tenantId: payload.tenantId, email: normalizedEmail },
     });
@@ -6179,6 +6454,7 @@ export class DriversService {
     contact: { email?: string; phone?: string },
   ): Promise<{ message: string }> {
     const payload = await this.verifySelfServiceToken(token);
+    const currentDriver = await this.findOne(payload.tenantId, payload.driverId);
     const updates: { email?: string; phone?: string } = {};
     if (contact.email) {
       updates.email = contact.email.trim().toLowerCase();
@@ -6189,6 +6465,14 @@ export class DriversService {
     if (Object.keys(updates).length === 0) {
       return { message: 'No changes.' };
     }
+
+    await this.assertVerifiedIdentityContactAvailable(payload.tenantId, {
+      ...(updates.email ? { email: updates.email } : {}),
+      ...(updates.phone ? { phone: updates.phone } : {}),
+      ...(currentDriver.nationality ? { phoneCountryCode: currentDriver.nationality } : {}),
+      currentDriverId: payload.driverId,
+      currentPersonId: currentDriver.personId,
+    });
 
     const linkedUser = await this.prisma.user.findFirst({
       where: { tenantId: payload.tenantId, driverId: payload.driverId },
@@ -6348,6 +6632,18 @@ export class DriversService {
       return { message: 'No changes.' };
     }
 
+    await this.assertVerifiedIdentityContactAvailable(payload.tenantId, {
+      ...(updates.email ? { email: updates.email } : {}),
+      ...(updates.phone ? { phone: updates.phone } : {}),
+      ...(updates.countryCode
+        ? { phoneCountryCode: updates.countryCode }
+        : guarantor.countryCode
+          ? { phoneCountryCode: guarantor.countryCode }
+          : {}),
+      currentGuarantorDriverId: payload.driverId,
+      ...(guarantor.personId !== undefined ? { currentPersonId: guarantor.personId } : {}),
+    });
+
     if (updates.email) {
       const conflictingUser = await this.prisma.user.findFirst({
         where: {
@@ -6462,9 +6758,40 @@ export class DriversService {
   async submitGuarantorFromSelfService(
     token: string,
     dto: CreateOrUpdateDriverGuarantorDto,
-  ): Promise<DriverGuarantorRecord> {
+  ): Promise<{
+    guarantor: DriverGuarantorRecord;
+    capacity: DriverGuarantorCapacityAssessment;
+    invitation: {
+      status:
+        | 'sent'
+        | 'already_verified'
+        | 'missing_email'
+        | 'operator_action_required'
+        | 'queued_until_driver_verified'
+        | 'failed'
+        | 'not_ready';
+      message: string;
+      destination?: string;
+    };
+  }> {
     const payload = await this.verifySelfServiceToken(token);
-    return this.createOrUpdateGuarantor(payload.tenantId, payload.driverId, dto);
+    const capacity = await this.assessDriverGuarantorCapacity(payload.tenantId, payload.driverId, {
+      phone: dto.phone,
+      ...(dto.email ? { email: dto.email } : {}),
+      countryCode: dto.countryCode ?? null,
+    });
+    if (!capacity.eligible) {
+      throw new ConflictException(capacity.message);
+    }
+    const guarantor = await this.createOrUpdateGuarantor(payload.tenantId, payload.driverId, dto, {
+      triggerInvitation: false,
+    });
+    const invitation = await this.maybeSendGuarantorSelfServiceLinkIfEligible(
+      payload.tenantId,
+      payload.driverId,
+      'guarantor_updated',
+    );
+    return { guarantor, capacity, invitation };
   }
 
   private async enrichDriversWithRisk(
@@ -6803,6 +7130,12 @@ export class DriversService {
         );
       }
     }
+
+    await this.assertVerifiedIdentityContactAvailable(tenantId, {
+      ...(dto.email?.trim() ? { email: dto.email.trim().toLowerCase() } : {}),
+      ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+      ...(dto.nationality ? { phoneCountryCode: dto.nationality } : {}),
+    });
 
     const currentDriverCount = await this.prisma.driver.count({
       where: { tenantId, archivedAt: null },
@@ -7245,6 +7578,14 @@ export class DriversService {
             'Review that existing driver record instead of creating a second driver identity.',
         );
       }
+
+      await this.assertVerifiedIdentityContactAvailable(tenantId, {
+        ...(driver.email ? { email: driver.email } : {}),
+        ...(driver.phone ? { phone: driver.phone } : {}),
+        ...(resolvedCountryCode ? { phoneCountryCode: resolvedCountryCode } : {}),
+        currentDriverId: driver.id,
+        currentPersonId: result.personId,
+      });
     }
 
     const nextIdentityStatus = this.mapIdentityStatus(
@@ -7682,6 +8023,158 @@ export class DriversService {
 
     throw new BadRequestException(
       `Phone number '${phone}' is not in a supported format for country '${normalizedCountryCode}'.`,
+    );
+  }
+
+  private buildPhoneContactCandidates(phone: string, countryCode?: string | null): string[] {
+    const trimmed = phone.trim();
+    const candidates = new Set<string>();
+    if (!trimmed) {
+      return [];
+    }
+
+    candidates.add(trimmed);
+    const compact = trimmed.replace(/[^\d+]/g, '');
+    if (compact) {
+      candidates.add(compact);
+    }
+
+    try {
+      candidates.add(this.normalizePhoneNumber(trimmed, countryCode));
+    } catch {
+      // Keep best-effort raw candidates when normalization is not possible.
+    }
+
+    return Array.from(candidates);
+  }
+
+  private async findVerifiedContactBindingConflict(
+    tenantId: string,
+    input: {
+      email?: string | null;
+      phoneCandidates?: string[];
+      currentDriverId?: string;
+      currentGuarantorDriverId?: string;
+      currentPersonId?: string | null;
+    },
+  ): Promise<VerifiedContactBindingConflict | null> {
+    const normalizedEmail = input.email?.trim() ? input.email.trim().toLowerCase() : null;
+    const phoneCandidates = (input.phoneCandidates ?? []).filter(Boolean);
+
+    if (normalizedEmail) {
+      const [driverConflict, guarantorConflict] = await Promise.all([
+        this.prisma.driver.findFirst({
+          where: {
+            tenantId,
+            email: normalizedEmail,
+            identityStatus: 'verified',
+            archivedAt: null,
+            ...(input.currentDriverId ? { id: { not: input.currentDriverId } } : {}),
+          },
+          select: { personId: true },
+        }),
+        this.prisma.driverGuarantor.findFirst({
+          where: {
+            tenantId,
+            email: normalizedEmail,
+            status: 'verified',
+            disconnectedAt: null,
+            ...(input.currentGuarantorDriverId
+              ? { driverId: { not: input.currentGuarantorDriverId } }
+              : {}),
+          },
+          select: { personId: true },
+        }),
+      ]);
+
+      if (driverConflict && driverConflict.personId !== input.currentPersonId) {
+        return { entityType: 'driver', contactType: 'email', personId: driverConflict.personId };
+      }
+      if (guarantorConflict && guarantorConflict.personId !== input.currentPersonId) {
+        return {
+          entityType: 'guarantor',
+          contactType: 'email',
+          personId: guarantorConflict.personId,
+        };
+      }
+    }
+
+    if (phoneCandidates.length > 0) {
+      const [driverConflict, guarantorConflict] = await Promise.all([
+        this.prisma.driver.findFirst({
+          where: {
+            tenantId,
+            phone: { in: phoneCandidates },
+            identityStatus: 'verified',
+            archivedAt: null,
+            ...(input.currentDriverId ? { id: { not: input.currentDriverId } } : {}),
+          },
+          select: { personId: true },
+        }),
+        this.prisma.driverGuarantor.findFirst({
+          where: {
+            tenantId,
+            phone: { in: phoneCandidates },
+            status: 'verified',
+            disconnectedAt: null,
+            ...(input.currentGuarantorDriverId
+              ? { driverId: { not: input.currentGuarantorDriverId } }
+              : {}),
+          },
+          select: { personId: true },
+        }),
+      ]);
+
+      if (driverConflict && driverConflict.personId !== input.currentPersonId) {
+        return { entityType: 'driver', contactType: 'phone', personId: driverConflict.personId };
+      }
+      if (guarantorConflict && guarantorConflict.personId !== input.currentPersonId) {
+        return {
+          entityType: 'guarantor',
+          contactType: 'phone',
+          personId: guarantorConflict.personId,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private async assertVerifiedIdentityContactAvailable(
+    tenantId: string,
+    input: {
+      email?: string | null;
+      phone?: string | null;
+      phoneCountryCode?: string | null;
+      currentDriverId?: string;
+      currentGuarantorDriverId?: string;
+      currentPersonId?: string | null;
+    },
+  ): Promise<void> {
+    const conflict = await this.findVerifiedContactBindingConflict(tenantId, {
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.phone
+        ? { phoneCandidates: this.buildPhoneContactCandidates(input.phone, input.phoneCountryCode) }
+        : {}),
+      ...(input.currentDriverId ? { currentDriverId: input.currentDriverId } : {}),
+      ...(input.currentGuarantorDriverId
+        ? { currentGuarantorDriverId: input.currentGuarantorDriverId }
+        : {}),
+      ...(input.currentPersonId ? { currentPersonId: input.currentPersonId } : {}),
+    });
+
+    if (!conflict) {
+      return;
+    }
+
+    if (conflict.contactType === 'email') {
+      throw new ConflictException(
+        'This email address is already bound to another verified NIN-backed identity in this organisation. Use a different email address.',
+      );
+    }
+
+    throw new ConflictException(
+      'This phone number is already bound to another verified NIN-backed identity in this organisation. Use a different phone number.',
     );
   }
 

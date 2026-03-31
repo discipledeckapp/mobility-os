@@ -1637,6 +1637,24 @@ export class DriverSelfServiceController {
     return this.service.submitGuarantorFromSelfService(token, guarantorDto);
   }
 
+  @Post('guarantor-capacity')
+  @ApiCreatedResponse({ type: Object })
+  assessGuarantorCapacity(
+    @Body('token') token: string,
+    @Body('phone') phone?: string,
+    @Body('email') email?: string,
+    @Body('countryCode') countryCode?: string,
+  ) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.assessGuarantorCapacityFromSelfService(token, {
+      ...(phone ? { phone } : {}),
+      ...(email ? { email } : {}),
+      ...(countryCode ? { countryCode } : {}),
+    });
+  }
+
   @Post('kyc-checkout')
   @ApiCreatedResponse({ type: Object })
   initiateKycCheckout(

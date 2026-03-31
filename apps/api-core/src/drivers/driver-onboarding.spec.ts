@@ -104,7 +104,8 @@ function makePrisma() {
   return {
     driver: {
       findUnique: jest.fn(),
-      findMany: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -143,6 +144,7 @@ function makePrisma() {
     fleet: { findUnique: jest.fn() },
     tenant: { findUnique: jest.fn() },
     selfServiceOtp: {
+      create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -191,7 +193,10 @@ function buildService(
       driverId: 'driver_1',
     }),
   };
-  const authEmailService = { sendDriverSelfServiceVerificationEmail: jest.fn() };
+  const authEmailService = {
+    sendDriverSelfServiceVerificationEmail: jest.fn(),
+    sendGuarantorSelfServiceVerificationEmail: jest.fn(),
+  };
   const documentStorageService = {
     uploadFile: jest
       .fn()
@@ -266,7 +271,10 @@ describe('Driver onboarding — OTP exchange (invited first-time driver)', () =>
       prisma as never,
       makeIntelligenceClient() as never,
       jwtService as never,
-      { sendDriverSelfServiceVerificationEmail: jest.fn() } as never,
+      {
+        sendDriverSelfServiceVerificationEmail: jest.fn(),
+        sendGuarantorSelfServiceVerificationEmail: jest.fn(),
+      } as never,
       { uploadFile: jest.fn(), readFile: jest.fn(), deleteFile: jest.fn() } as never,
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
@@ -1408,6 +1416,298 @@ describe('Driver onboarding — onboarding step state machine', () => {
     const completeStep = await service.getOnboardingStep(VALID_TOKEN);
     expect(completeStep.step).toBe('complete');
     expect(completeStep.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+  });
+});
+
+describe('Driver onboarding — guarantor self-service submission outcomes', () => {
+  let prisma: ReturnType<typeof makePrisma>;
+  let service: DriversService;
+  let authEmailService: {
+    sendDriverSelfServiceVerificationEmail: jest.Mock;
+    sendGuarantorSelfServiceVerificationEmail: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma = makePrisma();
+    prisma.tenant.findUnique.mockResolvedValue({ country: 'NG', metadata: {} });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'verified' }));
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: null,
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    authEmailService = {
+      sendDriverSelfServiceVerificationEmail: jest.fn(),
+      sendGuarantorSelfServiceVerificationEmail: jest.fn(),
+    };
+
+    service = new DriversService(
+      prisma as never,
+      makeIntelligenceClient() as never,
+      {
+        signAsync: jest.fn().mockResolvedValue('guarantor-self-service-token'),
+        verifyAsync: jest.fn().mockResolvedValue({
+          purpose: 'driver_self_service',
+          tenantId: 'tenant_1',
+          driverId: 'driver_1',
+        }),
+      } as never,
+      authEmailService as never,
+      { uploadFile: jest.fn(), readFile: jest.fn(), deleteFile: jest.fn() } as never,
+      {
+        enforceDriverCapacity: jest.fn().mockResolvedValue(undefined),
+        enforceVehicleCapacity: jest.fn(),
+        getCapInfo: jest.fn().mockResolvedValue({ driverCap: null }),
+      } as never,
+      { fireEvent: jest.fn() } as never,
+      { initializeDriverKycCheckout: jest.fn() } as never,
+      {
+        evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
+        listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
+        applyDriverEnforcement: jest.fn().mockImplementation((r: unknown) => r),
+      } as never,
+      {
+        notifyDriverVerificationStatus: jest.fn(),
+        notifyDriverLicenceReviewPending: jest.fn(),
+        notifyDriverLicenceReviewResolved: jest.fn(),
+      } as never,
+      { recordTenantAction: jest.fn() } as never,
+    );
+
+    prisma.driverGuarantor.upsert.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: null,
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  });
+
+  it('returns a sent invitation outcome after saving a valid guarantor with email', async () => {
+    (jest.spyOn(service as never, 'maybeSendGuarantorSelfServiceLinkIfEligible') as unknown as {
+      mockResolvedValue: (value: unknown) => unknown;
+    }).mockResolvedValue({
+        status: 'sent',
+        message: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+        destination: 'grace@example.com',
+      });
+
+    const result = await service.submitGuarantorFromSelfService('valid-token', {
+      name: 'Grace Eze',
+      phone: '08000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+    });
+
+    expect(result.guarantor.name).toBe('Grace Eze');
+    expect(result.invitation.status).toBe('sent');
+    expect(result.invitation.destination).toBe('grace@example.com');
+  });
+
+  it('assesses existing guarantor capacity using active driver relationships only', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: { operations: { guarantorMaxActiveDrivers: 2 } },
+    });
+    prisma.driverGuarantor.findMany.mockResolvedValue([
+      {
+        id: 'guarantor_match_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_2',
+        personId: null,
+        name: 'Grace Eze',
+        phone: '+2348000000000',
+        email: 'grace@example.com',
+        countryCode: 'NG',
+        relationship: 'Sibling',
+        status: 'pending_verification',
+        disconnectedAt: null,
+        disconnectedReason: null,
+        responsibilityAcceptedAt: null,
+        responsibilityAcceptanceEvidence: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'guarantor_match_2',
+        tenantId: 'tenant_1',
+        driverId: 'driver_3',
+        personId: null,
+        name: 'Grace Eze',
+        phone: '+2348000000000',
+        email: 'grace@example.com',
+        countryCode: 'NG',
+        relationship: 'Sibling',
+        status: 'pending_verification',
+        disconnectedAt: null,
+        disconnectedReason: null,
+        responsibilityAcceptedAt: null,
+        responsibilityAcceptanceEvidence: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+    prisma.driver.findMany.mockResolvedValue([
+      { id: 'driver_2' },
+    ]);
+
+    const assessment = await service.assessGuarantorCapacityFromSelfService('valid-token', {
+      phone: '08000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+    });
+
+    expect(assessment.matched).toBe(true);
+    expect(assessment.activeDriverCount).toBe(1);
+    expect(assessment.organisationLimit).toBe(2);
+    expect(assessment.eligible).toBe(true);
+  });
+
+  it('blocks guarantor save when the organisation limit has already been reached', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: { operations: { guarantorMaxActiveDrivers: 1 } },
+    });
+    prisma.driverGuarantor.findMany.mockResolvedValue([
+      {
+        id: 'guarantor_match_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_2',
+        personId: null,
+        name: 'Grace Eze',
+        phone: '+2348000000000',
+        email: 'grace@example.com',
+        countryCode: 'NG',
+        relationship: 'Sibling',
+        status: 'pending_verification',
+        disconnectedAt: null,
+        disconnectedReason: null,
+        responsibilityAcceptedAt: null,
+        responsibilityAcceptanceEvidence: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+    prisma.driver.findMany.mockResolvedValue([{ id: 'driver_2' }]);
+
+    await expect(
+      service.submitGuarantorFromSelfService('valid-token', {
+        name: 'Grace Eze',
+        phone: '08000000000',
+        email: 'grace@example.com',
+        countryCode: 'NG',
+        relationship: 'Sibling',
+      }),
+    ).rejects.toThrow(
+      'This guarantor already supports 1 active driver. Your organisation allows a maximum of 1.',
+    );
+  });
+
+  it('keeps the guarantor saved and reports missing email when no invitation can be sent yet', async () => {
+    (jest.spyOn(service as never, 'maybeSendGuarantorSelfServiceLinkIfEligible') as unknown as {
+      mockResolvedValue: (value: unknown) => unknown;
+    }).mockResolvedValue({
+        status: 'missing_email',
+        message:
+          'Guarantor saved, but no email address was provided for the verification link yet.',
+      });
+
+    prisma.driverGuarantor.upsert.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: null,
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: null,
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: null,
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: null,
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.submitGuarantorFromSelfService('valid-token', {
+      name: 'Grace Eze',
+      phone: '08000000000',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+    });
+
+    expect(result.guarantor.name).toBe('Grace Eze');
+    expect(result.invitation.status).toBe('missing_email');
+  });
+
+  it('preserves the save result and surfaces invitation delivery failure instead of swallowing it', async () => {
+    (jest.spyOn(service as never, 'maybeSendGuarantorSelfServiceLinkIfEligible') as unknown as {
+      mockResolvedValue: (value: unknown) => unknown;
+    }).mockResolvedValue({
+        status: 'failed',
+        message:
+          'Guarantor saved, but we could not send the verification link right now. Please ask your operator to retry.',
+        destination: 'grace@example.com',
+      });
+
+    const result = await service.submitGuarantorFromSelfService('valid-token', {
+      name: 'Grace Eze',
+      phone: '08000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+    });
+
+    expect(result.guarantor.name).toBe('Grace Eze');
+    expect(result.invitation.status).toBe('failed');
+    expect(result.invitation.destination).toBe('grace@example.com');
   });
 });
 

@@ -14,6 +14,8 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
+  type DriverGuarantorCapacityAssessment,
+  type DriverGuarantorInvitationResult,
   type DriverSelfServiceAssignmentRecord,
   type DocumentVerificationRecord,
   type DriverIdentityResolutionResult,
@@ -22,6 +24,7 @@ import {
   type RemittanceRecord,
   type UserNotificationRecord,
   acceptDriverSelfServiceAssignment,
+  assessDriverSelfServiceGuarantorCapacity,
   createDriverSelfServiceAccount,
   declineDriverSelfServiceAssignment,
   getDriverOnboardingStep,
@@ -2047,26 +2050,168 @@ function GuarantorStep({
   const [relationship, setRelationship] = useState(onboardingStep.guarantorRelationship ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [capacityAssessment, setCapacityAssessment] =
+    useState<DriverGuarantorCapacityAssessment | null>(null);
+  const [capacityLoading, setCapacityLoading] = useState(false);
+  const [submissionNotice, setSubmissionNotice] = useState<{
+    tone: 'success' | 'danger';
+    message: string;
+  } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    name: string | undefined;
+    phone: string | undefined;
+    email: string | undefined;
+    countryCode: string | undefined;
+  }>({
+    name: undefined,
+    phone: undefined,
+    email: undefined,
+    countryCode: undefined,
+  });
+
+  const guarantorStatus = onboardingStep.guarantorStatus ?? null;
+  const guarantorPending =
+    Boolean(onboardingStep.guarantorName?.trim()) &&
+    !onboardingStep.guarantorVerified &&
+    guarantorStatus !== 'verified';
+
+  function inputClass(hasError: boolean) {
+    return `w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+      hasError
+        ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-100'
+        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-100'
+    }`;
+  }
+
+  function normalizePhoneInput(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '';
+    }
+    const compact = trimmed.replace(/[\s()-]/g, '');
+    return compact.startsWith('+') ? `+${compact.slice(1).replace(/\+/g, '')}` : compact;
+  }
+
+  function getInvitationMessage(invitation: DriverGuarantorInvitationResult) {
+    if (invitation.status === 'sent' && invitation.destination) {
+      return `Guarantor saved. A verification link has been sent to ${invitation.destination}.`;
+    }
+    return invitation.message;
+  }
+
+  useEffect(() => {
+    const normalizedPhone = normalizePhoneInput(phone);
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedCountryCode = countryCode.trim().toUpperCase();
+    const canCheckPhone = normalizedPhone.length > 0 && /^\+?\d{10,15}$/.test(normalizedPhone);
+    const canCheckEmail =
+      trimmedEmail.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+
+    if (!canCheckPhone && !canCheckEmail) {
+      setCapacityAssessment(null);
+      setCapacityLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setCapacityLoading(true);
+      assessDriverSelfServiceGuarantorCapacity(token, {
+        ...(canCheckPhone ? { phone: normalizedPhone } : {}),
+        ...(canCheckEmail ? { email: trimmedEmail } : {}),
+        ...(trimmedCountryCode ? { countryCode: trimmedCountryCode } : {}),
+      })
+        .then((assessment) => {
+          setCapacityAssessment(assessment);
+        })
+        .catch(() => {
+          setCapacityAssessment(null);
+        })
+        .finally(() => setCapacityLoading(false));
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [countryCode, email, phone, token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSubmissionNotice(null);
 
-    if (!name.trim() || !phone.trim()) {
-      setError('Enter the guarantor name and phone number before continuing.');
+    const nextFieldErrors: {
+      name: string | undefined;
+      phone: string | undefined;
+      email: string | undefined;
+      countryCode: string | undefined;
+    } = {
+      name: undefined,
+      phone: undefined,
+      email: undefined,
+      countryCode: undefined,
+    };
+    const trimmedName = name.trim();
+    const normalizedPhone = normalizePhoneInput(phone);
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedCountryCode = countryCode.trim().toUpperCase();
+
+    if (!trimmedName) {
+      nextFieldErrors.name = 'Enter the guarantor name.';
+    }
+    if (!normalizedPhone) {
+      nextFieldErrors.phone = 'Enter the guarantor phone number.';
+    } else if (!/^\+?\d{10,15}$/.test(normalizedPhone)) {
+      nextFieldErrors.phone =
+        'Use 10 to 15 digits. Spaces, brackets, and dashes are okay, but they will be removed before saving.';
+    }
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextFieldErrors.email = 'Enter a valid email address.';
+    }
+    if (trimmedCountryCode && !/^[A-Z]{2}$/.test(trimmedCountryCode)) {
+      nextFieldErrors.countryCode = 'Use a 2-letter country code such as NG.';
+    }
+
+    setFieldErrors(nextFieldErrors);
+    if (Object.values(nextFieldErrors).some(Boolean)) {
+      setError('Check the highlighted guarantor fields and try again.');
       return;
     }
 
+    if (capacityAssessment && !capacityAssessment.eligible) {
+      setError(capacityAssessment.message);
+      return;
+    }
+
+    setFieldErrors({
+      name: undefined,
+      phone: undefined,
+      email: undefined,
+      countryCode: undefined,
+    });
     setSaving(true);
     try {
-      await submitDriverSelfServiceGuarantor(token, {
-        name: name.trim(),
-        phone: phone.trim(),
-        ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
-        ...(countryCode.trim() ? { countryCode: countryCode.trim().toUpperCase() } : {}),
+      const result = await submitDriverSelfServiceGuarantor(token, {
+        name: trimmedName,
+        phone: normalizedPhone,
+        ...(trimmedEmail ? { email: trimmedEmail } : {}),
+        ...(trimmedCountryCode ? { countryCode: trimmedCountryCode } : {}),
         ...(relationship.trim() ? { relationship: relationship.trim() } : {}),
       });
-      await onComplete();
+      setCapacityAssessment(result.capacity);
+      setSubmissionNotice({
+        tone: result.invitation.status === 'failed' ? 'danger' : 'success',
+        message:
+          result.capacity.matched && result.capacity.eligible
+            ? `${result.capacity.message} ${getInvitationMessage(result.invitation)}`
+            : getInvitationMessage(result.invitation),
+      });
+      try {
+        await onComplete();
+      } catch (refreshError) {
+        setError(
+          refreshError instanceof Error
+            ? `${getInvitationMessage(result.invitation)} We could not refresh your onboarding status automatically: ${refreshError.message}`
+            : `${getInvitationMessage(result.invitation)} We could not refresh your onboarding status automatically.`,
+        );
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'We could not save your guarantor details right now.',
@@ -2086,51 +2231,122 @@ function GuarantorStep({
           Your organisation requires a guarantor before activation can continue. Add the person who
           will vouch for you and we&apos;ll guide them into their own verification flow.
         </Text>
+        {capacityLoading ? <Text tone="muted">Checking guarantor eligibility…</Text> : null}
+        {!capacityLoading && capacityAssessment ? (
+          <Card
+            className={`shadow-none ${
+              capacityAssessment.eligible
+                ? 'border-emerald-200 bg-emerald-50/70'
+                : 'border-rose-200 bg-rose-50/80'
+            }`}
+          >
+            <CardContent className="space-y-2 px-4 py-4">
+              <Text tone={capacityAssessment.eligible ? 'strong' : 'danger'}>
+                {capacityAssessment.matched
+                  ? 'Existing guarantor found'
+                  : 'New guarantor details'}
+              </Text>
+              <Text tone="muted">{capacityAssessment.message}</Text>
+              {capacityAssessment.matched ? (
+                <Text tone="muted">
+                  {capacityAssessment.guarantorName ?? 'This guarantor'} currently guarantees{' '}
+                  {capacityAssessment.activeDriverCount} active driver
+                  {capacityAssessment.activeDriverCount === 1 ? '' : 's'} in this organisation.
+                  Limit: {capacityAssessment.organisationLimit}.
+                </Text>
+              ) : (
+                <Text tone="muted">
+                  Organisation limit: {capacityAssessment.organisationLimit} active driver
+                  {capacityAssessment.organisationLimit === 1 ? '' : 's'} per guarantor.
+                </Text>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+        {submissionNotice ? <Text tone={submissionNotice.tone}>{submissionNotice.message}</Text> : null}
+        {!submissionNotice && guarantorPending ? (
+          <Card className="border-emerald-200 bg-emerald-50/70 shadow-none">
+            <CardContent className="space-y-2 px-4 py-4">
+              <Text tone="strong">Guarantor saved and awaiting verification</Text>
+              <Text tone="muted">
+                {onboardingStep.guarantorEmail
+                  ? `${onboardingStep.guarantorName ?? 'Your guarantor'} has been saved with ${onboardingStep.guarantorEmail}. They must complete their verification before your onboarding can finish.`
+                  : `${onboardingStep.guarantorName ?? 'Your guarantor'} has been saved. Add an email address or contact your operator if a verification link still needs to be sent.`}
+              </Text>
+            </CardContent>
+          </Card>
+        ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Phone number"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              type="text"
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
-              placeholder="Country code"
-              maxLength={2}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              type="text"
-              value={relationship}
-              onChange={(e) => setRelationship(e.target.value)}
-              placeholder="Relationship"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 md:col-span-2"
-            />
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setFieldErrors((current) => ({ ...current, name: undefined }));
+                }}
+                placeholder="Full name"
+                className={inputClass(Boolean(fieldErrors.name))}
+              />
+              {fieldErrors.name ? <Text tone="danger">{fieldErrors.name}</Text> : null}
+            </div>
+            <div className="space-y-1">
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setFieldErrors((current) => ({ ...current, phone: undefined }));
+                }}
+                placeholder="Phone number"
+                className={inputClass(Boolean(fieldErrors.phone))}
+              />
+              {fieldErrors.phone ? <Text tone="danger">{fieldErrors.phone}</Text> : null}
+            </div>
+            <div className="space-y-1">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldErrors((current) => ({ ...current, email: undefined }));
+                }}
+                placeholder="Email address"
+                className={inputClass(Boolean(fieldErrors.email))}
+              />
+              {fieldErrors.email ? <Text tone="danger">{fieldErrors.email}</Text> : null}
+            </div>
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={countryCode}
+                onChange={(e) => {
+                  setCountryCode(e.target.value.toUpperCase());
+                  setFieldErrors((current) => ({ ...current, countryCode: undefined }));
+                }}
+                placeholder="Country code"
+                maxLength={2}
+                className={`${inputClass(Boolean(fieldErrors.countryCode))} uppercase`}
+              />
+              {fieldErrors.countryCode ? <Text tone="danger">{fieldErrors.countryCode}</Text> : null}
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <input
+                type="text"
+                value={relationship}
+                onChange={(e) => setRelationship(e.target.value)}
+                placeholder="Relationship"
+                className={inputClass(false)}
+              />
+            </div>
           </div>
           <Text tone="muted" className="text-xs">
             If you add an email address, the guarantor verification link will be sent automatically
             once your organisation&apos;s policy allows it.
           </Text>
           {error ? <Text tone="danger">{error}</Text> : null}
-          <Button disabled={saving} type="submit">
+          <Button disabled={saving || Boolean(capacityAssessment && !capacityAssessment.eligible)} type="submit">
             {saving ? 'Saving guarantor…' : 'Save guarantor and continue'}
           </Button>
         </form>

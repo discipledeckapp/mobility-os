@@ -586,6 +586,38 @@ export interface DriverGuarantorRecord {
   updatedAt: string;
 }
 
+export interface DriverGuarantorInvitationResult {
+  status:
+    | 'sent'
+    | 'already_verified'
+    | 'missing_email'
+    | 'operator_action_required'
+    | 'queued_until_driver_verified'
+    | 'failed'
+    | 'not_ready';
+  message: string;
+  destination?: string;
+}
+
+export interface DriverGuarantorCapacityAssessment {
+  matched: boolean;
+  matchedBy: Array<'phone' | 'email'>;
+  guarantorName: string | null;
+  guarantorPhone: string | null;
+  guarantorEmail: string | null;
+  activeDriverCount: number;
+  organisationLimit: number;
+  eligible: boolean;
+  linkedToCurrentDriver: boolean;
+  message: string;
+}
+
+export interface DriverGuarantorSubmissionResult {
+  guarantor: DriverGuarantorRecord;
+  capacity: DriverGuarantorCapacityAssessment;
+  invitation: DriverGuarantorInvitationResult;
+}
+
 export interface DriverIdentityResolutionInput {
   countryCode?: string;
   livenessPassed?: boolean;
@@ -3069,8 +3101,23 @@ export async function submitDriverSelfServiceGuarantor(
     countryCode?: string;
     relationship?: string;
   },
-): Promise<DriverGuarantorRecord> {
-  return apiCoreFetch<DriverGuarantorRecord>('/driver-self-service/guarantor', {
+): Promise<DriverGuarantorSubmissionResult> {
+  return apiCoreFetch<DriverGuarantorSubmissionResult>('/driver-self-service/guarantor', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function assessDriverSelfServiceGuarantorCapacity(
+  token: string,
+  input: {
+    phone?: string;
+    email?: string;
+    countryCode?: string;
+  },
+): Promise<DriverGuarantorCapacityAssessment> {
+  return apiCoreFetch<DriverGuarantorCapacityAssessment>('/driver-self-service/guarantor-capacity', {
     method: 'POST',
     body: JSON.stringify({ token, ...input }),
     cache: 'no-store',
@@ -3132,6 +3179,7 @@ export type OnboardingStepRecord = {
   guarantorEmail?: string | null;
   guarantorCountryCode?: string | null;
   guarantorRelationship?: string | null;
+  guarantorStatus?: string | null;
 };
 
 export async function getDriverOnboardingStep(

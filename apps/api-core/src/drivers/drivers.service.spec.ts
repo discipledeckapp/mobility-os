@@ -253,6 +253,30 @@ describe('DriversService', () => {
     );
   });
 
+  it('blocks guarantor save when the phone is already bound to another verified identity', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      identityStatus: 'unverified',
+      nationality: 'NG',
+      personId: null,
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue(null);
+    prisma.driver.findFirst.mockResolvedValue({
+      personId: 'person_existing_1',
+    });
+
+    await expect(
+      service.createOrUpdateGuarantor('tenant_1', 'driver_1', {
+        name: 'Chinwe Okafor',
+        phone: '08012345678',
+        countryCode: 'NG',
+      }),
+    ).rejects.toThrow(
+      'This phone number is already bound to another verified NIN-backed identity in this organisation. Use a different phone number.',
+    );
+  });
+
   it('blocks activation when the driver is not identity-verified', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
@@ -578,6 +602,46 @@ describe('DriversService', () => {
     });
   });
 
+  it('blocks guarantor self-service account creation when the email is already bound to another verified identity', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'guarantor_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      status: 'verified',
+      personId: null,
+    });
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.driverGuarantor.findFirst.mockResolvedValue({
+      personId: 'person_existing_1',
+    });
+
+    await expect(
+      service.createGuarantorSelfServiceAccountFromSelfService(
+        'guarantor-self-service-token',
+        'claimed@example.com',
+        'Password@123',
+      ),
+    ).rejects.toThrow(
+      'This email address is already bound to another verified NIN-backed identity in this organisation. Use a different email address.',
+    );
+  });
+
   it('completes guarantor self-service identity without creating a separate payment flow', async () => {
     jwtService.verifyAsync.mockResolvedValue({
       purpose: 'guarantor_self_service',
@@ -898,6 +962,33 @@ describe('DriversService', () => {
 
     expect(sendSelfServiceLinkSpy).toHaveBeenCalledWith('tenant_1', 'driver_1');
     expect(result.selfServiceInviteStatus).toBe('sent');
+  });
+
+  it('blocks driver creation when the email is already bound to another verified guarantor identity', async () => {
+    prisma.fleet.findUnique.mockResolvedValue({
+      id: 'fleet_1',
+      tenantId: 'tenant_1',
+      status: 'active',
+      operatingUnit: {
+        id: 'ou_1',
+        businessEntityId: 'be_1',
+      },
+    });
+    prisma.driverGuarantor.findFirst.mockResolvedValue({
+      personId: 'person_verified_guarantor_1',
+    });
+
+    await expect(
+      service.create('tenant_1', {
+        fleetId: 'fleet_1',
+        email: 'claimed@example.com',
+        firstName: 'Ada',
+        lastName: 'Okafor',
+        nationality: 'NG',
+      }),
+    ).rejects.toThrow(
+      'This email address is already bound to another verified NIN-backed identity in this organisation. Use a different email address.',
+    );
   });
 
   it('imports drivers from the published template column shape', async () => {
