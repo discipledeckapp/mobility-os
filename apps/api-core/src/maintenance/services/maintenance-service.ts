@@ -214,6 +214,11 @@ export class MaintenanceService {
       action: 'maintenance.work_order_updated',
       beforeState: existing as unknown as Prisma.InputJsonValue,
       afterState: updated as unknown as Prisma.InputJsonValue,
+      metadata: {
+        vehicleId: updated.vehicleId,
+        maintenanceRecordId: updated.maintenanceRecordId,
+        status: updated.status,
+      },
     });
 
     if (updated.status === 'completed') {

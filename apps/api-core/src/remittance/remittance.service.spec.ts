@@ -41,6 +41,9 @@ describe('RemittanceService', () => {
   const notificationsService = {
     notifyRemittanceRecorded: jest.fn(),
   };
+  const auditService = {
+    recordTenantAction: jest.fn(),
+  };
 
   let service: RemittanceService;
 
@@ -71,6 +74,7 @@ describe('RemittanceService', () => {
       policyService as never,
       recordsService as never,
       notificationsService as never,
+      auditService as never,
     );
   });
 
@@ -111,6 +115,17 @@ describe('RemittanceService', () => {
         status: 'pending',
       }),
     });
+    expect(auditService.recordTenantAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'remittance',
+        action: 'remittance.recorded',
+        metadata: expect.objectContaining({
+          assignmentId: 'assignment_1',
+          driverId: 'driver_1',
+          vehicleId: 'vehicle_1',
+        }),
+      }),
+    );
     expect(result.status).toBe('pending');
   });
 

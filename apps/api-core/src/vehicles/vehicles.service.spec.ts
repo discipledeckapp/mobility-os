@@ -29,6 +29,7 @@ describe('VehiclesService', () => {
       findMany: jest.fn(),
     },
     vehicleIncident: {
+      create: jest.fn(),
       findMany: jest.fn(),
     },
     vinDecodeRecord: {
@@ -45,6 +46,9 @@ describe('VehiclesService', () => {
   const meteringClient = {
     fireEvent: jest.fn(),
   };
+  const auditService = {
+    recordTenantAction: jest.fn(),
+  };
 
   let service: VehiclesService;
 
@@ -60,6 +64,7 @@ describe('VehiclesService', () => {
       prisma as never,
       subscriptionEntitlementsService as never,
       meteringClient as never,
+      auditService as never,
     );
   });
 
@@ -112,6 +117,46 @@ describe('VehiclesService', () => {
         acquisitionDate: '2025-01-12',
         currentEstimatedValueMinorUnits: 220000000,
         valuationSource: 'operator-estimate',
+      }),
+    );
+  });
+
+  it('records an audit entry when a driver reports a vehicle incident', async () => {
+    prisma.vehicle.findUnique.mockResolvedValue({
+      id: 'vehicle_1',
+      tenantId: 'tenant_1',
+    });
+    prisma.vehicleIncident.create.mockResolvedValue({
+      id: 'incident_1',
+      tenantId: 'tenant_1',
+      vehicleId: 'vehicle_1',
+      driverId: 'driver_1',
+      category: 'damage',
+      severity: 'high',
+      title: 'Front bumper damage',
+      status: 'open',
+      occurredAt: new Date('2026-03-30T10:00:00.000Z'),
+      createdAt: new Date('2026-03-30T10:10:00.000Z'),
+    });
+
+    await service.createIncident('tenant_1', 'vehicle_1', 'user_1', {
+      driverId: 'driver_1',
+      occurredAt: '2026-03-30T10:00:00.000Z',
+      category: 'damage',
+      severity: 'high',
+      title: 'Front bumper damage',
+    });
+
+    expect(auditService.recordTenantAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'user_1',
+        entityType: 'vehicle_incident',
+        action: 'vehicle.incident_reported',
+        metadata: expect.objectContaining({
+          vehicleId: 'vehicle_1',
+          driverId: 'driver_1',
+          title: 'Front bumper damage',
+        }),
       }),
     );
   });

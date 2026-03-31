@@ -47,16 +47,26 @@ function formatEntity(entityType: string) {
 }
 
 function getEntityHref(item: AuditLogRecord): Route | null {
+  const metadataVehicleId =
+    item.metadata && typeof item.metadata.vehicleId === 'string' ? item.metadata.vehicleId : null;
+
   switch (item.entityType) {
     case 'driver':
       return `/drivers/${item.entityId}` as Route;
+    case 'vehicle':
+      return `/vehicles/${item.entityId}` as Route;
     case 'assignment':
       return `/assignments/${item.entityId}` as Route;
+    case 'remittance':
+      return '/remittance' as Route;
     case 'work_order':
-      return '/maintenance' as Route;
+      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=maintenance` as Route) : ('/maintenance' as Route);
     case 'inspection':
-      return '/inspections' as Route;
+      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=history` as Route) : ('/inspections' as Route);
+    case 'vehicle_incident':
+      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=history` as Route) : ('/vehicles' as Route);
     case 'dispute':
+    case 'document':
       return '/records' as Route;
     default:
       return null;

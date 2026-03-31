@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { getAssignmentDisplayName } from '../../../lib/assignment-display';
 import { listAssignments, listDrivers, listFleets, listVehicles } from '../../../lib/api-core';
+import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
 
 type SearchItem = {
   id: string;
@@ -67,13 +69,22 @@ export async function GET(request: Request) {
         ),
       )
       .slice(0, 8)
-      .map<SearchItem>((assignment) => ({
-        id: assignment.id,
-        title: `Assignment ${assignment.id.slice(0, 8)}`,
-        subtitle: `${assignment.driverId} · ${assignment.vehicleId} · ${assignment.status}`,
-        href: `/assignments/${assignment.id}`,
-        type: 'assignment',
-      }));
+      .map<SearchItem>((assignment) => {
+        const driver = drivers.data.find((item) => item.id === assignment.driverId);
+        const vehicle = vehicles.data.find((item) => item.id === assignment.vehicleId);
+
+        return {
+          id: assignment.id,
+          title: getAssignmentDisplayName({
+            driverLabel: driver ? `${driver.firstName} ${driver.lastName}`.trim() : assignment.driverId,
+            vehicleLabel: vehicle ? getVehiclePrimaryLabel(vehicle) : assignment.vehicleId,
+            fallbackId: assignment.id,
+          }),
+          subtitle: `${assignment.status.replaceAll('_', ' ')} · ${assignment.id.slice(0, 8)}`,
+          href: `/assignments/${assignment.id}`,
+          type: 'assignment',
+        };
+      });
 
     const driverResults = drivers.data.map<SearchItem>((driver) => ({
       id: driver.id,

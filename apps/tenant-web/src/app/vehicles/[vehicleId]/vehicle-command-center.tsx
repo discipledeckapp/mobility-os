@@ -4,7 +4,9 @@ import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Badge, Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
 import Link from 'next/link';
-import type { VehicleDetailRecord, VehicleValuationRecord } from '../../../lib/api-core';
+import { OperationalActivityList } from '../../../components/operational-activity-list';
+import type { AuditLogRecord, VehicleDetailRecord, VehicleValuationRecord } from '../../../lib/api-core';
+import { buildOperationalActivityItem } from '../../../lib/operational-activity';
 import { getVehiclePrimaryLabel, getVehicleSecondaryLabel } from '../../../lib/vehicle-display';
 import { VehicleDetailActions } from './vehicle-detail-actions';
 
@@ -125,9 +127,11 @@ function InfoGrid({
 }
 
 export function VehicleCommandCenter({
+  auditEvents,
   locale,
   vehicle,
 }: {
+  auditEvents: AuditLogRecord[];
   locale: string;
   vehicle: VehicleDetailRecord;
 }) {
@@ -143,6 +147,20 @@ export function VehicleCommandCenter({
   const availabilityBadge = getAvailabilityBadge(vehicle);
   const assignmentBadge = getAssignmentBadge(vehicle);
   const maintenanceBadge = getMaintenanceBadge(vehicle);
+  const vehicleLabels = new Map([[vehicle.id, getVehiclePrimaryLabel(vehicle)]]);
+  const driverLabels = new Map(
+    vehicle.assignmentSummary.assignedDriverId && vehicle.assignmentSummary.assignedDriverName
+      ? [[vehicle.assignmentSummary.assignedDriverId, vehicle.assignmentSummary.assignedDriverName]]
+      : [],
+  );
+  const activityItems = auditEvents
+    .map((event) =>
+      buildOperationalActivityItem(event, locale, {
+        driverLabels,
+        vehicleLabels,
+      }),
+    )
+    .slice(0, 10);
 
   const panels: Record<TabKey, React.ReactNode> = {
     overview: (
@@ -480,6 +498,17 @@ export function VehicleCommandCenter({
     ),
     history: (
       <div className="grid gap-5 xl:grid-cols-3">
+        <Card className="border-slate-200 bg-white xl:col-span-3">
+          <CardHeader>
+            <CardTitle>Recent vehicle activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <OperationalActivityList
+              emptyMessage="No vehicle-linked operational activity has been recorded yet."
+              items={activityItems}
+            />
+          </CardContent>
+        </Card>
         <Card className="border-slate-200 bg-white xl:col-span-1">
           <CardHeader>
             <CardTitle>VIN and specs</CardTitle>

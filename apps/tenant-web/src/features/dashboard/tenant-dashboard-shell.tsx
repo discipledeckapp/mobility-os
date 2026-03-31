@@ -136,6 +136,10 @@ const activityKindColors: Record<string, string> = {
   vehicle: 'bg-violet-400',
   assignment: 'bg-emerald-400',
   remittance: 'bg-amber-400',
+  maintenance: 'bg-orange-400',
+  inspection: 'bg-sky-400',
+  incident: 'bg-rose-400',
+  record: 'bg-slate-400',
 };
 
 export function TenantDashboardShell({
@@ -158,8 +162,9 @@ export function TenantDashboardShell({
     maintenance: 'warning',
     cancelled: 'danger',
     disputed: 'danger',
+    overdue: 'danger',
     retired: 'danger',
-    completed: 'neutral',
+    completed: 'success',
     waived: 'neutral',
   } as const;
 

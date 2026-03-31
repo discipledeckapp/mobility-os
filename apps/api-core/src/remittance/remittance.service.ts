@@ -22,6 +22,7 @@ import { OperationalWalletsService } from '../operational-wallets/operational-wa
 import { PolicyService } from '../policy/policy.service';
 import { RecordsService } from '../records/records.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
 import {
   buildRemittanceReconciliation,
   parseFinancialContractSnapshot,
@@ -39,6 +40,7 @@ export class RemittanceService {
     private readonly policyService: PolicyService,
     private readonly recordsService: RecordsService,
     private readonly notificationsService: NotificationsService,
+    private readonly auditService: AuditService,
   ) {}
 
   private async enrichRemittances<T extends RemittanceWithWalletEntry>(
@@ -413,6 +415,23 @@ export class RemittanceService {
     }).catch(() => {
       // Recording the remittance is the primary operation; notification failure should not roll it back.
     });
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'remittance',
+      entityId: created.id,
+      action: 'remittance.recorded',
+      afterState: created as unknown as Prisma.InputJsonValue,
+      metadata: {
+        assignmentId: assignment.id,
+        driverId: assignment.driverId,
+        vehicleId: assignment.vehicleId,
+        fleetId: assignment.fleetId,
+        dueDate,
+        amountMinorUnits,
+        currency: plannedCurrency,
+        status: created.status,
+      },
+    });
     return this.enrichRemittance(created);
   }
 
@@ -483,6 +502,21 @@ export class RemittanceService {
     });
     await this.recordsService.issueRemittanceReceipt(tenantId, result.id);
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'remittance',
+      entityId: result.id,
+      action: 'remittance.confirmed',
+      afterState: result as unknown as Prisma.InputJsonValue,
+      metadata: {
+        assignmentId: record.assignmentId,
+        driverId: record.driverId,
+        vehicleId: record.vehicleId,
+        fleetId: record.fleetId,
+        paidDate,
+        status: nextStatus,
+      },
+    });
     return this.enrichRemittance(result);
   }
 
@@ -500,6 +534,21 @@ export class RemittanceService {
       data: { status: 'disputed', notes: notes.trim() },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'remittance',
+      entityId: updated.id,
+      action: 'remittance.disputed',
+      beforeState: record as unknown as Prisma.InputJsonValue,
+      afterState: updated as unknown as Prisma.InputJsonValue,
+      metadata: {
+        assignmentId: record.assignmentId,
+        driverId: record.driverId,
+        vehicleId: record.vehicleId,
+        fleetId: record.fleetId,
+        status: updated.status,
+      },
+    });
     return this.enrichRemittance(updated);
   }
 
@@ -521,6 +570,21 @@ export class RemittanceService {
       data: { status: 'waived', notes: notes.trim() },
     });
     await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'remittance',
+      entityId: updated.id,
+      action: 'remittance.waived',
+      beforeState: record as unknown as Prisma.InputJsonValue,
+      afterState: updated as unknown as Prisma.InputJsonValue,
+      metadata: {
+        assignmentId: record.assignmentId,
+        driverId: record.driverId,
+        vehicleId: record.vehicleId,
+        fleetId: record.fleetId,
+        status: updated.status,
+      },
+    });
     return this.enrichRemittance(updated);
   }
 
@@ -578,6 +642,21 @@ export class RemittanceService {
       });
 
       await this.policyService.evaluateDriverPolicies(tenantId, record.driverId);
+      await this.auditService.recordTenantAction({
+        tenantId,
+        entityType: 'remittance',
+        entityId: updated.id,
+        action: 'remittance.dispute_resolved',
+        afterState: updated as unknown as Prisma.InputJsonValue,
+        metadata: {
+          assignmentId: record.assignmentId,
+          driverId: record.driverId,
+          vehicleId: record.vehicleId,
+          fleetId: record.fleetId,
+          paidDate,
+          status: nextStatus,
+        },
+      });
       results.push(await this.enrichRemittance(updated));
     }
 

@@ -13,8 +13,12 @@ import { AuditService } from './audit.service';
 
 type AuditQueryDto = PaginationQueryDto & {
   entityType?: string;
+  entityId?: string;
   action?: string;
   actorId?: string;
+  relatedDriverId?: string;
+  relatedVehicleId?: string;
+  relatedAssignmentId?: string;
 };
 
 @ApiTags('Audit')

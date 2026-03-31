@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 import {
   type AssignmentRecord,
+  type AuditLogRecord,
   type DriverRecord,
   type RemittanceRecord,
   type ReportsOverviewRecord,
@@ -9,11 +10,14 @@ import {
   getReportsOverview,
   getTenantMe,
   listAssignments,
+  listAuditLog,
   listDrivers,
   listRemittances,
   listVehicles,
 } from '../../lib/api-core';
+import { getAssignmentDisplayName } from '../../lib/assignment-display';
 import { getFormattingLocale } from '../../lib/locale';
+import { buildOperationalActivityItem } from '../../lib/operational-activity';
 import { getVehiclePrimaryLabel, getVehicleSecondaryLabel } from '../../lib/vehicle-display';
 
 export interface DashboardSummaryItem {
@@ -31,7 +35,15 @@ export interface DashboardFeatureCard {
 
 export interface DashboardActivityItem {
   id: string;
-  kind: 'driver' | 'vehicle' | 'assignment' | 'remittance';
+  kind:
+    | 'driver'
+    | 'vehicle'
+    | 'assignment'
+    | 'remittance'
+    | 'maintenance'
+    | 'inspection'
+    | 'incident'
+    | 'record';
   title: string;
   description: string;
   href: Route;
@@ -259,7 +271,7 @@ function buildRecentActivity(
   drivers: DriverRecord[],
   vehicles: VehicleRecord[],
   assignments: AssignmentRecord[],
-  remittances: RemittanceRecord[],
+  auditEvents: AuditLogRecord[],
 ): DashboardActivityItem[] {
   const driverLabels = new Map(
     drivers.map((driver) => [driver.id, `${driver.firstName} ${driver.lastName}`]),
@@ -270,52 +282,25 @@ function buildRecentActivity(
       `${getVehiclePrimaryLabel(vehicle)} • ${getVehicleSecondaryLabel(vehicle)}`,
     ]),
   );
+  const assignmentLabels = new Map(
+    assignments.map((assignment) => [
+      assignment.id,
+      getAssignmentDisplayName({
+        driverLabel: driverLabels.get(assignment.driverId),
+        vehicleLabel: vehicleLabels.get(assignment.vehicleId),
+        fallbackId: assignment.id,
+      }),
+    ]),
+  );
 
-  const items: DashboardActivityItem[] = [
-    ...drivers.map((driver) => ({
-      id: `driver:${driver.id}`,
-      kind: 'driver' as const,
-      title: `${driver.firstName} ${driver.lastName}`,
-      description: `Driver added to fleet ${driver.fleetId}`,
-      href: '/drivers' as const,
-      timestamp: driver.createdAt,
-      status: driver.status,
-    })),
-    ...vehicles.map((vehicle) => ({
-      id: `vehicle:${vehicle.id}`,
-      kind: 'vehicle' as const,
-      title: getVehiclePrimaryLabel(vehicle),
-      description: `${getVehicleSecondaryLabel(vehicle)} added to fleet ${vehicle.fleetId}`,
-      href: `/vehicles/${vehicle.id}` as Route,
-      timestamp: vehicle.createdAt,
-      status: vehicle.status,
-    })),
-    ...assignments.map((assignment) => ({
-      id: `assignment:${assignment.id}`,
-      kind: 'assignment' as const,
-      title: driverLabels.get(assignment.driverId) ?? assignment.driverId,
-      description: `Assigned to ${vehicleLabels.get(assignment.vehicleId) ?? assignment.vehicleId}`,
-      href: '/assignments' as const,
-      timestamp: assignment.createdAt,
-      status: assignment.status,
-    })),
-    ...remittances.map((remittance) => ({
-      id: `remittance:${remittance.id}`,
-      kind: 'remittance' as const,
-      title: driverLabels.get(remittance.driverId) ?? remittance.driverId,
-      description: `${new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency: remittance.currency,
-        minimumFractionDigits: 2,
-      }).format(remittance.amountMinorUnits / 100)} due ${remittance.dueDate}`,
-      href: '/remittance' as const,
-      timestamp: remittance.createdAt,
-      status: remittance.status,
-    })),
-  ];
-
-  return items
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+  return auditEvents
+    .map((event) =>
+      buildOperationalActivityItem(event, locale, {
+        driverLabels,
+        vehicleLabels,
+        assignmentLabels,
+      }),
+    )
     .slice(0, 6);
 }
 
@@ -330,12 +315,13 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
   const tenant = await getTenantMe(token).catch(() => null);
   const locale = getFormattingLocale(tenant?.country);
 
-  const [driversResult, vehiclesResult, assignmentsResult, remittancesResult] =
+  const [driversResult, vehiclesResult, assignmentsResult, remittancesResult, auditResult] =
     await Promise.allSettled([
       settle(() => listDrivers({ limit: 200 }, token)),
       settle(() => listVehicles({ limit: 200 }, token)),
       settle(() => listAssignments({ limit: 200 }, token)),
       settle(() => listRemittances({ limit: 200 }, token)),
+      settle(() => listAuditLog({ limit: 20 }, token)),
     ]);
   const overviewResult = await Promise.resolve()
     .then(() => getReportsOverview({}, token))
@@ -368,6 +354,7 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
   const vehicles = vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [];
   const assignments = assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [];
   const remittances = remittancesResult.status === 'fulfilled' ? remittancesResult.value.data : [];
+  const auditEvents = auditResult.status === 'fulfilled' ? auditResult.value.data : [];
   const totalDrivers = driversResult.status === 'fulfilled' ? driversResult.value.total : 0;
 
   if (driversResult.status === 'rejected') {
@@ -384,6 +371,10 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
 
   if (remittancesResult.status === 'rejected') {
     appendAvailabilityNote('Remittance');
+  }
+
+  if (auditResult.status === 'rejected') {
+    appendAvailabilityNote('Activity');
   }
 
   if (overviewResult instanceof Error) {
@@ -503,7 +494,7 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
           : 'Projection unavailable',
       },
     ],
-    recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, remittances),
+    recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, auditEvents),
     featureCards: getDashboardFeatureCards(),
     actionItems: buildActionItems(drivers, remittances),
     notes,

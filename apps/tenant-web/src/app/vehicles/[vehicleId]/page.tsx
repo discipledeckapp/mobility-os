@@ -1,5 +1,5 @@
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
-import { getTenantMe, getVehicle } from '../../../lib/api-core';
+import { getTenantMe, getVehicle, listAuditLog, type AuditLogRecord } from '../../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
 import { VehicleCommandCenter } from './vehicle-command-center';
 
@@ -9,9 +9,12 @@ export default async function VehicleDetailsPage({
   params: Promise<{ vehicleId: string }>;
 }) {
   const { vehicleId } = await params;
-  const [vehicle, tenant] = await Promise.all([
+  const [vehicle, tenant, auditEvents] = await Promise.all([
     getVehicle(vehicleId),
     getTenantMe().catch(() => null),
+    listAuditLog({ limit: 20, relatedVehicleId: vehicleId })
+      .then((result) => result.data)
+      .catch(() => [] as AuditLogRecord[]),
   ]);
   const locale = tenant?.country === 'NG' ? 'en-NG' : 'en-US';
 
@@ -21,7 +24,7 @@ export default async function VehicleDetailsPage({
       eyebrow="Assets"
       title={getVehiclePrimaryLabel(vehicle)}
     >
-      <VehicleCommandCenter locale={locale} vehicle={vehicle} />
+      <VehicleCommandCenter auditEvents={auditEvents} locale={locale} vehicle={vehicle} />
     </TenantAppShell>
   );
 }

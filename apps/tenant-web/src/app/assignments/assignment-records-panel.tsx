@@ -23,6 +23,7 @@ import type {
   FleetRecord,
   VehicleRecord,
 } from '../../lib/api-core';
+import { formatAssignmentStatusLabel, getAssignmentDisplayName } from '../../lib/assignment-display';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 import { TenantMetricCard, TenantMetricGrid } from '../../features/shared/tenant-page-patterns';
 import { AssignmentRowActions } from './assignment-row-actions';
@@ -60,10 +61,6 @@ function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neut
   if (status === 'accepted') return 'neutral';
   if (status === 'cancelled' || status === 'declined') return 'danger';
   return 'neutral';
-}
-
-function formatStatusLabel(status: string) {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatDateTime(value?: string | null): string {
@@ -111,30 +108,6 @@ function getDriverSecondaryLabel(driver: DriverRecord): string | null {
   }
 
   return null;
-}
-
-function getAssignmentPrimaryLabel(input: {
-  driverLabel?: string | undefined;
-  vehicleLabel?: string | undefined;
-  fleetLabel?: string | undefined;
-}): string {
-  if (input.driverLabel && input.vehicleLabel) {
-    return `${input.driverLabel} on ${input.vehicleLabel}`;
-  }
-
-  if (input.driverLabel) {
-    return input.driverLabel;
-  }
-
-  if (input.vehicleLabel) {
-    return input.vehicleLabel;
-  }
-
-  if (input.fleetLabel) {
-    return `${input.fleetLabel} assignment`;
-  }
-
-  return 'Assignment record';
 }
 
 export function AssignmentRecordsPanel({
@@ -370,10 +343,11 @@ export function AssignmentRecordsPanel({
                       const driverLabel = driverLabels.get(assignment.driverId);
                       const vehicleLabel = vehicleLabels.get(assignment.vehicleId);
                       const fleetLabel = fleetLabels.get(assignment.fleetId);
-                      const assignmentLabel = getAssignmentPrimaryLabel({
+                      const assignmentLabel = getAssignmentDisplayName({
                         driverLabel,
                         vehicleLabel,
                         fleetLabel,
+                        fallbackId: assignment.id,
                       });
 
                       return (
@@ -386,8 +360,8 @@ export function AssignmentRecordsPanel({
                     </Link>
                     <Text tone="muted">
                       {fleetLabel
-                        ? `${fleetLabel} · ${formatStatusLabel(assignment.status)}`
-                        : formatStatusLabel(assignment.status)}
+                        ? `${fleetLabel} · ${formatAssignmentStatusLabel(assignment.status)}`
+                        : formatAssignmentStatusLabel(assignment.status)}
                     </Text>
                         </>
                       );
@@ -423,7 +397,7 @@ export function AssignmentRecordsPanel({
                 <TableCell>{fleetLabels.get(assignment.fleetId) ?? 'Fleet record'}</TableCell>
                 <TableCell>
                   <Badge tone={getStatusTone(assignment.status)}>
-                    {formatStatusLabel(assignment.status)}
+                    {formatAssignmentStatusLabel(assignment.status)}
                   </Badge>
                 </TableCell>
                 <TableCell>{formatDateTime(assignment.startedAt)}</TableCell>

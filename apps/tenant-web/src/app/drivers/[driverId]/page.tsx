@@ -18,6 +18,7 @@ import { Suspense } from 'react';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import {
   type AssignmentRecord,
+  type AuditLogRecord,
   type FleetRecord,
   type RemittanceRecord,
   type VehicleRecord,
@@ -27,17 +28,21 @@ import {
   getTenantApiToken,
   getTenantMe,
   listAssignments,
+  listAuditLog,
   listDriverDocuments,
   listFleets,
   listRemittances,
   listVehicles,
 } from '../../../lib/api-core';
+import { OperationalActivityList } from '../../../components/operational-activity-list';
+import { getAssignmentDisplayName } from '../../../lib/assignment-display';
 import {
   getDriverIdentityLabel,
   getDriverIdentityTone,
   getIdentityAuthorityLabel,
 } from '../../../lib/driver-identity';
 import { getFormattingLocale } from '../../../lib/locale';
+import { buildOperationalActivityItem } from '../../../lib/operational-activity';
 import { getVehiclePrimaryLabel } from '../../../lib/vehicle-display';
 import { DriverEvidenceImage } from '../driver-evidence-image';
 import { DriverAdminOverridePanel } from '../driver-admin-override-panel';
@@ -290,6 +295,7 @@ export default async function DriverDetailsPage({
     documents,
     guarantor,
     mobileAccess,
+    auditEvents,
   ] = await Promise.all([
     getDriver(driverId, token),
     listAssignments({ driverId, limit: 50 }, token)
@@ -306,6 +312,9 @@ export default async function DriverDetailsPage({
     listDriverDocuments(driverId, token).catch(() => []),
     getDriverGuarantor(driverId, token).catch(() => null),
     getDriverMobileAccess(driverId, token).catch(() => ({ linkedUser: null, suggestedUsers: [] })),
+    listAuditLog({ limit: 20, relatedDriverId: driverId }, token)
+      .then((result) => result.data)
+      .catch(() => [] as AuditLogRecord[]),
   ]);
   const locale = getFormattingLocale(tenant?.country);
 
@@ -326,6 +335,25 @@ export default async function DriverDetailsPage({
   const identityTone = getDriverIdentityTone(driver.identityStatus);
   const identityLabel = getDriverIdentityLabel(driver.identityStatus);
   const driverDisplayName = getDriverDisplayName(driver);
+  const assignmentLabels = new Map(
+    driverAssignments.map((assignment) => [
+      assignment.id,
+      getAssignmentDisplayName({
+        driverLabel: driverDisplayName,
+        vehicleLabel: vehicleLabels.get(assignment.vehicleId),
+        fallbackId: assignment.id,
+      }),
+    ]),
+  );
+  const activityItems = auditEvents
+    .map((event) =>
+      buildOperationalActivityItem(event, locale, {
+        driverLabels: new Map([[driver.id, driverDisplayName]]),
+        vehicleLabels,
+        assignmentLabels,
+      }),
+    )
+    .slice(0, 10);
   const identityProfile = getDriverIdentityProfile(driver);
   const selfieImageSrc = getDriverIdentityImageProxyUrl(
     driver.id,
@@ -1888,8 +1916,19 @@ export default async function DriverDetailsPage({
                     <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 space-y-1">
                       <Text tone="muted">Latest assignment</Text>
                       <p className="text-sm font-medium text-[var(--mobiris-ink)]">
-                        {latestAssignment?.id ?? 'None yet'}
+                        {latestAssignment
+                          ? assignmentLabels.get(latestAssignment.id) ?? latestAssignment.id
+                          : 'None yet'}
                       </p>
+                    </div>
+                  </div>
+                  <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-white p-4">
+                    <Text tone="strong">Recent driver activity</Text>
+                    <div className="mt-2">
+                      <OperationalActivityList
+                        emptyMessage="No driver-linked operational activity has been recorded yet."
+                        items={activityItems}
+                      />
                     </div>
                   </div>
                   {driverAssignments.length > 0 ? (
@@ -1910,7 +1949,7 @@ export default async function DriverDetailsPage({
                                 className="font-medium text-[var(--mobiris-primary-dark)] hover:underline"
                                 href={`/assignments/${assignment.id}`}
                               >
-                                {assignment.id}
+                                {assignmentLabels.get(assignment.id) ?? assignment.id}
                               </Link>
                             </TableCell>
                             <TableCell>

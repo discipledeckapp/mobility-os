@@ -43,19 +43,87 @@ export class AuditService {
     tenantId: string,
     query: PaginationQueryDto & {
       entityType?: string;
+      entityId?: string;
       action?: string;
       actorId?: string;
+      relatedDriverId?: string;
+      relatedVehicleId?: string;
+      relatedAssignmentId?: string;
     },
   ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
     const skip = (page - 1) * limit;
-    const where = {
+    const where: Prisma.OperationalAuditLogWhereInput = {
       tenantId,
       ...(query.entityType ? { entityType: query.entityType } : {}),
+      ...(query.entityId ? { entityId: query.entityId } : {}),
       ...(query.action ? { action: query.action } : {}),
       ...(query.actorId ? { actorId: query.actorId } : {}),
     };
+
+    const relatedScopes: Prisma.OperationalAuditLogWhereInput[] = [];
+
+    if (query.relatedDriverId) {
+      relatedScopes.push({
+        OR: [
+          {
+            entityType: 'driver',
+            entityId: query.relatedDriverId,
+          },
+          {
+            metadata: {
+              path: ['driverId'],
+              equals: query.relatedDriverId,
+            },
+          },
+        ],
+      });
+    }
+
+    if (query.relatedVehicleId) {
+      relatedScopes.push({
+        OR: [
+          {
+            entityType: 'vehicle',
+            entityId: query.relatedVehicleId,
+          },
+          {
+            metadata: {
+              path: ['vehicleId'],
+              equals: query.relatedVehicleId,
+            },
+          },
+        ],
+      });
+    }
+
+    if (query.relatedAssignmentId) {
+      relatedScopes.push({
+        OR: [
+          {
+            entityType: 'assignment',
+            entityId: query.relatedAssignmentId,
+          },
+          {
+            metadata: {
+              path: ['assignmentId'],
+              equals: query.relatedAssignmentId,
+            },
+          },
+        ],
+      });
+    }
+
+    if (relatedScopes.length > 0) {
+      const existingAnd =
+        where.AND === undefined
+          ? []
+          : Array.isArray(where.AND)
+            ? where.AND
+            : [where.AND];
+      where.AND = [...existingAnd, ...relatedScopes];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.operationalAuditLog.findMany({

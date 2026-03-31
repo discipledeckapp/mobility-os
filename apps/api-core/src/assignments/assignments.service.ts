@@ -643,6 +643,9 @@ export class AssignmentsService {
       },
     });
     await this.recordAssignmentAudit(tenantId, updated.id, 'assignment_accepted', {
+      driverId: updated.driverId,
+      vehicleId: updated.vehicleId,
+      fleetId: updated.fleetId,
       acceptedAt: acceptedAt.toISOString(),
       confirmationMethod: updated.driverConfirmationMethod,
       assignmentSnapshotHash: acceptanceSnapshotHash,
@@ -707,6 +710,9 @@ export class AssignmentsService {
       }),
     ]);
     await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_declined', {
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      fleetId: assignment.fleetId,
       declinedFrom: input.declinedFrom,
       ...(input.note ? { note: input.note } : {}),
     });
@@ -771,6 +777,9 @@ export class AssignmentsService {
 
     const [updated] = await this.prisma.$transaction(operations);
     await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_activated', {
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      fleetId: assignment.fleetId,
       source: 'start_endpoint',
       activatedAt: assignment.driverConfirmedAt.toISOString(),
     });
@@ -880,12 +889,18 @@ export class AssignmentsService {
       (updated as Assignment).id,
       'vehicle_returned',
       {
+        driverId: assignment.driverId,
+        vehicleId: assignment.vehicleId,
+        fleetId: assignment.fleetId,
         returnedAt: returnedAt.toISOString(),
         ...(input?.returnedBy ? { returnedBy: input.returnedBy } : {}),
         ...(returnEvidence ? { returnEvidence } : {}),
       } satisfies Prisma.InputJsonValue,
     );
     await this.recordAssignmentAudit(tenantId, (updated as Assignment).id, 'assignment_ended', {
+      driverId: assignment.driverId,
+      vehicleId: assignment.vehicleId,
+      fleetId: assignment.fleetId,
       status: resolution,
       returnedAt: returnedAt.toISOString(),
     });

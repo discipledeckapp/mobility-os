@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 import { buildCsv, parseCsv } from '../common/csv-utils';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
+import { AuditService } from '../audit/audit.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -99,6 +100,7 @@ export class VehiclesService {
     private readonly prisma: PrismaService,
     private readonly subscriptionEntitlementsService: SubscriptionEntitlementsService,
     private readonly meteringClient: ControlPlaneMeteringClient,
+    private readonly auditService: AuditService,
   ) {}
 
   private normalizeVehicleModel(model?: string | null): string {
@@ -662,7 +664,7 @@ export class VehiclesService {
     },
   ): Promise<VehicleIncident> {
     await this.findOne(tenantId, vehicleId);
-    return this.prisma.vehicleIncident.create({
+    const incident = await this.prisma.vehicleIncident.create({
       data: {
         tenantId,
         vehicleId,
@@ -677,6 +679,23 @@ export class VehiclesService {
         currency: dto.currency?.trim() || null,
       },
     });
+    await this.auditService.recordTenantAction({
+      tenantId,
+      actorId: reportedByUserId,
+      entityType: 'vehicle_incident',
+      entityId: incident.id,
+      action: 'vehicle.incident_reported',
+      afterState: incident as unknown as Prisma.InputJsonValue,
+      metadata: {
+        vehicleId,
+        ...(dto.driverId ? { driverId: dto.driverId } : {}),
+        category: incident.category,
+        severity: incident.severity,
+        title: incident.title,
+        status: incident.status,
+      },
+    });
+    return incident;
   }
 
   async suggestTenantVehicleCode(

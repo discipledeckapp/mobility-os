@@ -2813,8 +2813,12 @@ export async function getReportsOverview(
 export async function listAuditLog(
   input: PaginationParams & {
     entityType?: string;
+    entityId?: string;
     action?: string;
     actorId?: string;
+    relatedDriverId?: string;
+    relatedVehicleId?: string;
+    relatedAssignmentId?: string;
   } = {},
   token?: string,
 ): Promise<PaginatedApiResponse<AuditLogRecord>> {
@@ -2822,11 +2826,23 @@ export async function listAuditLog(
   if (input.entityType) {
     params.set('entityType', input.entityType);
   }
+  if (input.entityId) {
+    params.set('entityId', input.entityId);
+  }
   if (input.action) {
     params.set('action', input.action);
   }
   if (input.actorId) {
     params.set('actorId', input.actorId);
+  }
+  if (input.relatedDriverId) {
+    params.set('relatedDriverId', input.relatedDriverId);
+  }
+  if (input.relatedVehicleId) {
+    params.set('relatedVehicleId', input.relatedVehicleId);
+  }
+  if (input.relatedAssignmentId) {
+    params.set('relatedAssignmentId', input.relatedAssignmentId);
   }
   if (typeof input.page === 'number') {
     params.set('page', String(input.page));
