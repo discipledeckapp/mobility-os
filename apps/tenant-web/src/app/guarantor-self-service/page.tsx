@@ -267,7 +267,7 @@ function GuarantorAgreementCard({
         <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
           Guarantor agreement
         </Text>
-        <CardTitle>Review and accept before continuing</CardTitle>
+        <CardTitle>Confirm and accept before verification</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm leading-relaxed text-slate-700">
@@ -291,16 +291,16 @@ function GuarantorAgreementCard({
 
           <div className="space-y-3">
             <p>
-              You agree to act as guarantor for the driver named above and confirm that you know the
-              driver personally.
+              You confirm that you are aware you have been added as guarantor for the driver named
+              above and that you know the driver personally.
             </p>
             <p>
               Your responsibilities relate to remittance-recovery support only. This agreement does
               not make you liable for physical vehicle damage or criminal conduct by the driver.
             </p>
             <p>
-              You must complete live identity verification so the operator can activate this
-              guarantor linkage.
+              After accepting this request, you must complete live identity verification so the
+              operator can activate this guarantor linkage.
             </p>
           </div>
         </div>
@@ -352,8 +352,10 @@ function GuarantorAgreementCard({
             className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
           />
           <span className="text-sm leading-relaxed text-slate-700">
-            I have read, understood, and accept this guarantor agreement for{' '}
-            <strong className="text-slate-900">{context.driverName}</strong>.
+            I confirm that I am aware I have been added as guarantor for{' '}
+            <strong className="text-slate-900">{context.driverName}</strong> by{' '}
+            <strong className="text-slate-900">{org}</strong>, and I accept this guarantor
+            agreement.
           </span>
         </label>
 
@@ -366,7 +368,7 @@ function GuarantorAgreementCard({
           }}
           className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {saving ? 'Saving details…' : 'Continue to live verification'}
+          {saving ? 'Saving acceptance…' : 'Accept and continue to verification'}
         </button>
       </CardContent>
     </Card>
@@ -502,8 +504,10 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
             {context.organisationName ?? 'an operator'}.
           </Text>
           <Text tone="muted">
-            You will be asked to review the guarantor agreement, give consent, complete liveness,
-            and verify your identity. There is no payment required in this flow.
+            You will first be asked to confirm that you are aware of this guarantor request and
+            accept it. After that, you can continue into liveness and identity verification. If
+            your organisation charges for guarantor verification, the platform will tell you before
+            any billable step begins.
           </Text>
         </section>
 

@@ -1428,6 +1428,11 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     sendDriverSelfServiceVerificationEmail: jest.Mock;
     sendGuarantorSelfServiceVerificationEmail: jest.Mock;
   };
+  let controlPlaneBillingClient: {
+    initializeDriverKycCheckout: jest.Mock;
+    initializeIdentityVerificationCheckout: jest.Mock;
+    verifyAndApplyPayment: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -1457,6 +1462,11 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
       sendDriverSelfServiceVerificationEmail: jest.fn(),
       sendGuarantorSelfServiceVerificationEmail: jest.fn(),
     };
+    controlPlaneBillingClient = {
+      initializeDriverKycCheckout: jest.fn(),
+      initializeIdentityVerificationCheckout: jest.fn(),
+      verifyAndApplyPayment: jest.fn(),
+    };
 
     service = new DriversService(
       prisma as never,
@@ -1477,7 +1487,7 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
         getCapInfo: jest.fn().mockResolvedValue({ driverCap: null }),
       } as never,
       { fireEvent: jest.fn() } as never,
-      { initializeDriverKycCheckout: jest.fn() } as never,
+      controlPlaneBillingClient as never,
       {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
@@ -1531,6 +1541,7 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     expect(result.guarantor.name).toBe('Grace Eze');
     expect(result.invitation.status).toBe('sent');
     expect(result.invitation.destination).toBe('grace@example.com');
+    expect(result.payment.paymentStatus).toBe('not_required');
   });
 
   it('assesses existing guarantor capacity using active driver relationships only', async () => {
@@ -1687,6 +1698,110 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
 
     expect(result.guarantor.name).toBe('Grace Eze');
     expect(result.invitation.status).toBe('missing_email');
+  });
+
+  it('holds the guarantor invite until the driver pays the guarantor verification add-on', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantorVerification: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    const sendInviteSpy = jest.spyOn(
+      service as never,
+      'maybeSendGuarantorSelfServiceLinkIfEligible',
+    );
+
+    const result = await service.submitGuarantorFromSelfService('valid-token', {
+      name: 'Grace Eze',
+      phone: '08000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+    });
+
+    expect(result.payment.paymentStatus).toBe('driver_payment_required');
+    expect(result.payment.amountMinorUnits).toBe(500000);
+    expect(result.invitation.status).toBe('not_ready');
+    expect(sendInviteSpy).not.toHaveBeenCalled();
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  it('starts a driver-paid guarantor verification checkout with an add-on payment key', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantorVerification: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    controlPlaneBillingClient.initializeIdentityVerificationCheckout.mockResolvedValue({
+      checkoutUrl: 'https://paystack.test/guarantor-addon',
+    });
+
+    const result = await service.initiateVerificationAddonCheckoutFromSelfService(
+      'valid-token',
+      'guarantor_verification',
+      'paystack',
+      'https://tenant.example.com/driver-self-service',
+    );
+
+    expect(result.status).toBe('checkout_required');
+    expect(controlPlaneBillingClient.initializeIdentityVerificationCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentKey: 'guarantor_verification',
+        purposeLabel: 'guarantor verification',
+        relatedDriverId: 'driver_1',
+      }),
+    );
+  });
+
+  it('records the guarantor add-on payment and sends the invite after payment verification', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantorVerification: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    controlPlaneBillingClient.verifyAndApplyPayment.mockResolvedValue({
+      status: 'applied',
+      amountMinorUnits: 500000,
+      currency: 'NGN',
+    });
+    const sendInviteSpy = jest.spyOn(
+      service as never,
+      'maybeSendGuarantorSelfServiceLinkIfEligible',
+    ) as unknown as { mockResolvedValue: (value: unknown) => unknown };
+    sendInviteSpy.mockResolvedValue({
+      status: 'sent',
+      message: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+      destination: 'grace@example.com',
+    });
+
+    const result = await service.verifyVerificationAddonPaymentFromSelfService(
+      'valid-token',
+      'guarantor_verification',
+      'paystack',
+      'ref_guarantor_addon_1',
+    );
+
+    expect(result.status).toBe('verified');
+    expect(controlPlaneBillingClient.verifyAndApplyPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reference: 'ref_guarantor_addon_1',
+        driverId: 'driver_1',
+      }),
+    );
+    expect(prisma.$queryRaw).toHaveBeenCalled();
+    expect(sendInviteSpy).toHaveBeenCalledWith('tenant_1', 'driver_1', 'guarantor_updated');
   });
 
   it('preserves the save result and surfaces invitation delivery failure instead of swallowing it', async () => {

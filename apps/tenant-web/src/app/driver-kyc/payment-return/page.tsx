@@ -16,7 +16,13 @@ type DriverKycResumePayload = {
   token?: string;
   returnUrl?: string;
   driverId?: string;
+  chargeKey?: 'guarantor_verification' | 'drivers_license_verification';
 };
+
+const DRIVER_PAYMENT_RESUME_PREFIXES = [
+  'mobiris_driver_kyc_resume_',
+  'mobiris_driver_verification_addon_resume_',
+] as const;
 
 function getDriverKycNextUrl({
   token,
@@ -50,6 +56,14 @@ function mapDriverSafeError(message?: string) {
   return 'We could not finish confirming your payment yet. Retry verification now.';
 }
 
+function getSuccessTitle(chargeKey: string | null) {
+  return chargeKey === 'guarantor_verification'
+    ? 'Your guarantor verification payment is verified'
+    : chargeKey === 'drivers_license_verification'
+      ? "Your driver's licence verification payment is verified"
+      : 'Your KYC payment is verified';
+}
+
 function DriverKycPaymentReturnInner() {
   const params = useSearchParams();
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
@@ -60,6 +74,9 @@ function DriverKycPaymentReturnInner() {
   const provider = params?.get('provider') ?? null;
   const tokenFromParams = params?.get('token') ?? null;
   const reference = params?.get('reference') ?? params?.get('trxref') ?? null;
+  const chargeKey =
+    (params?.get('chargeKey') as 'guarantor_verification' | 'drivers_license_verification' | null) ??
+    null;
   const returnUrlFromParams = params?.get('returnUrl') ?? null;
 
   useEffect(() => {
@@ -67,6 +84,7 @@ function DriverKycPaymentReturnInner() {
       setResumeContext({
         token: tokenFromParams,
         returnUrl: returnUrlFromParams,
+        ...(chargeKey ? { chargeKey } : {}),
       });
       return;
     }
@@ -74,7 +92,7 @@ function DriverKycPaymentReturnInner() {
     const storage = window.sessionStorage;
     for (let index = 0; index < storage.length; index += 1) {
       const key = storage.key(index);
-      if (!key?.startsWith('mobiris_driver_kyc_resume_')) {
+      if (!key || !DRIVER_PAYMENT_RESUME_PREFIXES.some((prefix) => key.startsWith(prefix))) {
         continue;
       }
 
@@ -88,7 +106,7 @@ function DriverKycPaymentReturnInner() {
         // Ignore malformed browser state and keep scanning.
       }
     }
-  }, [returnUrlFromParams, tokenFromParams]);
+  }, [chargeKey, returnUrlFromParams, tokenFromParams]);
 
   const token = tokenFromParams ?? resumeContext?.token ?? null;
   const returnUrl = returnUrlFromParams ?? resumeContext?.returnUrl ?? null;
@@ -107,18 +125,46 @@ function DriverKycPaymentReturnInner() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
 
-    fetch(`${apiUrl}/driver-self-service/verify-kyc-payment`, {
+    fetch(
+      `${apiUrl}${
+        chargeKey
+          ? '/driver-self-service/verify-verification-addon-payment'
+          : '/driver-self-service/verify-kyc-payment'
+      }`,
+      {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token, provider, reference }),
-    })
+      body: JSON.stringify({
+        token,
+        provider,
+        reference,
+        ...(chargeKey ? { chargeKey } : {}),
+      }),
+    },
+    )
       .then(async (res) => {
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { message?: string };
           throw new Error(body.message ?? `Payment verification failed (${res.status})`);
         }
-        if (resumeContext?.driverId) {
-          window.sessionStorage.removeItem(`mobiris_driver_kyc_resume_${resumeContext.driverId}`);
+        const storage = window.sessionStorage;
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index);
+          if (!key || !DRIVER_PAYMENT_RESUME_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+            continue;
+          }
+          try {
+            const parsed = JSON.parse(storage.getItem(key) ?? '{}') as DriverKycResumePayload;
+            const sameDriver =
+              !resumeContext?.driverId || !parsed.driverId || parsed.driverId === resumeContext.driverId;
+            const sameChargeKey =
+              !chargeKey || !parsed.chargeKey || parsed.chargeKey === chargeKey;
+            if (sameDriver && sameChargeKey) {
+              storage.removeItem(key);
+            }
+          } catch {
+            storage.removeItem(key);
+          }
         }
         setState('success');
       })
@@ -126,7 +172,7 @@ function DriverKycPaymentReturnInner() {
         setState('error');
         setErrorMsg(mapDriverSafeError(err instanceof Error ? err.message : undefined));
       });
-  }, [provider, reference, resumeContext?.driverId, token]);
+  }, [chargeKey, provider, reference, resumeContext?.driverId, token]);
 
   useEffect(() => {
     if (state !== 'success') {
@@ -172,7 +218,7 @@ function DriverKycPaymentReturnInner() {
               <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
                 Payment confirmed
               </Text>
-              <CardTitle>Your KYC payment is verified</CardTitle>
+              <CardTitle>{getSuccessTitle(chargeKey)}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Text tone="muted">

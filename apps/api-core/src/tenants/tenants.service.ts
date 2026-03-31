@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type Tenant } from '@prisma/client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
 import type { InternalTenantOwnerSummaryDto } from './dto/internal-tenant-owner-summary.dto';
 import type { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
-import { writeOrganisationSettings } from './tenant-settings';
+import {
+  compareVerificationTiers,
+  type VerificationTier,
+  writeOrganisationSettings,
+  readOrganisationSettings,
+} from './tenant-settings';
 
 // Tenants are provisioned by api-control-plane, never created here.
 // This service provides read-only access scoped to the calling tenant.
@@ -45,6 +50,37 @@ export class TenantsService {
 
   async updateSettings(tenantId: string, dto: UpdateTenantSettingsDto): Promise<Tenant> {
     const tenant = await this.findById(tenantId);
+    const currentSettings = readOrganisationSettings(tenant.metadata, tenant.country);
+    const currentTier = currentSettings.operations.verificationTier;
+    const nextTier = dto.verificationTier ?? currentTier;
+    const isTierUpgrade = compareVerificationTiers(nextTier, currentTier) > 0;
+    const rolloutScope = dto.verificationTierRolloutScope;
+    const rolloutChangedAt = isTierUpgrade ? new Date().toISOString() : null;
+
+    if (isTierUpgrade && !rolloutScope) {
+      throw new BadRequestException(
+        'Choose whether the stronger verification tier applies to new verification journeys only or to both existing and new drivers.',
+      );
+    }
+
+    if (isTierUpgrade) {
+      if (rolloutScope === 'new_only') {
+        await this.grandfatherExistingVerificationJourneys(
+          tenantId,
+          currentTier,
+          nextTier,
+          new Date(rolloutChangedAt as string),
+        );
+      } else {
+        await this.requireReverificationForExistingDrivers(
+          tenantId,
+          currentTier,
+          nextTier,
+          new Date(rolloutChangedAt as string),
+        );
+      }
+    }
+
     const metadata = writeOrganisationSettings(
       tenant.metadata,
       {
@@ -53,6 +89,12 @@ export class TenantsService {
         ...(dto.defaultLanguage !== undefined ? { defaultLanguage: dto.defaultLanguage } : {}),
         ...(dto.verificationTier !== undefined
           ? { verificationTier: dto.verificationTier }
+          : {}),
+        ...(isTierUpgrade && rolloutScope
+          ? {
+              verificationTierRolloutScope: rolloutScope,
+              verificationTierRolloutChangedAt: rolloutChangedAt,
+            }
           : {}),
         ...(dto.guarantorMaxActiveDrivers !== undefined
           ? { guarantorMaxActiveDrivers: dto.guarantorMaxActiveDrivers }
@@ -100,6 +142,134 @@ export class TenantsService {
       where: { id: tenantId },
       data: { metadata: metadata as Prisma.InputJsonValue },
     });
+  }
+
+  private normalizeVerificationTierOverride(tier?: string | null): VerificationTier | null {
+    if (
+      tier === 'BASIC_IDENTITY' ||
+      tier === 'VERIFIED_IDENTITY' ||
+      tier === 'FULL_TRUST_VERIFICATION'
+    ) {
+      return tier;
+    }
+    return null;
+  }
+
+  private async findDriversEligibleForVerificationTransition(tenantId: string, effectiveAt: Date) {
+    const [verifiedDrivers, invitedOtps] = await Promise.all([
+      this.prisma.driver.findMany({
+        where: {
+          tenantId,
+          archivedAt: null,
+          identityLastVerifiedAt: { lte: effectiveAt },
+        },
+        select: {
+          id: true,
+          verificationTierOverride: true,
+          identityStatus: true,
+        },
+      }),
+      this.prisma.selfServiceOtp.findMany({
+        where: {
+          tenantId,
+          subjectType: 'driver',
+          createdAt: { lte: effectiveAt },
+        },
+        distinct: ['subjectId'],
+        select: { subjectId: true },
+      }),
+    ]);
+
+    const eligibleIds = new Set<string>(verifiedDrivers.map((driver) => driver.id));
+    for (const otp of invitedOtps) {
+      eligibleIds.add(otp.subjectId);
+    }
+
+    if (eligibleIds.size === 0) {
+      return [];
+    }
+
+    return this.prisma.driver.findMany({
+      where: {
+        tenantId,
+        archivedAt: null,
+        id: { in: Array.from(eligibleIds) },
+      },
+      select: {
+        id: true,
+        verificationTierOverride: true,
+        identityStatus: true,
+      },
+    });
+  }
+
+  private async grandfatherExistingVerificationJourneys(
+    tenantId: string,
+    previousTier: VerificationTier,
+    nextTier: VerificationTier,
+    effectiveAt: Date,
+  ): Promise<void> {
+    const drivers = await this.findDriversEligibleForVerificationTransition(tenantId, effectiveAt);
+
+    for (const driver of drivers) {
+      const driverTier =
+        this.normalizeVerificationTierOverride(driver.verificationTierOverride) ?? previousTier;
+      if (compareVerificationTiers(driverTier, nextTier) >= 0) {
+        continue;
+      }
+      if (this.normalizeVerificationTierOverride(driver.verificationTierOverride) === previousTier) {
+        continue;
+      }
+      await this.prisma.driver.update({
+        where: { id: driver.id },
+        data: { verificationTierOverride: previousTier },
+      });
+    }
+  }
+
+  private async requireReverificationForExistingDrivers(
+    tenantId: string,
+    previousTier: VerificationTier,
+    nextTier: VerificationTier,
+    effectiveAt: Date,
+  ): Promise<void> {
+    const drivers = await this.findDriversEligibleForVerificationTransition(tenantId, effectiveAt);
+
+    for (const driver of drivers) {
+      const driverTier =
+        this.normalizeVerificationTierOverride(driver.verificationTierOverride) ?? previousTier;
+      if (compareVerificationTiers(driverTier, nextTier) >= 0) {
+        continue;
+      }
+
+      await this.prisma.driver.update({
+        where: { id: driver.id },
+        data: {
+          verificationTierOverride: null,
+          identityStatus: 'unverified',
+          identityReviewCaseId: null,
+          identityReviewStatus: null,
+          identityLastDecision: null,
+          identityVerificationConfidence: null,
+          identityLastVerifiedAt: null,
+          identityLivenessPassed: null,
+          identityLivenessProvider: null,
+          identityLivenessConfidence: null,
+          identityLivenessReason: null,
+          kycPaymentReference: null,
+          kycPaymentVerifiedAt: null,
+          adminAssignmentOverride: false,
+          adminAssignmentOverrideRequestedAt: null,
+          adminAssignmentOverrideRequestedBy: null,
+          adminAssignmentOverrideReason: null,
+          adminAssignmentOverrideEvidence: Prisma.JsonNull,
+          adminAssignmentOverrideOtpHash: null,
+          adminAssignmentOverrideOtpExpiresAt: null,
+          adminAssignmentOverrideConfirmedAt: null,
+          adminAssignmentOverrideConfirmedBy: null,
+        },
+      });
+    }
   }
 
   async getOwnerSummary(tenantId: string): Promise<InternalTenantOwnerSummaryDto> {

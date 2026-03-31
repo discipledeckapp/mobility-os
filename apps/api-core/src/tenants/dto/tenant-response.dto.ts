@@ -64,6 +64,12 @@ export class TenantResponseDto {
   @ApiPropertyOptional()
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
 
+  @ApiPropertyOptional({ enum: ['new_only', 'existing_and_new'] })
+  verificationTierRolloutScope?: 'new_only' | 'existing_and_new';
+
+  @ApiPropertyOptional()
+  verificationTierRolloutChangedAt?: string | null;
+
   @ApiPropertyOptional()
   verificationTierLabel?: string;
 
@@ -85,6 +91,18 @@ export class TenantResponseDto {
     amountMinorUnits: number;
     currency: string;
   }>;
+
+  @ApiPropertyOptional()
+  guarantorVerificationPriceMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  guarantorVerificationPriceCurrency?: string;
+
+  @ApiPropertyOptional()
+  driversLicenseVerificationPriceMinorUnits?: number;
+
+  @ApiPropertyOptional()
+  driversLicenseVerificationPriceCurrency?: string;
 
   @ApiPropertyOptional()
   requireGuarantor?: boolean;

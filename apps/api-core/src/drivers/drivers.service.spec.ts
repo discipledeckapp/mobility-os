@@ -964,6 +964,37 @@ describe('DriversService', () => {
     );
   });
 
+  it('does not let a per-driver verification tier fall below the organisation minimum', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      email: 'ada@example.com',
+      identityStatus: 'unverified',
+      verificationTierOverride: null,
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Tenant One',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'VERIFIED_IDENTITY',
+          driverPaysKyc: false,
+        },
+      },
+    });
+    jwtService.signAsync.mockResolvedValue('driver-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({ id: 'otp_1', otpCode: 'ABC123' });
+
+    await service.sendSelfServiceLink('tenant_1', 'driver_1', {
+      verificationTierOverride: 'BASIC_IDENTITY',
+    });
+
+    expect(prisma.driver.update).not.toHaveBeenCalled();
+    expect(authEmailService.sendDriverSelfServiceVerificationEmail).toHaveBeenCalled();
+  });
+
   it('can request fresh reverification for an existing driver at a selected tier', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',

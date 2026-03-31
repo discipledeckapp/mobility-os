@@ -279,7 +279,8 @@ export class PaymentsService {
   ): Promise<PaymentCheckoutResponseDto> {
     const currency = dto.currency.toUpperCase();
     const amountMinorUnits = dto.amountMinorUnits;
-    const subjectReferenceKey = `${dto.subjectType}_${dto.subjectId}`;
+    const paymentKey = dto.paymentKey?.trim() || 'identity_verification';
+    const subjectReferenceKey = `${dto.subjectType}_${dto.subjectId}_${paymentKey}`;
     const reusableAttempt = await this.prisma.cpPaymentAttempt.findFirst({
       where: {
         provider: dto.provider,
@@ -318,7 +319,9 @@ export class PaymentsService {
       redirectUrl,
       customerEmail: dto.customerEmail,
       ...(dto.customerName ? { customerName: dto.customerName } : {}),
-      description: `Mobiris ${getVerificationTierLabel(dto.verificationTier)} verification fee`,
+      description: dto.purposeLabel?.trim()
+        ? `Mobiris ${dto.purposeLabel.trim()} fee`
+        : `Mobiris ${getVerificationTierLabel(dto.verificationTier)} verification fee`,
       metadata: {
         purpose: 'identity_verification',
         tenantId: dto.tenantId,
@@ -326,6 +329,7 @@ export class PaymentsService {
         subjectId: dto.subjectId,
         driverId: dto.relatedDriverId ?? (dto.subjectType === 'driver' ? dto.subjectId : null),
         verificationTier: dto.verificationTier,
+        paymentKey,
       },
     });
 

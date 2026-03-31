@@ -362,19 +362,20 @@ export class AuthEmailService {
     const html = renderAuthEmailShell(
       `${escapeHtml(organisationName)} guarantor verification`,
       'Guarantor Verification',
-      `You have been named as a guarantor for ${input.driverName} by ${escapeHtml(organisationName)}. Please complete your identity verification to confirm your role.`,
+      `You have been listed as a guarantor for ${input.driverName} by ${escapeHtml(organisationName)}. Please acknowledge this request and complete your verification to confirm your role.`,
       `
         <div style="border:1px solid #fde68a;border-radius:16px;background:#fffbeb;padding:20px;">
           <div style="font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Organisation</div>
           <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(organisationName)}</div>
           <div style="margin-top:14px;font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">Driver you are guaranteeing</div>
           <div style="margin-top:10px;font-size:22px;font-weight:700;color:#0f172a;">${input.driverName}</div>
-          <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Use the secure link below on the device that will capture the live selfie. Once complete, the operator will be notified.</div>
+          <div style="margin-top:14px;font-size:13px;font-weight:600;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;">What happens next</div>
+          <div style="margin-top:10px;font-size:14px;line-height:1.6;color:#475569;">Open the secure link below, confirm that you are aware you have been added as guarantor for this driver, then proceed to your live verification. Once complete, the operator will be notified.</div>
         </div>
         ${otpBlock}
-        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.guarantorName}, if you were not expecting this request, please ignore this email or contact ${escapeHtml(organisationName)} directly.</p>
+        <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#334155;">Hi ${input.guarantorName}, if you were not expecting this request, please do not accept it. Ignore this email or contact ${escapeHtml(organisationName)} directly.</p>
       `,
-      'Start guarantor verification',
+      'Accept and continue',
       input.verificationUrl,
       brand,
     );

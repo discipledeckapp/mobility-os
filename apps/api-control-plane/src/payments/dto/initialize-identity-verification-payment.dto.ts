@@ -42,6 +42,21 @@ export class InitializeIdentityVerificationPaymentDto {
   @IsString()
   relatedDriverId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Optional add-on charge key so separate identity-verification checkouts can be tracked independently for the same subject.',
+  })
+  @IsOptional()
+  @IsString()
+  paymentKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional human label used in payment descriptions for add-on verification charges.',
+  })
+  @IsOptional()
+  @IsString()
+  purposeLabel?: string;
+
   @ApiProperty()
   @IsISO4217CurrencyCode()
   currency!: string;

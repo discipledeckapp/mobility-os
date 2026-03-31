@@ -13,6 +13,7 @@ import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { TenantsService } from './tenants.service';
 import {
+  getVerificationAddonPrice,
   listVerificationTierPrices,
   readOrganisationSettings,
   resolveVerificationPolicy,
@@ -37,6 +38,11 @@ export class TenantsController {
     const settings = readOrganisationSettings(tenant.metadata, tenant.country);
     const verificationPolicy = resolveVerificationPolicy(settings.operations, 'NGN');
     const verificationTierPricing = listVerificationTierPrices('NGN');
+    const guarantorVerificationPrice = getVerificationAddonPrice('guarantor_verification', 'NGN');
+    const driversLicenseVerificationPrice = getVerificationAddonPrice(
+      'drivers_license_verification',
+      'NGN',
+    );
 
     return {
       ...tenant,
@@ -64,9 +70,15 @@ export class TenantsController {
       verificationTier: verificationPolicy.tier,
       verificationTierLabel: verificationPolicy.label,
       verificationTierDescription: verificationPolicy.description,
+      verificationTierRolloutScope: settings.operations.verificationTierRolloutScope,
+      verificationTierRolloutChangedAt: settings.operations.verificationTierRolloutChangedAt,
       verificationTierPriceMinorUnits: verificationPolicy.price.amountMinorUnits,
       verificationTierPriceCurrency: verificationPolicy.price.currency,
       verificationTierPricing,
+      guarantorVerificationPriceMinorUnits: guarantorVerificationPrice.amountMinorUnits,
+      guarantorVerificationPriceCurrency: guarantorVerificationPrice.currency,
+      driversLicenseVerificationPriceMinorUnits: driversLicenseVerificationPrice.amountMinorUnits,
+      driversLicenseVerificationPriceCurrency: driversLicenseVerificationPrice.currency,
       requireGuarantor: settings.operations.requireGuarantor,
       guarantorBlocking: settings.operations.guarantorBlocking,
       requireGuarantorVerification: settings.operations.requireGuarantorVerification,
@@ -85,6 +97,11 @@ export class TenantsController {
     const settings = readOrganisationSettings(tenant.metadata, tenant.country);
     const verificationPolicy = resolveVerificationPolicy(settings.operations, 'NGN');
     const verificationTierPricing = listVerificationTierPrices('NGN');
+    const guarantorVerificationPrice = getVerificationAddonPrice('guarantor_verification', 'NGN');
+    const driversLicenseVerificationPrice = getVerificationAddonPrice(
+      'drivers_license_verification',
+      'NGN',
+    );
 
     return {
       ...tenant,
@@ -112,9 +129,15 @@ export class TenantsController {
       verificationTier: verificationPolicy.tier,
       verificationTierLabel: verificationPolicy.label,
       verificationTierDescription: verificationPolicy.description,
+      verificationTierRolloutScope: settings.operations.verificationTierRolloutScope,
+      verificationTierRolloutChangedAt: settings.operations.verificationTierRolloutChangedAt,
       verificationTierPriceMinorUnits: verificationPolicy.price.amountMinorUnits,
       verificationTierPriceCurrency: verificationPolicy.price.currency,
       verificationTierPricing,
+      guarantorVerificationPriceMinorUnits: guarantorVerificationPrice.amountMinorUnits,
+      guarantorVerificationPriceCurrency: guarantorVerificationPrice.currency,
+      driversLicenseVerificationPriceMinorUnits: driversLicenseVerificationPrice.amountMinorUnits,
+      driversLicenseVerificationPriceCurrency: driversLicenseVerificationPrice.currency,
       requireGuarantor: settings.operations.requireGuarantor,
       guarantorBlocking: settings.operations.guarantorBlocking,
       requireGuarantorVerification: settings.operations.requireGuarantorVerification,

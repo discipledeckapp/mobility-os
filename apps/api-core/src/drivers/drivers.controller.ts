@@ -1679,6 +1679,38 @@ export class DriverSelfServiceController {
     return this.service.verifyKycPaymentFromSelfService(token, provider, reference);
   }
 
+  @Post('verification-addon-checkout')
+  @ApiCreatedResponse({ type: Object })
+  initiateVerificationAddonCheckout(
+    @Body('token') token: string,
+    @Body('chargeKey') chargeKey: 'guarantor_verification' | 'drivers_license_verification',
+    @Body('provider') provider: 'paystack' | 'flutterwave',
+    @Body('returnUrl') returnUrl?: string,
+  ) {
+    return this.service.initiateVerificationAddonCheckoutFromSelfService(
+      token,
+      chargeKey,
+      provider ?? 'paystack',
+      returnUrl,
+    );
+  }
+
+  @Post('verify-verification-addon-payment')
+  @ApiCreatedResponse({ type: Object })
+  verifyVerificationAddonPayment(
+    @Body('token') token: string,
+    @Body('chargeKey') chargeKey: 'guarantor_verification' | 'drivers_license_verification',
+    @Body('provider') provider: string,
+    @Body('reference') reference: string,
+  ) {
+    return this.service.verifyVerificationAddonPaymentFromSelfService(
+      token,
+      chargeKey,
+      provider,
+      reference,
+    );
+  }
+
   @Post('documents/list')
   @ApiCreatedResponse({ type: [DriverDocumentResponseDto] })
   listDocuments(@Body('token') token: string) {

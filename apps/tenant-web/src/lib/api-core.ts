@@ -117,6 +117,8 @@ export interface TenantRecord {
   requiredVehicleDocumentSlugs?: string[];
   driverPaysKyc?: boolean;
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+  verificationTierRolloutScope?: 'new_only' | 'existing_and_new';
+  verificationTierRolloutChangedAt?: string | null;
   verificationTierLabel?: string;
   verificationTierDescription?: string;
   verificationTierPriceMinorUnits?: number;
@@ -126,6 +128,10 @@ export interface TenantRecord {
     amountMinorUnits: number;
     currency: string;
   }>;
+  guarantorVerificationPriceMinorUnits?: number;
+  guarantorVerificationPriceCurrency?: string;
+  driversLicenseVerificationPriceMinorUnits?: number;
+  driversLicenseVerificationPriceCurrency?: string;
   requireGuarantor?: boolean;
   guarantorBlocking?: boolean;
   requireGuarantorVerification?: boolean;
@@ -150,6 +156,7 @@ export interface UpdateTenantSettingsInput {
   logoUrl?: string;
   defaultLanguage?: 'en' | 'fr';
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
+  verificationTierRolloutScope?: 'new_only' | 'existing_and_new';
   guarantorMaxActiveDrivers?: number;
   autoSendDriverSelfServiceLinkOnCreate?: boolean;
   requireIdentityVerificationForActivation?: boolean;
@@ -387,6 +394,14 @@ export interface DriverRecord {
   verificationTierLabel?: string;
   verificationTierDescription?: string;
   verificationTierComponents?: Array<'identity' | 'guarantor' | 'drivers_license'>;
+  guarantorVerificationPaymentStatus?: 'not_required' | 'ready' | 'driver_payment_required';
+  guarantorVerificationPaymentMessage?: string | null;
+  guarantorVerificationAmountMinorUnits?: number;
+  guarantorVerificationCurrency?: string | null;
+  driversLicenseVerificationPaymentStatus?: 'not_required' | 'ready' | 'driver_payment_required';
+  driversLicenseVerificationPaymentMessage?: string | null;
+  driversLicenseVerificationAmountMinorUnits?: number;
+  driversLicenseVerificationCurrency?: string | null;
   verificationComponents?: Array<{
     key: 'identity' | 'guarantor' | 'drivers_license';
     label: string;
@@ -615,6 +630,14 @@ export interface DriverGuarantorCapacityAssessment {
 export interface DriverGuarantorSubmissionResult {
   guarantor: DriverGuarantorRecord;
   capacity: DriverGuarantorCapacityAssessment;
+  payment: {
+    required: boolean;
+    paymentStatus: 'not_required' | 'ready' | 'driver_payment_required';
+    paymentMessage: string;
+    amountMinorUnits: number;
+    currency: string;
+    payer: 'driver' | 'organisation';
+  };
   invitation: DriverGuarantorInvitationResult;
 }
 
@@ -3010,6 +3033,32 @@ export async function initiateDriverKycCheckout(
   return apiCoreFetch<DriverKycCheckoutRecord>('/driver-self-service/kyc-checkout', {
     method: 'POST',
     body: JSON.stringify({ token, provider, ...(returnUrl ? { returnUrl } : {}) }),
+    cache: 'no-store',
+  });
+}
+
+export async function initiateDriverVerificationAddonCheckout(
+  token: string,
+  chargeKey: 'guarantor_verification' | 'drivers_license_verification',
+  provider: 'paystack' | 'flutterwave' = 'paystack',
+  returnUrl?: string,
+): Promise<DriverKycCheckoutRecord> {
+  return apiCoreFetch<DriverKycCheckoutRecord>('/driver-self-service/verification-addon-checkout', {
+    method: 'POST',
+    body: JSON.stringify({ token, chargeKey, provider, ...(returnUrl ? { returnUrl } : {}) }),
+    cache: 'no-store',
+  });
+}
+
+export async function verifyDriverVerificationAddonPayment(
+  token: string,
+  chargeKey: 'guarantor_verification' | 'drivers_license_verification',
+  provider: string,
+  reference: string,
+): Promise<{ status: string }> {
+  return apiCoreFetch<{ status: string }>('/driver-self-service/verify-verification-addon-payment', {
+    method: 'POST',
+    body: JSON.stringify({ token, chargeKey, provider, reference }),
     cache: 'no-store',
   });
 }

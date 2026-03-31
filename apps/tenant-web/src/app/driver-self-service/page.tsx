@@ -30,6 +30,7 @@ import {
   getDriverOnboardingStep,
   getDriverSelfServiceContext,
   initiateDriverKycCheckout,
+  initiateDriverVerificationAddonCheckout,
   listDriverSelfServiceNotifications,
   listDriverSelfServiceRemittance,
   listDriverSelfServiceAssignments,
@@ -1697,6 +1698,114 @@ function Field({
   );
 }
 
+function VerificationAddonPaymentCard({
+  token,
+  driver,
+  chargeKey,
+  title,
+  description,
+  paymentOverride,
+  onRefresh,
+}: {
+  token: string;
+  driver: DriverRecord;
+  chargeKey: 'guarantor_verification' | 'drivers_license_verification';
+  title: string;
+  description: string;
+  paymentOverride?: {
+    paymentStatus: 'not_required' | 'ready' | 'driver_payment_required';
+    paymentMessage: string;
+    amountMinorUnits: number;
+    currency: string;
+  } | null;
+  onRefresh: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const paymentStatus =
+    paymentOverride?.paymentStatus ??
+    (chargeKey === 'guarantor_verification'
+      ? driver.guarantorVerificationPaymentStatus
+      : driver.driversLicenseVerificationPaymentStatus);
+  const paymentMessage =
+    paymentOverride?.paymentMessage ??
+    (chargeKey === 'guarantor_verification'
+      ? driver.guarantorVerificationPaymentMessage
+      : driver.driversLicenseVerificationPaymentMessage);
+  const amountMinorUnits =
+    paymentOverride?.amountMinorUnits ??
+    (chargeKey === 'guarantor_verification'
+      ? driver.guarantorVerificationAmountMinorUnits
+      : driver.driversLicenseVerificationAmountMinorUnits);
+  const currency =
+    paymentOverride?.currency ??
+    (chargeKey === 'guarantor_verification'
+      ? driver.guarantorVerificationCurrency
+      : driver.driversLicenseVerificationCurrency);
+
+  if (paymentStatus !== 'driver_payment_required') {
+    return null;
+  }
+
+  async function handleCheckout() {
+    setLoading(true);
+    setError(null);
+    try {
+      const fallbackReturnUrl = `${window.location.origin}/driver-self-service?token=${encodeURIComponent(token)}`;
+      window.sessionStorage.setItem(
+        `mobiris_driver_verification_addon_resume_${driver.id}_${chargeKey}`,
+        JSON.stringify({
+          token,
+          returnUrl: fallbackReturnUrl,
+          driverId: driver.id,
+          chargeKey,
+        }),
+      );
+      const checkout = await initiateDriverVerificationAddonCheckout(
+        token,
+        chargeKey,
+        'paystack',
+        fallbackReturnUrl,
+      );
+      window.location.href = checkout.checkoutUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to start payment right now.');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <SelfServiceBlockingOverlay
+        visible={loading}
+        title="Preparing your payment"
+        message="Opening the verification payment flow and preserving your place in onboarding."
+      />
+      <Card className="border-amber-200 bg-amber-50/70 shadow-none">
+        <CardContent className="space-y-3 px-4 py-4">
+          <Text tone="strong">{title}</Text>
+          <Text tone="muted">{description}</Text>
+          <Text tone="muted">
+            {paymentMessage}
+            {amountMinorUnits && currency
+              ? ` Required amount: ${formatMinorCurrency(amountMinorUnits, currency)}.`
+              : ''}
+          </Text>
+          {error ? <Text tone="danger">{error}</Text> : null}
+          <div className="flex flex-wrap gap-3">
+            <Button disabled={loading} onClick={() => void handleCheckout()} type="button">
+              {loading ? 'Opening payment…' : 'Pay now'}
+            </Button>
+            <Button onClick={() => void onRefresh()} type="button" variant="secondary">
+              I&apos;ve completed payment
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
 function DocumentVerificationStep({
   token,
   driver,
@@ -1719,6 +1828,9 @@ function DocumentVerificationStep({
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<DocumentVerificationRecord | null>(null);
   const existingLicenceVerification = driver.driverLicenceVerification;
+  const selectedDocumentRequiresAddonPayment =
+    selectedDocType.trim().toLowerCase() === 'drivers-license' &&
+    driver.driversLicenseVerificationPaymentStatus === 'driver_payment_required';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1942,6 +2054,17 @@ function DocumentVerificationStep({
             </div>
           ) : null}
 
+          {selectedDocumentRequiresAddonPayment ? (
+            <VerificationAddonPaymentCard
+              chargeKey="drivers_license_verification"
+              description="Driver's licence verification needs a separate payment before we can check this document with the issuing authority."
+              driver={driver}
+              onRefresh={onComplete}
+              title="Driver's licence verification payment required"
+              token={token}
+            />
+          ) : null}
+
           {pendingTypes.length > 0 ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -1982,7 +2105,7 @@ function DocumentVerificationStep({
               </div>
               {error ? <Text tone="danger">{error}</Text> : null}
               <div className="flex flex-wrap gap-3">
-                <Button disabled={loading} type="submit">
+                <Button disabled={loading || selectedDocumentRequiresAddonPayment} type="submit">
                   {loading ? 'Verifying…' : 'Verify document'}
                 </Button>
               </div>
@@ -2057,6 +2180,23 @@ function GuarantorStep({
     tone: 'success' | 'danger';
     message: string;
   } | null>(null);
+  const [paymentRequirement, setPaymentRequirement] = useState<{
+    paymentStatus: 'not_required' | 'ready' | 'driver_payment_required';
+    paymentMessage: string;
+    amountMinorUnits: number;
+    currency: string;
+  } | null>(
+    driver.guarantorVerificationPaymentStatus === 'driver_payment_required'
+      ? {
+          paymentStatus: driver.guarantorVerificationPaymentStatus,
+          paymentMessage:
+            driver.guarantorVerificationPaymentMessage ??
+            'You must complete payment before guarantor verification can continue.',
+          amountMinorUnits: driver.guarantorVerificationAmountMinorUnits ?? 0,
+          currency: driver.guarantorVerificationCurrency ?? 'NGN',
+        }
+      : null,
+  );
   const [fieldErrors, setFieldErrors] = useState<{
     name: string | undefined;
     phone: string | undefined;
@@ -2152,6 +2292,7 @@ function GuarantorStep({
     const normalizedPhone = normalizePhoneInput(phone);
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedCountryCode = countryCode.trim().toUpperCase();
+    setPaymentRequirement(null);
 
     if (!trimmedName) {
       nextFieldErrors.name = 'Enter the guarantor name.';
@@ -2196,8 +2337,22 @@ function GuarantorStep({
         ...(relationship.trim() ? { relationship: relationship.trim() } : {}),
       });
       setCapacityAssessment(result.capacity);
+      setPaymentRequirement(
+        result.payment.paymentStatus === 'driver_payment_required'
+          ? {
+              paymentStatus: result.payment.paymentStatus,
+              paymentMessage: result.payment.paymentMessage,
+              amountMinorUnits: result.payment.amountMinorUnits,
+              currency: result.payment.currency,
+            }
+          : null,
+      );
       setSubmissionNotice({
-        tone: result.invitation.status === 'failed' ? 'danger' : 'success',
+        tone:
+          result.invitation.status === 'failed' ||
+          result.invitation.status === 'not_ready'
+            ? 'danger'
+            : 'success',
         message:
           result.capacity.matched && result.capacity.eligible
             ? `${result.capacity.message} ${getInvitationMessage(result.invitation)}`
@@ -2264,6 +2419,17 @@ function GuarantorStep({
           </Card>
         ) : null}
         {submissionNotice ? <Text tone={submissionNotice.tone}>{submissionNotice.message}</Text> : null}
+        {paymentRequirement ? (
+          <VerificationAddonPaymentCard
+            chargeKey="guarantor_verification"
+            description="Your guarantor has been saved, but we need to confirm the guarantor verification payment before their invite can be sent."
+            driver={driver}
+            onRefresh={onComplete}
+            paymentOverride={paymentRequirement}
+            title="Guarantor verification payment required"
+            token={token}
+          />
+        ) : null}
         {!submissionNotice && guarantorPending ? (
           <Card className="border-emerald-200 bg-emerald-50/70 shadow-none">
             <CardContent className="space-y-2 px-4 py-4">

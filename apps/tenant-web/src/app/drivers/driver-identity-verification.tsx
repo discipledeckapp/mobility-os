@@ -253,6 +253,9 @@ export function DriverIdentityVerification({
     result: NonNullable<ResolveDriverVerificationActionState['result']>,
   ) => void;
 }) {
+  const getTierRank = (
+    tier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION',
+  ) => (tier === 'FULL_TRUST_VERIFICATION' ? 3 : tier === 'VERIFIED_IDENTITY' ? 2 : 1);
   const initialCountryCode = driver.nationality ?? defaultCountryCode ?? 'NG';
   const router = useRouter();
   const [isOpen] = useState(mode === 'self_service' || mode === 'guarantor_self_service');
@@ -260,6 +263,7 @@ export function DriverIdentityVerification({
   const [selectedVerificationTier, setSelectedVerificationTier] = useState<
     'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION'
   >(driver.verificationTier ?? 'BASIC_IDENTITY');
+  const organisationMinimumTier = driver.verificationTier ?? 'BASIC_IDENTITY';
   const [forceReverification, setForceReverification] = useState(false);
   const [countryCode, setCountryCode] = useState(initialCountryCode);
   const countryOptions = useMemo(
@@ -412,6 +416,12 @@ export function DriverIdentityVerification({
       stopStream();
     };
   }, []);
+
+  useEffect(() => {
+    if (getTierRank(selectedVerificationTier) < getTierRank(organisationMinimumTier)) {
+      setSelectedVerificationTier(organisationMinimumTier);
+    }
+  }, [organisationMinimumTier, selectedVerificationTier]);
 
   useEffect(() => {
     if (!showLivenessLoadingModal) {
@@ -843,7 +853,11 @@ export function DriverIdentityVerification({
                   value={selectedVerificationTier}
                 >
                   {VERIFICATION_TIER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option
+                      disabled={getTierRank(option.value) < getTierRank(organisationMinimumTier)}
+                      key={option.value}
+                      value={option.value}
+                    >
                       {option.label}
                     </option>
                   ))}

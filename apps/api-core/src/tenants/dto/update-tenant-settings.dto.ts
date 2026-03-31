@@ -43,6 +43,16 @@ export class UpdateTenantSettingsDto {
   @IsIn(VERIFICATION_TIERS)
   verificationTier?: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
 
+  @ApiPropertyOptional({
+    enum: ['new_only', 'existing_and_new'],
+    description:
+      'Required when increasing the organisation verification tier. Choose whether the stronger requirement applies only to new verification journeys or to both existing and new drivers.',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['new_only', 'existing_and_new'])
+  verificationTierRolloutScope?: 'new_only' | 'existing_and_new';
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()

@@ -507,7 +507,52 @@ describe('PaymentsService', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           reference: {
-            startsWith: 'mos_paystack_identity_verification_driver_driver_1_',
+            startsWith: 'mos_paystack_identity_verification_driver_driver_1_identity_verification_',
+          },
+        }),
+      }),
+    );
+  });
+
+  it('initializes an add-on identity verification checkout with a distinct payment key', async () => {
+    paymentProvidersService.initializePayment.mockResolvedValue({
+      provider: 'paystack',
+      checkoutUrl: 'https://paystack.test/addon-checkout',
+      accessCode: 'access_addon_123',
+    });
+    prisma.cpPaymentAttempt.create.mockResolvedValue({
+      id: 'attempt_addon_1',
+    });
+
+    await service.initializeIdentityVerificationPayment({
+      provider: 'paystack',
+      tenantId: 'tenant_1',
+      subjectType: 'driver',
+      subjectId: 'driver_1',
+      relatedDriverId: 'driver_1',
+      paymentKey: 'guarantor_verification',
+      purposeLabel: 'guarantor verification',
+      currency: 'NGN',
+      verificationTier: 'FULL_TRUST_VERIFICATION',
+      amountMinorUnits: 500000,
+      customerEmail: 'driver@example.com',
+      customerName: 'Driver One',
+    });
+
+    expect(paymentProvidersService.initializePayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Mobiris guarantor verification fee',
+        metadata: expect.objectContaining({
+          paymentKey: 'guarantor_verification',
+        }),
+      }),
+    );
+    expect(prisma.cpPaymentAttempt.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          reference: {
+            startsWith:
+              'mos_paystack_identity_verification_driver_driver_1_guarantor_verification_',
           },
         }),
       }),

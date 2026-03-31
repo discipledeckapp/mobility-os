@@ -114,6 +114,14 @@ const VERIFICATION_TIER_OPTIONS = [
   },
 ] as const;
 
+function getVerificationTierRank(
+  tier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION',
+): number {
+  if (tier === 'FULL_TRUST_VERIFICATION') return 3;
+  if (tier === 'VERIFIED_IDENTITY') return 2;
+  return 1;
+}
+
 function formatMoney(amountMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
     style: 'currency',
@@ -348,6 +356,9 @@ export function SettingsPanel({
   const [selectedTier, setSelectedTier] = useState<
     'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION'
   >(tenant.verificationTier ?? 'BASIC_IDENTITY');
+  const [verificationTierRolloutScope, setVerificationTierRolloutScope] = useState<
+    'new_only' | 'existing_and_new'
+  >(tenant.verificationTierRolloutScope ?? 'new_only');
   const tierPricing = tenant.verificationTierPricing ?? [];
   const defaultTierPricing = {
     tier: 'BASIC_IDENTITY' as const,
@@ -365,6 +376,24 @@ export function SettingsPanel({
     selectedTierPricing.amountMinorUnits,
     selectedTierPricing.currency,
   );
+  const guarantorVerificationAmount =
+    tenant.guarantorVerificationPriceMinorUnits && tenant.guarantorVerificationPriceCurrency
+      ? formatMoney(
+          tenant.guarantorVerificationPriceMinorUnits,
+          tenant.guarantorVerificationPriceCurrency,
+        )
+      : 'NGN 5,000.00';
+  const driversLicenseVerificationAmount =
+    tenant.driversLicenseVerificationPriceMinorUnits &&
+    tenant.driversLicenseVerificationPriceCurrency
+      ? formatMoney(
+          tenant.driversLicenseVerificationPriceMinorUnits,
+          tenant.driversLicenseVerificationPriceCurrency,
+        )
+      : 'NGN 5,000.00';
+  const requiresTierRolloutChoice =
+    getVerificationTierRank(selectedTier) >
+    getVerificationTierRank(tenant.verificationTier ?? 'BASIC_IDENTITY');
   const activeRegisteredDeviceCount = registeredDevices.filter((device) => !device.disabledAt).length;
 
   function handleDisableDevice(deviceId: string) {
@@ -694,6 +723,45 @@ export function SettingsPanel({
                       type="hidden"
                       value={selectedTier !== 'BASIC_IDENTITY' ? 'true' : 'false'}
                     />
+                    {requiresTierRolloutChoice ? (
+                      <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm font-semibold text-amber-900">
+                          Apply this stronger verification rule from when?
+                        </p>
+                        <p className="mt-1 text-sm text-amber-800">
+                          Drivers who were already invited or verified before this timestamp can be
+                          protected if you apply the upgrade to new verification journeys only.
+                        </p>
+                        <div className="mt-3 space-y-2">
+                          <label className="flex items-start gap-3 text-sm text-slate-700">
+                            <input
+                              checked={verificationTierRolloutScope === 'new_only'}
+                              name="verificationTierRolloutScope"
+                              onChange={() => setVerificationTierRolloutScope('new_only')}
+                              type="radio"
+                              value="new_only"
+                            />
+                            <span>
+                              New verifications only. Existing invited or already-verified drivers
+                              keep their current requirement.
+                            </span>
+                          </label>
+                          <label className="flex items-start gap-3 text-sm text-slate-700">
+                            <input
+                              checked={verificationTierRolloutScope === 'existing_and_new'}
+                              name="verificationTierRolloutScope"
+                              onChange={() => setVerificationTierRolloutScope('existing_and_new')}
+                              type="radio"
+                              value="existing_and_new"
+                            />
+                            <span>
+                              Existing and new drivers. Drivers below this new company minimum will
+                              be pushed into re-verification.
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    ) : null}
                     {selectedTier === 'FULL_TRUST_VERIFICATION' ? (
                       <input
                         name="requiredDriverDocumentSlugs"
@@ -745,6 +813,12 @@ export function SettingsPanel({
                     <p className="text-xs text-slate-500">
                       The selected verification tier determines the required checks and price. The
                       payment model only determines who pays.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Adding a new guarantor after a driver is already verified uses a separate{' '}
+                      {guarantorVerificationAmount} guarantor-verification charge. If a driver’s
+                      licence must be verified at any point, that check costs{' '}
+                      {driversLicenseVerificationAmount}.
                     </p>
                   </div>
 

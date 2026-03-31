@@ -11,6 +11,7 @@ export type VerificationTier =
   | 'VERIFIED_IDENTITY'
   | 'FULL_TRUST_VERIFICATION';
 export type VerificationComponentKey = 'identity' | 'guarantor' | 'drivers_license';
+export type VerificationTierRolloutScope = 'new_only' | 'existing_and_new';
 
 export interface OrganisationBrandingSettings {
   displayName?: string | null;
@@ -20,6 +21,8 @@ export interface OrganisationBrandingSettings {
 export interface OrganisationOperationsSettings {
   defaultLanguage: SupportedLanguage;
   verificationTier: VerificationTier;
+  verificationTierRolloutScope: VerificationTierRolloutScope;
+  verificationTierRolloutChangedAt: string | null;
   guarantorMaxActiveDrivers: number;
   autoSendDriverSelfServiceLinkOnCreate: boolean;
   requireIdentityVerificationForActivation: boolean;
@@ -68,6 +71,13 @@ export interface VerificationTierDescriptor {
 
 export interface VerificationTierPrice {
   tier: VerificationTier;
+  amountMinorUnits: number;
+  currency: string;
+}
+
+export interface VerificationAddonPrice {
+  key: 'guarantor_verification' | 'drivers_license_verification';
+  label: string;
   amountMinorUnits: number;
   currency: string;
 }
@@ -127,11 +137,25 @@ const FULL_TRUST_VERIFICATION_TIER: VerificationTierDescriptor = {
   description: 'Complete identity, accountability, and legal eligibility verification',
   components: ['identity', 'guarantor', 'drivers_license'],
 };
+const VERIFICATION_TIER_RANK: Record<VerificationTier, number> = {
+  BASIC_IDENTITY: 1,
+  VERIFIED_IDENTITY: 2,
+  FULL_TRUST_VERIFICATION: 3,
+};
 const VERIFICATION_TIER_PRICING: Record<string, Record<VerificationTier, number>> = {
   NGN: {
     BASIC_IDENTITY: 500_000,
     VERIFIED_IDENTITY: 1_000_000,
     FULL_TRUST_VERIFICATION: 1_500_000,
+  },
+};
+const VERIFICATION_ADDON_PRICING: Record<
+  string,
+  Record<VerificationAddonPrice['key'], number>
+> = {
+  NGN: {
+    guarantor_verification: 500_000,
+    drivers_license_verification: 500_000,
   },
 };
 
@@ -284,6 +308,13 @@ export function getVerificationTierDescriptor(
   return BASIC_IDENTITY_TIER;
 }
 
+export function compareVerificationTiers(
+  left: VerificationTier,
+  right: VerificationTier,
+): number {
+  return VERIFICATION_TIER_RANK[left] - VERIFICATION_TIER_RANK[right];
+}
+
 export function getVerificationTierPrice(
   tier: VerificationTier,
   currency = 'NGN',
@@ -331,6 +362,29 @@ export function listVerificationTierPrices(currency = 'NGN'): VerificationTierPr
       amountMinorUnits: pricing.FULL_TRUST_VERIFICATION,
     },
   ];
+}
+
+export function getVerificationAddonPrice(
+  key: VerificationAddonPrice['key'],
+  currency = 'NGN',
+): VerificationAddonPrice {
+  const normalizedCurrency = currency.trim().toUpperCase() || 'NGN';
+  const pricing =
+    VERIFICATION_ADDON_PRICING[normalizedCurrency] ??
+    VERIFICATION_ADDON_PRICING.NGN ?? {
+      guarantor_verification: 500_000,
+      drivers_license_verification: 500_000,
+    };
+
+  return {
+    key,
+    label:
+      key === 'guarantor_verification'
+        ? 'Guarantor verification'
+        : "Driver's licence verification",
+    amountMinorUnits: pricing[key],
+    currency: normalizedCurrency,
+  };
 }
 
 export function resolveVerificationPolicy(
@@ -436,6 +490,15 @@ export function readOrganisationSettings(
     operations: {
       defaultLanguage: defaultLanguageCandidate,
       verificationTier,
+      verificationTierRolloutScope:
+        operations.verificationTierRolloutScope === 'existing_and_new'
+          ? 'existing_and_new'
+          : 'new_only',
+      verificationTierRolloutChangedAt:
+        typeof operations.verificationTierRolloutChangedAt === 'string' &&
+        operations.verificationTierRolloutChangedAt.trim()
+          ? operations.verificationTierRolloutChangedAt
+          : null,
       guarantorMaxActiveDrivers: guarantorLimitCandidate,
       autoSendDriverSelfServiceLinkOnCreate:
         typeof operations.autoSendDriverSelfServiceLinkOnCreate === 'boolean'
@@ -491,6 +554,8 @@ export function writeOrganisationSettings(
     logoUrl: string | null;
     defaultLanguage: SupportedLanguage;
     verificationTier: VerificationTier;
+    verificationTierRolloutScope: VerificationTierRolloutScope;
+    verificationTierRolloutChangedAt: string | null;
     guarantorMaxActiveDrivers: number;
     autoSendDriverSelfServiceLinkOnCreate: boolean;
     requireIdentityVerificationForActivation: boolean;
@@ -525,6 +590,10 @@ export function writeOrganisationSettings(
   current.operations = {
     defaultLanguage: input.defaultLanguage ?? settings.operations.defaultLanguage,
     verificationTier,
+    verificationTierRolloutScope:
+      input.verificationTierRolloutScope ?? settings.operations.verificationTierRolloutScope,
+    verificationTierRolloutChangedAt:
+      input.verificationTierRolloutChangedAt ?? settings.operations.verificationTierRolloutChangedAt,
     guarantorMaxActiveDrivers:
       input.guarantorMaxActiveDrivers ?? settings.operations.guarantorMaxActiveDrivers,
     autoSendDriverSelfServiceLinkOnCreate:

@@ -217,6 +217,8 @@ export class ControlPlaneBillingClient {
     subjectType: 'driver' | 'guarantor';
     subjectId: string;
     relatedDriverId?: string;
+    paymentKey?: string;
+    purposeLabel?: string;
     provider: string;
     currency: string;
     verificationTier: 'BASIC_IDENTITY' | 'VERIFIED_IDENTITY' | 'FULL_TRUST_VERIFICATION';
