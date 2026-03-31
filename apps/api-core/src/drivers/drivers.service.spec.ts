@@ -807,7 +807,7 @@ describe('DriversService', () => {
         }),
       }),
     );
-    expect(prisma.verificationEntitlement.findFirst).not.toHaveBeenCalled();
+    expect(prisma.verificationEntitlement.findFirst).toHaveBeenCalled();
     expect(controlPlaneBillingClient.initializeDriverKycCheckout).not.toHaveBeenCalled();
     expect(result.personId).toBe('person_guarantor_1');
   });
@@ -1585,6 +1585,60 @@ describe('DriversService', () => {
     expect(prisma.driver.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'driver_1' },
+        data: expect.objectContaining({ personId: 'person_1' }),
+      }),
+    );
+    expect(result.personId).toBe('person_1');
+  });
+
+  it('allows a returning driver to resume verification when the same person already exists on a matching email record', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_retry',
+      tenantId: 'tenant_1',
+      firstName: 'Amara',
+      lastName: 'Okafor',
+      phone: '+2348012345678',
+      email: 'amara@example.com',
+      dateOfBirth: '1992-04-11',
+      nationality: 'NG',
+    });
+    prisma.driver.findFirst
+      .mockResolvedValueOnce({
+        id: 'driver_existing',
+        firstName: 'Amara',
+        lastName: 'Okafor',
+        email: 'amara@example.com',
+        phone: '+2348099999999',
+        status: 'inactive',
+      })
+      .mockResolvedValueOnce({
+        personId: 'person_1',
+      });
+    intelligenceClient.resolveEnrollment.mockResolvedValue({
+      decision: 'auto_linked',
+      personId: 'person_1',
+      isVerifiedMatch: true,
+      globalRiskScore: 2,
+      riskBand: 'low',
+      isWatchlisted: false,
+      hasDuplicateIdentityFlag: false,
+      fraudIndicatorCount: 0,
+      verificationConfidence: 0.99,
+    });
+
+    const result = await service.resolveIdentity('tenant_1', 'driver_retry', {
+      subjectConsent: true,
+      livenessCheck: {
+        provider: 'youverify',
+        sessionId: 'session_retry_1',
+        passed: true,
+      },
+      identifiers: [{ type: 'NATIONAL_ID', value: '12345678901', countryCode: 'NG' }],
+    });
+
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_retry' },
         data: expect.objectContaining({ personId: 'person_1' }),
       }),
     );

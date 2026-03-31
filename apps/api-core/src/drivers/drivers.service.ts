@@ -2124,15 +2124,11 @@ export class DriversService {
       verificationPaymentStatus =
         spendSummary.availableSpendMinorUnits >= verificationAmountMinorUnits && unlockedByCredit
           ? 'ready'
-          : spendSummary.savedCard
-            ? 'insufficient_balance'
-            : 'wallet_missing';
+          : 'driver_payment_required';
       verificationPaymentMessage =
         verificationPaymentStatus === 'ready'
           ? `Your organisation has enough wallet or credit cover for ${verificationTierLabel} (${formattedVerificationAmount}).`
-          : verificationPaymentStatus === 'wallet_missing'
-            ? `Your organisation can fund the verification wallet, add a card to unlock verification credit, or switch this onboarding flow to driver pay before ${verificationTierLabel} can continue.`
-            : `Your organisation needs more available spend for ${verificationTierLabel} (${formattedVerificationAmount}). They can fund the wallet, add a card for verification credit, or switch this onboarding flow to driver pay if they allow it.`;
+          : `Your organisation has not prepaid ${verificationTierLabel}. You can pay ${formattedVerificationAmount} now and continue verification immediately.`;
     }
 
     if (latestAttempt?.status === 'blocked') {
@@ -2156,7 +2152,12 @@ export class DriversService {
       verificationConsumedAt: entitlement?.consumedAt ?? null,
       verificationAttemptCount,
       verificationBlockedReason,
-      verificationPayer: driverPaysKyc ? 'driver' : 'organisation',
+      verificationPayer:
+        verificationPaymentStatus === 'driver_payment_required'
+          ? 'driver'
+          : driverPaysKyc
+            ? 'driver'
+            : 'organisation',
       verificationAmountMinorUnits,
       verificationCurrency,
       verificationWalletBalanceMinorUnits,
@@ -4177,12 +4178,6 @@ export class DriversService {
       driver,
     );
 
-    if (!verificationPolicy.driverPaysKyc) {
-      throw new BadRequestException(
-        'This organisation does not require drivers to pay for their own KYC verification.',
-      );
-    }
-
     if (!driver.email) {
       throw new BadRequestException(
         'A driver email address is required to initiate a KYC payment checkout.',
@@ -4383,7 +4378,7 @@ export class DriversService {
         subjectType: 'driver',
         subjectId: payload.driverId,
         tenantId: payload.tenantId,
-        payerType: verificationPolicy.driverPaysKyc ? 'driver' : 'tenant',
+        payerType: 'driver',
         paymentReference: normalizedReference,
         paymentProvider: provider,
         amountMinorUnits: applied.amountMinorUnits,
@@ -8155,7 +8150,7 @@ export class DriversService {
         },
       });
 
-      if (conflictingDriver) {
+      if (conflictingDriver && !this.isSameDriverRetryCandidate(driver, conflictingDriver)) {
         const conflictingName =
           [conflictingDriver.firstName, conflictingDriver.lastName].filter(Boolean).join(' ') ||
           conflictingDriver.email ||
@@ -8333,6 +8328,24 @@ export class DriversService {
     }
 
     return 'pending_verification';
+  }
+
+  private isSameDriverRetryCandidate(
+    currentDriver: Pick<Driver, 'email' | 'phone'>,
+    conflictingDriver: {
+      email?: string | null;
+      phone?: string | null;
+    },
+  ): boolean {
+    const currentEmail = currentDriver.email?.trim().toLowerCase() ?? null;
+    const conflictingEmail = conflictingDriver.email?.trim().toLowerCase() ?? null;
+    if (currentEmail && conflictingEmail && currentEmail === conflictingEmail) {
+      return true;
+    }
+
+    const currentPhone = currentDriver.phone?.trim() ?? null;
+    const conflictingPhone = conflictingDriver.phone?.trim() ?? null;
+    return Boolean(currentPhone && conflictingPhone && currentPhone === conflictingPhone);
   }
 
   private buildVerifiedDriverProfileUpdate(result: DriverIdentityResolutionResult): {

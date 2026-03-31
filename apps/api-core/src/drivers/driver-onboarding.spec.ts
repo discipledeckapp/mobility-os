@@ -545,12 +545,42 @@ describe('Driver onboarding — payment decision logic', () => {
   let prisma: ReturnType<typeof makePrisma>;
   let intelligenceClient: ReturnType<typeof makeIntelligenceClient>;
   let service: DriversService;
+  let controlPlaneBillingClient: {
+    initializeDriverKycCheckout: jest.Mock;
+  };
+  let verificationSpendService: {
+    getSpendSummary: jest.Mock;
+    saveAuthorizedCard: jest.Mock;
+    ensureVerificationSpendApplied: jest.Mock;
+  };
   const VALID_TOKEN = 'valid.token';
 
   function setup(tenantMetadata = {}) {
     jest.clearAllMocks();
     prisma = makePrisma();
     intelligenceClient = makeIntelligenceClient();
+    controlPlaneBillingClient = {
+      initializeDriverKycCheckout: jest.fn(),
+    };
+    verificationSpendService = {
+      getSpendSummary: jest.fn().mockResolvedValue({
+        currency: 'NGN',
+        walletBalanceMinorUnits: 2_000_000,
+        creditLimitMinorUnits: 0,
+        creditUsedMinorUnits: 0,
+        availableSpendMinorUnits: 2_000_000,
+        starterCreditActive: false,
+        starterCreditEligible: false,
+        cardCreditActive: false,
+        unlockedTiers: ['BASIC_IDENTITY', 'VERIFIED_IDENTITY', 'FULL_TRUST_VERIFICATION'],
+        savedCard: null,
+      }),
+      saveAuthorizedCard: jest.fn(),
+      ensureVerificationSpendApplied: jest.fn().mockResolvedValue({
+        status: 'applied',
+        fundingSource: 'wallet',
+      }),
+    };
     prisma.tenant.findUnique.mockResolvedValue({ country: 'NG', metadata: tenantMetadata });
 
     const jwtService = {
@@ -569,7 +599,7 @@ describe('Driver onboarding — payment decision logic', () => {
       { uploadFile: jest.fn(), readFile: jest.fn(), deleteFile: jest.fn() } as never,
       { enforceDriverCapacity: jest.fn(), getCapInfo: jest.fn().mockResolvedValue({}) } as never,
       { fireEvent: jest.fn() } as never,
-      { initializeDriverKycCheckout: jest.fn() } as never,
+      controlPlaneBillingClient as never,
       {
         evaluateDriverPolicies: jest.fn().mockResolvedValue([]),
         listActiveActionsByEntityIds: jest.fn().mockResolvedValue(new Map()),
@@ -581,6 +611,7 @@ describe('Driver onboarding — payment decision logic', () => {
         notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
+      verificationSpendService as never,
     );
   }
 
@@ -637,6 +668,43 @@ describe('Driver onboarding — payment decision logic', () => {
     expect(context.verificationAvailableSpendMinorUnits).toBeGreaterThanOrEqual(
       context.verificationAmountMinorUnits ?? 0,
     );
+  });
+
+  it('lets invited drivers pay immediately when organisation sponsorship is not prepaid', async () => {
+    setup({ operations: { driverPaysKyc: false, requireIdentityVerificationForActivation: true } });
+    verificationSpendService.getSpendSummary.mockResolvedValue({
+      currency: 'NGN',
+      walletBalanceMinorUnits: 0,
+      creditLimitMinorUnits: 0,
+      creditUsedMinorUnits: 0,
+      availableSpendMinorUnits: 0,
+      starterCreditActive: false,
+      starterCreditEligible: false,
+      cardCreditActive: false,
+      unlockedTiers: [],
+      savedCard: null,
+    });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue(null);
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+    controlPlaneBillingClient.initializeDriverKycCheckout.mockResolvedValue({
+      checkoutUrl: 'https://paystack.test/driver-kyc',
+    });
+
+    const [context, step, checkout] = await Promise.all([
+      service.getSelfServiceContext(VALID_TOKEN),
+      service.getOnboardingStep(VALID_TOKEN),
+      service.initiateKycCheckoutFromSelfService(VALID_TOKEN, 'paystack'),
+    ]);
+
+    expect(context.verificationPaymentStatus).toBe('driver_payment_required');
+    expect(context.verificationPayer).toBe('driver');
+    expect(step.step).toBe('payment');
+    expect(checkout.status).toBe('checkout_required');
+    expect(controlPlaneBillingClient.initializeDriverKycCheckout).toHaveBeenCalled();
   });
 
   it('keeps full trust context, pricing, and onboarding step aligned when the driver pays', async () => {
