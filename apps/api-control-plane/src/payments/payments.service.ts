@@ -440,7 +440,7 @@ export class PaymentsService {
           appliedAt: new Date(),
         },
       });
-      await this.recordsService.issueDocument({
+      const receiptDocument = await this.recordsService.issueDocument({
         tenantId: invoice.tenantId,
         documentType: 'subscription_payment_receipt',
         issuerType: 'platform',
@@ -466,6 +466,20 @@ export class PaymentsService {
           paidAt: verified.paidAt ?? null,
         },
       });
+      const receiptPaidAt = verified.paidAt ?? new Date().toISOString();
+      if (attempt?.customerEmail) {
+        await this.staffNotificationService.sendSubscriptionPaymentReceipt({
+          email: attempt.customerEmail,
+          name: attempt.customerName ?? 'Customer',
+          reference: dto.reference,
+          amountMinorUnits: verified.amountMinorUnits,
+          currency: verified.currency,
+          provider: dto.provider,
+          paidAt: receiptPaidAt,
+          invoiceId: invoice.id,
+          documentUrl: receiptDocument.fileUrl,
+        });
+      }
 
       return {
         provider: dto.provider,
@@ -669,7 +683,7 @@ export class PaymentsService {
         appliedAt: new Date(),
       },
     });
-    await this.recordsService.issueDocument({
+    const receiptDocument = await this.recordsService.issueDocument({
       tenantId,
       documentType: 'wallet_funding_receipt',
       issuerType: 'platform',
@@ -695,6 +709,19 @@ export class PaymentsService {
         paidAt: verified.paidAt ?? null,
       },
     });
+    const receiptPaidAt = verified.paidAt ?? new Date().toISOString();
+    if (attempt?.customerEmail) {
+      await this.staffNotificationService.sendWalletFundingReceipt({
+        email: attempt.customerEmail,
+        name: attempt.customerName ?? 'Customer',
+        reference: dto.reference,
+        amountMinorUnits: verified.amountMinorUnits,
+        currency: verified.currency,
+        provider: dto.provider,
+        paidAt: receiptPaidAt,
+        documentUrl: receiptDocument.fileUrl,
+      });
+    }
 
     return {
       provider: dto.provider,

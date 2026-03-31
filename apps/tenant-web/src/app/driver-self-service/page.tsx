@@ -810,6 +810,9 @@ function RemittanceWorkspace({
   const remittanceAssignment = assignment;
   const canRecord = assignment.status === 'active';
   const amountMinorUnits = parseAmountInputToMinorUnits(amount);
+  const expectedAmountMinorUnits = assignment.remittanceAmountMinorUnits ?? null;
+  const amountVarianceMinorUnits =
+    amountMinorUnits !== null && expectedAmountMinorUnits ? amountMinorUnits - expectedAmountMinorUnits : null;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -913,6 +916,41 @@ function RemittanceWorkspace({
                 value={notes}
               />
             </div>
+            {amountVarianceMinorUnits !== null && expectedAmountMinorUnits ? (
+              <div
+                className={[
+                  'rounded-2xl border p-4',
+                  amountVarianceMinorUnits < 0
+                    ? 'border-amber-200 bg-amber-50'
+                    : amountVarianceMinorUnits > 0
+                      ? 'border-sky-200 bg-sky-50'
+                      : 'border-emerald-200 bg-emerald-50',
+                ].join(' ')}
+              >
+                <Text className="font-semibold text-[var(--mobiris-ink)]">
+                  {amountVarianceMinorUnits < 0
+                    ? 'Underpayment detected'
+                    : amountVarianceMinorUnits > 0
+                      ? 'Overpayment detected'
+                      : 'Amount matches the expected collection'}
+                </Text>
+                <Text tone="muted">
+                  Expected amount:{' '}
+                  {formatMinorCurrency(expectedAmountMinorUnits, assignment.remittanceCurrency)}.
+                  {amountVarianceMinorUnits < 0
+                    ? ` Outstanding after this payment: ${formatMinorCurrency(
+                        Math.abs(amountVarianceMinorUnits),
+                        assignment.remittanceCurrency,
+                      )}.`
+                    : amountVarianceMinorUnits > 0
+                      ? ` Excess received: ${formatMinorCurrency(
+                          amountVarianceMinorUnits,
+                          assignment.remittanceCurrency,
+                        )}.`
+                      : ' No outstanding balance remains for this period.'}
+                </Text>
+              </div>
+            ) : null}
             {success ? <Text className="text-emerald-700">{success}</Text> : null}
             {error ? <Text tone="danger">{error}</Text> : null}
             <Button
@@ -953,6 +991,32 @@ function RemittanceWorkspace({
                       Due {formatShortDate(remittance.dueDate)} · Recorded{' '}
                       {formatNotificationDate(remittance.createdAt)}
                     </Text>
+                    {remittance.reconciliation ? (
+                      <>
+                        <Text tone="muted">
+                          Expected{' '}
+                          {formatMinorCurrency(
+                            remittance.reconciliation.expectedAmountMinorUnits,
+                            remittance.currency,
+                          )}{' '}
+                          · Variance{' '}
+                          {remittance.reconciliation.varianceMinorUnits < 0 ? '-' : '+'}
+                          {formatMinorCurrency(
+                            Math.abs(remittance.reconciliation.varianceMinorUnits),
+                            remittance.currency,
+                          )}
+                        </Text>
+                        {(remittance.reconciliation.outstandingBalanceMinorUnits ?? 0) > 0 ? (
+                          <Text tone="muted">
+                            Outstanding{' '}
+                            {formatMinorCurrency(
+                              remittance.reconciliation.outstandingBalanceMinorUnits ?? 0,
+                              remittance.currency,
+                            )}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : null}
                     {remittance.notes ? <Text tone="muted">{remittance.notes}</Text> : null}
                   </div>
                   <Badge tone={remittanceStatusTone(remittance.status)}>

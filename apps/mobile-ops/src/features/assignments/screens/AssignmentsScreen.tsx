@@ -11,6 +11,7 @@ import { ConfirmationModal } from '../../../components/confirmation-modal';
 import { EmptyState } from '../../../components/empty-state';
 import { Input } from '../../../components/input';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { ASSIGNMENT_STATUS } from '../../../constants';
 import { useAuth } from '../../../contexts/auth-context';
@@ -156,50 +157,56 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         footer={<BottomNav currentTab="Home" navigation={navigation} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Card style={styles.heroCard}>
-          <View style={styles.heroHeader}>
-            <View style={styles.heroCopy}>
-              <Text style={styles.kicker}>Driver home</Text>
-              <Text style={styles.title}>{session?.name ?? 'Field operator'}</Text>
-              <Text style={styles.muted}>
-                Check your assignment, review vehicle details, and take the next action needed today.
-              </Text>
+        <PageShell
+          eyebrow="Driver home"
+          title={session?.name ?? 'Your workday'}
+          subtitle="Review today’s assignment, clear the next required task, and keep remittance current."
+          badge={<Badge label={session?.role.replace(/_/g, ' ') ?? 'SIGNED IN'} tone="neutral" />}
+          actions={
+            <View style={styles.heroActions}>
+              <Button
+                accessibilityHint="Open your verification and readiness status"
+                label="Verification status"
+                variant="secondary"
+                onPress={() => navigation.navigate('Profile')}
+              />
+              <Button
+                accessibilityHint="Open account alerts and assignment updates"
+                label="View alerts"
+                variant="secondary"
+                onPress={() => navigation.navigate('Notifications')}
+              />
+              {canRecordAnyRemittance ? (
+                <>
+                  <Button
+                    accessibilityHint="Open the remittance recording form"
+                    label="Record remittance"
+                    onPress={() => navigation.navigate('Remittance', {})}
+                  />
+                  <Button
+                    accessibilityHint="Open the remittance history for this account"
+                    label="Remittance history"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('RemittanceHistory')}
+                  />
+                </>
+              ) : null}
             </View>
-            <Badge label={session?.role.replace(/_/g, ' ') ?? 'SIGNED IN'} tone="neutral" />
-          </View>
-          <View style={styles.heroActions}>
-            <Button
-              accessibilityHint="Open your verification and readiness status"
-              label="Verification status"
-              variant="secondary"
-              onPress={() => navigation.navigate('Profile')}
-            />
-            {canRecordAnyRemittance ? (
-              <>
-                <Button
-                  accessibilityHint="Open the remittance recording form"
-                  label="Record remittance"
-                  onPress={() => navigation.navigate('Remittance', {})}
-                />
-                <Button
-                  accessibilityHint="Open the remittance history for this account"
-                  label="Remittance history"
-                  variant="secondary"
-                  onPress={() => navigation.navigate('RemittanceHistory')}
-                />
-              </>
-            ) : null}
-          </View>
+          }
+        >
           <Button
             accessibilityHint="Sign out of the mobile operations app"
             label="Sign out"
             variant="secondary"
             onPress={() => setShowLogoutModal(true)}
           />
-        </Card>
+        </PageShell>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Ready to operate</Text>
+          <SectionIntro
+            title="Ready to operate"
+            subtitle="Your current readiness state stays visible until you are clear to work."
+          />
           {driver ? (
             <>
               <View style={styles.readinessRow}>
@@ -253,7 +260,10 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Current assignment</Text>
+          <SectionIntro
+            title="Current assignment"
+            subtitle="The latest active or pending assignment is pinned here first."
+          />
           {currentAssignment ? (
             <>
               <View style={styles.rowBetween}>
@@ -329,6 +339,10 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         </Card>
 
         <Card style={styles.section}>
+          <SectionIntro
+            title="Assignment list"
+            subtitle="Search or filter to find a different assignment without scanning a long list."
+          />
           <Input
             accessibilityHint="Search assignments by assignment code, vehicle, plate number, or status"
             autoCapitalize="none"
@@ -541,30 +555,6 @@ function pickCurrentAssignment(assignments: AssignmentRecord[]): AssignmentRecor
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    gap: tokens.spacing.md,
-  },
-  heroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: tokens.spacing.md,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: tokens.spacing.xs,
-  },
-  kicker: {
-    color: tokens.colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 26,
-    fontWeight: '800',
-  },
   muted: {
     color: tokens.colors.inkSoft,
     lineHeight: 20,

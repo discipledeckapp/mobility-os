@@ -8,6 +8,7 @@ import { BottomNav } from '../../../components/bottom-nav';
 import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import { useToast } from '../../../contexts/toast-context';
@@ -67,14 +68,19 @@ export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceH
     const pendingMinorUnits = history
       .filter((record) => record.status === 'pending')
       .reduce((sum, record) => sum + record.amountMinorUnits, 0);
-    const confirmedMinorUnits = history
-      .filter((record) => record.status === 'confirmed')
+    const settledMinorUnits = history
+      .filter((record) => record.status === 'completed' || record.status === 'partially_settled')
       .reduce((sum, record) => sum + record.amountMinorUnits, 0);
+    const outstandingMinorUnits = history.reduce(
+      (sum, record) => sum + (record.reconciliation?.outstandingBalanceMinorUnits ?? 0),
+      0,
+    );
 
     return {
       totalMinorUnits,
       pendingMinorUnits,
-      confirmedMinorUnits,
+      settledMinorUnits,
+      outstandingMinorUnits,
     };
   }, [history]);
 
@@ -83,15 +89,17 @@ export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceH
       footer={<BottomNav currentTab="Remittance" navigation={navigation} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Card style={styles.section}>
-        <Text style={styles.title}>Remittance history</Text>
-        <Text style={styles.muted}>
-          Review the collections recorded from this device and their current status.
-        </Text>
-      </Card>
+      <PageShell
+        eyebrow="Remittance"
+        title="Remittance history"
+        subtitle="Review the collections recorded from this device, including outstanding balances and partial settlement."
+      />
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Summary</Text>
+        <SectionIntro
+          title="Summary"
+          subtitle="Keep an eye on what is pending, what has settled, and what is still outstanding."
+        />
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Total recorded</Text>
           <Text style={styles.summaryValue}>
@@ -105,15 +113,24 @@ export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceH
           </Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Confirmed</Text>
+          <Text style={styles.summaryLabel}>Settled</Text>
           <Text style={styles.summaryValue}>
-            {currencyLabel} {formatMajorAmount(totals.confirmedMinorUnits, session?.currencyMinorUnit)}
+            {currencyLabel} {formatMajorAmount(totals.settledMinorUnits, session?.currencyMinorUnit)}
+          </Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Outstanding</Text>
+          <Text style={styles.summaryValue}>
+            {currencyLabel} {formatMajorAmount(totals.outstandingMinorUnits, session?.currencyMinorUnit)}
           </Text>
         </View>
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Collections</Text>
+        <SectionIntro
+          title="Collections"
+          subtitle="Each entry shows settlement state, variance, and remaining balance where available."
+        />
         {loading ? (
           <>
             <LoadingSkeleton height={84} />
@@ -143,6 +160,34 @@ export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceH
                 <Text style={styles.meta}>
                   Assignment {record.assignmentId.slice(-6).toUpperCase()}
                 </Text>
+                {record.reconciliation ? (
+                  <>
+                    <Text style={styles.meta}>
+                      Expected {currencyLabel}{' '}
+                      {formatMajorAmount(
+                        record.reconciliation.expectedAmountMinorUnits,
+                        session?.currencyMinorUnit,
+                      )}
+                    </Text>
+                    <Text style={styles.meta}>
+                      Variance {record.reconciliation.varianceMinorUnits < 0 ? '-' : '+'}
+                      {currencyLabel}{' '}
+                      {formatMajorAmount(
+                        Math.abs(record.reconciliation.varianceMinorUnits),
+                        session?.currencyMinorUnit,
+                      )}
+                    </Text>
+                    {(record.reconciliation.outstandingBalanceMinorUnits ?? 0) > 0 ? (
+                      <Text style={styles.meta}>
+                        Outstanding {currencyLabel}{' '}
+                        {formatMajorAmount(
+                          record.reconciliation.outstandingBalanceMinorUnits ?? 0,
+                          session?.currencyMinorUnit,
+                        )}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
                 {record.notes ? <Text style={styles.meta}>Notes: {record.notes}</Text> : null}
               </View>
               <Badge label={formatStatusLabel(record.status)} tone={historyTone(record.status)} />
@@ -182,10 +227,10 @@ function formatMajorAmount(amountMinorUnits: number, minorUnit?: number | null) 
 }
 
 function historyTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'confirmed') {
+  if (status === 'completed' || status === 'partially_settled') {
     return 'success';
   }
-  if (status === 'disputed') {
+  if (status === 'disputed' || status === 'cancelled_due_to_assignment_end') {
     return 'danger';
   }
   if (status === 'pending') {
@@ -202,19 +247,9 @@ const styles = StyleSheet.create({
   section: {
     gap: tokens.spacing.sm,
   },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 24,
-    fontWeight: '800',
-  },
   muted: {
     color: tokens.colors.inkSoft,
     lineHeight: 20,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
-    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',

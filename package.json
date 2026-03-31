@@ -14,11 +14,14 @@
     "check": "biome check .",
     "format": "biome format --write .",
     "test": "turbo test",
+    "test:e2e:web": "playwright test tests/e2e/web",
+    "test:last-mile": "./scripts/test-last-mile.sh",
     "type-check": "turbo type-check",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

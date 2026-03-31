@@ -13,6 +13,7 @@ import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
 import { Input } from '../../../components/input';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { FullScreenBlockingLoader, InlineProcessingCard, SkeletonCard } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { mobileEnv } from '../../../config/env';
@@ -143,6 +144,24 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         : {}),
     });
   }, [selectedAssignment]);
+  const expectedAmountMinorUnits = useMemo(
+    () =>
+      selectedAssignment?.financialContract?.summary.nextDueAmountMinorUnits ??
+      selectedAssignment?.financialContract?.summary.expectedPerPeriodAmountMinorUnits ??
+      selectedAssignment?.remittanceAmountMinorUnits ??
+      null,
+    [selectedAssignment],
+  );
+  const enteredAmountMinorUnits = useMemo(
+    () => convertMajorToMinorUnits(amount, session?.currencyMinorUnit),
+    [amount, session?.currencyMinorUnit],
+  );
+  const amountVarianceMinorUnits = useMemo(() => {
+    if (enteredAmountMinorUnits === null || expectedAmountMinorUnits === null) {
+      return null;
+    }
+    return enteredAmountMinorUnits - expectedAmountMinorUnits;
+  }, [enteredAmountMinorUnits, expectedAmountMinorUnits]);
 
   useEffect(() => {
     if (selectedAssignment && suggestedAmount) {
@@ -271,12 +290,11 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       footer={<BottomNav currentTab="Remittance" navigation={navigation} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Card style={styles.section}>
-        <Text style={styles.title}>Record collection</Text>
-        <Text style={styles.muted}>
-          Select the assignment this payment belongs to, then record the amount and date.
-        </Text>
-        <View style={styles.headerRow}>
+      <PageShell
+        eyebrow="Remittance"
+        title="Record collection"
+        subtitle="Select the assignment, record the amount received, and keep the ledger in sync."
+        actions={
           <Button
             accessibilityHint="Review queued offline actions waiting to sync"
             containerStyle={styles.historyButton}
@@ -284,20 +302,23 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
             variant="secondary"
             onPress={() => navigation.navigate('OfflineQueue')}
           />
-        </View>
-      </Card>
+        }
+      />
 
       <Card style={styles.section}>
-        <View style={styles.headerRow}>
-          <Text style={styles.sectionTitle}>Recent collections</Text>
-          <Button
-            accessibilityHint="Open the full remittance history for this account"
-            containerStyle={styles.historyButton}
-            label="View full history"
-            variant="secondary"
-            onPress={() => navigation.navigate('RemittanceHistory')}
-          />
-        </View>
+        <SectionIntro
+          title="Recent collections"
+          subtitle="Use recent entries as a quick reference before you submit the next one."
+          action={
+            <Button
+              accessibilityHint="Open the full remittance history for this account"
+              containerStyle={styles.historyButton}
+              label="View full history"
+              variant="secondary"
+              onPress={() => navigation.navigate('RemittanceHistory')}
+            />
+          }
+        />
         {historyLoading ? (
           <InlineProcessingCard
             activeStep={1}
@@ -341,7 +362,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Assignment</Text>
+        <SectionIntro
+          title="Assignment"
+          subtitle="Choose the active assignment this payment belongs to."
+        />
         <Input
           accessibilityHint="Search assignments by ID"
           label="Search assignment"
@@ -400,6 +424,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       </Card>
 
       <Card style={styles.section}>
+        <SectionIntro
+          title="Collection details"
+          subtitle="The form stays compact and focused on the payment you are recording now."
+        />
         <Input
           accessibilityHint="Enter the amount in major currency units"
           keyboardType="decimal-pad"
@@ -464,6 +492,41 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
             })}{' '}
             {selectedAssignment.financialContract.currency}.
           </Text>
+        ) : null}
+        {amountVarianceMinorUnits !== null && expectedAmountMinorUnits ? (
+          <View
+            style={[
+              styles.variancePanel,
+              amountVarianceMinorUnits < 0
+                ? styles.variancePanelWarning
+                : amountVarianceMinorUnits > 0
+                  ? styles.variancePanelInfo
+                  : styles.variancePanelSuccess,
+            ]}
+          >
+            <Text style={styles.varianceTitle}>
+              {amountVarianceMinorUnits < 0
+                ? 'Underpayment detected'
+                : amountVarianceMinorUnits > 0
+                  ? 'Overpayment detected'
+                  : 'Amount matches the expected collection'}
+            </Text>
+            <Text style={styles.helper}>
+              Expected {currencyLabel}{' '}
+              {formatMajorAmount(expectedAmountMinorUnits, session?.currencyMinorUnit)}.
+              {amountVarianceMinorUnits < 0
+                ? ` Outstanding after this payment: ${currencyLabel} ${formatMajorAmount(
+                    Math.abs(amountVarianceMinorUnits),
+                    session?.currencyMinorUnit,
+                  )}.`
+                : amountVarianceMinorUnits > 0
+                  ? ` Excess received: ${currencyLabel} ${formatMajorAmount(
+                      amountVarianceMinorUnits,
+                      session?.currencyMinorUnit,
+                    )}.`
+                  : ' No outstanding balance remains for this period.'}
+            </Text>
+          </View>
         ) : null}
 
         <Input
@@ -568,19 +631,9 @@ const styles = StyleSheet.create({
   section: {
     gap: tokens.spacing.sm,
   },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 24,
-    fontWeight: '800',
-  },
   muted: {
     color: tokens.colors.inkSoft,
     lineHeight: 20,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
-    fontWeight: '700',
   },
   headerRow: {
     flexDirection: 'row',
@@ -662,6 +715,29 @@ const styles = StyleSheet.create({
   },
   queueTitle: {
     color: tokens.colors.ink,
+    fontWeight: '700',
+  },
+  variancePanel: {
+    borderWidth: 1,
+    borderRadius: tokens.radius.card,
+    padding: tokens.spacing.md,
+    gap: tokens.spacing.xs,
+  },
+  variancePanelWarning: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+  },
+  variancePanelInfo: {
+    borderColor: '#38BDF8',
+    backgroundColor: '#F0F9FF',
+  },
+  variancePanelSuccess: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  varianceTitle: {
+    color: tokens.colors.ink,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

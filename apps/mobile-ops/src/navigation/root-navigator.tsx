@@ -15,6 +15,7 @@ import { LegalDocumentScreen } from '../features/auth/screens/LegalDocumentScree
 import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScreen';
 import { SignupOtpScreen } from '../features/auth/screens/SignupOtpScreen';
 import { SignupScreen } from '../features/auth/screens/SignupScreen';
+import { NotificationsScreen } from '../features/drivers/screens/NotificationsScreen';
 import { ProfileScreen } from '../features/drivers/screens/ProfileScreen';
 import { BusinessEntitiesScreen } from '../features/operator/screens/BusinessEntitiesScreen';
 import { BusinessEntityDetailScreen } from '../features/operator/screens/BusinessEntityDetailScreen';
@@ -225,7 +226,7 @@ export function RootNavigator() {
             <Stack.Screen
               name="Profile"
               component={ProfileScreen}
-              options={{ title: 'Verification status' }}
+              options={{ title: 'Profile' }}
             />
             <Stack.Screen
               name="OfflineQueue"
@@ -237,7 +238,7 @@ export function RootNavigator() {
                 <Stack.Screen
                   name="Home"
                   component={AssignmentsScreen}
-                  options={{ title: 'Assignments' }}
+                  options={{ title: 'Home' }}
                 />
                 <Stack.Screen
                   name="AssignmentDetail"
@@ -247,12 +248,17 @@ export function RootNavigator() {
                 <Stack.Screen
                   name="Remittance"
                   component={RemittanceScreen}
-                  options={{ title: 'Record remittance' }}
+                  options={{ title: 'Remittance' }}
                 />
                 <Stack.Screen
                   name="RemittanceHistory"
                   component={RemittanceHistoryScreen}
                   options={{ title: 'Remittance history' }}
+                />
+                <Stack.Screen
+                  name="Notifications"
+                  component={NotificationsScreen}
+                  options={{ title: 'Alerts' }}
                 />
               </>
             ) : null}

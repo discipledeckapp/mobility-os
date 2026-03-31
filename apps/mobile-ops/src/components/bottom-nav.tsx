@@ -4,11 +4,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RootStackParamList } from '../navigation/types';
 import { tokens } from '../theme/tokens';
 
-type BottomNavTab = 'Home' | 'Remittance' | 'Profile';
+type BottomNavTab = 'Home' | 'Remittance' | 'Notifications' | 'Profile';
 
 const tabs: Array<{ key: BottomNavTab; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
-  { key: 'Home', label: 'Assignments', icon: 'clipboard' },
+  { key: 'Home', label: 'Home', icon: 'home' },
   { key: 'Remittance', label: 'Remittance', icon: 'credit-card' },
+  { key: 'Notifications', label: 'Alerts', icon: 'bell' },
   { key: 'Profile', label: 'Profile', icon: 'user' },
 ];
 

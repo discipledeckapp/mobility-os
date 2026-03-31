@@ -628,6 +628,43 @@ describe('Driver onboarding — payment decision logic', () => {
       context.verificationAmountMinorUnits ?? 0,
     );
   });
+
+  it('keeps full trust context, pricing, and onboarding step aligned when the driver pays', async () => {
+    setup({
+      operations: {
+        verificationTier: 'FULL_TRUST_VERIFICATION',
+        driverPaysKyc: true,
+        requireGuarantor: false,
+        requiredDriverDocumentSlugs: [],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+
+    const [context, step] = await Promise.all([
+      service.getSelfServiceContext(VALID_TOKEN),
+      service.getOnboardingStep(VALID_TOKEN),
+    ]);
+
+    expect(context.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+    expect(context.verificationTierLabel).toBe('Full Trust Verification');
+    expect(context.verificationTierComponents).toEqual(
+      expect.arrayContaining(['identity', 'guarantor', 'drivers_license']),
+    );
+    expect(context.requiredDriverDocumentSlugs).toContain('drivers-license');
+    expect(context.verificationAmountMinorUnits).toBe(1_500_000);
+    expect(context.driverPaysKyc).toBe(true);
+    expect(context.verificationPaymentStatus).toBe('driver_payment_required');
+
+    expect(step.step).toBe('payment');
+    expect(step.verificationTier).toBe(context.verificationTier);
+    expect(step.verificationTierLabel).toBe(context.verificationTierLabel);
+    expect(step.verificationTierComponents).toEqual(context.verificationTierComponents);
+  });
 });
 
 describe('Driver onboarding — document ID verification (zero-trust)', () => {
@@ -1291,6 +1328,86 @@ describe('Driver onboarding — onboarding step state machine', () => {
     const step = await service.getOnboardingStep(VALID_TOKEN);
     expect(step.step).toBe('guarantor');
     expect(step.verificationTier).toBe('FULL_TRUST_VERIFICATION');
+  });
+
+  it('progresses full trust onboarding from guarantor to licence to complete', async () => {
+    setup({
+      operations: {
+        verificationTier: 'FULL_TRUST_VERIFICATION',
+        driverPaysKyc: false,
+        requireGuarantor: true,
+        requiredDriverDocumentSlugs: ['drivers-license'],
+      },
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+        operationalProfile: {
+          phoneNumber: '+2348012345678',
+          address: '12 Marina Road',
+          town: 'Lagos',
+          localGovernmentArea: 'Eti-Osa',
+          state: 'Lagos',
+          nextOfKinName: 'Ngozi Okonkwo',
+          nextOfKinPhone: '+2348099999999',
+          emergencyContactName: 'Emeka Okonkwo',
+          emergencyContactPhone: '+2348088888888',
+        },
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_success_1',
+      status: 'success',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+
+    prisma.driverGuarantor.findFirst.mockResolvedValue(null);
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([]);
+
+    const guarantorStep = await service.getOnboardingStep(VALID_TOKEN);
+    expect(guarantorStep.step).toBe('guarantor');
+
+    prisma.driverGuarantor.findFirst.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: 'person_guarantor_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'verified',
+      disconnectedAt: null,
+      relationship: 'Sibling',
+    });
+
+    const documentStep = await service.getOnboardingStep(VALID_TOKEN);
+    expect(documentStep.step).toBe('document_verification');
+    expect(documentStep.requiredDocumentTypes).toContain('drivers-license');
+
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([
+      {
+        id: 'licence_ver_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        documentType: 'drivers-license',
+        idNumber: 'DL12345',
+        status: 'verified',
+        providerMatch: true,
+        verifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const completeStep = await service.getOnboardingStep(VALID_TOKEN);
+    expect(completeStep.step).toBe('complete');
+    expect(completeStep.verificationTier).toBe('FULL_TRUST_VERIFICATION');
   });
 });
 

@@ -8,6 +8,7 @@ import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
 import { OperatorBottomNav } from '../../../components/operator-bottom-nav';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import type { ScreenProps } from '../../../navigation/types';
@@ -83,19 +84,16 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
         />
       }
     >
-      <Card style={styles.hero}>
-        <Text style={styles.kicker}>Operator home</Text>
-        <Text style={styles.title}>
-          {session?.organisationDisplayName ?? session?.tenantName ?? 'Mobiris Fleet OS'}
-        </Text>
-        <Text style={styles.copy}>
-          Run fleet operations from your phone. Drivers, vehicles, assignments, remittance, and alerts are all one tap away.
-        </Text>
+      <PageShell
+        eyebrow="Operator home"
+        title={session?.organisationDisplayName ?? session?.tenantName ?? 'Mobiris Fleet OS'}
+        subtitle="Drivers, vehicles, assignments, cash movement, and compliance all stay within quick mobile reach."
+        badge={<Badge label={(session?.role ?? 'operator').replace(/_/g, ' ')} tone="neutral" />}
+      >
         {session?.organisationLogoUrl ? (
           <Text style={styles.meta}>Logo: {session.organisationLogoUrl}</Text>
         ) : null}
-        <Badge label={(session?.role ?? 'operator').replace(/_/g, ' ')} tone="neutral" />
-      </Card>
+      </PageShell>
 
       <View style={styles.metricGrid}>
         <Card style={styles.metricCard}>
@@ -130,14 +128,20 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
       </View>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Start here</Text>
+        <SectionIntro
+          title="Start here"
+          subtitle="Follow the same operating sequence used in tenant web so mobile feels familiar."
+        />
         <Text style={styles.metricHint}>
           Follow the core operator flow: add a vehicle, add a driver, verify the driver, then create an assignment.
         </Text>
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Today’s operating focus</Text>
+        <SectionIntro
+          title="Today’s operating focus"
+          subtitle="The highest-value workspaces stay one tap away from the dashboard."
+        />
         <View style={styles.actionGrid}>
           <Button label="Drivers" onPress={() => navigation.navigate('OperatorDrivers')} />
           <Button label="Dispatch" variant="secondary" onPress={() => navigation.navigate('OperatorAssignments')} />
@@ -176,10 +180,6 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: tokens.spacing.sm },
-  kicker: { color: tokens.colors.primary, fontWeight: '700', textTransform: 'uppercase' },
-  title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
-  copy: { color: tokens.colors.inkSoft, lineHeight: 20 },
   meta: { color: tokens.colors.inkSoft, fontSize: 12, lineHeight: 18 },
   metricGrid: { flexDirection: 'row', gap: tokens.spacing.md },
   metricCard: { flex: 1, gap: tokens.spacing.xs },

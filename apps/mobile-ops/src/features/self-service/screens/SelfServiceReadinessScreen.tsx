@@ -7,6 +7,7 @@ import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
@@ -153,12 +154,13 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
-      <Card style={styles.section}>
-        <Text style={styles.kicker}>Mobiris Fleet OS</Text>
-        <Text style={styles.title}>Your next driver step</Text>
-        <Text style={styles.copy}>
-          We only show the steps needed for {driver.verificationTierLabel ?? 'your organisation’s verification level'}.
-        </Text>
+      <PageShell
+        eyebrow="Mobiris Fleet OS"
+        title="Your next driver step"
+        subtitle={`We only show the steps needed for ${
+          driver.verificationTierLabel ?? 'your organisation’s verification level'
+        }.`}
+      >
         <View style={styles.badgeRow}>
           <Badge
             label={`Sign in: ${formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')}`}
@@ -177,19 +179,23 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
             tone={readinessTone(driver.assignmentReadiness ?? 'not_ready')}
           />
         </View>
-      </Card>
+      </PageShell>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Do this next</Text>
+        <SectionIntro
+          title="Do this next"
+          subtitle="The current next action stays pinned so onboarding feels guided."
+        />
         <Text style={styles.label}>{nextAction.title}</Text>
         <Text style={styles.copy}>{nextAction.description}</Text>
         <Button label={nextAction.cta} onPress={openNextAction} />
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {driver.verificationTierLabel ?? 'Verification level'}
-        </Text>
+        <SectionIntro
+          title={driver.verificationTierLabel ?? 'Verification level'}
+          subtitle="These are the checks your organisation expects before you can operate."
+        />
         <Text style={styles.copy}>
           {driver.verificationTierDescription ??
             'Your organisation decides which checks must be completed before you can operate.'}
@@ -233,7 +239,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Current blockers</Text>
+        <SectionIntro
+          title="Current blockers"
+          subtitle="Anything still preventing activation is listed here in plain language."
+        />
         {allReasons.length ? (
           allReasons.map((reason) => (
             <View key={reason} style={styles.reasonRow}>
@@ -248,7 +257,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
 
       {needsVerificationPayment ? (
         <Card style={[styles.section, styles.kycPaymentCard]}>
-          <Text style={styles.sectionTitle}>Identity verification payment</Text>
+          <SectionIntro
+            title="Identity verification payment"
+            subtitle="Finish this payment to unlock the identity check for your selected tier."
+          />
           <Text style={styles.copy}>
             {driver.verificationPaymentMessage ??
               `Your organisation requires you to pay for ${driver.verificationTierLabel ?? 'your selected verification tier'} before your identity check can proceed.`}
@@ -286,7 +298,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         </Card>
       ) : companyFundingBlocked ? (
         <Card style={[styles.section, styles.kycPaymentCard]}>
-          <Text style={styles.sectionTitle}>Verification waiting on organisation</Text>
+          <SectionIntro
+            title="Verification waiting on organisation"
+            subtitle="This step needs organisation support before you can continue."
+          />
           <Text style={styles.copy}>
             {`Verification requires confirmation from your organisation before ${driver.verificationTierLabel ?? 'this verification tier'} can continue.`}
           </Text>
@@ -307,7 +322,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
 
       {driver.requiresGuarantor && !driver.hasGuarantor ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Guarantor</Text>
+          <SectionIntro
+            title="Guarantor"
+            subtitle="Add this only if your organisation requires or recommends it."
+          />
           <Text style={styles.copy}>
             {driver.guarantorBlocking
               ? 'Your organisation requires a guarantor before you can be assigned. Add contact details for someone who can vouch for you.'
@@ -330,7 +348,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
 
       {driver.mobileAccessStatus === 'missing' ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Sign-in account</Text>
+          <SectionIntro
+            title="Sign-in account"
+            subtitle="Create the account that lets you return to the app directly."
+          />
           <Text style={styles.copy}>
             Create your email and password so you can sign in to the app. Account access does not
             wait for assignment approval.
@@ -342,7 +363,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
         </Card>
       ) : !signInReady ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Sign-in account</Text>
+          <SectionIntro
+            title="Sign-in account"
+            subtitle="Your account exists, but mobile access still needs attention."
+          />
           <Text style={styles.copy}>
             Your account exists, but access is currently {mobileAccessLabel.toLowerCase()}. Contact
             your operator if this status looks wrong.
@@ -362,7 +386,10 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
       )}
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>More actions</Text>
+        <SectionIntro
+          title="More actions"
+          subtitle="Use these only when you need to change course or retry."
+        />
         {canResumeVerification ? (
           <Button
             label="Open verification tasks"
@@ -447,17 +474,6 @@ const styles = StyleSheet.create({
   section: {
     gap: tokens.spacing.sm,
   },
-  kicker: {
-    color: tokens.colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 28,
-    fontWeight: '800',
-  },
   copy: {
     color: tokens.colors.inkSoft,
     fontSize: 15,
@@ -467,11 +483,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
-    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',

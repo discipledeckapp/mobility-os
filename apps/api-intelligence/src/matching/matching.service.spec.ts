@@ -210,6 +210,60 @@ describe('MatchingService', () => {
     expect(personsService.applyIdentityEnrichment).not.toHaveBeenCalled();
   });
 
+  it('anchors same-person recognition on NIN even when email and phone change', async () => {
+    prisma.intelPersonIdentifier.findMany.mockResolvedValue([
+      {
+        id: 'identifier_nin_1',
+        personId: 'person_existing',
+        type: 'NATIONAL_ID',
+        value: '11111111111',
+      },
+    ]);
+    personsService.queryForTenant.mockResolvedValue({
+      personId: 'person_existing',
+      globalRiskScore: 8,
+      riskBand: 'low',
+      isWatchlisted: false,
+      hasDuplicateIdentityFlag: false,
+      fraudIndicatorCount: 0,
+      verificationConfidence: 0.95,
+    });
+
+    const result = await service.resolveEnrollment({
+      tenantId: 'tenant_1',
+      identifiers: [
+        { type: 'NATIONAL_ID', value: '11111111111', countryCode: 'NG' },
+        { type: 'EMAIL', value: 'new-driver@example.com' },
+        { type: 'PHONE', value: '+2348099999999' },
+      ],
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        decision: ResolutionDecision.AutoLinked,
+        personId: 'person_existing',
+      }),
+    );
+    expect(personsService.create).not.toHaveBeenCalled();
+    expect(personsService.recordTenantPresence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'person_existing',
+        tenantId: 'tenant_1',
+        roleType: 'driver',
+      }),
+    );
+    expect(identifiersService.addIdentifier).toHaveBeenCalledWith({
+      personId: 'person_existing',
+      type: 'EMAIL',
+      value: 'new-driver@example.com',
+    });
+    expect(identifiersService.addIdentifier).toHaveBeenCalledWith({
+      personId: 'person_existing',
+      type: 'PHONE',
+      value: '+2348099999999',
+    });
+  });
+
   it('returns review_required when identifiers match multiple persons', async () => {
     prisma.intelPersonIdentifier.findMany.mockResolvedValue([
       {
@@ -242,6 +296,45 @@ describe('MatchingService', () => {
     expect(personsService.setDuplicateFlag).toHaveBeenCalledWith('person_a', true);
     expect(personsService.setDuplicateFlag).toHaveBeenCalledWith('person_b', true);
     expect(linkageEventsService.record).not.toHaveBeenCalled();
+  });
+
+  it('requires manual review when the same NIN resolves to multiple canonical persons', async () => {
+    prisma.intelPersonIdentifier.findMany.mockResolvedValue([
+      {
+        id: 'identifier_nin_a',
+        personId: 'person_a',
+        type: 'NATIONAL_ID',
+        value: '11111111111',
+      },
+      {
+        id: 'identifier_nin_b',
+        personId: 'person_b',
+        type: 'NATIONAL_ID',
+        value: '11111111111',
+      },
+    ]);
+    reviewCasesService.create.mockResolvedValue({ id: 'review_case_nin_1' });
+
+    const result = await service.resolveEnrollment({
+      tenantId: 'tenant_1',
+      countryCode: 'NG',
+      identifiers: [{ type: 'NATIONAL_ID', value: '11111111111', countryCode: 'NG' }],
+    });
+
+    expect(result).toEqual({
+      decision: ResolutionDecision.ReviewRequired,
+      reviewCaseId: 'review_case_nin_1',
+    });
+    expect(reviewCasesService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidence: expect.objectContaining({
+          conflictType: 'ambiguous_identifier_match',
+          candidatePersonIds: ['person_a', 'person_b'],
+        }),
+      }),
+    );
+    expect(personsService.setDuplicateFlag).toHaveBeenCalledWith('person_a', true);
+    expect(personsService.setDuplicateFlag).toHaveBeenCalledWith('person_b', true);
   });
 
   it('returns review_required when a biometric conflict is found', async () => {

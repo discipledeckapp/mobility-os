@@ -1,4 +1,13 @@
-import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputProps,
+  View,
+} from 'react-native';
+import { useScreenScroll } from './screen-scroll-context';
 import { tokens } from '../theme/tokens';
 
 interface InputProps extends TextInputProps {
@@ -8,12 +17,26 @@ interface InputProps extends TextInputProps {
 }
 
 export function Input({ label, helperText, errorText, style, ...props }: InputProps) {
+  const screenScroll = useScreenScroll();
+  const [layoutY, setLayoutY] = useState(0);
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    setLayoutY(event.nativeEvent.layout.y);
+  }, []);
+  const handleFocus = useCallback(
+    (event: Parameters<NonNullable<TextInputProps['onFocus']>>[0]) => {
+      screenScroll?.scrollToInput(layoutY);
+      props.onFocus?.(event);
+    },
+    [layoutY, props, screenScroll],
+  );
+
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} onLayout={handleLayout}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         accessibilityHint={props.accessibilityHint ?? helperText}
         accessibilityLabel={props.accessibilityLabel ?? label}
+        onFocus={handleFocus}
         placeholderTextColor={tokens.colors.inkSoft}
         style={[styles.input, errorText ? styles.inputError : null, style]}
         {...props}
@@ -34,13 +57,15 @@ const styles = StyleSheet.create({
     color: tokens.colors.ink,
   },
   input: {
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
+    paddingVertical: 14,
     color: tokens.colors.ink,
+    textAlignVertical: 'top',
   },
   inputError: {
     borderColor: tokens.colors.error,

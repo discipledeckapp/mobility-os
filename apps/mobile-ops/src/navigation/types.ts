@@ -24,6 +24,7 @@ export type RootStackParamList = {
   AssignmentDetail: { assignmentId: string };
   Remittance: { assignmentId?: string };
   RemittanceHistory: undefined;
+  Notifications: undefined;
   Profile: undefined;
   OfflineQueue: undefined;
   OperatorDashboard: undefined;

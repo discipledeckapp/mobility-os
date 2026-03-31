@@ -9,10 +9,6 @@ GRADLE_HOME_DIR="$ROOT_DIR/.gradle"
 MODE="${1:-all}"
 GRADLE_CMD="./gradlew"
 
-if command -v gradle >/dev/null 2>&1; then
-  GRADLE_CMD="gradle"
-fi
-
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$GRADLE_HOME_DIR"
 export GRADLE_USER_HOME="$GRADLE_HOME_DIR"

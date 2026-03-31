@@ -339,6 +339,88 @@ export class StaffNotificationService {
     });
   }
 
+  async sendSubscriptionPaymentReceipt(input: {
+    email: string;
+    name: string;
+    reference: string;
+    amountMinorUnits: number;
+    currency: string;
+    provider: string;
+    paidAt: string;
+    invoiceId: string;
+    documentUrl?: string | null;
+  }): Promise<void> {
+    const receiptLinkMarkup = input.documentUrl
+      ? `<p style="margin:16px 0 0;"><a href="${input.documentUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:12px;">Download receipt</a></p>`
+      : '';
+
+    await this.sendZeptoEmail({
+      toEmail: input.email,
+      toName: input.name,
+      subject: `Mobiris subscription payment receipt ${input.reference}`,
+      htmlBody: renderAdminEmailShell(
+        'Subscription payment received',
+        `
+          <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#334155;">Hello ${input.name}, your subscription payment has been received successfully.</p>
+          <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px 24px;margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Receipt summary</div>
+            <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;font-size:14px;line-height:2;">
+              <tr><td style="color:#64748b;width:140px;">Invoice</td><td style="color:#0f172a;">${input.invoiceId}</td></tr>
+              <tr><td style="color:#64748b;">Reference</td><td style="color:#0f172a;">${input.reference}</td></tr>
+              <tr><td style="color:#64748b;">Amount</td><td style="color:#0f172a;">${input.amountMinorUnits} ${input.currency}</td></tr>
+              <tr><td style="color:#64748b;">Provider</td><td style="color:#0f172a;">${input.provider}</td></tr>
+              <tr><td style="color:#64748b;">Paid at</td><td style="color:#0f172a;">${input.paidAt}</td></tr>
+            </table>
+            ${receiptLinkMarkup}
+          </div>
+        `,
+      ),
+      skipWarningContext: 'subscription receipt email',
+      successLogContext: 'Subscription receipt email sent',
+      failureLogContext: 'Subscription receipt email failed',
+    });
+  }
+
+  async sendWalletFundingReceipt(input: {
+    email: string;
+    name: string;
+    reference: string;
+    amountMinorUnits: number;
+    currency: string;
+    provider: string;
+    paidAt: string;
+    documentUrl?: string | null;
+  }): Promise<void> {
+    const receiptLinkMarkup = input.documentUrl
+      ? `<p style="margin:16px 0 0;"><a href="${input.documentUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:12px;">Download receipt</a></p>`
+      : '';
+
+    await this.sendZeptoEmail({
+      toEmail: input.email,
+      toName: input.name,
+      subject: `Mobiris wallet funding receipt ${input.reference}`,
+      htmlBody: renderAdminEmailShell(
+        'Wallet funding received',
+        `
+          <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#334155;">Hello ${input.name}, your wallet funding payment has been received successfully.</p>
+          <div style="border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;padding:20px 24px;margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Receipt summary</div>
+            <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;font-size:14px;line-height:2;">
+              <tr><td style="color:#64748b;width:140px;">Reference</td><td style="color:#0f172a;">${input.reference}</td></tr>
+              <tr><td style="color:#64748b;">Amount</td><td style="color:#0f172a;">${input.amountMinorUnits} ${input.currency}</td></tr>
+              <tr><td style="color:#64748b;">Provider</td><td style="color:#0f172a;">${input.provider}</td></tr>
+              <tr><td style="color:#64748b;">Paid at</td><td style="color:#0f172a;">${input.paidAt}</td></tr>
+            </table>
+            ${receiptLinkMarkup}
+          </div>
+        `,
+      ),
+      skipWarningContext: 'wallet funding receipt email',
+      successLogContext: 'Wallet funding receipt email sent',
+      failureLogContext: 'Wallet funding receipt email failed',
+    });
+  }
+
   async notifyVerificationPaymentReceived(input: {
     tenantId?: string | null;
     driverId?: string | null;

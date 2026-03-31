@@ -27,6 +27,8 @@ describe('PaymentsService', () => {
   };
   const staffNotificationService = {
     sendVerificationPaymentReceipt: jest.fn(),
+    sendSubscriptionPaymentReceipt: jest.fn(),
+    sendWalletFundingReceipt: jest.fn(),
     notifyVerificationPaymentReceived: jest.fn(),
   };
   const paymentProvidersService = {
@@ -203,6 +205,8 @@ describe('PaymentsService', () => {
       purpose: 'invoice_settlement',
       tenantId: 'tenant_1',
       invoiceId: 'inv_1',
+      customerEmail: 'billing@example.com',
+      customerName: 'Billing Owner',
     });
     prisma.cpPaymentAttempt.update.mockResolvedValue({ id: 'attempt_1' });
     prisma.cpPaymentAttempt.updateMany.mockResolvedValue({ count: 1 });
@@ -230,6 +234,10 @@ describe('PaymentsService', () => {
       id: 'sub_1',
       status: 'active',
     });
+    recordsService.issueDocument.mockResolvedValue({
+      id: 'receipt_invoice_1',
+      fileUrl: 'https://control.mobiris.ng/receipts/invoice_1.pdf',
+    });
 
     const result = await service.handleWebhook(
       'flutterwave',
@@ -239,12 +247,117 @@ describe('PaymentsService', () => {
 
     expect(result.status).toBe('applied');
     expect(result.invoiceId).toBe('inv_1');
+    expect(staffNotificationService.sendSubscriptionPaymentReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'billing@example.com',
+        invoiceId: 'inv_1',
+        reference: 'ref_webhook_1',
+      }),
+    );
     expect(tenantLifecycleService.markPaymentRecovered).toHaveBeenCalledWith({
       tenantId: 'tenant_1',
       invoiceId: 'inv_1',
       provider: 'flutterwave',
       referenceId: 'ref_webhook_1',
     });
+  });
+
+  it('reconciles an identity-verification webhook and stays idempotent on repeated callbacks', async () => {
+    paymentProvidersService.extractWebhookReference.mockReturnValue('ref_kyc_webhook_1');
+    prisma.cpPaymentAttempt.findUnique
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_webhook_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
+        amountMinorUnits: 1_500_000,
+        currency: 'NGN',
+        status: 'checkout_initialized',
+      })
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_webhook_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
+        amountMinorUnits: 1_500_000,
+        currency: 'NGN',
+        status: 'checkout_initialized',
+      })
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_webhook_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
+        amountMinorUnits: 1_500_000,
+        currency: 'NGN',
+        status: 'applied',
+      })
+      .mockResolvedValueOnce({
+        reference: 'ref_kyc_webhook_1',
+        purpose: 'identity_verification',
+        tenantId: 'tenant_1',
+        invoiceId: null,
+        customerEmail: 'driver@example.com',
+        customerName: 'Driver One',
+        amountMinorUnits: 1_500_000,
+        currency: 'NGN',
+        status: 'applied',
+      });
+    prisma.cpPaymentAttempt.update.mockResolvedValue({ id: 'attempt_1' });
+    prisma.cpPaymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+    paymentProvidersService.verifyPayment.mockResolvedValue({
+      provider: 'paystack',
+      reference: 'ref_kyc_webhook_1',
+      status: 'successful',
+      amountMinorUnits: 1_500_000,
+      currency: 'NGN',
+    });
+    recordsService.issueDocument.mockResolvedValue({
+      id: 'receipt_1',
+      fileUrl: 'https://control.mobiris.ng/receipts/receipt_1.pdf',
+    });
+
+    const first = await service.handleWebhook(
+      'paystack',
+      { 'x-paystack-signature': 'sig' },
+      { event: 'charge.success', data: { reference: 'ref_kyc_webhook_1' } },
+    );
+    const second = await service.handleWebhook(
+      'paystack',
+      { 'x-paystack-signature': 'sig' },
+      { event: 'charge.success', data: { reference: 'ref_kyc_webhook_1' } },
+    );
+
+    expect(first).toEqual(
+      expect.objectContaining({
+        purpose: 'identity_verification',
+        status: 'applied',
+      }),
+    );
+    expect(second).toEqual(
+      expect.objectContaining({
+        purpose: 'identity_verification',
+        status: 'already_applied',
+      }),
+    );
+    expect(staffNotificationService.sendVerificationPaymentReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'driver@example.com',
+        reference: 'ref_kyc_webhook_1',
+      }),
+    );
+    expect(staffNotificationService.notifyVerificationPaymentReceived).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant_1',
+        reference: 'ref_kyc_webhook_1',
+      }),
+    );
   });
 
   it('applies identity verification payments and returns already_applied on retry', async () => {
@@ -314,6 +427,51 @@ describe('PaymentsService', () => {
         tenantId: 'tenant_1',
         driverId: 'driver_1',
         reference: 'ref_kyc_1',
+      }),
+    );
+  });
+
+  it('emails a wallet funding receipt to the payer when a top-up is applied', async () => {
+    prisma.cpPaymentAttempt.findUnique.mockResolvedValue({
+      reference: 'ref_wallet_1',
+      purpose: 'platform_wallet_topup',
+      tenantId: 'tenant_1',
+      invoiceId: null,
+      status: 'checkout_initialized',
+      amountMinorUnits: 250000,
+      currency: 'NGN',
+      customerEmail: 'wallet@example.com',
+      customerName: 'Wallet Owner',
+    });
+    prisma.cpPaymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+    paymentProvidersService.verifyPayment.mockResolvedValue({
+      provider: 'flutterwave',
+      reference: 'ref_wallet_1',
+      status: 'successful',
+      amountMinorUnits: 250000,
+      currency: 'NGN',
+    });
+    platformWalletsService.hasEntryForReference.mockResolvedValue(false);
+    platformWalletsService.createEntry.mockResolvedValue({
+      id: 'entry_1',
+    });
+    recordsService.issueDocument.mockResolvedValue({
+      id: 'receipt_wallet_1',
+      fileUrl: 'https://control.mobiris.ng/receipts/wallet_1.pdf',
+    });
+
+    const result = await service.verifyAndApplyPayment({
+      provider: 'flutterwave',
+      reference: 'ref_wallet_1',
+      purpose: 'platform_wallet_topup',
+      tenantId: 'tenant_1',
+    });
+
+    expect(result.status).toBe('applied');
+    expect(staffNotificationService.sendWalletFundingReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'wallet@example.com',
+        reference: 'ref_wallet_1',
       }),
     );
   });

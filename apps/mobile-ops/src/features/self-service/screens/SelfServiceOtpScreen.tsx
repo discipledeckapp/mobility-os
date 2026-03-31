@@ -5,11 +5,32 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { Input } from '../../../components/input';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { FullScreenBlockingLoader } from '../../../components/processing-state';
 import { Screen } from '../../../components/screen';
 import { useSelfService } from '../../../contexts/self-service-context';
 import type { ScreenProps } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
+
+function normalizeInviteToken(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const queryToken = url.searchParams.get('token');
+    if (queryToken?.trim()) {
+      return queryToken.trim();
+    }
+
+    const pathToken = url.pathname.split('/').filter(Boolean).at(-1);
+    return pathToken?.trim() ? pathToken.trim() : trimmed;
+  } catch {
+    return trimmed;
+  }
+}
 
 export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp'>) {
   const { bootstrapToken, exchangeOtpCode, loginWithPassword } = useSelfService();
@@ -54,14 +75,15 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
   };
 
   const onSubmitToken = async () => {
-    if (!directToken.trim()) {
+    const normalizedToken = normalizeInviteToken(directToken);
+    if (!normalizedToken) {
       Alert.alert('Invite link', 'Paste the invitation token to continue.');
       return;
     }
 
     setSubmittingToken(true);
     try {
-      await bootstrapToken(directToken);
+      await bootstrapToken(normalizedToken);
       navigation.replace('SelfServiceResume', {});
     } catch (error) {
       Alert.alert(
@@ -97,11 +119,11 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
   return (
     <Screen contentContainerStyle={styles.content}>
-      <View style={styles.hero}>
-        <Text style={styles.kicker}>Driver onboarding</Text>
-        <Text style={styles.title}>Choose how you want to continue</Text>
-        <Text style={styles.copy}>Most drivers start with an invite. Returning drivers can sign in.</Text>
-      </View>
+      <PageShell
+        eyebrow="Driver onboarding"
+        title="Choose how to continue"
+        subtitle="Most drivers start with an invite. Returning drivers can sign in."
+      />
 
       <View style={styles.modeRow}>
         <Pressable
@@ -134,8 +156,10 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
       {mode === 'code' ? (
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Use invitation code</Text>
-          <Text style={styles.sectionHint}>Enter the short code shared by your organisation.</Text>
+          <SectionIntro
+            title="Use invitation code"
+            subtitle="Enter the short code shared by your organisation."
+          />
           <Input
             autoCapitalize="characters"
             autoCorrect={false}
@@ -150,8 +174,10 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
       {mode === 'link' ? (
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Open invite link</Text>
-          <Text style={styles.sectionHint}>Paste the secure token from your email or message.</Text>
+          <SectionIntro
+            title="Open invite link"
+            subtitle="Paste the secure token from your email or message."
+          />
           <Input
             autoCapitalize="none"
             autoCorrect={false}
@@ -171,8 +197,10 @@ export function SelfServiceOtpScreen({ navigation }: ScreenProps<'SelfServiceOtp
 
       {mode === 'signin' ? (
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Sign in</Text>
-          <Text style={styles.sectionHint}>Use this only if you already created your account.</Text>
+          <SectionIntro
+            title="Sign in"
+            subtitle="Use this only if you already created your account."
+          />
           <Input
             autoCapitalize="none"
             autoCorrect={false}
@@ -223,26 +251,6 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: 'center',
   },
-  hero: {
-    gap: tokens.spacing.sm,
-    marginTop: tokens.spacing.lg,
-  },
-  kicker: {
-    color: tokens.colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 30,
-    fontWeight: '800',
-  },
-  copy: {
-    color: tokens.colors.inkSoft,
-    fontSize: 15,
-    lineHeight: 22,
-  },
   card: {
     gap: tokens.spacing.md,
   },
@@ -271,16 +279,6 @@ const styles = StyleSheet.create({
   },
   modeChipTextActive: {
     color: tokens.colors.primary,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  sectionHint: {
-    color: tokens.colors.inkSoft,
-    fontSize: 14,
-    lineHeight: 20,
   },
   backText: {
     color: tokens.colors.primary,

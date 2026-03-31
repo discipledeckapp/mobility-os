@@ -50,15 +50,26 @@ async function run() {
       : {
           operation,
           method: 'POST' as const,
-          url: `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/session/generate`,
+          url: `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/session/generate`,
           body: {
-            ttlSeconds: 120,
+            publicMerchantID: process.env.YOUVERIFY_PUBLIC_MERCHANT_ID,
             metadata: {
               tenantId: 'diagnostic_tenant',
               countryCode: 'NG',
             },
           },
         };
+
+  if (operation === 'liveness-init' && !process.env.YOUVERIFY_PUBLIC_MERCHANT_ID) {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        reason: 'missing_config',
+        requiredEnv: ['YOUVERIFY_PUBLIC_MERCHANT_ID'],
+      }),
+    );
+    process.exit(1);
+  }
 
   const response = await requestProviderJson({
     providerName: 'youverify',
@@ -88,6 +99,40 @@ async function run() {
       2,
     ),
   );
+
+  if (!failure && operation === 'liveness-init') {
+    const tokenResponse = await requestProviderJson({
+      providerName: 'youverify',
+      operation: 'liveness-token',
+      method: 'POST',
+      url: `${baseUrl.replace(/\/$/, '')}/v2/api/identity/sdk/liveness/token`,
+      headers: { token: apiKey },
+      body: {
+        publicMerchantID: process.env.YOUVERIFY_PUBLIC_MERCHANT_ID,
+        deviceCorrelationId: `mobiris-diagnostic-${Date.now()}`,
+      },
+    });
+
+    const tokenFailure = summarizeProviderFailure('youverify', 'liveness-token', tokenResponse);
+    console.log(
+      JSON.stringify(
+        {
+          ok: !tokenFailure,
+          provider: 'youverify',
+          operation: 'liveness-token',
+          statusCode: tokenResponse.statusCode,
+          failure: tokenFailure ?? null,
+          body: sanitizeProviderPayload(tokenResponse.payload),
+        },
+        null,
+        2,
+      ),
+    );
+
+    if (tokenFailure) {
+      process.exit(1);
+    }
+  }
 
   if (failure) {
     process.exit(1);

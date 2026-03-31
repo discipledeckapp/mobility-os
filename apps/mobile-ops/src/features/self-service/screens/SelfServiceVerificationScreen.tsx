@@ -519,12 +519,24 @@ export function SelfServiceVerificationScreen({
   );
 
   const nativeLivenessSupported = isYouVerifyLivenessAvailable();
-  const biometricReady = !biometricVerificationRequired || nativeLivenessPassed === true;
+  const persistedLivenessPassed = driver?.identityLivenessPassed === true;
+  const hasPassedLiveness = nativeLivenessPassed === true || persistedLivenessPassed;
+  const biometricReady = !biometricVerificationRequired || hasPassedLiveness;
   const canSubmitIdentity = useMemo(
     () =>
       verificationLifecycle !== 'completed' && Boolean(token && identifiersReady && biometricReady),
     [biometricReady, identifiersReady, token, verificationLifecycle],
   );
+
+  useEffect(() => {
+    if (!biometricVerificationRequired || nativeLivenessPassed === true || !persistedLivenessPassed) {
+      return;
+    }
+
+    setLivenessFeedback(
+      'Face verification has already passed. Review your ID details below and submit your identity check.',
+    );
+  }, [biometricVerificationRequired, nativeLivenessPassed, persistedLivenessPassed]);
 
   const refreshVerificationStatus = useCallback(async () => {
     if (!token) {
@@ -1719,7 +1731,7 @@ export function SelfServiceVerificationScreen({
                   ) : null}
                 </View>
               ) : null}
-              {nativeLivenessPassed === true ? (
+              {hasPassedLiveness ? (
                 <View style={styles.successRow}>
                   <Badge label="Face verification passed" tone="success" />
                 </View>
@@ -1732,7 +1744,7 @@ export function SelfServiceVerificationScreen({
                 <Text
                   style={[
                     styles.hintText,
-                    nativeLivenessPassed === true
+                    hasPassedLiveness
                       ? styles.successText
                       : nativeLivenessPassed === false
                         ? styles.warningText
@@ -1748,13 +1760,13 @@ export function SelfServiceVerificationScreen({
                     nativeLivenessSupported
                       ? livenessRunning
                         ? 'Starting verification…'
-                        : nativeLivenessPassed === true
+                        : hasPassedLiveness
                           ? 'Redo face verification'
                           : 'Start face verification'
                       : 'Continue in browser'
                   }
                   variant={
-                    nativeLivenessSupported && nativeLivenessPassed === true
+                    nativeLivenessSupported && hasPassedLiveness
                       ? 'secondary'
                       : 'primary'
                   }
@@ -2005,7 +2017,7 @@ export function SelfServiceVerificationScreen({
                 <Text style={styles.hintText}>
                   {!identifiersReady
                     ? 'Enter all required ID numbers first.'
-                    : biometricVerificationRequired && nativeLivenessPassed !== true
+                    : biometricVerificationRequired && !hasPassedLiveness
                       ? 'Complete face verification above before submitting.'
                       : ''}
                 </Text>

@@ -45,10 +45,21 @@ describe('DriversService', () => {
       findFirst: jest.fn(),
     },
     assignment: {
+      findMany: jest.fn(),
       count: jest.fn(),
     },
     remittance: {
       count: jest.fn(),
+    },
+    verificationEntitlement: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    userNotification: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
     },
     userConsent: {
       create: jest.fn(),
@@ -61,6 +72,9 @@ describe('DriversService', () => {
     },
     fleet: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
+    vehicle: {
       findMany: jest.fn(),
     },
     tenant: {
@@ -100,6 +114,11 @@ describe('DriversService', () => {
     listActiveActionsByEntityIds: jest.fn(),
     applyDriverEnforcement: jest.fn((readiness: unknown) => readiness),
   };
+  const controlPlaneBillingClient = {
+    initializeDriverKycCheckout: jest.fn(),
+    initializeIdentityVerificationCheckout: jest.fn(),
+    verifyAndApplyPayment: jest.fn(),
+  };
   const notificationsService = {
     notifyDriverVerificationStatus: jest.fn(),
     notifyDriverLicenceReviewPending: jest.fn(),
@@ -121,8 +140,12 @@ describe('DriversService', () => {
     prisma.driver.count.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([]);
     prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    prisma.assignment.findMany.mockResolvedValue([]);
     prisma.assignment.count.mockResolvedValue(0);
     prisma.remittance.count.mockResolvedValue(0);
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.userNotification.findMany.mockResolvedValue([]);
+    prisma.userNotification.findFirst.mockResolvedValue(null);
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.tenant.findUnique.mockResolvedValue({
       country: 'NG',
@@ -163,11 +186,7 @@ describe('DriversService', () => {
       documentStorageService as never,
       subscriptionEntitlementsService as never,
       { fireEvent: jest.fn() } as never,
-      {
-        initializeDriverKycCheckout: jest.fn(),
-        initializeIdentityVerificationCheckout: jest.fn(),
-        verifyAndApplyPayment: jest.fn(),
-      } as never,
+      controlPlaneBillingClient as never,
       policyService as never,
       notificationsService as never,
       auditService as never,
@@ -509,6 +528,123 @@ describe('DriversService', () => {
     });
 
     expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).toHaveBeenCalled();
+  });
+
+  it('creates a guarantor self-service account linked back to the driver workflow', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'guarantor_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      status: 'pending_verification',
+    });
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.user.create.mockResolvedValue({ id: 'user_1' });
+
+    await service.createGuarantorSelfServiceAccountFromSelfService(
+      'guarantor-self-service-token',
+      'grace-login@example.com',
+      'Password@123',
+    );
+
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: 'tenant_1',
+        email: 'grace-login@example.com',
+        phone: '+2348000000000',
+        role: 'READ_ONLY',
+        settings: expect.objectContaining({
+          selfServiceLinkage: {
+            subjectType: 'guarantor',
+            driverId: 'driver_1',
+          },
+        }),
+      }),
+    });
+  });
+
+  it('completes guarantor self-service identity without creating a separate payment flow', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'guarantor_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      phone: '+2348012345678',
+      nationality: 'NG',
+      personId: 'person_driver_1',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      status: 'pending_verification',
+      personId: null,
+    });
+    prisma.driverGuarantor.update.mockResolvedValue({
+      id: 'guarantor_1',
+      driverId: 'driver_1',
+      tenantId: 'tenant_1',
+      personId: 'person_guarantor_1',
+      status: 'verified',
+    });
+    intelligenceClient.resolveEnrollment.mockResolvedValue({
+      decision: 'verified_match',
+      personId: 'person_guarantor_1',
+      isVerifiedMatch: true,
+      verifiedProfile: {
+        fullName: 'Grace Eze',
+      },
+    });
+
+    const result = await service.resolveGuarantorIdentityFromSelfService(
+      'guarantor-self-service-token',
+      {
+        subjectConsent: true,
+        livenessCheck: {
+          provider: 'youverify',
+          sessionId: 'g-session-1',
+          passed: true,
+        },
+        identifiers: [{ type: 'NATIONAL_ID', value: '11111111111', countryCode: 'NG' }],
+      },
+    );
+
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { driverId: 'driver_1' },
+        data: expect.objectContaining({
+          personId: 'person_guarantor_1',
+          status: 'verified',
+        }),
+      }),
+    );
+    expect(prisma.verificationEntitlement.findFirst).not.toHaveBeenCalled();
+    expect(controlPlaneBillingClient.initializeDriverKycCheckout).not.toHaveBeenCalled();
+    expect(result.personId).toBe('person_guarantor_1');
   });
 
   it('uploads driver documents in pending status', async () => {
@@ -940,6 +1076,81 @@ describe('DriversService', () => {
     });
   });
 
+  it('shows the driver a newly assigned vehicle and the assignment-issued notification', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'driver_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.assignment.findMany.mockResolvedValue([
+      {
+        id: 'assignment_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        vehicleId: 'vehicle_1',
+        fleetId: 'fleet_1',
+        status: 'driver_action_required',
+        notes: 'Morning dispatch',
+        remittanceAmountMinorUnits: 250000,
+        remittanceCurrency: 'NGN',
+        remittanceFrequency: 'daily',
+        remittanceStartDate: '2026-03-31',
+        createdAt: new Date('2026-03-31T06:00:00.000Z'),
+        updatedAt: new Date('2026-03-31T06:00:00.000Z'),
+      },
+    ]);
+    prisma.vehicle.findMany.mockResolvedValue([
+      {
+        id: 'vehicle_1',
+        make: 'Toyota',
+        model: 'Corolla',
+        plate: 'LAG-123AA',
+        tenantVehicleCode: null,
+        systemVehicleCode: null,
+        status: 'assigned',
+      },
+    ]);
+    prisma.user.findMany.mockResolvedValue([{ id: 'user_1' }]);
+    prisma.userNotification.findMany.mockResolvedValue([
+      {
+        id: 'notification_1',
+        tenantId: 'tenant_1',
+        userId: 'user_1',
+        topic: 'assignment_issued',
+        title: 'Vehicle assigned',
+        body: 'Toyota Corolla has been assigned to you.',
+        actionUrl: '/assignments/assignment_1',
+        metadata: { assignmentId: 'assignment_1' },
+        readAt: null,
+        createdAt: new Date('2026-03-31T06:01:00.000Z'),
+        updatedAt: new Date('2026-03-31T06:01:00.000Z'),
+      },
+    ]);
+
+    const [assignments, notifications] = await Promise.all([
+      service.listAssignmentsFromSelfService('driver-self-service-token'),
+      service.listNotificationsFromSelfService('driver-self-service-token'),
+    ]);
+
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0]).toMatchObject({
+      id: 'assignment_1',
+      status: 'driver_action_required',
+      vehicleId: 'vehicle_1',
+      vehicle: expect.objectContaining({
+        plate: 'LAG-123AA',
+        status: 'assigned',
+      }),
+    });
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        id: 'notification_1',
+        topic: 'assignment_issued',
+        actionUrl: '/assignments/assignment_1',
+      }),
+    ]);
+  });
+
   it('initializes a driver liveness session through api-intelligence', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       id: 'driver_1',
@@ -1080,6 +1291,65 @@ describe('DriversService', () => {
     );
 
     expect(prisma.driver.update).not.toHaveBeenCalled();
+  });
+
+  it('allows the same canonical person to continue onboarding in another tenant without local duplicate blocking', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_2',
+      firstName: 'Emeka',
+      lastName: 'Okonkwo',
+      phone: '+2348012345678',
+      email: 'new-tenant@example.com',
+      dateOfBirth: '1990-06-15',
+      nationality: 'NG',
+    });
+    prisma.driver.findFirst.mockResolvedValue(null);
+    intelligenceClient.resolveEnrollment.mockResolvedValue({
+      decision: 'auto_linked',
+      personId: 'person_1',
+      isVerifiedMatch: true,
+      globalRiskScore: 3,
+      riskBand: 'low',
+      isWatchlisted: false,
+      hasDuplicateIdentityFlag: false,
+      fraudIndicatorCount: 0,
+      verificationConfidence: 0.99,
+    });
+
+    const result = await service.resolveIdentity('tenant_2', 'driver_1', {
+      subjectConsent: true,
+      livenessCheck: {
+        provider: 'youverify',
+        sessionId: 'session_2',
+        passed: true,
+      },
+      identifiers: [{ type: 'NATIONAL_ID', value: '12345678901', countryCode: 'NG' }],
+    });
+
+    expect(prisma.driver.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant_2',
+        personId: 'person_1',
+        id: { not: 'driver_1' },
+        archivedAt: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        status: true,
+      },
+    });
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_1' },
+        data: expect.objectContaining({ personId: 'person_1' }),
+      }),
+    );
+    expect(result.personId).toBe('person_1');
   });
 
   it('requires all operational profile fields before self-service profile completion can continue', async () => {

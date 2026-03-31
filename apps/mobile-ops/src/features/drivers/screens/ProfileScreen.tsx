@@ -1,19 +1,15 @@
 'use client';
 
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import {
-  listUserNotifications,
-  markUserNotificationRead,
-  type UserNotificationRecord,
-} from '../../../api';
 import { Badge } from '../../../components/badge';
 import { BottomNav } from '../../../components/bottom-nav';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
 import { LoadingSkeleton } from '../../../components/loading-skeleton';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import { useSelfService } from '../../../contexts/self-service-context';
@@ -31,24 +27,13 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
     Boolean(session?.linkedDriverId),
   );
   const { assignments, refreshAssignments } = useAssignments(Boolean(session?.linkedDriverId));
-  const [notifications, setNotifications] = useState<UserNotificationRecord[]>([]);
   const licenceRequired = session?.requiredDriverDocumentSlugs?.includes('drivers-license') ?? true;
   const currentAssignment = useMemo(() => pickCurrentAssignment(assignments), [assignments]);
-
-  const refreshNotifications = useCallback(async () => {
-    if (!session?.linkedDriverId) {
-      setNotifications([]);
-      return [];
-    }
-    const nextNotifications = await listUserNotifications();
-    setNotifications(nextNotifications);
-    return nextNotifications;
-  }, [session?.linkedDriverId]);
 
   const onRefresh = async () => {
     try {
       await refreshSession();
-      await Promise.all([refreshDriver(), refreshAssignments(), refreshNotifications()]);
+      await Promise.all([refreshDriver(), refreshAssignments()]);
       showToast('Verification status refreshed.', 'success');
     } catch (error) {
       Alert.alert(
@@ -60,39 +45,10 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
   useFocusEffect(
     useCallback(() => {
-      void Promise.all([refreshDriver(), refreshAssignments(), refreshNotifications()]).catch(() => {
+      void Promise.all([refreshDriver(), refreshAssignments()]).catch(() => {
         // Pull-to-refresh surfaces visible errors when needed.
       });
-    }, [refreshAssignments, refreshDriver, refreshNotifications]),
-  );
-
-  const handleNotificationOpen = useCallback(
-    async (notification: UserNotificationRecord) => {
-      try {
-        if (!notification.readAt) {
-          const updated = await markUserNotificationRead(notification.id);
-          setNotifications((current) =>
-            current.map((item) => (item.id === notification.id ? updated : item)),
-          );
-        }
-      } catch {
-        // Keep navigation available even if mark-read fails.
-      }
-
-      const assignmentId = extractNotificationAssignmentId(notification);
-      if (assignmentId) {
-        navigation.navigate('AssignmentDetail', { assignmentId });
-        return;
-      }
-
-      if (notification.topic.startsWith('remittance_')) {
-        navigation.navigate('RemittanceHistory');
-        return;
-      }
-
-      Alert.alert(notification.title, notification.body);
-    },
-    [navigation],
+    }, [refreshAssignments, refreshDriver]),
   );
 
   if (loading) {
@@ -133,8 +89,39 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       footer={<BottomNav currentTab="Profile" navigation={navigation} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      <PageShell
+        eyebrow="Driver profile"
+        title={getDriverDisplayName(driver.firstName, driver.lastName, driver.identityStatus)}
+        subtitle="Keep your account, verification status, and eligibility in good standing so work can continue smoothly."
+        badge={
+          <Badge
+            label={formatIdentityStatus(driver.identityStatus)}
+            tone={identityTone(driver.identityStatus)}
+          />
+        }
+        actions={
+          <>
+            <Button
+              accessibilityHint="Open assignment and remittance alerts"
+              label="View alerts"
+              variant="secondary"
+              onPress={() => navigation.navigate('Notifications')}
+            />
+            <Button
+              accessibilityHint="Refresh your verification status and eligibility"
+              label="Refresh status"
+              variant="secondary"
+              onPress={() => void onRefresh()}
+            />
+          </>
+        }
+      />
+
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Verification status</Text>
+        <SectionIntro
+          title="Verification status"
+          subtitle="This shows what is cleared already and what still needs your attention."
+        />
         <View style={styles.statusPanel}>
           <Badge
             label={formatIdentityStatus(driver.identityStatus)}
@@ -156,9 +143,12 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
       {driver.identityStatus !== 'verified' ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Risk warning</Text>
+          <SectionIntro
+            title="Risk warning"
+            subtitle="Incomplete verification raises operational risk and can block next actions."
+          />
           <Text style={styles.muted}>
-            This driver has not completed identity verification. Risk is higher. Complete verification to reduce risk.
+            This driver has not completed identity verification. Complete verification to reduce risk.
           </Text>
           <Text style={styles.muted}>
             Assignment acceptance is still required before remittance can start.
@@ -167,9 +157,10 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       ) : null}
 
       <Card style={styles.section}>
-        <Text style={styles.title}>
-          {getDriverDisplayName(driver.firstName, driver.lastName, driver.identityStatus)}
-        </Text>
+        <SectionIntro
+          title="Account"
+          subtitle="Your linked driver identity, contact details, and mobile access status."
+        />
         <View style={styles.badgeRow}>
           <Badge
             label={formatIdentityStatus(driver.identityStatus)}
@@ -194,7 +185,10 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Profile information</Text>
+        <SectionIntro
+          title="Profile information"
+          subtitle="Personal details currently linked to this driver record."
+        />
         <Text style={styles.meta}>Organisation: {driver.organisationName ?? 'Not available'}</Text>
         <Text style={styles.meta}>Date of birth: {formatDateOnly(driver.dateOfBirth)}</Text>
         <Text style={styles.meta}>Gender: {formatProfileValue(driver.gender)}</Text>
@@ -206,7 +200,10 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
       {currentAssignment ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Current assignment</Text>
+          <SectionIntro
+            title="Current assignment"
+            subtitle="Jump back into the active vehicle workspace from here."
+          />
           <View style={styles.statusPanel}>
             <Badge
               label={formatIdentityStatus(currentAssignment.status)}
@@ -239,47 +236,13 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       ) : null}
 
       <Card style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          {notifications.filter((item) => !item.readAt).length > 0 ? (
-            <Badge
-              label={`${notifications.filter((item) => !item.readAt).length} new`}
-              tone="warning"
-            />
-          ) : null}
-        </View>
-        {notifications.length === 0 ? (
-          <Text style={styles.muted}>
-            Driver updates, assignment changes, and remittance alerts will appear here.
-          </Text>
-        ) : (
-          notifications.slice(0, 5).map((notification) => (
-            <View key={notification.id} style={styles.notificationCard}>
-              <View style={styles.notificationCopy}>
-                <View style={styles.notificationTitleRow}>
-                  <Text style={styles.notificationTitle}>{notification.title}</Text>
-                  {!notification.readAt ? <Badge label="New" tone="success" /> : null}
-                </View>
-                <Text style={styles.muted}>{notification.body}</Text>
-                <Text style={styles.notificationTime}>
-                  {formatDateTime(notification.createdAt, session?.formattingLocale)}
-                </Text>
-              </View>
-              <Button
-                accessibilityHint="Open this notification and mark it as read"
-                label={extractNotificationAssignmentId(notification) ? 'Open' : 'View'}
-                variant="secondary"
-                onPress={() => void handleNotificationOpen(notification)}
-              />
-            </View>
-          ))
-        )}
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Eligibility</Text>
+        <SectionIntro
+          title="Eligibility"
+          subtitle="Track what still blocks new work or verification approval."
+        />
         <Text style={styles.meta}>
-          Approved licence: {licenceRequired ? (driver.hasApprovedLicence ? 'Yes' : 'No') : 'Not required'}
+          Approved licence:{' '}
+          {licenceRequired ? (driver.hasApprovedLicence ? 'Yes' : 'No') : 'Not required'}
         </Text>
         <Text style={styles.meta}>Pending documents: {driver.pendingDocumentCount}</Text>
         <Text style={styles.meta}>Rejected documents: {driver.rejectedDocumentCount}</Text>
@@ -287,7 +250,10 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Next step</Text>
+        <SectionIntro
+          title="Next step"
+          subtitle="The app keeps the current next action visible instead of leaving you to guess."
+        />
         <Text style={styles.muted}>{guidanceForDriver(driver, licenceRequired)}</Text>
         {licenceRequired && !driver.hasApprovedLicence ? (
           <Button
@@ -322,12 +288,6 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             onPress={() => navigation.navigate('SelfServiceReadiness')}
           />
         ) : null}
-        <Button
-          accessibilityHint="Refresh your verification status and eligibility"
-          label="Refresh status"
-          variant="secondary"
-          onPress={() => void onRefresh()}
-        />
       </Card>
     </Screen>
   );
@@ -504,29 +464,8 @@ function assignmentGuidance(status: string) {
   return 'This assignment is no longer active.';
 }
 
-function extractNotificationAssignmentId(notification: UserNotificationRecord) {
-  const metadataAssignmentId =
-    notification.metadata && typeof notification.metadata.assignmentId === 'string'
-      ? notification.metadata.assignmentId
-      : null;
-  if (metadataAssignmentId) {
-    return metadataAssignmentId;
-  }
-
-  const actionUrl = notification.actionUrl ?? '';
-  const assignmentMatch =
-    actionUrl.match(/[?&]assignmentId=([^&]+)/)?.[1] ?? actionUrl.match(/\/assignments\/([^/?#]+)/)?.[1];
-  return assignmentMatch ? decodeURIComponent(assignmentMatch) : null;
-}
-
 const styles = StyleSheet.create({
   section: {
-    gap: tokens.spacing.sm,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     gap: tokens.spacing.sm,
   },
   statusPanel: {
@@ -537,19 +476,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.card,
     padding: tokens.spacing.md,
   },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 24,
-    fontWeight: '800',
-  },
   statusTitle: {
     color: tokens.colors.ink,
     fontSize: 20,
-    fontWeight: '700',
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
     fontWeight: '700',
   },
   badgeRow: {
@@ -564,33 +493,6 @@ const styles = StyleSheet.create({
   meta: {
     color: tokens.colors.ink,
     lineHeight: 20,
-  },
-  notificationCard: {
-    gap: tokens.spacing.sm,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.card,
-    backgroundColor: tokens.colors.card,
-    padding: tokens.spacing.md,
-  },
-  notificationCopy: {
-    gap: tokens.spacing.xs,
-  },
-  notificationTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.spacing.sm,
-  },
-  notificationTitle: {
-    flex: 1,
-    color: tokens.colors.ink,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  notificationTime: {
-    color: tokens.colors.inkSoft,
-    fontSize: 12,
   },
 });
 

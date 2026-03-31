@@ -328,6 +328,10 @@ export interface DriverRecord {
   identityReviewStatus?: string | null;
   identityLastDecision?: string | null;
   identityLastVerifiedAt?: string | null;
+  identityLivenessPassed?: boolean | null;
+  identityLivenessProvider?: string | null;
+  identityLivenessConfidence?: number | null;
+  identityLivenessReason?: string | null;
   riskBand?: string | null;
   isWatchlisted?: boolean | null;
   hasApprovedLicence: boolean;

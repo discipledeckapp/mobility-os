@@ -2,6 +2,7 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../../components/card';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useAppEntry, type AppEntryRole } from '../../../contexts/app-entry-context';
 import type { ScreenProps } from '../../../navigation/types';
@@ -38,17 +39,22 @@ export function RoleSelectionScreen({ navigation }: ScreenProps<'RoleSelection'>
 
   return (
     <Screen contentContainerStyle={styles.content}>
-      <View style={styles.hero}>
+      <PageShell
+        eyebrow="Step 1 of 2"
+        title="Choose your path"
+        subtitle="We will only show the steps that match this role."
+      >
         <View style={styles.logoCore}>
           <Text style={styles.logoMark}>M</Text>
         </View>
         <Text style={styles.productName}>Mobiris Fleet OS</Text>
-        <Text style={styles.stepLabel}>Step 1 of 2</Text>
-        <Text style={styles.title}>Choose your path</Text>
-        <Text style={styles.subtitle}>We will only show the steps that match this role.</Text>
-      </View>
+      </PageShell>
 
       <View style={styles.optionList}>
+        <SectionIntro
+          title="Who are you signing in as?"
+          subtitle="Pick the role that matches the invite or account you are using."
+        />
         {ROLE_OPTIONS.map((option) => (
           <Pressable
             key={option.id}
@@ -85,11 +91,6 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: 'center',
   },
-  hero: {
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-    marginTop: tokens.spacing.lg,
-  },
   logoCore: {
     width: 72,
     height: 72,
@@ -112,26 +113,6 @@ const styles = StyleSheet.create({
     color: tokens.colors.primary,
     fontSize: 14,
     fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  stepLabel: {
-    color: tokens.colors.inkSoft,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: tokens.colors.inkSoft,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
   },
   optionList: {
     gap: tokens.spacing.md,

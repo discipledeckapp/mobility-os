@@ -2631,7 +2631,7 @@ export class DriversService {
 
     const selfServiceLocalRiskFlags: string[] = [];
     const verificationTierPolicy = resolveVerificationPolicy({
-      verificationTier: effectiveOperations.verificationTier,
+      verificationTier: verificationPolicy.verificationTier,
     });
     if (
       !verificationTierPolicy.components.includes('guarantor') &&
@@ -2650,16 +2650,14 @@ export class DriversService {
         settings.operations.requireIdentityVerificationForActivation,
       requireBiometricVerification: settings.operations.requireBiometricVerification,
       requireGovernmentVerificationLookup: settings.operations.requireGovernmentVerificationLookup,
-      requiresGuarantor: settings.operations.requireGuarantor !== false,
-      guarantorBlocking: settings.operations.guarantorBlocking,
+      requiresGuarantor: effectiveOperations.requireGuarantor !== false,
+      guarantorBlocking: effectiveOperations.guarantorBlocking,
       ...(selfServiceLocalRiskFlags.length > 0
         ? { localRiskFlags: selfServiceLocalRiskFlags }
         : {}),
       enabledDriverIdentifierTypes: verificationPolicy.enabledDriverIdentifierTypes,
       requiredDriverIdentifierTypes: verificationPolicy.requiredDriverIdentifierTypes,
-      requiredDriverDocumentSlugs: verificationTierPolicy.components.includes('drivers_license')
-        ? [DRIVER_LICENCE_DOCUMENT_TYPE]
-        : [],
+      requiredDriverDocumentSlugs: verificationPolicy.requiredDriverDocumentSlugs,
       driverPaysKyc: verificationPolicy.driverPaysKyc,
       kycPaymentVerified: verificationPolicy.kycPaymentVerified,
       verificationPaymentState: verificationPolicy.verificationPaymentState,

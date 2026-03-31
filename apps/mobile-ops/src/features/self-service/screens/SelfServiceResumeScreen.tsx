@@ -8,6 +8,7 @@ import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
 import { Card } from '../../../components/card';
 import { EmptyState } from '../../../components/empty-state';
+import { PageShell, SectionIntro } from '../../../components/page-shell';
 import { Screen } from '../../../components/screen';
 import { useSelfService } from '../../../contexts/self-service-context';
 import { useToast } from '../../../contexts/toast-context';
@@ -107,23 +108,24 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
-      <Card style={styles.heroCard}>
-        <Text style={styles.kicker}>Mobiris Fleet OS</Text>
-        <Text style={styles.title}>
-          {driver.firstName ? `Hi ${driver.firstName}` : 'Your onboarding is ready'}
-        </Text>
-        <Text style={styles.copy}>
-          {driver.organisationName ?? 'Your organisation'} invited you to continue onboarding.
-          We will keep this simple and take you to the next thing that matters.
-        </Text>
+      <PageShell
+        eyebrow="Mobiris Fleet OS"
+        title={driver.firstName ? `Hi ${driver.firstName}` : 'Your onboarding is ready'}
+        subtitle={`${
+          driver.organisationName ?? 'Your organisation'
+        } invited you to continue onboarding. We will keep this simple and take you to the next thing that matters.`}
+      >
         <View style={styles.badgeRow}>
           <Badge label={formatIdentityStatus(driver.identityStatus)} tone={identityTone(driver.identityStatus)} />
           <Badge label={formatReadinessLabel(driver.authenticationAccess ?? 'not_ready')} tone={readinessTone(driver.authenticationAccess ?? 'not_ready')} />
         </View>
-      </Card>
+      </PageShell>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>What happens next</Text>
+        <SectionIntro
+          title="What happens next"
+          subtitle="The app keeps the next required action at the top so you do not have to guess."
+        />
         <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
         <Text style={styles.copy}>{nextStep.description}</Text>
         <Button label={nextStep.cta} onPress={() => navigation.navigate(nextStep.target)} />
@@ -131,7 +133,10 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick status</Text>
+        <SectionIntro
+          title="Quick status"
+          subtitle="A compact view of what is already clear and what still remains."
+        />
         <View style={styles.metricRow}>
           <Metric label="Account" value={driver.hasMobileAccess ? 'Ready' : 'Pending'} />
           <Metric label="Identity" value={formatIdentityStatus(driver.identityStatus)} />
@@ -144,7 +149,10 @@ export function SelfServiceResumeScreen({ navigation, route }: ScreenProps<'Self
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Your steps</Text>
+        <SectionIntro
+          title="Your steps"
+          subtitle="Only required steps stay visible here."
+        />
         {onboardingSteps.filter((step) => step.required).map((step) => (
           <View key={step.key} style={styles.stepRow}>
             <View
@@ -227,24 +235,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  heroCard: {
-    gap: tokens.spacing.sm,
-    backgroundColor: '#F8FBFF',
-    borderColor: '#BFDBFE',
-  },
   section: {
     gap: tokens.spacing.sm,
-  },
-  kicker: {
-    color: tokens.colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: tokens.colors.ink,
-    fontSize: 28,
-    fontWeight: '800',
   },
   copy: {
     color: tokens.colors.inkSoft,
@@ -255,11 +247,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
-  },
-  sectionTitle: {
-    color: tokens.colors.ink,
-    fontSize: 18,
-    fontWeight: '700',
   },
   metricRow: {
     flexDirection: 'row',

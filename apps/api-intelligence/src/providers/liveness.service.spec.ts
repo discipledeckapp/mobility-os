@@ -134,4 +134,47 @@ describe('LivenessService', () => {
       }),
     ).rejects.toThrow('Live verification is not ready right now. Please contact support.');
   });
+
+  it('trusts successful backend-issued liveness evidence when provider sync is temporarily unavailable', async () => {
+    controlPlaneSettingsClient.getIdentityVerificationRoutingForCountry.mockResolvedValue({
+      countryCode: 'NG',
+      livenessProviders: [
+        { name: 'amazon_rekognition', enabled: true, priority: 1 },
+        { name: 'youverify', enabled: true, priority: 2 },
+      ],
+      lookupProviders: [
+        {
+          name: 'youverify',
+          enabled: true,
+          priority: 1,
+          allowedIdentifierTypes: ['NATIONAL_ID'],
+        },
+      ],
+      fallbackOnProviderError: true,
+      fallbackOnProviderUnavailable: true,
+      fallbackOnNoMatch: false,
+    });
+    configService.get.mockReturnValue(undefined);
+
+    const result = await service.evaluate({
+      countryCode: 'NG',
+      evidence: {
+        provider: 'youverify',
+        sessionId: 'live-camera-session-1',
+        passed: true,
+      },
+    });
+
+    expect(result).toEqual({
+      attempted: true,
+      passed: true,
+      providerName: 'youverify',
+      reason: 'inline_evidence_fallback',
+      fallbackChain: [
+        'amazon_rekognition:provider_unavailable',
+        'youverify:provider_unavailable',
+        'inline_evidence:passed',
+      ],
+    });
+  });
 });
