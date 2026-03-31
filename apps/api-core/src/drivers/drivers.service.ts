@@ -599,16 +599,17 @@ const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
 @Injectable()
 export class DriversService {
   private static readonly guarantorInvitationMessages = {
-    sent: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+    sent:
+      'Guarantor saved. A verification link and code have been sent to the guarantor email address. We will remind both of you until verification is complete.',
     already_verified: 'Guarantor saved. This guarantor is already verified.',
     missing_email:
-      'Guarantor saved, but no email address was provided for the verification link yet.',
+      'Guarantor saved, but no email address was provided for the verification link yet. Add one so we can send the onboarding link and code.',
     operator_action_required:
-      'Guarantor saved. Your operator will send the guarantor verification link.',
+      'Guarantor saved. Your operator needs to send the guarantor verification link.',
     queued_until_driver_verified:
       'Guarantor saved. The verification link will be sent after your identity verification is completed.',
     failed:
-      'Guarantor saved, but we could not send the verification link right now. Please ask your operator to retry.',
+      'Guarantor saved, but we could not send the verification link and code right now. Please ask your operator to retry.',
     not_ready: 'Guarantor saved.',
   } as const;
 
@@ -3580,7 +3581,7 @@ export class DriversService {
   private async maybeSendGuarantorSelfServiceLinkIfEligible(
     tenantId: string,
     driverId: string,
-    reason: 'guarantor_updated' | 'driver_verified',
+    reason: 'guarantor_updated' | 'driver_verified' | 'reminder',
   ): Promise<{
     status:
       | 'sent'
@@ -3601,8 +3602,18 @@ export class DriversService {
       }),
     ]);
     const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const driverName = this.formatDriverName(driver);
 
     if (settings.operations.requireGuarantorVerification !== true) {
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: 'Guarantor',
+        status: 'operator_action_required',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'operator_action_required',
         message: DriversService.guarantorInvitationMessages.operator_action_required,
@@ -3610,6 +3621,15 @@ export class DriversService {
     }
 
     if (driver.identityStatus !== 'verified') {
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: 'Guarantor',
+        status: 'queued_until_driver_verified',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'queued_until_driver_verified',
         message: DriversService.guarantorInvitationMessages.queued_until_driver_verified,
@@ -3628,6 +3648,16 @@ export class DriversService {
     }
 
     if (guarantor.status === 'verified') {
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: guarantor.name,
+        guarantorEmail: guarantor.email ?? null,
+        status: 'verified',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'already_verified',
         message: DriversService.guarantorInvitationMessages.already_verified,
@@ -3636,6 +3666,15 @@ export class DriversService {
     }
 
     if (!guarantor.email) {
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: guarantor.name,
+        status: 'missing_email',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'missing_email',
         message: DriversService.guarantorInvitationMessages.missing_email,
@@ -3653,6 +3692,16 @@ export class DriversService {
           reason,
         }),
       );
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: guarantor.name,
+        guarantorEmail: delivery.destination,
+        status: reason === 'reminder' ? 'pending' : 'invited',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'sent',
         message: DriversService.guarantorInvitationMessages.sent,
@@ -3669,12 +3718,78 @@ export class DriversService {
           error: error instanceof Error ? error.message : 'unknown error',
         }),
       );
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId,
+        driverName,
+        driverEmail: driver.email ?? null,
+        guarantorName: guarantor.name,
+        guarantorEmail: guarantor.email ?? null,
+        status: 'failed',
+        actionUrl: `/drivers/${driverId}`,
+      });
       return {
         status: 'failed',
         message: DriversService.guarantorInvitationMessages.failed,
         ...(guarantor.email ? { destination: guarantor.email } : {}),
       };
     }
+  }
+
+  async findDriversPendingGuarantorReminders(): Promise<
+    Array<{ tenantId: string; driverId: string }>
+  > {
+    const filteredPending = await this.prisma.driverGuarantor.findMany({
+      where: {
+        status: 'pending_verification',
+        disconnectedAt: null,
+      },
+      select: {
+        tenantId: true,
+        driverId: true,
+      },
+    });
+
+    const reminders: Array<{ tenantId: string; driverId: string }> = [];
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+    for (const item of filteredPending) {
+      const latestOtp = await this.prisma.selfServiceOtp.findFirst({
+        where: {
+          tenantId: item.tenantId,
+          subjectType: 'guarantor',
+          subjectId: item.driverId,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+
+      if (latestOtp && latestOtp.createdAt.getTime() >= cutoff) {
+        continue;
+      }
+
+      reminders.push(item);
+    }
+
+    return reminders;
+  }
+
+  async sendPendingGuarantorReminder(
+    tenantId: string,
+    driverId: string,
+  ): Promise<{
+    status:
+      | 'sent'
+      | 'already_verified'
+      | 'missing_email'
+      | 'operator_action_required'
+      | 'queued_until_driver_verified'
+      | 'failed'
+      | 'not_ready';
+    message: string;
+    destination?: string;
+  }> {
+    return this.maybeSendGuarantorSelfServiceLinkIfEligible(tenantId, driverId, 'reminder');
   }
 
   async exchangeDriverSelfServiceOtp(otpCode: string): Promise<{ token: string }> {
@@ -4789,6 +4904,13 @@ export class DriversService {
       throw new ConflictException(capacityAssessment.message);
     }
 
+    if (existingGuarantor) {
+      this.assertGuarantorReplacementAllowed(existingGuarantor, {
+        nextPhone: normalizedPhone,
+        nextEmail: dto.email?.trim().toLowerCase() || null,
+      });
+    }
+
     await this.assertVerifiedIdentityContactAvailable(tenantId, {
       ...(dto.email?.trim() ? { email: dto.email.trim().toLowerCase() } : {}),
       phone: normalizedPhone,
@@ -4854,7 +4976,7 @@ export class DriversService {
       throw new NotFoundException('No guarantor has been linked to this driver yet.');
     }
 
-    return this.driverGuarantors.update({
+    const updatedGuarantor = await this.driverGuarantors.update({
       where: { driverId: driver.id },
       data: {
         status: 'disconnected',
@@ -4862,6 +4984,36 @@ export class DriversService {
         disconnectedReason: reason?.trim() || 'Disconnected by operator request',
       },
     });
+
+    await this.policyService.evaluateDriverPolicies(tenantId, driver.id);
+    await this.notificationsService.notifyGuarantorStatus({
+      tenantId,
+      driverId: driver.id,
+      driverName: this.formatDriverName(driver),
+      driverEmail: driver.email ?? null,
+      guarantorName: guarantor.name,
+      guarantorEmail: guarantor.email ?? null,
+      status: 'disconnected',
+      actionUrl: `/drivers/${driver.id}`,
+    });
+
+    return updatedGuarantor;
+  }
+
+  async removeGuarantorFromSelfService(
+    token: string,
+    reason?: string | null,
+  ): Promise<{ message: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    await this.removeGuarantor(
+      payload.tenantId,
+      payload.driverId,
+      reason?.trim() || 'Disconnected by guarantor before continuing coverage',
+    );
+    return {
+      message:
+        'You are no longer listed as this driver’s guarantor. The driver and organisation have been notified for immediate follow-up.',
+    };
   }
 
   /**
@@ -5001,6 +5153,19 @@ export class DriversService {
         status: result.personId ? 'verified' : 'pending_verification',
       },
     });
+
+    if (result.personId) {
+      await this.notificationsService.notifyGuarantorStatus({
+        tenantId,
+        driverId: driver.id,
+        driverName: this.formatDriverName(driver),
+        driverEmail: driver.email ?? null,
+        guarantorName: guarantor.name,
+        guarantorEmail: guarantor.email ?? null,
+        status: 'verified',
+        actionUrl: `/drivers/${driver.id}`,
+      });
+    }
 
     return {
       ...result,
@@ -6792,6 +6957,37 @@ export class DriversService {
       'guarantor_updated',
     );
     return { guarantor, capacity, invitation };
+  }
+
+  private assertGuarantorReplacementAllowed(
+    existingGuarantor: DriverGuarantorRecord,
+    next: { nextPhone: string; nextEmail?: string | null },
+  ) {
+    const nextEmail = next.nextEmail?.trim().toLowerCase() || null;
+    const existingEmail = existingGuarantor.email?.trim().toLowerCase() || null;
+    const isSameContact =
+      existingGuarantor.phone === next.nextPhone &&
+      existingEmail === nextEmail;
+
+    if (isSameContact) {
+      return;
+    }
+
+    const hasAcceptedResponsibility = Boolean(existingGuarantor.responsibilityAcceptedAt);
+    const hasStartedKyc = Boolean(
+      existingGuarantor.personId ||
+        existingGuarantor.selfieImageUrl ||
+        existingGuarantor.providerImageUrl ||
+        existingGuarantor.dateOfBirth ||
+        existingGuarantor.gender ||
+        existingGuarantor.status === 'verified',
+    );
+
+    if (hasAcceptedResponsibility || hasStartedKyc) {
+      throw new ConflictException(
+        'You can only change this guarantor before they accept responsibility or start KYC. Ask your organisation to review the current guarantor before replacing them.',
+      );
+    }
   }
 
   private async enrichDriversWithRisk(

@@ -67,6 +67,7 @@ describe('DriversService', () => {
     },
     selfServiceOtp: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -123,6 +124,7 @@ describe('DriversService', () => {
     notifyDriverVerificationStatus: jest.fn(),
     notifyDriverLicenceReviewPending: jest.fn(),
     notifyDriverLicenceReviewResolved: jest.fn(),
+    notifyGuarantorStatus: jest.fn(),
   };
 
   let service: DriversService;
@@ -146,6 +148,7 @@ describe('DriversService', () => {
     prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
     prisma.userNotification.findMany.mockResolvedValue([]);
     prisma.userNotification.findFirst.mockResolvedValue(null);
+    prisma.selfServiceOtp.findFirst.mockResolvedValue(null);
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.tenant.findUnique.mockResolvedValue({
       country: 'NG',
@@ -275,6 +278,96 @@ describe('DriversService', () => {
     ).rejects.toThrow(
       'This phone number is already bound to another verified NIN-backed identity in this organisation. Use a different phone number.',
     );
+  });
+
+  it('allows replacing a guarantor before responsibility is accepted or KYC starts', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      identityStatus: 'verified',
+      nationality: 'NG',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Old Guarantor',
+      phone: '+2348000000000',
+      email: 'old@example.com',
+      status: 'pending_verification',
+      responsibilityAcceptedAt: null,
+      selfieImageUrl: null,
+      providerImageUrl: null,
+      dateOfBirth: null,
+      gender: null,
+      disconnectedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.driverGuarantor.upsert.mockResolvedValue({
+      id: 'guarantor_2',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'New Guarantor',
+      phone: '+2348111111111',
+      email: 'new@example.com',
+      countryCode: 'NG',
+      relationship: 'Brother',
+      status: 'pending_verification',
+    });
+
+    const result = await service.createOrUpdateGuarantor('tenant_1', 'driver_1', {
+      name: 'New Guarantor',
+      phone: '08111111111',
+      email: 'new@example.com',
+      countryCode: 'NG',
+      relationship: 'Brother',
+    });
+
+    expect(prisma.driverGuarantor.upsert).toHaveBeenCalled();
+    expect(result.name).toBe('New Guarantor');
+  });
+
+  it('blocks replacing a guarantor after they accept responsibility', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      identityStatus: 'verified',
+      nationality: 'NG',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Accepted Guarantor',
+      phone: '+2348000000000',
+      email: 'accepted@example.com',
+      status: 'pending_verification',
+      responsibilityAcceptedAt: new Date('2026-01-02T10:00:00.000Z'),
+      selfieImageUrl: null,
+      providerImageUrl: null,
+      dateOfBirth: null,
+      gender: null,
+      disconnectedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(
+      service.createOrUpdateGuarantor('tenant_1', 'driver_1', {
+        name: 'Replacement Guarantor',
+        phone: '08111111111',
+        email: 'replacement@example.com',
+        countryCode: 'NG',
+        relationship: 'Brother',
+      }),
+    ).rejects.toThrow(
+      'You can only change this guarantor before they accept responsibility or start KYC. Ask your organisation to review the current guarantor before replacing them.',
+    );
+
+    expect(prisma.driverGuarantor.upsert).not.toHaveBeenCalled();
   });
 
   it('blocks activation when the driver is not identity-verified', async () => {
@@ -552,6 +645,14 @@ describe('DriversService', () => {
     });
 
     expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).toHaveBeenCalled();
+    expect(notificationsService.notifyGuarantorStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        driverId: 'driver_1',
+        guarantorName: 'Chinwe Okafor',
+        guarantorEmail: 'chinwe@example.com',
+        status: 'invited',
+      }),
+    );
   });
 
   it('creates a guarantor self-service account linked back to the driver workflow', async () => {
@@ -812,10 +913,16 @@ describe('DriversService', () => {
       id: 'driver_1',
       tenantId: 'tenant_1',
       identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+      email: 'ada@example.com',
     });
     prisma.driverGuarantor.findUnique.mockResolvedValue({
       id: 'guarantor_1',
       driverId: 'driver_1',
+      tenantId: 'tenant_1',
+      name: 'Grace Eze',
+      email: 'grace@example.com',
       status: 'active',
     });
     prisma.driverGuarantor.update.mockResolvedValue({
@@ -831,6 +938,16 @@ describe('DriversService', () => {
 
     expect(prisma.driverGuarantor.update).toHaveBeenCalled();
     expect(result.status).toBe('disconnected');
+    expect(policyService.evaluateDriverPolicies).toHaveBeenCalledWith('tenant_1', 'driver_1');
+    expect(notificationsService.notifyGuarantorStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        guarantorName: 'Grace Eze',
+        guarantorEmail: 'grace@example.com',
+        status: 'disconnected',
+      }),
+    );
   });
 
   it('requires an email address before sending a self-service link', async () => {

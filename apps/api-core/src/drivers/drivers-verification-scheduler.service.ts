@@ -88,4 +88,61 @@ export class DriversVerificationSchedulerService {
       }),
     );
   }
+
+  @Cron('0 */6 * * *')
+  async sendPendingGuarantorOnboardingReminders(): Promise<void> {
+    let pending: Awaited<ReturnType<DriversService['findDriversPendingGuarantorReminders']>>;
+    try {
+      pending = await this.driversService.findDriversPendingGuarantorReminders();
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'guarantor_reminder_scheduler_query_failed',
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return;
+    }
+
+    if (pending.length === 0) {
+      return;
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'guarantor_reminder_scheduler_started',
+        pendingCount: pending.length,
+      }),
+    );
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const item of pending) {
+      try {
+        const result = await this.driversService.sendPendingGuarantorReminder(
+          item.tenantId,
+          item.driverId,
+        );
+        if (result.status === 'sent') {
+          sent += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch {
+        failed += 1;
+      }
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'guarantor_reminder_scheduler_completed',
+        total: pending.length,
+        sent,
+        skipped,
+        failed,
+      }),
+    );
+  }
 }

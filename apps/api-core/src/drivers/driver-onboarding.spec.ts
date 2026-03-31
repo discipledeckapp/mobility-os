@@ -145,6 +145,7 @@ function makePrisma() {
     tenant: { findUnique: jest.fn() },
     selfServiceOtp: {
       create: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -218,6 +219,7 @@ function buildService(
     notifyDriverVerificationStatus: jest.fn(),
     notifyDriverLicenceReviewPending: jest.fn(),
     notifyDriverLicenceReviewResolved: jest.fn(),
+    notifyGuarantorStatus: jest.fn(),
   };
   const auditService = { recordTenantAction: jest.fn() };
 
@@ -1708,6 +1710,41 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     expect(result.guarantor.name).toBe('Grace Eze');
     expect(result.invitation.status).toBe('failed');
     expect(result.invitation.destination).toBe('grace@example.com');
+  });
+
+  it('blocks driver-side guarantor replacement once the existing guarantor has accepted responsibility', async () => {
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: new Date('2026-01-02T10:00:00.000Z'),
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(
+      service.submitGuarantorFromSelfService('valid-token', {
+        name: 'Replacement Guarantor',
+        phone: '08111111111',
+        email: 'replacement@example.com',
+        countryCode: 'NG',
+        relationship: 'Brother',
+      }),
+    ).rejects.toThrow(
+      'You can only change this guarantor before they accept responsibility or start KYC. Ask your organisation to review the current guarantor before replacing them.',
+    );
+
+    expect(prisma.driverGuarantor.upsert).not.toHaveBeenCalled();
   });
 });
 

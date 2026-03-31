@@ -1838,4 +1838,16 @@ export class GuarantorSelfServiceController {
       ...(relationship ? { relationship } : {}),
     });
   }
+
+  @Post('disconnect')
+  @ApiCreatedResponse({ type: Object })
+  disconnectGuarantor(
+    @Body('token') token: string,
+    @Body('reason') reason?: string,
+  ): Promise<{ message: string }> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.removeGuarantorFromSelfService(token, reason);
+  }
 }

@@ -2094,7 +2094,7 @@ function GuarantorStep({
 
   function getInvitationMessage(invitation: DriverGuarantorInvitationResult) {
     if (invitation.status === 'sent' && invitation.destination) {
-      return `Guarantor saved. A verification link has been sent to ${invitation.destination}.`;
+      return `${invitation.message} Sent to ${invitation.destination}.`;
     }
     return invitation.message;
   }
@@ -2405,9 +2405,10 @@ function CompletionStep({
           </CardHeader>
           <CardContent className="space-y-3">
             <Text tone="muted">
-              Your organisation requires a guarantor to complete your onboarding. Your organisation
-              will send your guarantor a verification link separately. If your guarantor has not
-              received their link, ask your organisation to resend it.
+              Your organisation requires a guarantor to complete your onboarding. If you added an
+              email address for your guarantor, Mobiris will send their verification link and code
+              automatically and keep reminding both of you until it is done. If your guarantor has
+              still not received anything, ask your organisation to resend it.
             </Text>
             <Text tone="muted" className="text-xs">
               A guarantor is someone who vouches for you and agrees to be responsible if needed.

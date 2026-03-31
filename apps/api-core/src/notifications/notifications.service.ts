@@ -1695,6 +1695,127 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     return { created };
   }
 
+  async notifyGuarantorStatus(input: {
+    tenantId: string;
+    driverId: string;
+    driverName: string;
+    driverEmail?: string | null;
+    guarantorName: string;
+    guarantorEmail?: string | null;
+    status:
+      | 'invited'
+      | 'pending'
+      | 'verified'
+      | 'disconnected'
+      | 'missing_email'
+      | 'failed'
+      | 'queued_until_driver_verified'
+      | 'operator_action_required';
+    actionUrl?: string | null;
+  }): Promise<{ created: number }> {
+    const [tenantContext, recipients] = await Promise.all([
+      this.getTenantNotificationContext(input.tenantId),
+      this.getTenantDriverNotificationRecipients(input.tenantId, input.driverId),
+    ]);
+
+    if (!tenantContext) {
+      return { created: 0 };
+    }
+
+    const operatorActionUrl = input.actionUrl ?? `/drivers/${input.driverId}`;
+    const driverActionUrl = '/driver-self-service';
+    const title =
+      input.status === 'invited'
+        ? 'Guarantor invitation sent'
+        : input.status === 'pending'
+          ? 'Guarantor verification still pending'
+          : input.status === 'verified'
+            ? 'Guarantor verification complete'
+            : input.status === 'disconnected'
+              ? 'Guarantor disconnected'
+            : input.status === 'missing_email'
+              ? 'Guarantor email required'
+              : input.status === 'failed'
+                ? 'Guarantor invitation needs attention'
+                : input.status === 'queued_until_driver_verified'
+                  ? 'Guarantor invitation queued'
+                  : 'Guarantor invitation needs operator action';
+    const operatorBody =
+      input.status === 'invited'
+        ? `${input.guarantorName} was invited to complete guarantor onboarding for ${input.driverName}.`
+        : input.status === 'pending'
+          ? `${input.guarantorName} still has not completed guarantor onboarding for ${input.driverName}. A reminder was sent.`
+          : input.status === 'verified'
+            ? `${input.guarantorName} completed guarantor onboarding for ${input.driverName}.`
+            : input.status === 'disconnected'
+              ? `${input.guarantorName} is no longer guaranteeing ${input.driverName}. Review the driver immediately because guarantor coverage has been removed.`
+            : input.status === 'missing_email'
+              ? `${input.guarantorName} cannot be invited yet because no email address is available.`
+              : input.status === 'failed'
+                ? `The guarantor onboarding invite for ${input.guarantorName} could not be delivered automatically.`
+                : input.status === 'queued_until_driver_verified'
+                  ? `${input.guarantorName}'s onboarding invite is queued until ${input.driverName} completes identity verification.`
+                  : `${input.guarantorName}'s onboarding invite needs manual operator follow-up.`;
+    const driverBody =
+      input.status === 'invited'
+        ? `${input.guarantorName} has been invited to complete guarantor onboarding${input.guarantorEmail ? ` at ${input.guarantorEmail}` : ''}. We will keep reminding both of you until it is done.`
+        : input.status === 'pending'
+          ? `${input.guarantorName} has not completed guarantor onboarding yet. We sent another reminder and will keep you updated.`
+          : input.status === 'verified'
+            ? `${input.guarantorName} has completed guarantor onboarding. You can continue with the remaining steps.`
+            : input.status === 'disconnected'
+              ? `${input.guarantorName} is no longer attached to your profile as guarantor. Your organisation has been notified, and your account now needs a replacement guarantor review immediately.`
+            : input.status === 'missing_email'
+              ? `Add an email address for ${input.guarantorName} so we can send the guarantor onboarding link and code.`
+              : input.status === 'failed'
+                ? `We could not deliver ${input.guarantorName}'s guarantor onboarding link automatically. Please ask your operator to retry.`
+                : input.status === 'queued_until_driver_verified'
+                  ? `Your guarantor invite is ready, but it will only be sent after your own identity verification is complete.`
+                  : `Your guarantor onboarding invite needs manual operator follow-up.`;
+
+    let created = 0;
+    for (const recipient of [...recipients.operators, ...recipients.driverUsers]) {
+      const isDriverRecipient = recipient.driverId === input.driverId;
+      const notification = await this.createNotificationForUser(
+        recipient,
+        {
+          topic: 'guarantor_status',
+          title,
+          body: isDriverRecipient ? driverBody : operatorBody,
+          actionUrl: isDriverRecipient ? driverActionUrl : operatorActionUrl,
+          metadata: {
+            driverId: input.driverId,
+            guarantorName: input.guarantorName,
+            guarantorEmail: input.guarantorEmail ?? null,
+            status: input.status,
+          },
+        },
+        {
+          tenantCountry: tenantContext.tenant.country,
+          organisationName: tenantContext.organisationName,
+          dedupeWithinHours:
+            input.status === 'pending' ? 18 : input.status === 'invited' ? 6 : 1,
+        },
+      );
+      if (notification) {
+        created += 1;
+      }
+    }
+
+    if (input.driverEmail && recipients.driverUsers.length === 0) {
+      await this.createDirectDriverEmailNotification({
+        email: input.driverEmail,
+        name: input.driverName,
+        title,
+        body: driverBody,
+        organisationName: tenantContext.organisationName,
+        actionUrl: driverActionUrl,
+      });
+    }
+
+    return { created };
+  }
+
   async syncAllTenantMaintenanceReminders(): Promise<{ created: number }> {
     const tenantIds = await this.prisma.vehicleMaintenanceSchedule.findMany({
       where: { isActive: true },
