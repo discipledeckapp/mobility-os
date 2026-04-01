@@ -1,4 +1,3 @@
-import { getCountryConfig } from '@mobility-os/domain-config';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
@@ -27,12 +26,7 @@ export class PlatformWalletsService {
     if (!countryCode) {
       return undefined;
     }
-
-    try {
-      return getCountryConfig(countryCode).currency;
-    } catch {
-      return undefined;
-    }
+    return countryCode.trim().toUpperCase() === 'NG' ? 'NGN' : 'USD';
   }
 
   private async ensureWalletScaffoldedForTenant(params: {

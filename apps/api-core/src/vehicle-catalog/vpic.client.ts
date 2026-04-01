@@ -2,6 +2,7 @@ import { mapExternalTypeLabelToVehicleCategory } from './vehicle-catalog.utils';
 
 export const DEFAULT_VPIC_API_BASE_URL = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 export const VPIC_IMPORT_SOURCE = 'nhtsa-vpic';
+const VPIC_TIMEOUT_MS = 8_000;
 export const DEFAULT_VPIC_IMPORT_VEHICLE_TYPES = [
   'car',
   'multipurpose passenger vehicle (mpv)',
@@ -65,7 +66,22 @@ function getBaseUrl(): string {
 }
 
 async function fetchVpicEnvelope<T>(path: string): Promise<VpicResponseEnvelope<T>> {
-  const response = await fetch(`${getBaseUrl()}${path}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), VPIC_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}${path}`, {
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeout);
+    throw new Error(
+      error instanceof Error && error.name === 'AbortError'
+        ? 'Vehicle catalog lookup timed out. Continue manually.'
+        : 'Vehicle catalog lookup is temporarily unavailable. Continue manually.',
+    );
+  }
+  clearTimeout(timeout);
   const rawBody = await response.text().catch(() => '');
 
   if (!response.ok) {

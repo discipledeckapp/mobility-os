@@ -31,7 +31,10 @@ import { buildCsv, parseCsv } from '../common/csv-utils';
 import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
-import { resolveAssignmentPaymentModel } from '../assignments/financial-contract';
+import {
+  parseFinancialContractSnapshot,
+  resolveAssignmentPaymentModel,
+} from '../assignments/financial-contract';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { IntelligenceClient } from '../intelligence/intelligence.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -262,9 +265,12 @@ type SelfServiceAssignmentSummary = {
   remittanceCurrency: string | null;
   remittanceFrequency: string | null;
   remittanceStartDate: string | null;
+  contractStatus: string | null;
+  driverConfirmedAt: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  financialContract: ReturnType<typeof parseFinancialContractSnapshot>;
   vehicle: {
     id: string;
     make: string | null;
@@ -3202,9 +3208,15 @@ export class DriversService {
       remittanceCurrency: assignment.remittanceCurrency,
       remittanceFrequency: assignment.remittanceFrequency,
       remittanceStartDate: assignment.remittanceStartDate,
+      contractStatus: assignment.contractStatus,
+      driverConfirmedAt: assignment.driverConfirmedAt?.toISOString() ?? null,
       notes: assignment.notes,
       createdAt: assignment.createdAt.toISOString(),
       updatedAt: assignment.updatedAt.toISOString(),
+      financialContract: parseFinancialContractSnapshot(
+        assignment.contractSnapshot,
+        assignment,
+      ),
       vehicle: {
         id: assignment.vehicleId,
         make: vehicleById.get(assignment.vehicleId)?.make ?? null,
@@ -3678,6 +3690,40 @@ export class DriversService {
     driverId: string,
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
     const driver = await this.findOne(tenantId, driverId);
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: driver.tenantId },
+      select: { country: true, metadata: true, name: true },
+    });
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const verificationTierPolicy = this.getEffectiveDriverVerificationPolicy(
+      settings.operations,
+      driver,
+      tenant?.country && isCountrySupported(tenant.country)
+        ? getCountryConfig(tenant.country).currency
+        : 'NGN',
+    );
+    const requiresGuarantor = verificationTierPolicy.components.includes('guarantor');
+
+    if (!requiresGuarantor) {
+      throw new BadRequestException(
+        'This verification tier does not require a guarantor, so no guarantor link can be sent.',
+      );
+    }
+
+    const guarantorPaymentPolicy = await this.getDriverVerificationAddonPaymentPolicy(
+      tenantId,
+      driver,
+      'guarantor_verification',
+    );
+    if (
+      guarantorPaymentPolicy.required &&
+      guarantorPaymentPolicy.paymentStatus === 'driver_payment_required'
+    ) {
+      throw new BadRequestException(
+        guarantorPaymentPolicy.paymentMessage,
+      );
+    }
+
     const guarantor = await this.driverGuarantors.findUnique({ where: { driverId: driver.id } });
 
     if (!guarantor) {
@@ -3696,10 +3742,6 @@ export class DriversService {
     ]);
 
     const verificationUrl = `${process.env.TENANT_WEB_URL ?? 'http://localhost:3000'}/guarantor-self-service?token=${encodeURIComponent(token)}`;
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: driver.tenantId },
-      select: { name: true, country: true, metadata: true },
-    });
 
     await this.authEmailService.sendGuarantorSelfServiceVerificationEmail({
       email: guarantor.email,
@@ -7339,6 +7381,11 @@ export class DriversService {
       driver,
       'guarantor_verification',
     );
+    if (!paymentPolicy.required) {
+      throw new BadRequestException(
+        'A guarantor is not required for this driver under the current verification policy.',
+      );
+    }
     const invitation =
       paymentPolicy.required &&
       paymentPolicy.payer === 'driver' &&

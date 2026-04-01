@@ -1,7 +1,6 @@
 import type { Route } from 'next';
 import {
   type AssignmentRecord,
-  type AuditLogRecord,
   type DriverRecord,
   type RemittanceRecord,
   type ReportsOverviewRecord,
@@ -10,15 +9,12 @@ import {
   getReportsOverview,
   getTenantMe,
   listAssignments,
-  listAuditLog,
   listDrivers,
   listRemittances,
   listVehicles,
 } from '../../lib/api-core';
-import { getAssignmentDisplayName } from '../../lib/assignment-display';
 import { getFormattingLocale } from '../../lib/locale';
-import { buildOperationalActivityItem } from '../../lib/operational-activity';
-import { getVehiclePrimaryLabel, getVehicleSecondaryLabel } from '../../lib/vehicle-display';
+import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
 
 export interface DashboardSummaryItem {
   label: string;
@@ -266,41 +262,40 @@ function getDashboardFeatureCards(): DashboardFeatureCard[] {
   ];
 }
 
-function buildRecentActivity(
-  locale: string,
+function buildFallbackRecentActivity(
+  assignments: AssignmentRecord[],
+  remittances: RemittanceRecord[],
   drivers: DriverRecord[],
   vehicles: VehicleRecord[],
-  assignments: AssignmentRecord[],
-  auditEvents: AuditLogRecord[],
 ): DashboardActivityItem[] {
   const driverLabels = new Map(
-    drivers.map((driver) => [driver.id, `${driver.firstName} ${driver.lastName}`]),
+    drivers.map((driver) => [driver.id, `${driver.firstName} ${driver.lastName}`.trim()]),
   );
   const vehicleLabels = new Map(
-    vehicles.map((vehicle) => [
-      vehicle.id,
-      `${getVehiclePrimaryLabel(vehicle)} • ${getVehicleSecondaryLabel(vehicle)}`,
-    ]),
-  );
-  const assignmentLabels = new Map(
-    assignments.map((assignment) => [
-      assignment.id,
-      getAssignmentDisplayName({
-        driverLabel: driverLabels.get(assignment.driverId),
-        vehicleLabel: vehicleLabels.get(assignment.vehicleId),
-        fallbackId: assignment.id,
-      }),
-    ]),
+    vehicles.map((vehicle) => [vehicle.id, getVehiclePrimaryLabel(vehicle)]),
   );
 
-  return auditEvents
-    .map((event) =>
-      buildOperationalActivityItem(event, locale, {
-        driverLabels,
-        vehicleLabels,
-        assignmentLabels,
-      }),
-    )
+  const assignmentItems: DashboardActivityItem[] = assignments.map((assignment) => ({
+    id: `assignment-${assignment.id}`,
+    kind: 'assignment',
+    title: 'Assignment updated',
+    description: `${driverLabels.get(assignment.driverId) ?? 'Driver'} • ${vehicleLabels.get(assignment.vehicleId) ?? 'Vehicle'} • ${assignment.status.replace(/_/g, ' ')}`,
+    href: '/assignments',
+    timestamp: assignment.updatedAt,
+    status: assignment.status,
+  }));
+  const remittanceItems: DashboardActivityItem[] = remittances.map((remittance) => ({
+    id: `remittance-${remittance.id}`,
+    kind: 'remittance',
+    title: 'Remittance recorded',
+    description: `${remittance.currency} ${remittance.amountMinorUnits / 100} • ${remittance.status.replace(/_/g, ' ')}`,
+    href: '/remittance',
+    timestamp: remittance.updatedAt,
+    status: remittance.status,
+  }));
+
+  return [...assignmentItems, ...remittanceItems]
+    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
     .slice(0, 6);
 }
 
@@ -308,20 +303,19 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
   const settle = async <T>(loader: () => Promise<T>): Promise<T> => loader();
   const notes: string[] = [];
   const appendAvailabilityNote = (surface: string) => {
-    notes.push(`${surface} data is temporarily unavailable. Try refreshing or contact support.`);
+    notes.push(`${surface} is still syncing, so this dashboard is showing the latest confirmed data we could load.`);
   };
 
   const token = await getTenantApiToken(explicitToken).catch(() => explicitToken);
   const tenant = await getTenantMe(token).catch(() => null);
   const locale = getFormattingLocale(tenant?.country);
 
-  const [driversResult, vehiclesResult, assignmentsResult, remittancesResult, auditResult] =
+  const [driversResult, vehiclesResult, assignmentsResult, remittancesResult] =
     await Promise.allSettled([
       settle(() => listDrivers({ limit: 200 }, token)),
       settle(() => listVehicles({ limit: 200 }, token)),
       settle(() => listAssignments({ limit: 200 }, token)),
       settle(() => listRemittances({ limit: 200 }, token)),
-      settle(() => listAuditLog({ limit: 20 }, token)),
     ]);
   const overviewResult = await Promise.resolve()
     .then(() => getReportsOverview({}, token))
@@ -354,7 +348,6 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
   const vehicles = vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [];
   const assignments = assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [];
   const remittances = remittancesResult.status === 'fulfilled' ? remittancesResult.value.data : [];
-  const auditEvents = auditResult.status === 'fulfilled' ? auditResult.value.data : [];
   const totalDrivers = driversResult.status === 'fulfilled' ? driversResult.value.total : 0;
 
   if (driversResult.status === 'rejected') {
@@ -371,10 +364,6 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
 
   if (remittancesResult.status === 'rejected') {
     appendAvailabilityNote('Remittance');
-  }
-
-  if (auditResult.status === 'rejected') {
-    appendAvailabilityNote('Activity');
   }
 
   if (overviewResult instanceof Error) {
@@ -494,7 +483,18 @@ export async function getDashboardData(explicitToken?: string): Promise<Dashboar
           : 'Projection unavailable',
       },
     ],
-    recentActivity: buildRecentActivity(locale, drivers, vehicles, assignments, auditEvents),
+    recentActivity:
+      !(overviewResult instanceof Error) && (overviewResult as ReportsOverviewRecord).recentActivity.length > 0
+        ? (overviewResult as ReportsOverviewRecord).recentActivity.map((item) => ({
+            id: item.id,
+            kind: item.kind as DashboardActivityItem['kind'],
+            title: item.title,
+            description: item.description,
+            href: item.href as Route,
+            timestamp: item.timestamp,
+            status: item.status,
+          }))
+        : buildFallbackRecentActivity(assignments, remittances, drivers, vehicles),
     featureCards: getDashboardFeatureCards(),
     actionItems: buildActionItems(drivers, remittances),
     notes,

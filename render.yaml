@@ -46,8 +46,16 @@ services:
         sync: false
       - key: CONTROL_PLANE_API_URL
         sync: false
-      - key: INTERNAL_SERVICE_TOKEN
+      - key: INTERNAL_SERVICE_JWT_SECRET
         generateValue: true
+      - key: INTERNAL_SERVICE_JWT_EXPIRES_IN
+        value: 2m
+      - key: INTERNAL_SERVICE_CALLER_ID
+        value: api-core
+      - key: INTERNAL_SERVICE_AUDIENCE
+        value: api-core
+      - key: INTERNAL_SERVICE_ALLOWED_CALLERS
+        value: api-control-plane
       - key: INTELLIGENCE_API_URL
         sync: false
       - key: INTELLIGENCE_API_KEY
@@ -133,8 +141,16 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false
-      - key: INTERNAL_SERVICE_TOKEN
+      - key: INTERNAL_SERVICE_JWT_SECRET
         sync: false
+      - key: INTERNAL_SERVICE_JWT_EXPIRES_IN
+        value: 2m
+      - key: INTERNAL_SERVICE_CALLER_ID
+        value: api-control-plane
+      - key: INTERNAL_SERVICE_AUDIENCE
+        value: api-control-plane
+      - key: INTERNAL_SERVICE_ALLOWED_CALLERS
+        value: api-core,api-intelligence
       - key: API_CORE_BASE_URL
         sync: false
       - key: FLUTTERWAVE_BASE_URL
@@ -191,8 +207,12 @@ services:
         sync: false
       - key: CONTROL_PLANE_BASE_URL
         sync: false
-      - key: INTERNAL_SERVICE_TOKEN
+      - key: INTERNAL_SERVICE_JWT_SECRET
         sync: false
+      - key: INTERNAL_SERVICE_JWT_EXPIRES_IN
+        value: 2m
+      - key: INTERNAL_SERVICE_CALLER_ID
+        value: api-intelligence
       - key: VERIFICATION_FEE_AMOUNT_MINOR_UNITS
         value: 0
       - key: AWS_REGION

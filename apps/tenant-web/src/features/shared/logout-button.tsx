@@ -3,7 +3,7 @@
 import { Button } from '@mobility-os/ui';
 import { logoutAction } from '../../app/(auth)/login/actions';
 import { Modal } from './modal';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 
 export function LogoutButton({
   className,
@@ -13,6 +13,7 @@ export function LogoutButton({
   mobile?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   return (
     <>
@@ -51,11 +52,17 @@ export function LogoutButton({
             <Button onClick={() => setOpen(false)} size="sm" variant="ghost">
               Stay signed in
             </Button>
-            <form action={logoutAction}>
-              <Button size="sm" type="submit">
-                Log out
-              </Button>
-            </form>
+            <Button
+              onClick={() => {
+                startTransition(() => {
+                  void logoutAction();
+                });
+              }}
+              size="sm"
+              disabled={isPending}
+            >
+              {isPending ? 'Logging out…' : 'Log out'}
+            </Button>
           </>
         }
         onClose={() => setOpen(false)}

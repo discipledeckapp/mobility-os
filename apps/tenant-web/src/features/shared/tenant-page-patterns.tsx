@@ -35,14 +35,16 @@ export function TenantHeroPanel({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
               {eyebrow}
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
+            <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
               {title}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-5 text-slate-600 sm:leading-6">
               {description}
             </p>
           </div>
-          {actions ? <div className="flex shrink-0 flex-wrap gap-3">{actions}</div> : null}
+          {actions ? (
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap">{actions}</div>
+          ) : null}
         </div>
         {children}
       </CardContent>

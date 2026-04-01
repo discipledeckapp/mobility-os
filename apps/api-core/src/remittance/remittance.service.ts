@@ -24,6 +24,7 @@ import { RecordsService } from '../records/records.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
 import {
+  summarizeFinancialContract,
   buildRemittanceReconciliation,
   parseFinancialContractSnapshot,
 } from '../assignments/financial-contract';
@@ -249,6 +250,59 @@ export class RemittanceService {
     }
   }
 
+  private resolveContractualRemittancePeriod(input: {
+    assignment: {
+      status: string;
+      contractSnapshot: unknown;
+      paymentModel?: string | null;
+      remittanceModel?: string | null;
+      remittanceFrequency?: string | null;
+      remittanceAmountMinorUnits?: number | null;
+      remittanceCurrency?: string | null;
+      remittanceStartDate?: string | null;
+      remittanceCollectionDay?: number | null;
+    };
+    remittances: Array<{ dueDate: string; amountMinorUnits: number; status: string }>;
+  }): { dueDate: string | null; expectedAmountMinorUnits: number | null } {
+    const snapshot = parseFinancialContractSnapshot(
+      input.assignment.contractSnapshot,
+      input.assignment,
+    );
+    const summary = summarizeFinancialContract({
+      assignmentStatus: input.assignment.status,
+      snapshot,
+      remittances: input.remittances,
+    });
+
+    if (!summary) {
+      return { dueDate: null, expectedAmountMinorUnits: null };
+    }
+
+    if (
+      summary.summary.currentPeriodDueDate &&
+      summary.summary.currentPeriodStatus !== 'complete'
+    ) {
+      return {
+        dueDate: summary.summary.currentPeriodDueDate,
+        expectedAmountMinorUnits: summary.summary.expectedPerPeriodAmountMinorUnits,
+      };
+    }
+
+    if (summary.summary.nextDueDate) {
+      return {
+        dueDate: summary.summary.nextDueDate,
+        expectedAmountMinorUnits:
+          summary.summary.nextDueAmountMinorUnits ??
+          summary.summary.expectedPerPeriodAmountMinorUnits,
+      };
+    }
+
+    return {
+      dueDate: summary.summary.currentPeriodDueDate ?? null,
+      expectedAmountMinorUnits: summary.summary.expectedPerPeriodAmountMinorUnits,
+    };
+  }
+
   async record(tenantId: string, dto: RecordRemittanceDto): Promise<EnrichedRemittance> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -338,8 +392,26 @@ export class RemittanceService {
       );
     }
 
+    const historicalRemittances = await this.prisma.remittance.findMany({
+      where: {
+        tenantId,
+        assignmentId: assignment.id,
+      },
+      select: {
+        dueDate: true,
+        amountMinorUnits: true,
+        status: true,
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+    const contractualPeriod = this.resolveContractualRemittancePeriod({
+      assignment,
+      remittances: historicalRemittances,
+    });
+
     const dueDate =
       dto.dueDate ??
+      contractualPeriod.dueDate ??
       computeNextRemittanceDueDate({
         remittanceFrequency: assignment.remittanceFrequency,
         remittanceAmountMinorUnits: assignment.remittanceAmountMinorUnits,
@@ -354,9 +426,13 @@ export class RemittanceService {
       );
     }
 
+    const expectedAmountMinorUnits =
+      contractualPeriod.dueDate === dueDate && contractualPeriod.expectedAmountMinorUnits
+        ? contractualPeriod.expectedAmountMinorUnits
+        : assignment.remittanceAmountMinorUnits ?? amountMinorUnits;
     const shortfallAmountMinorUnits = Math.max(
       0,
-      (assignment.remittanceAmountMinorUnits ?? amountMinorUnits) - amountMinorUnits,
+      expectedAmountMinorUnits - amountMinorUnits,
     );
 
     const created = await this.prisma.remittance.create({

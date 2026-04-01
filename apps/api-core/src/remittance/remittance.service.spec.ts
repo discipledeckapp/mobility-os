@@ -129,6 +129,83 @@ describe('RemittanceService', () => {
     expect(result.status).toBe('pending');
   });
 
+  it('derives the remittance due date from the hire-purchase contract schedule when none is supplied', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: 'tenant_1',
+      country: 'NG',
+    });
+    prisma.assignment.findUnique.mockResolvedValue({
+      id: 'assignment_1',
+      tenantId: 'tenant_1',
+      status: 'active',
+      driverConfirmedAt: new Date('2026-03-20T07:00:00.000Z'),
+      driverId: 'driver_1',
+      vehicleId: 'vehicle_1',
+      fleetId: 'fleet_1',
+      operatingUnitId: 'ou_1',
+      businessEntityId: 'be_1',
+      contractSnapshot: {
+        version: '2026-03-29',
+        contractType: 'hire_purchase',
+        paymentModel: 'hire_purchase',
+        currency: 'NGN',
+        schedule: {
+          frequency: 'monthly',
+          startDate: '2026-03-01',
+        },
+        display: {
+          summaryLabel: 'Hire purchase contract',
+          expectedRemittanceTerms: 'Monthly on day 1',
+        },
+        hirePurchase: {
+          totalTargetAmountMinorUnits: 30_000,
+          installmentPlan: {
+            periodCount: 3,
+            contractEndDate: '2026-05-01',
+            baseInstallmentAmountMinorUnits: 10_000,
+            finalInstallmentAmountMinorUnits: 10_000,
+            generatedFromTarget: true,
+          },
+        },
+        obligations: [],
+        generatedAt: '2026-03-01T00:00:00.000Z',
+      },
+      remittanceModel: 'hire_purchase',
+      remittanceFrequency: 'monthly',
+      remittanceAmountMinorUnits: 10_000,
+      remittanceCurrency: 'NGN',
+      remittanceStartDate: '2026-03-01',
+      remittanceCollectionDay: null,
+    });
+    prisma.remittance.findMany.mockResolvedValueOnce([
+      {
+        dueDate: '2026-03-01',
+        amountMinorUnits: 10_000,
+        status: 'completed',
+      },
+    ]);
+    prisma.remittance.create.mockResolvedValue({
+      id: 'rem_2',
+      tenantId: 'tenant_1',
+      assignmentId: 'assignment_1',
+      status: 'pending',
+    });
+
+    await service.record('tenant_1', {
+      assignmentId: 'assignment_1',
+      amountMinorUnits: 10_000,
+      currency: 'NGN',
+    });
+
+    expect(prisma.remittance.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        assignmentId: 'assignment_1',
+        dueDate: '2026-04-01',
+        shortfallAmountMinorUnits: 0,
+      }),
+    });
+  });
+
   it('rejects remittance recording for non-active assignments', async () => {
     prisma.tenant.findUnique.mockResolvedValue({
       id: 'tenant_1',

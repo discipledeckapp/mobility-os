@@ -107,6 +107,7 @@ function createLoggerModule() {
     // ── Config (global, loaded first) ─────────────────────────────────────────
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
       validate: intelligenceEnvConfig,
       cache: true,
     }),

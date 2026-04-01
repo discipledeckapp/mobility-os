@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const controlPlaneBaseUrl = process.env.CONTROL_PLANE_BASE_URL ?? 'https://control.mobiris.ng';
+const controlPlaneBaseUrl = process.env.CONTROL_PLANE_BASE_URL ?? 'http://localhost:3200';
 
 test.describe('control-plane auth shell', () => {
   test('redirects protected routes to login when unauthenticated', async ({ page }) => {

@@ -1,5 +1,23 @@
 import { z } from 'zod';
 
+const envBoolean = z
+  .union([z.boolean(), z.string()])
+  .transform((value) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'off', ''].includes(normalized)) {
+      return false;
+    }
+
+    throw new Error(`Invalid boolean value '${value}'`);
+  });
+
 /**
  * Environment variable schema for api-control-plane (SaaS governance plane).
  *
@@ -34,9 +52,15 @@ const schema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().optional(),
 
   // ── Internal service auth ──────────────────────────────────────────────────
-  INTERNAL_SERVICE_TOKEN: z
+  INTERNAL_SERVICE_JWT_SECRET: z
     .string()
-    .min(16, 'INTERNAL_SERVICE_TOKEN must be at least 16 characters'),
+    .min(32, 'INTERNAL_SERVICE_JWT_SECRET must be at least 32 characters'),
+  INTERNAL_SERVICE_JWT_EXPIRES_IN: z.string().default('2m'),
+  INTERNAL_SERVICE_CALLER_ID: z.string().default('api-control-plane'),
+  INTERNAL_SERVICE_AUDIENCE: z.string().default('api-control-plane'),
+  INTERNAL_SERVICE_ALLOWED_CALLERS: z
+    .string()
+    .default('api-core,api-intelligence'),
   API_CORE_BASE_URL: z.string().url('API_CORE_BASE_URL must be a valid URL').optional(),
 
   // ── Payment providers ──────────────────────────────────────────────────────
@@ -57,7 +81,7 @@ const schema = z.object({
     .optional(),
 
   // ── Controlled bootstrap ───────────────────────────────────────────────────
-  BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS: z.coerce.boolean().default(false),
+  BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS: envBoolean.default(false),
 });
 
 export type ControlPlaneEnv = z.infer<typeof schema>;

@@ -32,7 +32,7 @@ type ResolvedOperatingUnitsPageData = {
   drivers: Awaited<ReturnType<typeof listDrivers>>['data'];
   vehicles: Awaited<ReturnType<typeof listVehicles>>['data'];
   assignments: Awaited<ReturnType<typeof listAssignments>>['data'];
-  degraded: boolean;
+  degradedSurfaces: string[];
 };
 
 function getStatusTone(status: string): 'success' | 'warning' | 'neutral' {
@@ -79,12 +79,13 @@ async function resolveOperatingUnitsPageData(
     vehicles: vehiclesResult.status === 'fulfilled' ? vehiclesResult.value.data : [],
     assignments:
       assignmentsResult.status === 'fulfilled' ? assignmentsResult.value.data : [],
-    degraded:
-      businessEntitiesResult.status === 'rejected' ||
-      fleetsResult.status === 'rejected' ||
-      driversResult.status === 'rejected' ||
-      vehiclesResult.status === 'rejected' ||
-      assignmentsResult.status === 'rejected',
+    degradedSurfaces: [
+      ...(businessEntitiesResult.status === 'rejected' ? ['business entities'] : []),
+      ...(fleetsResult.status === 'rejected' ? ['fleets'] : []),
+      ...(driversResult.status === 'rejected' ? ['drivers'] : []),
+      ...(vehiclesResult.status === 'rejected' ? ['vehicles'] : []),
+      ...(assignmentsResult.status === 'rejected' ? ['assignments'] : []),
+    ],
   };
 }
 
@@ -100,7 +101,7 @@ export default async function OperatingUnitsPage({
     drivers,
     vehicles,
     assignments,
-    degraded,
+    degradedSurfaces,
   } = await resolveOperatingUnitsPageData(selectedBusinessEntityId);
   const entityNameById = new Map(businessEntities.map((entity) => [entity.id, entity.name]));
   const cards = operatingUnits.map((unit) => {
@@ -138,9 +139,9 @@ export default async function OperatingUnitsPage({
               <Text tone="muted">
                 Use operating units to separate depots, local execution teams, or city-level dispatch structure before fleets and assignments are attached.
               </Text>
-              {degraded ? (
+              {degradedSurfaces.length > 0 ? (
                 <Text className="text-amber-700">
-                  Some linked fleet and staffing signals are temporarily unavailable, so a few counts may be incomplete right now.
+                  Some linked signals are still loading for {degradedSurfaces.join(', ')}, so a few counts may be incomplete right now.
                 </Text>
               ) : null}
             </div>

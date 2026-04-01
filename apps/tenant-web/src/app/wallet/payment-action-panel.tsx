@@ -32,24 +32,32 @@ function parseFundingAmount(amountRaw: string, currencyMinorUnit: number) {
     return { minorUnits: 0, error: 'Use numbers only, for example 5000 or 5000.50.' };
   }
 
-  const [wholePart, fractionalPart = ''] = normalized.split('.');
+  const [wholePart = '0', fractionalPart = ''] = normalized.split('.');
   if (fractionalPart.length > currencyMinorUnit) {
     return {
       minorUnits: 0,
       error: `Use no more than ${currencyMinorUnit} decimal place${currencyMinorUnit === 1 ? '' : 's'}.`,
     };
   }
+  if (wholePart.length > 12) {
+    return {
+      minorUnits: 0,
+      error: 'Enter a realistic funding amount for one checkout.',
+    };
+  }
 
-  const factor = 10 ** currencyMinorUnit;
   const paddedFraction = `${fractionalPart}${'0'.repeat(currencyMinorUnit)}`.slice(
     0,
     currencyMinorUnit,
   );
-  const whole = Number.parseInt(wholePart ?? '0', 10);
-  const fraction = paddedFraction ? Number.parseInt(paddedFraction, 10) : 0;
-  const minorUnits = whole * factor + fraction;
+  const combinedDigits = `${wholePart}${paddedFraction}`.replace(/^0+(?=\d)/, '');
+  if (!/^\d+$/.test(combinedDigits || '0')) {
+    return { minorUnits: 0, error: 'Use numbers only, for example 5000 or 5000.50.' };
+  }
 
-  if (!Number.isFinite(minorUnits) || minorUnits <= 0) {
+  const minorUnits = Number.parseInt(combinedDigits || '0', 10);
+
+  if (!Number.isSafeInteger(minorUnits) || minorUnits <= 0) {
     return { minorUnits: 0, error: 'Enter an amount greater than zero.' };
   }
 
@@ -163,7 +171,7 @@ export function PaymentActionPanel({
                 value={amountInput}
               />
               <Text className="text-xs text-slate-500">
-                This exact amount will be sent to checkout.
+                This exact amount will be sent to checkout. Supported hosted gateways here are Paystack and Flutterwave.
               </Text>
               {amountState.error ? (
                 <Text className="text-xs text-rose-700">{amountState.error}</Text>
@@ -197,7 +205,7 @@ export function PaymentActionPanel({
         <CardHeader>
           <CardTitle>Saved payment method</CardTitle>
           <CardDescription>
-            Add one reusable payment method for card-backed verification credit. This setup flow uses Paystack.
+            Add one reusable payment method for card-backed verification credit. A temporary NGN 100 card authorization may be used by the gateway to validate the card before future charges.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -227,6 +235,12 @@ export function PaymentActionPanel({
               {canVerifyNow
                 ? 'You already have spend available for company-paid verification. Add a saved payment method only if you want more flexibility later.'
                 : 'If available spend is too low, either fund the wallet now or add a saved payment method to unlock card-backed credit.'}
+            </Text>
+          </div>
+          <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/80 p-4">
+            <Text tone="strong">Before you continue</Text>
+            <Text tone="muted">
+              Verification funding payment methods are separate from subscription billing cards. If your bank shows a small authorization hold during setup, it is a gateway card-check and not your main funding amount.
             </Text>
           </div>
 

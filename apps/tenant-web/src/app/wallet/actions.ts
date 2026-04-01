@@ -34,13 +34,8 @@ function parseAmountToMinorUnits(amountRaw: string, currencyMinorUnitRaw: string
     return null;
   }
 
-  const [wholePart, fractionalPart = ''] = normalized.split('.');
-  if (fractionalPart.length > currencyMinorUnit) {
-    return null;
-  }
-
-  const whole = Number.parseInt(wholePart ?? '0', 10);
-  if (!Number.isFinite(whole)) {
+  const [wholePart = '0', fractionalPart = ''] = normalized.split('.');
+  if (fractionalPart.length > currencyMinorUnit || wholePart.length > 12) {
     return null;
   }
 
@@ -48,11 +43,13 @@ function parseAmountToMinorUnits(amountRaw: string, currencyMinorUnitRaw: string
     0,
     currencyMinorUnit,
   );
-  const fraction = paddedFraction ? Number.parseInt(paddedFraction, 10) : 0;
-  const factor = 10 ** currencyMinorUnit;
-  const amountMinorUnits = whole * factor + fraction;
+  const combinedDigits = `${wholePart}${paddedFraction}`.replace(/^0+(?=\d)/, '');
+  if (!/^\d+$/.test(combinedDigits || '0')) {
+    return null;
+  }
 
-  return Number.isFinite(amountMinorUnits) ? amountMinorUnits : null;
+  const amountMinorUnits = Number.parseInt(combinedDigits || '0', 10);
+  return Number.isSafeInteger(amountMinorUnits) ? amountMinorUnits : null;
 }
 
 function sanitizeCheckoutError(

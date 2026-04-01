@@ -1,4 +1,3 @@
-import { getCountryConfig } from '@mobility-os/domain-config';
 import {
   BadRequestException,
   ConflictException,
@@ -33,12 +32,25 @@ export class SubscriptionsService {
     if (!countryCode) {
       return undefined;
     }
+    return countryCode.trim().toUpperCase() === 'NG' ? 'NGN' : 'USD';
+  }
 
-    try {
-      return getCountryConfig(countryCode).currency;
-    } catch {
-      return undefined;
-    }
+  private prioritizeBootstrapPlan<T extends { currency: string; tier: string; billingInterval: string }>(
+    plans: T[],
+    currency?: string,
+  ): T | undefined {
+    const normalizedCurrency = currency?.toUpperCase();
+    return [...plans].sort((left, right) => {
+      const leftScore =
+        (left.currency === normalizedCurrency ? 100 : 0) +
+        (left.tier === 'growth' ? 10 : 0) +
+        (left.billingInterval === 'monthly' ? 1 : 0);
+      const rightScore =
+        (right.currency === normalizedCurrency ? 100 : 0) +
+        (right.tier === 'growth' ? 10 : 0) +
+        (right.billingInterval === 'monthly' ? 1 : 0);
+      return rightScore - leftScore;
+    })[0];
   }
 
   private async ensureSubscriptionsScaffolded(): Promise<void> {
@@ -215,11 +227,7 @@ export class SubscriptionsService {
 
     const activePlans = await this.plansService.listPlans(true);
     const currency = params.currency?.toUpperCase();
-    const plan =
-      activePlans.find((item) => item.currency === currency && item.tier === 'growth') ??
-      activePlans.find((item) => item.currency === currency) ??
-      activePlans.find((item) => item.tier === 'growth') ??
-      activePlans[0];
+    const plan = this.prioritizeBootstrapPlan(activePlans, currency);
 
     if (!plan) {
       throw new NotFoundException(

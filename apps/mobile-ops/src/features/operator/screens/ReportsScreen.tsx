@@ -17,14 +17,17 @@ export function ReportsScreen({ navigation }: ScreenProps<'OperatorReports'>) {
   const readinessQuery = useQuery({
     queryKey: ['operator-reports', 'readiness'],
     queryFn: getOperationalReadinessReport,
+    staleTime: 60_000,
   });
   const expiryQuery = useQuery({
     queryKey: ['operator-reports', 'licence-expiry'],
     queryFn: getLicenceExpiryReport,
+    staleTime: 120_000,
   });
   const overviewQuery = useQuery({
     queryKey: ['operator-reports', 'overview'],
     queryFn: getReportsOverview,
+    staleTime: 120_000,
   });
 
   const refreshing = readinessQuery.isRefetching || expiryQuery.isRefetching || overviewQuery.isRefetching;

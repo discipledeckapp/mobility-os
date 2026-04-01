@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from '../auth/internal-service-jwt';
 
 export interface TenantSubscriptionSummary {
   id: string;
@@ -301,14 +302,20 @@ export class ControlPlaneBillingClient {
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const baseUrl = this.configService.get<string>('CONTROL_PLANE_API_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken) {
+    if (!baseUrl || !internalServiceJwtSecret) {
       throw new ServiceUnavailableException('Control-plane billing integration is not configured');
     }
 
+    const bearerToken = await signInternalServiceJwt({
+      secret: internalServiceJwtSecret,
+      callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-core'),
+      audience: 'api-control-plane',
+      expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+    });
     const headers = new Headers(init.headers);
-    headers.set('x-internal-service-token', internalToken);
+    headers.set('authorization', `Bearer ${bearerToken}`);
     headers.set('content-type', 'application/json');
 
     let response: Response;

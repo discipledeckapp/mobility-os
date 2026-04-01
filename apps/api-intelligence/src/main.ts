@@ -40,7 +40,12 @@ async function bootstrap(): Promise<void> {
     origin: false,
     credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-internal-service-token'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-api-key',
+      'x-caller-service',
+    ],
   });
 
   app.getHttpAdapter().getInstance().addHook('onSend', (_request, reply, payload, done) => {

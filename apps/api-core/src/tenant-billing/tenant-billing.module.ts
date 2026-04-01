@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
+import { RecordsModule } from '../records/records.module';
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneMeteringClient } from './control-plane-metering.client';
@@ -11,7 +12,7 @@ import { TenantBillingService } from './tenant-billing.service';
 import { VerificationSpendService } from './verification-spend.service';
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, forwardRef(() => RecordsModule)],
   controllers: [TenantBillingController],
   providers: [
     ControlPlaneBillingClient,

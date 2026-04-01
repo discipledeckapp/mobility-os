@@ -121,6 +121,29 @@ export class ManagerPerformanceSummaryDto {
   overdueMaintenanceCount!: number;
 }
 
+export class RecentOperationalActivityDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  kind!: string;
+
+  @ApiProperty()
+  title!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty()
+  href!: string;
+
+  @ApiProperty()
+  timestamp!: string;
+
+  @ApiProperty()
+  status!: string;
+}
+
 export class ReportsOverviewResponseDto {
   @ApiProperty({ type: WalletSummaryDto })
   wallet!: WalletSummaryDto;
@@ -145,4 +168,7 @@ export class ReportsOverviewResponseDto {
 
   @ApiProperty({ type: [ManagerPerformanceSummaryDto] })
   managerPerformance!: ManagerPerformanceSummaryDto[];
+
+  @ApiProperty({ type: [RecentOperationalActivityDto] })
+  recentActivity!: RecentOperationalActivityDto[];
 }

@@ -1,8 +1,13 @@
 import { LEGAL_DOCUMENT_VERSIONS } from '@mobility-os/domain-config';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
-import { Cron } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import type { Prisma } from '@prisma/client';
 import { readUserSettings } from '../auth/user-settings';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
@@ -16,8 +21,9 @@ import type { CreateDataSubjectRequestDto } from './dto/create-data-subject-requ
 const OPEN_REVIEW_STATUSES = new Set(['open', 'pending', 'in_review', 'review_required']);
 
 @Injectable()
-export class PrivacyService {
+export class PrivacyService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(PrivacyService.name);
+  private readonly jobs: CronJob[] = [];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -236,7 +242,28 @@ export class PrivacyService {
     };
   }
 
-  @Cron('45 3 * * *')
+  onApplicationBootstrap(): void {
+    if (process.env.DISABLE_SCHEDULER === 'true') {
+      this.logger.log('Privacy scheduler disabled by environment flag.');
+      return;
+    }
+
+    this.jobs.push(
+      CronJob.from({
+        cronTime: '45 3 * * *',
+        onTick: () => void this.sweepRetiredBiometricAssets(),
+        start: true,
+      }),
+    );
+  }
+
+  onApplicationShutdown(): void {
+    for (const job of this.jobs) {
+      job.stop();
+    }
+    this.jobs.length = 0;
+  }
+
   async sweepRetiredBiometricAssets(): Promise<void> {
     const retentionDays = this.configService.get<number>('BIOMETRIC_ASSET_RETENTION_DAYS') ?? 180;
     if (!Number.isFinite(retentionDays) || retentionDays <= 0) {

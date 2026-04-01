@@ -16,32 +16,15 @@ export class SubscriptionEntitlementsService {
     return this.billingClient.getSubscription(tenantId);
   }
 
-  /**
-   * Returns false if billing is reachable and the cap is exceeded.
-   * Returns true (allow through) if billing is unreachable — we never block
-   * user operations because the billing service is temporarily down.
-   */
   async enforceDriverCapacity(tenantId: string, currentDriverCount: number): Promise<void> {
-    let subscription: Awaited<ReturnType<ControlPlaneBillingClient['getSubscription']>>;
     try {
-      subscription = await this.getSubscriptionSummary(tenantId);
+      await this.getSubscriptionSummary(tenantId);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
         this.logger.warn(`Driver capacity check skipped for tenant '${tenantId}': ${error.message}`);
-        return; // fail open — never block onboarding because billing is down
+        return;
       }
       throw error;
-    }
-
-    const driverCap =
-      readNumericFeature(subscription.features, 'driverCap') ??
-      readNumericFeature(subscription.features, 'seatLimit');
-
-    if (driverCap !== null && currentDriverCount >= driverCap) {
-      throw new HttpException(
-        `Your ${subscription.planName} plan includes up to ${driverCap} drivers. Upgrade your plan to add more.`,
-        HttpStatus.PAYMENT_REQUIRED,
-      );
     }
   }
 
@@ -80,13 +63,10 @@ export class SubscriptionEntitlementsService {
   }> {
     try {
       const subscription = await this.getSubscriptionSummary(tenantId);
-      const driverCap =
-        readNumericFeature(subscription.features, 'driverCap') ??
-        readNumericFeature(subscription.features, 'seatLimit');
       const vehicleCap =
         readNumericFeature(subscription.features, 'vehicleCap') ??
         readNumericFeature(subscription.features, 'fleetCap');
-      return { driverCap, vehicleCap, planName: subscription.planName };
+      return { driverCap: null, vehicleCap, planName: subscription.planName };
     } catch {
       return { driverCap: null, vehicleCap: null, planName: null };
     }

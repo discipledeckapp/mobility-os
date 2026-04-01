@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { Alert, StyleSheet, Switch, Text } from 'react-native';
+import { Alert, InteractionManager, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import {
   createDataSubjectRequest,
   deactivateTeamMember,
@@ -37,7 +37,7 @@ import { Screen } from '../../../components/screen';
 import { useAuth } from '../../../contexts/auth-context';
 import type { RootStackParamList } from '../../../navigation/types';
 import { tokens } from '../../../theme/tokens';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export function SettingsScreen() {
@@ -90,49 +90,86 @@ export function SettingsScreen() {
   );
   const [privacyRequestType, setPrivacyRequestType] = useState<'access' | 'correction' | 'deletion' | 'restriction'>('access');
   const [privacyRequestDetails, setPrivacyRequestDetails] = useState('');
+  const [shouldLoadExtendedData, setShouldLoadExtendedData] = useState(false);
+  const [activeSection, setActiveSection] = useState<
+    'profile' | 'organisation' | 'notifications' | 'privacy' | 'team' | 'billing'
+  >('profile');
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShouldLoadExtendedData(true);
+    });
+
+    return () => {
+      task.cancel();
+    };
+  }, []);
+
   const teamQuery = useQuery({
     queryKey: ['operator-team'],
     queryFn: listTeamMembers,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const tenantQuery = useQuery({
     queryKey: ['operator-settings', 'tenant'],
     queryFn: getTenantMe,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const fleetsQuery = useQuery({
     queryKey: ['operator-settings', 'fleets'],
     queryFn: () => listFleets(),
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const vehiclesQuery = useQuery({
     queryKey: ['operator-settings', 'vehicles'],
     queryFn: () => listVehicles({ limit: 200 }),
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const plansQuery = useQuery({
     queryKey: ['operator-settings', 'plans'],
     queryFn: listTenantBillingPlans,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const billingQuery = useQuery({
     queryKey: ['operator-settings', 'billing-summary'],
     queryFn: getTenantBillingSummary,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const notificationsQuery = useQuery({
     queryKey: ['operator-settings', 'notifications'],
     queryFn: listUserNotifications,
+    enabled: shouldLoadExtendedData,
+    staleTime: 60_000,
   });
   const prefsQuery = useQuery({
     queryKey: ['operator-settings', 'prefs'],
     queryFn: getNotificationPreferences,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const pushDevicesQuery = useQuery({
     queryKey: ['operator-settings', 'push-devices'],
     queryFn: listPushDevices,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const privacySupportQuery = useQuery({
     queryKey: ['operator-settings', 'privacy-support'],
     queryFn: getPrivacySupport,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const privacyRequestsQuery = useQuery({
     queryKey: ['operator-settings', 'privacy-requests'],
     queryFn: listDataSubjectRequests,
+    enabled: shouldLoadExtendedData,
+    staleTime: 120_000,
   });
   const inviteMutation = useMutation({
     mutationFn: () =>
@@ -351,6 +388,15 @@ export function SettingsScreen() {
   const toggleSelection = (current: string[], value: string) =>
     current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
 
+  const sectionTabs = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'organisation', label: 'Organisation' },
+    { id: 'notifications', label: 'Alerts' },
+    { id: 'privacy', label: 'Privacy' },
+    { id: 'team', label: 'Team' },
+    { id: 'billing', label: 'Billing' },
+  ] as const;
+
   return (
     <Screen>
       <Card style={styles.section}>
@@ -360,6 +406,37 @@ export function SettingsScreen() {
         <Text style={styles.meta}>Role: {session?.role ?? 'Unknown role'}</Text>
         <Text style={styles.meta}>Email: {session?.email}</Text>
         <Button label="Sign out" variant="secondary" onPress={() => void logout()} />
+      </Card>
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Choose an area</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sectionTabRow}
+        >
+          {sectionTabs.map((tab) => (
+            <Pressable key={tab.id} onPress={() => setActiveSection(tab.id)}>
+              <View
+                style={[
+                  styles.sectionTab,
+                  activeSection === tab.id ? styles.sectionTabActive : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sectionTabLabel,
+                    activeSection === tab.id ? styles.sectionTabLabelActive : null,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+        <Text style={styles.meta}>
+          Mobile settings are grouped by task so you can focus on one area at a time.
+        </Text>
       </Card>
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Device access</Text>
@@ -395,6 +472,7 @@ export function SettingsScreen() {
           }}
         />
       </Card>
+      {activeSection === 'profile' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Profile</Text>
         <Input label="Name" onChangeText={setProfileName} value={profileName} />
@@ -407,6 +485,8 @@ export function SettingsScreen() {
         />
         <Button label="Save profile" loading={profileMutation.isPending} onPress={() => profileMutation.mutate()} />
       </Card>
+      ) : null}
+      {activeSection === 'organisation' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Organisation</Text>
         <Input label="Display name" onChangeText={setDisplayName} value={displayName} />
@@ -461,8 +541,15 @@ export function SettingsScreen() {
           onPress={() => organisationMutation.mutate()}
         />
       </Card>
+      ) : null}
+      {activeSection === 'notifications' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
+        {!shouldLoadExtendedData ? (
+          <Text style={styles.meta}>
+            Loading notifications, device access, and reminder settings after the screen settles.
+          </Text>
+        ) : null}
         <Button
           label="Privacy Policy"
           variant="secondary"
@@ -555,8 +642,15 @@ export function SettingsScreen() {
           ))}
         </Card>
       </Card>
+      ) : null}
+      {activeSection === 'privacy' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Privacy and data rights</Text>
+        {!shouldLoadExtendedData ? (
+          <Text style={styles.meta}>
+            Loading privacy support contacts and your recent data requests.
+          </Text>
+        ) : null}
         <Text style={styles.meta}>
           Submit access, correction, deletion, or processing-restriction requests without leaving the app.
         </Text>
@@ -605,8 +699,15 @@ export function SettingsScreen() {
           </Card>
         ))}
       </Card>
+      ) : null}
+      {activeSection === 'team' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Invite team member</Text>
+        {!shouldLoadExtendedData ? (
+          <Text style={styles.meta}>
+            Loading fleets, vehicles, and permission data for team access controls.
+          </Text>
+        ) : null}
         <Input label="Name" onChangeText={setName} value={name} />
         <Input label="Email" onChangeText={setEmail} value={email} />
         <Input label="Role" helperText="FLEET_MANAGER, FINANCE_OFFICER, FIELD_OFFICER, READ_ONLY" onChangeText={setRole} value={role} />
@@ -646,8 +747,15 @@ export function SettingsScreen() {
         ))}
         <Button label="Invite team member" loading={inviteMutation.isPending} onPress={() => inviteMutation.mutate()} />
       </Card>
+      ) : null}
+      {activeSection === 'billing' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Company plan</Text>
+        {!shouldLoadExtendedData ? (
+          <Text style={styles.meta}>
+            Loading subscription plans and billing summary.
+          </Text>
+        ) : null}
         {(plansQuery.data ?? []).map((plan) => (
           <Card key={plan.id} style={styles.innerCard}>
             <Text style={styles.memberName}>{plan.name}</Text>
@@ -663,8 +771,15 @@ export function SettingsScreen() {
           </Card>
         ))}
       </Card>
+      ) : null}
+      {activeSection === 'team' ? (
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Team</Text>
+        {!shouldLoadExtendedData ? (
+          <Text style={styles.meta}>
+            Loading team roster and current device access state.
+          </Text>
+        ) : null}
         {(teamQuery.data ?? []).map((member) => (
           <Card key={member.id} style={styles.innerCard}>
             <Text style={styles.memberName}>{member.name}</Text>
@@ -765,6 +880,7 @@ export function SettingsScreen() {
           </Card>
         ))}
       </Card>
+      ) : null}
     </Screen>
   );
 }
@@ -816,6 +932,26 @@ function notificationTopicLabel(topic: string) {
 
 const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
+  sectionTabRow: { gap: tokens.spacing.sm },
+  sectionTab: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.button,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    backgroundColor: '#FFFFFF',
+  },
+  sectionTabActive: {
+    borderColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primaryTint,
+  },
+  sectionTabLabel: {
+    color: tokens.colors.inkSoft,
+    fontWeight: '700',
+  },
+  sectionTabLabelActive: {
+    color: tokens.colors.primary,
+  },
   title: { color: tokens.colors.ink, fontSize: 28, fontWeight: '800' },
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
   innerCard: { gap: tokens.spacing.xs },

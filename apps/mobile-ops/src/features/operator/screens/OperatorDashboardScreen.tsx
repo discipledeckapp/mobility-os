@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { getOperationalReadinessReport, getReportsOverview, listDrivers, listVehicles } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
@@ -20,18 +20,22 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
   const overviewQuery = useQuery({
     queryKey: ['operator-dashboard', 'overview'],
     queryFn: getReportsOverview,
+    staleTime: 120_000,
   });
   const driversQuery = useQuery({
     queryKey: ['operator-dashboard', 'drivers-total'],
     queryFn: () => listDrivers({ page: 1, limit: 1 }),
+    staleTime: 120_000,
   });
   const readinessQuery = useQuery({
     queryKey: ['operator-dashboard', 'readiness'],
     queryFn: getOperationalReadinessReport,
+    staleTime: 60_000,
   });
   const vehiclesQuery = useQuery({
     queryKey: ['operator-dashboard', 'vehicles-total'],
     queryFn: () => listVehicles({ page: 1, limit: 1 }),
+    staleTime: 120_000,
   });
 
   const onRefresh = async () => {
@@ -68,6 +72,29 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
   const vehiclesTotal = vehiclesQuery.data?.total ?? 0;
   const currency = overview?.wallet.currency ?? session?.defaultCurrency ?? 'NGN';
   const minorUnit = session?.currencyMinorUnit ?? 2;
+  const primaryTasks = [
+    {
+      id: 'readiness',
+      label: queuedDrivers > 0 ? `Clear readiness queue (${queuedDrivers})` : 'Review readiness',
+      hint:
+        queuedDrivers > 0
+          ? 'Drivers are waiting on verification, documentation, or activation review.'
+          : 'Check the readiness queue before dispatch opens.',
+      target: 'OperatorReports' as const,
+    },
+    {
+      id: 'dispatch',
+      label: 'Dispatch assignments',
+      hint: 'Open assignment operations to issue, confirm, and track live work.',
+      target: 'OperatorAssignments' as const,
+    },
+    {
+      id: 'cash',
+      label: 'Track remittance',
+      hint: 'Review expected collections and investigate any at-risk remittance.',
+      target: 'OperatorRemittance' as const,
+    },
+  ];
 
   return (
     <Screen
@@ -85,15 +112,38 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
       }
     >
       <PageShell
+        compact
         eyebrow="Operator home"
         title={session?.organisationDisplayName ?? session?.tenantName ?? 'Mobiris Fleet OS'}
-        subtitle="Drivers, vehicles, assignments, cash movement, and compliance all stay within quick mobile reach."
+        subtitle="See the next operational priority first, then jump into dispatch, remittance, or compliance."
         badge={<Badge label={(session?.role ?? 'operator').replace(/_/g, ' ')} tone="neutral" />}
       >
         {session?.organisationLogoUrl ? (
           <Text style={styles.meta}>Logo: {session.organisationLogoUrl}</Text>
         ) : null}
       </PageShell>
+
+      <Card style={styles.section}>
+        <SectionIntro
+          title="Do this now"
+          subtitle="The mobile dashboard should push the highest-value work forward first."
+        />
+        <View style={styles.priorityList}>
+          {primaryTasks.map((task, index) => (
+            <Pressable key={task.id} onPress={() => navigation.navigate(task.target)}>
+              <View style={[styles.priorityCard, index === 0 ? styles.priorityCardPrimary : null]}>
+                <View style={styles.priorityIndex}>
+                  <Text style={styles.priorityIndexLabel}>{index + 1}</Text>
+                </View>
+                <View style={styles.priorityCopy}>
+                  <Text style={styles.priorityTitle}>{task.label}</Text>
+                  <Text style={styles.metricHint}>{task.hint}</Text>
+                </View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
 
       <View style={styles.metricGrid}>
         <Card style={styles.metricCard}>
@@ -139,39 +189,47 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
 
       <Card style={styles.section}>
         <SectionIntro
-          title="Today’s operating focus"
-          subtitle="The highest-value workspaces stay one tap away from the dashboard."
+          title="Quick workspaces"
+          subtitle="Use these when you already know the area you need."
         />
         <View style={styles.actionGrid}>
           <Button label="Drivers" onPress={() => navigation.navigate('OperatorDrivers')} />
-          <Button label="Dispatch" variant="secondary" onPress={() => navigation.navigate('OperatorAssignments')} />
-        </View>
-        <View style={styles.actionGrid}>
-          <Button label="Remittance" variant="secondary" onPress={() => navigation.navigate('OperatorRemittance')} />
-          <Button label="Reports" variant="secondary" onPress={() => navigation.navigate('OperatorReports')} />
+          <Button
+            label="Assignments"
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorAssignments')}
+          />
         </View>
         <View style={styles.actionGrid}>
           <Button
-            label={`Readiness queue (${queuedDrivers})`}
+            label="Remittance"
             variant="secondary"
-            onPress={() => navigation.navigate('OperatorReports')}
+            onPress={() => navigation.navigate('OperatorRemittance')}
           />
+          <Button label="Reports" variant="secondary" onPress={() => navigation.navigate('OperatorReports')} />
+        </View>
+        <View style={styles.actionGrid}>
           <Button
             label="Maintenance queue"
             variant="secondary"
             onPress={() => navigation.navigate('OperatorMaintenance')}
           />
-        </View>
-        <View style={styles.actionGrid}>
           <Button
             label="Inspections"
             variant="secondary"
             onPress={() => navigation.navigate('OperatorInspections')}
           />
+        </View>
+        <View style={styles.actionGrid}>
           <Button
             label="Compliance"
             variant="secondary"
             onPress={() => navigation.navigate('OperatorCompliance')}
+          />
+          <Button
+            label="Wallet"
+            variant="secondary"
+            onPress={() => navigation.navigate('OperatorWallet')}
           />
         </View>
       </Card>
@@ -190,6 +248,45 @@ const styles = StyleSheet.create({
   section: { gap: tokens.spacing.sm },
   sectionTitle: { color: tokens.colors.ink, fontSize: 18, fontWeight: '700' },
   actionGrid: { flexDirection: 'row', gap: tokens.spacing.sm },
+  priorityList: {
+    gap: tokens.spacing.sm,
+  },
+  priorityCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#FFFFFF',
+    padding: tokens.spacing.md,
+    flexDirection: 'row',
+    gap: tokens.spacing.md,
+    alignItems: 'flex-start',
+  },
+  priorityCardPrimary: {
+    borderColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primaryTint,
+  },
+  priorityIndex: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: tokens.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priorityIndexLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  priorityCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  priorityTitle: {
+    color: tokens.colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });
 
 export default OperatorDashboardScreen;

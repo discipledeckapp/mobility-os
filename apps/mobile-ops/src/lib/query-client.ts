@@ -6,9 +6,11 @@ import { STORAGE_KEYS } from '../constants';
 export const mobileQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: 120_000,
+      gcTime: 15 * 60_000,
       retry: 1,
       refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
     },
     mutations: {
       retry: 0,

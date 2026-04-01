@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
 import {
@@ -107,6 +109,85 @@ function joinNameParts(parts: Array<unknown>): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+const SELFIE_FETCH_TIMEOUT_MS = 5_000;
+
+function isPrivateIpv4(host: string): boolean {
+  const octets = host.split('.').map((segment) => Number.parseInt(segment, 10));
+  if (octets.length !== 4 || octets.some((value) => Number.isNaN(value))) {
+    return false;
+  }
+
+  const first = octets[0];
+  const second = octets[1];
+  if (first === undefined || second === undefined) {
+    return false;
+  }
+
+  if (first === 10 || first === 127 || first === 0) {
+    return true;
+  }
+  if (first === 169 && second === 254) {
+    return true;
+  }
+  if (first === 172 && second >= 16 && second <= 31) {
+    return true;
+  }
+  if (first === 192 && second === 168) {
+    return true;
+  }
+  return false;
+}
+
+function isBlockedIpv6(host: string): boolean {
+  const normalized = host.toLowerCase();
+  return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd');
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase();
+  if (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    normalized.endsWith('.internal') ||
+    normalized.endsWith('.local')
+  ) {
+    return true;
+  }
+
+  const ipVersion = isIP(normalized);
+  if (ipVersion === 4) {
+    return isPrivateIpv4(normalized);
+  }
+  if (ipVersion === 6) {
+    return isBlockedIpv6(normalized);
+  }
+
+  return false;
+}
+
+async function assertPublicSelfieUrl(imageUrl: string): Promise<URL> {
+  const parsed = new URL(imageUrl);
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('unsupported_protocol');
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('embedded_credentials_not_allowed');
+  }
+  if (isBlockedHostname(parsed.hostname)) {
+    throw new Error('blocked_hostname');
+  }
+
+  const resolved = await lookup(parsed.hostname, { all: true });
+  if (resolved.length === 0) {
+    throw new Error('hostname_resolution_failed');
+  }
+  if (resolved.some((entry) => isBlockedHostname(entry.address))) {
+    throw new Error('blocked_host_resolution');
+  }
+
+  return parsed;
 }
 
 function normalizeYouVerifyResponse(
@@ -676,12 +757,35 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
     }
 
     try {
-      const response = await fetch(imageUrl);
+      const safeUrl = await assertPublicSelfieUrl(imageUrl);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SELFIE_FETCH_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch(safeUrl, {
+          signal: controller.signal,
+          redirect: 'error',
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!response.ok) {
         this.logger.warn(
           JSON.stringify({
             event: 'youverify_selfie_fetch_failed',
             statusCode: response.status,
+          }),
+        );
+        return imageUrl;
+      }
+
+      const contentLength = Number.parseInt(response.headers.get('content-length') ?? '', 10);
+      if (Number.isFinite(contentLength) && contentLength > 5 * 1024 * 1024) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'youverify_selfie_fetch_rejected',
+            reason: 'image_too_large',
+            contentLength,
           }),
         );
         return imageUrl;

@@ -47,6 +47,7 @@ const ACCOUNT_VERIFICATION_PURPOSE = 'ACCOUNT_VERIFICATION';
 const GENERIC_AUTH_MESSAGE =
   'If the account exists and is eligible, the requested auth message has been sent.';
 const PASSWORD_RESET_SUCCESS_MESSAGE = 'Your password has been reset successfully.';
+const REFRESH_TOKEN_ROTATION_GRACE_PERIOD_MS = 30_000;
 
 function deriveMobileRole(user: {
   role: string;
@@ -354,12 +355,19 @@ export class AuthService {
     const storedToken = await this.prisma.authRefreshToken.findFirst({
       where: {
         tokenHash,
-        consumedAt: null,
         expiresAt: { gt: new Date() },
       },
     });
 
     if (!storedToken) {
+      throw new UnauthorizedException('Refresh token is no longer valid.');
+    }
+
+    const consumedRecently =
+      storedToken.consumedAt !== null &&
+      Date.now() - storedToken.consumedAt.getTime() <= REFRESH_TOKEN_ROTATION_GRACE_PERIOD_MS;
+
+    if (storedToken.consumedAt !== null && !consumedRecently) {
       throw new UnauthorizedException('Refresh token is no longer valid.');
     }
 
@@ -375,10 +383,12 @@ export class AuthService {
       throw new UnauthorizedException('The authenticated session is no longer valid.');
     }
 
-    await this.prisma.authRefreshToken.update({
-      where: { id: storedToken.id },
-      data: { consumedAt: new Date() },
-    });
+    if (!storedToken.consumedAt) {
+      await this.prisma.authRefreshToken.update({
+        where: { id: storedToken.id },
+        data: { consumedAt: new Date() },
+      });
+    }
 
     return this.issueTokens(user);
   }

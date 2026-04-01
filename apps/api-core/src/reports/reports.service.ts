@@ -92,6 +92,72 @@ export class ReportsService {
     return { status: 'on_track', reason: null };
   }
 
+  private buildRecentActivityFeed(input: {
+    assignments: Array<{
+      id: string;
+      driverId: string;
+      vehicleId: string;
+      status: string;
+      updatedAt: Date;
+    }>;
+    remittances: Array<{
+      id: string;
+      driverId: string;
+      vehicleId: string;
+      amountMinorUnits: number;
+      currency: string;
+      status: string;
+      updatedAt: Date;
+    }>;
+    drivers: Array<{
+      id: string;
+      firstName?: string | null;
+      lastName?: string | null;
+    }>;
+    vehicles: Array<{
+      id: string;
+      make?: string | null;
+      model?: string | null;
+      plate?: string | null;
+    }>;
+  }) {
+    const driverLabelById = new Map(
+      input.drivers.map((driver) => [
+        driver.id,
+        `${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim() || 'Driver',
+      ]),
+    );
+    const vehicleLabelById = new Map(
+      input.vehicles.map((vehicle) => [
+        vehicle.id,
+        vehicle.plate?.trim() || `${vehicle.make ?? ''} ${vehicle.model ?? ''}`.trim() || 'Vehicle',
+      ]),
+    );
+
+    const assignmentItems = input.assignments.map((assignment) => ({
+      id: `assignment-${assignment.id}`,
+      kind: 'assignment',
+      title: 'Assignment updated',
+      description: `${driverLabelById.get(assignment.driverId) ?? 'Driver'} • ${vehicleLabelById.get(assignment.vehicleId) ?? 'Vehicle'} • ${assignment.status.replace(/_/g, ' ')}`,
+      href: '/assignments',
+      timestamp: assignment.updatedAt.toISOString(),
+      status: assignment.status,
+    }));
+    const remittanceItems = input.remittances.map((remittance) => ({
+      id: `remittance-${remittance.id}`,
+      kind: 'remittance',
+      title: 'Remittance recorded',
+      description: `${driverLabelById.get(remittance.driverId) ?? 'Driver'} • ${remittance.currency} ${(remittance.amountMinorUnits / 100).toFixed(2)} • ${remittance.status.replace(/_/g, ' ')}`,
+      href: '/remittance',
+      timestamp: remittance.updatedAt.toISOString(),
+      status: remittance.status,
+    }));
+
+    return [...assignmentItems, ...remittanceItems]
+      .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+      .slice(0, 6);
+  }
+
   async getOverview(
     tenantId: string,
     fleetIds: string[] = [],
@@ -134,6 +200,8 @@ export class ReportsService {
       activeAssignments,
       driversPage,
       vehicles,
+      recentAssignments,
+      recentRemittances,
     ] = await Promise.all([
       this.prisma.operationalWallet.findMany({
         where: { tenantId },
@@ -209,7 +277,40 @@ export class ReportsService {
           ...vehicleScope,
           ...(fleetIds.length > 0 ? { fleetId: { in: fleetIds } } : {}),
         },
-        select: { id: true, fleetId: true, status: true },
+        select: { id: true, fleetId: true, status: true, make: true, model: true, plate: true },
+      }),
+      this.prisma.assignment.findMany({
+        where: {
+          tenantId,
+          ...fleetScope,
+          ...assignmentVehicleScope,
+        },
+        select: {
+          id: true,
+          driverId: true,
+          vehicleId: true,
+          status: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 12,
+      }),
+      this.prisma.remittance.findMany({
+        where: {
+          tenantId,
+          ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
+        },
+        select: {
+          id: true,
+          driverId: true,
+          vehicleId: true,
+          amountMinorUnits: true,
+          currency: true,
+          status: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 12,
       }),
     ]);
 
@@ -293,13 +394,14 @@ export class ReportsService {
             where: {
               tenantId,
               assignmentId: { in: hirePurchaseAssignmentIds },
-              status: 'completed',
-              ...remittanceDateFilter,
             },
             select: {
               assignmentId: true,
+              dueDate: true,
               amountMinorUnits: true,
+              status: true,
             },
+            orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
           })
         : Promise.resolve([]),
     ]);
@@ -329,9 +431,9 @@ export class ReportsService {
             ? confirmedHirePurchaseRemittances
                 .filter((remittance) => remittance.assignmentId === assignment.id)
                 .map((remittance) => ({
-                  dueDate: toIsoDate(new Date()),
+                  dueDate: remittance.dueDate,
                   amountMinorUnits: remittance.amountMinorUnits,
-                  status: 'completed',
+                  status: remittance.status,
                 }))
             : [],
       });
@@ -639,6 +741,12 @@ export class ReportsService {
       },
       fleetPerformance,
       managerPerformance,
+      recentActivity: this.buildRecentActivityFeed({
+        assignments: recentAssignments,
+        remittances: recentRemittances,
+        drivers,
+        vehicles,
+      }),
     };
   }
 

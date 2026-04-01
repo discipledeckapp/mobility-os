@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from '../auth/internal-service-jwt';
 
 export type LivenessProviderName =
   | 'azure_face'
@@ -84,18 +85,24 @@ export class ControlPlaneSettingsClient {
     countryCode: string,
   ): Promise<IdentityVerificationRoutingCountrySetting | null> {
     const baseUrl = this.configService.get<string>('CONTROL_PLANE_BASE_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken) {
+    if (!baseUrl || !internalServiceJwtSecret) {
       return null;
     }
 
     try {
+      const bearerToken = await signInternalServiceJwt({
+        secret: internalServiceJwtSecret,
+        callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-intelligence'),
+        audience: 'api-control-plane',
+        expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+      });
       const response = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/internal/platform-settings/identity-verification-routing`,
         {
           headers: {
-            'x-internal-service-token': internalToken,
+            authorization: `Bearer ${bearerToken}`,
           },
         },
       );
@@ -119,18 +126,24 @@ export class ControlPlaneSettingsClient {
     countryCode: string,
   ): Promise<VerificationBillingPolicyCountrySetting | null> {
     const baseUrl = this.configService.get<string>('CONTROL_PLANE_BASE_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken) {
+    if (!baseUrl || !internalServiceJwtSecret) {
       return null;
     }
 
     try {
+      const bearerToken = await signInternalServiceJwt({
+        secret: internalServiceJwtSecret,
+        callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-intelligence'),
+        audience: 'api-control-plane',
+        expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+      });
       const response = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/internal/platform-settings/verification-billing-policy`,
         {
           headers: {
-            'x-internal-service-token': internalToken,
+            authorization: `Bearer ${bearerToken}`,
           },
         },
       );

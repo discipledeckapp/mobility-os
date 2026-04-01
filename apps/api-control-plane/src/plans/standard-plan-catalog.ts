@@ -4,7 +4,7 @@ export interface StandardPlanSpec {
   name: string;
   tier: 'starter' | 'growth' | 'enterprise';
   billingInterval: 'monthly';
-  currency: 'NGN' | 'GHS' | 'KES' | 'ZAR';
+  currency: 'NGN' | 'USD' | 'GHS' | 'KES' | 'ZAR';
   basePriceMinorUnits: number;
   features: Record<string, unknown>;
   customTerms?: Record<string, unknown> | null;
@@ -20,7 +20,22 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: 1,
       vehicleCap: 10,
-      driverCap: 15,
+      seatLimit: 3,
+      verificationEnabled: false,
+      walletEnabled: false,
+      intelligenceEnabled: false,
+      supportTier: 'email',
+    },
+  },
+  {
+    name: 'Starter',
+    tier: 'starter',
+    billingInterval: 'monthly',
+    currency: 'USD',
+    basePriceMinorUnits: 9_900,
+    features: {
+      operatingUnitCap: 1,
+      vehicleCap: 10,
       seatLimit: 3,
       verificationEnabled: false,
       walletEnabled: false,
@@ -37,7 +52,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: 1,
       vehicleCap: 10,
-      driverCap: 15,
       seatLimit: 3,
       verificationEnabled: false,
       walletEnabled: false,
@@ -54,7 +68,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: 1,
       vehicleCap: 10,
-      driverCap: 15,
       seatLimit: 3,
       verificationEnabled: false,
       walletEnabled: false,
@@ -71,7 +84,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: 1,
       vehicleCap: 10,
-      driverCap: 15,
       seatLimit: 3,
       verificationEnabled: false,
       walletEnabled: false,
@@ -89,7 +101,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
       operatingUnitCap: 5,
       vehicleCap: 20,
       vehicleOverageRateMinorUnits: 150_000,
-      driverCap: null,
       seatLimit: 25,
       verificationEnabled: true,
       verificationsIncluded: 10,
@@ -103,13 +114,34 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     name: 'Growth',
     tier: 'growth',
     billingInterval: 'monthly',
+    currency: 'USD',
+    basePriceMinorUnits: 29_900,
+    features: {
+      operatingUnitCap: 5,
+      vehicleCap: 20,
+      vehicleOverageRateMinorUnits: 1_500,
+      seatLimit: 25,
+      verificationEnabled: true,
+      verificationsIncluded: 10,
+      verificationRateMinorUnits: 600,
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      supportTier: 'whatsapp_email',
+      assignmentCap: 50,
+      bulkAssignmentsEnabled: true,
+      exportsEnabled: true,
+    },
+  },
+  {
+    name: 'Growth',
+    tier: 'growth',
+    billingInterval: 'monthly',
     currency: 'GHS',
     basePriceMinorUnits: 35_000,
     features: {
       operatingUnitCap: 5,
       vehicleCap: 20,
       vehicleOverageRateMinorUnits: 1_500,
-      driverCap: null,
       seatLimit: 25,
       verificationEnabled: true,
       verificationsIncluded: 10,
@@ -128,7 +160,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
       operatingUnitCap: 5,
       vehicleCap: 20,
       vehicleOverageRateMinorUnits: 25_000,
-      driverCap: null,
       seatLimit: 25,
       verificationEnabled: true,
       verificationsIncluded: 10,
@@ -147,7 +178,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
       operatingUnitCap: 5,
       vehicleCap: 20,
       vehicleOverageRateMinorUnits: 3_500,
-      driverCap: null,
       seatLimit: 25,
       verificationEnabled: true,
       verificationsIncluded: 10,
@@ -165,7 +195,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: null,
       vehicleCap: null,
-      driverCap: null,
       seatLimit: null,
       verificationEnabled: true,
       walletEnabled: true,
@@ -185,12 +214,38 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     name: 'Enterprise',
     tier: 'enterprise',
     billingInterval: 'monthly',
+    currency: 'USD',
+    basePriceMinorUnits: 0,
+    features: {
+      operatingUnitCap: null,
+      vehicleCap: null,
+      seatLimit: null,
+      verificationEnabled: true,
+      walletEnabled: true,
+      intelligenceEnabled: true,
+      whiteLabelAvailable: true,
+      ssoAvailable: true,
+      supportTier: 'dedicated',
+      assistedUpgradeOnly: true,
+      assignmentCap: null,
+      bulkAssignmentsEnabled: true,
+      exportsEnabled: true,
+    },
+    customTerms: {
+      pricingModel: 'custom_quote_required',
+      minimumFleetSize: 50,
+      contactSalesRequired: true,
+    },
+  },
+  {
+    name: 'Enterprise',
+    tier: 'enterprise',
+    billingInterval: 'monthly',
     currency: 'GHS',
     basePriceMinorUnits: 0,
     features: {
       operatingUnitCap: null,
       vehicleCap: null,
-      driverCap: null,
       seatLimit: null,
       verificationEnabled: true,
       walletEnabled: true,
@@ -215,7 +270,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: null,
       vehicleCap: null,
-      driverCap: null,
       seatLimit: null,
       verificationEnabled: true,
       walletEnabled: true,
@@ -240,7 +294,6 @@ export const STANDARD_PLAN_CATALOG: StandardPlanSpec[] = [
     features: {
       operatingUnitCap: null,
       vehicleCap: null,
-      driverCap: null,
       seatLimit: null,
       verificationEnabled: true,
       walletEnabled: true,

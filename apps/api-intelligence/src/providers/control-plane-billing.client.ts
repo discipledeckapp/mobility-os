@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from '../auth/internal-service-jwt';
 
 @Injectable()
 export class ControlPlaneBillingClient {
@@ -13,20 +14,26 @@ export class ControlPlaneBillingClient {
     description?: string;
   }): Promise<boolean> {
     const baseUrl = this.configService.get<string>('CONTROL_PLANE_BASE_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken || input.amountMinorUnits <= 0) {
+    if (!baseUrl || !internalServiceJwtSecret || input.amountMinorUnits <= 0) {
       return false;
     }
 
     try {
+      const bearerToken = await signInternalServiceJwt({
+        secret: internalServiceJwtSecret,
+        callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-intelligence'),
+        audience: 'api-control-plane',
+        expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+      });
       const response = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/internal/platform-wallets/verification-charges`,
         {
           method: 'POST',
           headers: {
+            authorization: `Bearer ${bearerToken}`,
             'content-type': 'application/json',
-            'x-internal-service-token': internalToken,
           },
           body: JSON.stringify(input),
         },

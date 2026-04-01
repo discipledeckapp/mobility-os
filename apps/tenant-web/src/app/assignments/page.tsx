@@ -89,7 +89,7 @@ export default async function AssignmentsPage() {
         actions={
           !errorMessage ? (
             <Link
-              className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
+              className="inline-flex h-11 w-full items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)] sm:w-auto"
               href="/assignments/new"
             >
               Create assignment
@@ -110,6 +110,9 @@ export default async function AssignmentsPage() {
           <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
             {assignmentsNeedingAttention} waiting for action or confirmation
           </div>
+        </div>
+        <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/90 px-4 py-3 text-sm text-slate-700">
+          On mobile, start with assignments waiting for action before scanning the full registry.
         </div>
       </TenantHeroPanel>
 

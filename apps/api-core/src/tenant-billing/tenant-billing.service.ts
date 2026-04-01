@@ -2,8 +2,11 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
 import { getCountryConfig } from '@mobility-os/domain-config';
+import { readUserSettings } from '../auth/user-settings';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { ZeptoMailService } from '../notifications/zeptomail.service';
+import { RecordsService } from '../records/records.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ControlPlaneBillingClient } from './control-plane-billing.client';
 import type { InitializeCardSetupCheckoutDto } from './dto/initialize-card-setup-checkout.dto';
@@ -27,7 +30,6 @@ function readNumericFeature(features: Record<string, unknown>, key: string): num
 // Growth plan limits used for the trial fallback when control-plane is unreachable.
 const TRIAL_FEATURES = {
   vehicleCap: 20,
-  driverCap: null as number | null,
   seatLimit: 25,
   verificationEnabled: true,
   walletEnabled: true,
@@ -42,7 +44,126 @@ export class TenantBillingService {
     private readonly controlPlaneBillingClient: ControlPlaneBillingClient,
     private readonly configService: ConfigService,
     private readonly verificationSpendService: VerificationSpendService,
+    private readonly recordsService: RecordsService,
+    private readonly zeptoMailService: ZeptoMailService,
   ) {}
+
+  private resolveTenantCurrency(country?: string | null): string {
+    return country?.trim().toUpperCase() === 'NG' ? 'NGN' : 'USD';
+  }
+
+  private async issuePaymentReceipt(input: {
+    tenantId: string;
+    purpose: TenantPaymentApplicationDto['purpose'];
+    reference: string;
+    provider: string;
+    amountMinorUnits: number;
+    currency: string;
+    invoiceId?: string;
+    paymentMethod?: TenantPaymentApplicationDto['paymentMethod'];
+  }) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { name: true },
+    });
+    const titleByPurpose: Record<TenantPaymentApplicationDto['purpose'], string> = {
+      platform_wallet_topup: 'Verification Funding Receipt',
+      card_authorization_setup: 'Verification Card Authorization Receipt',
+      subscription_billing_setup: 'Subscription Billing Setup Receipt',
+      invoice_settlement: 'Subscription Invoice Payment Receipt',
+    };
+
+    return this.recordsService.issueDocument({
+      tenantId: input.tenantId,
+      documentType: 'tenant_billing_receipt',
+      issuerType: 'system',
+      issuerId: 'api-core',
+      recipientType: 'tenant',
+      recipientId: input.tenantId,
+      relatedEntityType: 'tenant_payment',
+      relatedEntityId: input.reference,
+      title: `${titleByPurpose[input.purpose]} ${input.reference}`,
+      subjectLines: [
+        `Organisation: ${tenant?.name ?? input.tenantId}`,
+        `Purpose: ${input.purpose.replace(/_/g, ' ')}`,
+        `Provider: ${input.provider}`,
+        `Reference: ${input.reference}`,
+        `Amount: ${input.amountMinorUnits} ${input.currency}`,
+        ...(input.invoiceId ? [`Invoice: ${input.invoiceId}`] : []),
+        ...(input.paymentMethod?.brand || input.paymentMethod?.last4
+          ? [
+              `Payment method: ${input.paymentMethod?.brand ?? 'Card'} ${input.paymentMethod?.last4 ? `ending in ${input.paymentMethod.last4}` : ''}`.trim(),
+            ]
+          : []),
+      ],
+      canonicalPayload: {
+        tenantId: input.tenantId,
+        purpose: input.purpose,
+        provider: input.provider,
+        reference: input.reference,
+        amountMinorUnits: input.amountMinorUnits,
+        currency: input.currency,
+        ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+        ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
+      },
+      metadata: {
+        purpose: input.purpose,
+        provider: input.provider,
+        reference: input.reference,
+      },
+    });
+  }
+
+  private async deliverPaymentReceiptEmail(input: {
+    tenantId: string;
+    purpose: TenantPaymentApplicationDto['purpose'];
+    reference: string;
+    amountMinorUnits: number;
+    currency: string;
+    receiptDocumentNumber: string;
+  }): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        tenantId: input.tenantId,
+        isActive: true,
+        role: { in: ['TENANT_OWNER', 'TENANT_ADMIN', 'FINANCE_OFFICER'] },
+      },
+      select: {
+        email: true,
+        name: true,
+        role: true,
+        settings: true,
+      },
+    });
+    const recipients = users.filter((user) => {
+      const settings = readUserSettings(user.settings, {
+        preferredLanguage: 'en',
+        role: user.role,
+      });
+      return settings.notificationPreferences.verification_payment_receipt.email;
+    });
+
+    if (recipients.length === 0) {
+      return [];
+    }
+
+    await this.zeptoMailService.sendEmail({
+      to: recipients.map((recipient) => ({
+        address: recipient.email,
+        ...(recipient.name ? { name: recipient.name } : {}),
+      })),
+      subject: `Payment receipt ${input.receiptDocumentNumber}`,
+      htmlBody: [
+        `<p>Your Mobility OS payment was confirmed.</p>`,
+        `<p><strong>Purpose:</strong> ${input.purpose.replace(/_/g, ' ')}</p>`,
+        `<p><strong>Reference:</strong> ${input.reference}</p>`,
+        `<p><strong>Amount:</strong> ${input.amountMinorUnits} ${input.currency}</p>`,
+        `<p><strong>Receipt:</strong> ${input.receiptDocumentNumber}</p>`,
+      ].join(''),
+    });
+
+    return recipients.map((recipient) => recipient.email);
+  }
 
   async getSummary(tenantId: string, userId: string): Promise<TenantBillingSummaryDto> {
     // Always fetch local counts — these come from our own DB, never the control plane.
@@ -73,12 +194,30 @@ export class TenantBillingService {
       ReturnType<ControlPlaneBillingClient['getBillingPaymentMethod']>
     > | null = null;
 
-    try {
-      [subscription, invoices, balance, entries, billingPaymentMethod] = await Promise.all([
-        this.controlPlaneBillingClient.getSubscription(tenantId),
-        this.controlPlaneBillingClient.listInvoices(tenantId),
-        this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId),
-        this.controlPlaneBillingClient.listPlatformWalletEntries(tenantId),
+    const handleBillingDegradation = (label: string, error: unknown): null => {
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(`Billing summary ${label} degraded for tenant '${tenantId}': ${error.message}`);
+        return null;
+      }
+      throw error;
+    };
+
+    const [subscriptionResult, invoicesResult, balanceResult, entriesResult, paymentMethodResult] =
+      await Promise.all([
+        this.controlPlaneBillingClient.getSubscription(tenantId).catch((error) =>
+          handleBillingDegradation('subscription', error),
+        ),
+        this.controlPlaneBillingClient.listInvoices(tenantId).catch((error) => {
+          const degraded = handleBillingDegradation('invoices', error);
+          return degraded ?? [];
+        }),
+        this.controlPlaneBillingClient.getPlatformWalletBalance(tenantId).catch((error) =>
+          handleBillingDegradation('wallet balance', error),
+        ),
+        this.controlPlaneBillingClient.listPlatformWalletEntries(tenantId).catch((error) => {
+          const degraded = handleBillingDegradation('wallet ledger', error);
+          return degraded ?? [];
+        }),
         this.controlPlaneBillingClient.getBillingPaymentMethod(tenantId).catch((error) => {
           if (
             error instanceof ServiceUnavailableException &&
@@ -86,28 +225,20 @@ export class TenantBillingService {
           ) {
             return null;
           }
-          if (error instanceof ServiceUnavailableException) {
-            this.logger.warn(
-              `Billing payment method lookup degraded for tenant '${tenantId}': ${error.message}`,
-            );
-            return null;
-          }
-          throw error;
+          const degraded = handleBillingDegradation('billing payment method', error);
+          return degraded;
         }),
       ]);
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        this.logger.warn(`Billing summary degraded for tenant '${tenantId}': ${error.message}`);
-      } else {
-        throw error;
-      }
-    }
+
+    subscription = subscriptionResult;
+    invoices = invoicesResult;
+    balance = balanceResult;
+    entries = entriesResult;
+    billingPaymentMethod = paymentMethodResult;
 
     // If control-plane data is unavailable, build a trial fallback from local tenant data.
     if (!subscription) {
-      const currency = tenant ? (() => {
-        try { return getCountryConfig(tenant.country).currency; } catch { return 'NGN'; }
-      })() : 'NGN';
+      const currency = this.resolveTenantCurrency(tenant?.country);
       const createdAt = tenant?.createdAt ?? new Date();
       const trialEndsAt = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
       const now = new Date();
@@ -147,7 +278,7 @@ export class TenantBillingService {
           driverCount,
           vehicleCount,
           operatorSeatCount,
-          driverCap: TRIAL_FEATURES.driverCap,
+          driverCap: null,
           vehicleCap: TRIAL_FEATURES.vehicleCap,
           seatCap: TRIAL_FEATURES.seatLimit,
           openInvoiceCount: 0,
@@ -161,9 +292,6 @@ export class TenantBillingService {
     }
 
     const outstandingInvoice = invoices.find((invoice) => invoice.status === 'open') ?? null;
-    const driverCap =
-      readNumericFeature(subscription.features, 'driverCap') ??
-      readNumericFeature(subscription.features, 'seatLimit');
     const vehicleCap =
       readNumericFeature(subscription.features, 'vehicleCap') ??
       readNumericFeature(subscription.features, 'fleetCap');
@@ -234,7 +362,7 @@ export class TenantBillingService {
         driverCount,
         vehicleCount,
         operatorSeatCount,
-        driverCap,
+        driverCap: null,
         vehicleCap,
         seatCap,
         openInvoiceCount: invoices.filter((invoice) => invoice.status === 'open').length,
@@ -369,6 +497,32 @@ export class TenantBillingService {
       });
     }
 
+    const receipt = await this.issuePaymentReceipt({
+      tenantId,
+      purpose: result.purpose,
+      reference: result.reference,
+      provider: result.provider,
+      amountMinorUnits: result.amountMinorUnits,
+      currency: result.currency,
+      ...(result.invoiceId ? { invoiceId: result.invoiceId } : {}),
+      ...(result.paymentMethod ? { paymentMethod: result.paymentMethod } : {}),
+    });
+    let receiptEmailSentTo: string[] = [];
+    try {
+      receiptEmailSentTo = await this.deliverPaymentReceiptEmail({
+        tenantId,
+        purpose: result.purpose,
+        reference: result.reference,
+        amountMinorUnits: result.amountMinorUnits,
+        currency: result.currency,
+        receiptDocumentNumber: receipt.documentNumber,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Receipt email delivery failed for payment '${result.reference}' on tenant '${tenantId}': ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
+
     return {
       provider: result.provider,
       reference: result.reference,
@@ -379,12 +533,31 @@ export class TenantBillingService {
       ...(result.invoiceId ? { invoiceId: result.invoiceId } : {}),
       ...(result.tenantId ? { tenantId: result.tenantId } : {}),
       ...(result.paymentMethod ? { paymentMethod: result.paymentMethod } : {}),
+      receiptDocumentId: receipt.id,
+      receiptDocumentNumber: receipt.documentNumber,
+      receiptEmailSentTo,
     };
   }
 
-  async listPlans(): Promise<TenantBillingPlanDto[]> {
+  async listPlans(tenantId: string): Promise<TenantBillingPlanDto[]> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true },
+    });
+    const preferredCurrency = this.resolveTenantCurrency(tenant?.country);
     const plans = await this.controlPlaneBillingClient.listPlans();
-    return plans.map((plan) => ({
+    const sortedPlans = [...plans].sort((left, right) => {
+      const leftPreferred = left.currency === preferredCurrency ? 1 : 0;
+      const rightPreferred = right.currency === preferredCurrency ? 1 : 0;
+      if (leftPreferred !== rightPreferred) {
+        return rightPreferred - leftPreferred;
+      }
+      if (left.isActive !== right.isActive) {
+        return left.isActive ? -1 : 1;
+      }
+      return left.basePriceMinorUnits - right.basePriceMinorUnits;
+    });
+    return sortedPlans.map((plan) => ({
       id: plan.id,
       name: plan.name,
       tier: plan.tier,
@@ -394,6 +567,7 @@ export class TenantBillingService {
       isActive: plan.isActive,
       features: plan.features,
       customTerms: plan.customTerms ?? null,
+      isPreferredCurrency: plan.currency === preferredCurrency,
     }));
   }
 

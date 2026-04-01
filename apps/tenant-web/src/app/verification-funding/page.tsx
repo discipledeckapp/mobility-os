@@ -153,9 +153,9 @@ function FundingStateCard({
 
 export default async function VerificationFundingPage() {
   let billingSummary: TenantBillingSummaryRecord | null = null;
-  let fundingUnavailable = false;
   let locale = 'en-US';
   let currencyMinorUnit = 2;
+  let fundingErrorMessage: string | null = null;
 
   try {
     const [tenant, session, summary] = await Promise.all([
@@ -168,7 +168,10 @@ export default async function VerificationFundingPage() {
     billingSummary = summary;
   } catch (error) {
     console.error('[verification-funding] page load failed', error);
-    fundingUnavailable = true;
+    fundingErrorMessage =
+      error instanceof Error
+        ? error.message
+        : 'We could not load the latest funding state right now.';
   }
 
   return (
@@ -178,18 +181,22 @@ export default async function VerificationFundingPage() {
       title="Verification Funding"
     >
       <div className="space-y-6">
-        {fundingUnavailable || !billingSummary ? (
+        {fundingErrorMessage ? (
           <Card className="border-amber-200 bg-amber-50">
             <CardHeader>
-              <CardTitle>Verification funding is temporarily unavailable</CardTitle>
+              <CardTitle>Funding data needs attention</CardTitle>
               <CardDescription>
-                We could not load the latest funding state right now. Please try again shortly. If this keeps happening, contact support.
+                {fundingErrorMessage} Refresh this page to retry. If the problem continues, verify that billing services are reachable before starting another funding attempt.
               </CardDescription>
             </CardHeader>
           </Card>
-        ) : (
+        ) : null}
+        {!billingSummary ? null : (
           <>
             <FundingStateCard locale={locale} summary={billingSummary} />
+            <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white p-4 text-sm text-slate-600">
+              On mobile, start with the readiness card and available spend. Open the funding action panel only when you are ready to top up or add a card.
+            </div>
 
             <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
               <Card className="border-slate-200 bg-white">

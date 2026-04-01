@@ -54,13 +54,14 @@ function formatCap(value: number | null, suffix: string): string {
 function getPlanHighlights(plan: TenantBillingPlanRecord): string[] {
   const highlights = [
     formatCap(getPlanNumericFeature(plan, 'operatingUnitCap'), 'operating units'),
-    formatCap(getPlanNumericFeature(plan, 'driverCap'), 'drivers'),
     formatCap(getPlanNumericFeature(plan, 'vehicleCap'), 'vehicles'),
     formatCap(getPlanNumericFeature(plan, 'seatLimit'), 'seats'),
   ];
 
   const assignmentsCap = getPlanNumericFeature(plan, 'assignmentCap');
-  highlights.push(assignmentsCap === null ? 'Assignments included' : `${assignmentsCap} assignments`);
+  highlights.push(
+    assignmentsCap === null ? 'Assignments included' : `${assignmentsCap} concurrent assignments`,
+  );
 
   if (getPlanBooleanFeature(plan, 'verificationEnabled')) {
     const included = getPlanNumericFeature(plan, 'verificationsIncluded');
@@ -82,6 +83,13 @@ function getPlanHighlights(plan: TenantBillingPlanRecord): string[] {
   const supportTier = getPlanStringFeature(plan, 'supportTier');
   if (supportTier) {
     highlights.push(`Support: ${supportTier.replaceAll('_', ' / ')}`);
+  }
+
+  if (getPlanBooleanFeature(plan, 'bulkAssignmentsEnabled')) {
+    highlights.push('Bulk assignment tools');
+  }
+  if (getPlanBooleanFeature(plan, 'exportsEnabled')) {
+    highlights.push('Operational exports');
   }
 
   return highlights;
@@ -134,8 +142,8 @@ export function SubscriptionManagementPanel({
         <CardHeader>
           <CardTitle>Plan management</CardTitle>
           <CardDescription>
-            Subscription controls scale only: driver capacity, vehicle capacity, operator seats,
-            and access to plan-level features.
+            Subscription controls operational scale only: vehicles, assignments, operator seats,
+            and access to plan-level features. Drivers are not capped.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -173,10 +181,12 @@ export function SubscriptionManagementPanel({
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] bg-white/80 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Drivers
+                  Assignments
                 </p>
                 <p className="mt-1 text-base font-semibold text-slate-950">
-                  {summary.usage.driverCap == null ? 'Unlimited' : summary.usage.driverCap}
+                  {typeof currentPlan?.features.assignmentCap === 'number'
+                    ? currentPlan.features.assignmentCap
+                    : 'Unlimited'}
                 </p>
               </div>
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] bg-white/80 p-3">

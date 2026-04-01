@@ -132,6 +132,8 @@ function GuarantorAccountStep({
   const [email, setEmail] = useState(context.guarantorEmail ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -190,19 +192,36 @@ function GuarantorAccountStep({
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
           />
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
           />
+          <button
+            className="text-left text-xs font-medium text-amber-700"
+            onClick={() => setShowPassword((current) => !current)}
+            type="button"
+          >
+            {showPassword ? 'Hide password' : 'Show password'}
+          </button>
+          <Text tone="muted">
+            Use at least 8 characters. A longer password with a mix of words, numbers, and symbols is better.
+          </Text>
           <input
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm password"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
           />
+          <button
+            className="text-left text-xs font-medium text-amber-700"
+            onClick={() => setShowConfirmPassword((current) => !current)}
+            type="button"
+          >
+            {showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+          </button>
           {error ? <Text tone="danger">{error}</Text> : null}
           <Button disabled={submitting} type="submit">
             {submitting ? 'Creating account…' : 'Create sign-in account'}
@@ -461,7 +480,7 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
   if (state === 'loading') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)]">
-        <Text tone="muted">Loading your onboarding…</Text>
+        <Text tone="muted">Loading your guarantor workspace…</Text>
       </main>
     );
   }

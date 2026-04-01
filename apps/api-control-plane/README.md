@@ -79,7 +79,7 @@ See `packages/env-config` for the full variable reference.
 Key variables:
 - `DATABASE_URL` — PostgreSQL connection string
 - `PLATFORM_JWT_SECRET` — Platform JWT signing secret
-- `INTERNAL_SERVICE_TOKEN` — Internal service-to-service token for protected control-plane internal routes
+- `INTERNAL_SERVICE_JWT_SECRET` — Shared signing secret for short-lived internal service JWTs
 - `BOOTSTRAP_DEFAULT_PLATFORM_SETTINGS` — When `true`, seeds default structured platform settings on startup
 - `PORT` — Default `3001`
 

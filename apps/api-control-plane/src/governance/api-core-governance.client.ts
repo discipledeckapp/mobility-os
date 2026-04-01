@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from '../auth/internal-service-jwt';
 
 export interface ApiCorePrivacyOversightRecord {
   generatedAt: string;
@@ -100,16 +101,22 @@ export class ApiCoreGovernanceClient {
 
   private async request<T>(path: string): Promise<T> {
     const baseUrl = this.configService.get<string>('API_CORE_BASE_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken) {
+    if (!baseUrl || !internalServiceJwtSecret) {
       throw new ServiceUnavailableException('api-core governance integration is not configured.');
     }
 
+    const bearerToken = await signInternalServiceJwt({
+      secret: internalServiceJwtSecret,
+      callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-control-plane'),
+      audience: 'api-core',
+      expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+    });
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1${path}`, {
       headers: {
+        authorization: `Bearer ${bearerToken}`,
         'content-type': 'application/json',
-        'x-internal-service-token': internalToken,
       },
     });
 

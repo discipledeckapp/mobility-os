@@ -71,6 +71,9 @@ export class TenantBillingPlanDto {
   isActive!: boolean;
 
   @ApiProperty()
+  isPreferredCurrency!: boolean;
+
+  @ApiProperty()
   features!: Record<string, unknown>;
 
   @ApiPropertyOptional()
@@ -326,6 +329,15 @@ export class TenantPaymentApplicationDto {
 
   @ApiPropertyOptional()
   tenantId?: string;
+
+  @ApiPropertyOptional()
+  receiptDocumentId?: string;
+
+  @ApiPropertyOptional()
+  receiptDocumentNumber?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  receiptEmailSentTo?: string[];
 
   @ApiPropertyOptional()
   paymentMethod?: {

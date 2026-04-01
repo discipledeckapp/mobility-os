@@ -1,18 +1,49 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { randomUUID } from 'node:crypto';
+import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import { CronJob } from 'cron';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { BillingCollectionsService } from './billing-collections.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { BillingRunsService } from './billing-runs.service';
 
 @Injectable()
-export class BillingSchedulerService {
+export class BillingSchedulerService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(BillingSchedulerService.name);
+  private readonly jobs: CronJob[] = [];
 
   constructor(
     private readonly billingRunsService: BillingRunsService,
     private readonly billingCollectionsService: BillingCollectionsService,
   ) {}
+
+  onApplicationBootstrap(): void {
+    if (process.env.DISABLE_SCHEDULER === 'true') {
+      this.logger.log('Billing scheduler disabled by environment flag.');
+      return;
+    }
+
+    this.jobs.push(
+      CronJob.from({
+        cronTime: '0 2 2 * *',
+        onTick: () => void this.runMonthlyBillingCycle(),
+        start: true,
+        name: `monthly-billing-run-${randomUUID()}`,
+      }),
+      CronJob.from({
+        cronTime: '0 3 * * *',
+        onTick: () => void this.runDailyCollections(),
+        start: true,
+        name: `daily-billing-collections-${randomUUID()}`,
+      }),
+    );
+  }
+
+  onApplicationShutdown(): void {
+    for (const job of this.jobs) {
+      job.stop();
+    }
+    this.jobs.length = 0;
+  }
 
   /**
    * Generate invoices and advance subscription periods for all due subscriptions.
@@ -20,7 +51,6 @@ export class BillingSchedulerService {
    * The 2nd gives Paystack/Flutterwave time to process any pending payments before
    * we roll forward and settle from the platform wallet.
    */
-  @Cron('0 2 2 * *')
   async runMonthlyBillingCycle(): Promise<void> {
     this.logger.log('Starting monthly billing run');
     try {
@@ -42,7 +72,6 @@ export class BillingSchedulerService {
    * Runs daily at 03:00 UTC — after the billing run window, so newly generated
    * invoices are available for same-day settlement attempts.
    */
-  @Cron('0 3 * * *')
   async runDailyCollections(): Promise<void> {
     this.logger.log('Starting daily collections run');
     try {

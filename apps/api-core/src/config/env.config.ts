@@ -49,7 +49,16 @@ const schema = z.object({
 
   // ── Internal service URLs ──────────────────────────────────────────────────
   CONTROL_PLANE_API_URL: z.string().url('CONTROL_PLANE_API_URL must be a valid URL').optional(),
-  INTERNAL_SERVICE_TOKEN: z.string().min(16, 'INTERNAL_SERVICE_TOKEN is required').optional(),
+  INTERNAL_SERVICE_JWT_SECRET: z
+    .string()
+    .min(32, 'INTERNAL_SERVICE_JWT_SECRET must be at least 32 characters')
+    .optional(),
+  INTERNAL_SERVICE_JWT_EXPIRES_IN: z.string().default('2m'),
+  INTERNAL_SERVICE_CALLER_ID: z.string().default('api-core'),
+  INTERNAL_SERVICE_AUDIENCE: z.string().default('api-core'),
+  INTERNAL_SERVICE_ALLOWED_CALLERS: z
+    .string()
+    .default('api-control-plane'),
   INTELLIGENCE_API_URL: z
     .string()
     .url('INTELLIGENCE_API_URL must be a valid URL')
@@ -103,6 +112,12 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
   if (hasIntelligenceUrl !== hasIntelligenceKey) {
     throw new Error(
       '[api-core] Environment validation failed:\n  INTELLIGENCE_API_URL/INTELLIGENCE_API_KEY: both must be set together when intelligence integration is enabled.',
+    );
+  }
+
+  if (data.CONTROL_PLANE_API_URL && !data.INTERNAL_SERVICE_JWT_SECRET) {
+    throw new Error(
+      '[api-core] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_API_URL is configured.',
     );
   }
 

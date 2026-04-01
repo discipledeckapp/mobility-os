@@ -291,9 +291,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <PageShell
+        compact
         eyebrow="Remittance"
         title="Record collection"
-        subtitle="Select the assignment, record the amount received, and keep the ledger in sync."
+        subtitle="Work through assignment, amount, and evidence in a simpler handheld flow."
         actions={
           <Button
             accessibilityHint="Review queued offline actions waiting to sync"
@@ -307,7 +308,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
       <Card style={styles.section}>
         <SectionIntro
-          title="Recent collections"
+          title="Step 1: Review recent collections"
           subtitle="Use recent entries as a quick reference before you submit the next one."
           action={
             <Button
@@ -334,7 +335,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         ) : history.length === 0 ? (
           <Text style={styles.muted}>No collections have been recorded from this mobile account yet.</Text>
         ) : (
-          history.map((record) => (
+          history.slice(0, 3).map((record) => (
             <View key={record.id} style={styles.historyRow}>
               <View style={styles.optionCopy}>
                 <Text style={styles.optionTitle}>
@@ -363,7 +364,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
       <Card style={styles.section}>
         <SectionIntro
-          title="Assignment"
+          title="Step 2: Choose assignment"
           subtitle="Choose the active assignment this payment belongs to."
         />
         <Input
@@ -425,7 +426,7 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
 
       <Card style={styles.section}>
         <SectionIntro
-          title="Collection details"
+          title="Step 3: Confirm collection"
           subtitle="The form stays compact and focused on the payment you are recording now."
         />
         <Input
@@ -536,6 +537,14 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
           onChangeText={setNotes}
           style={styles.notesInput}
           value={notes}
+          helperText="Optional. Use notes only when the cash handoff needs extra context."
+        />
+      </Card>
+
+      <Card style={styles.section}>
+        <SectionIntro
+          title="Step 4: Add optional evidence"
+          subtitle="Only add these fields when they help later reconciliation."
         />
         <Input
           accessibilityHint="Optional shift label for later cash reconciliation"

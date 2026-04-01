@@ -3,7 +3,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
 import {
   ThrottlerGuard,
   ThrottlerModule,
@@ -89,10 +88,6 @@ function createLoggerModule() {
   });
 }
 
-function createScheduleImports() {
-  return process.env.DISABLE_SCHEDULER === 'true' ? [] : [ScheduleModule.forRoot()];
-}
-
 /**
  * Root application module for the SaaS control plane (api-control-plane).
  *
@@ -118,6 +113,7 @@ function createScheduleImports() {
     // ── Config (global, loaded first) ─────────────────────────────────────────
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
       validate: controlPlaneEnvConfig,
       cache: true,
     }),
@@ -128,7 +124,6 @@ function createScheduleImports() {
       },
     ]),
     createLoggerModule(),
-    ...createScheduleImports(),
 
     // ── Infrastructure ────────────────────────────────────────────────────────
     DatabaseModule,

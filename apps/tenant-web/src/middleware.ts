@@ -70,6 +70,19 @@ async function refreshTenantSession(refreshToken: string) {
   }
 }
 
+function buildTenantLoginRedirect(request: NextRequest) {
+  const loginUrl = new URL('/login', request.url);
+  const currentPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (currentPath && currentPath !== '/login') {
+    loginUrl.searchParams.set('next', currentPath);
+  }
+
+  const response = NextResponse.redirect(loginUrl);
+  response.cookies.delete(TENANT_AUTH_COOKIE_NAME);
+  response.cookies.delete(TENANT_REFRESH_COOKIE_NAME);
+  return response;
+}
+
 function applySessionCookies(
   response: NextResponse,
   tokens: { accessToken: string; refreshToken: string },
@@ -108,9 +121,11 @@ export async function middleware(request: NextRequest) {
 
   let activeAccessToken = authCookie;
   let activeRefreshToken = refreshCookie;
+  let refreshStatus: 'idle' | 'success' | 'invalid' | 'unavailable' = 'idle';
 
   if (!isTenantJwtUsable(activeAccessToken) && activeRefreshToken) {
     const refreshedSession = await refreshTenantSession(activeRefreshToken);
+    refreshStatus = refreshedSession.status;
     if (refreshedSession.status === 'success') {
       activeAccessToken = refreshedSession.accessToken;
       activeRefreshToken = refreshedSession.refreshToken;
@@ -140,6 +155,17 @@ export async function middleware(request: NextRequest) {
       return response;
     }
 
+    if (refreshedSession.status === 'invalid') {
+      if (!isPublicRoute) {
+        return buildTenantLoginRedirect(request);
+      }
+
+      const response = NextResponse.next();
+      response.cookies.delete(TENANT_AUTH_COOKIE_NAME);
+      response.cookies.delete(TENANT_REFRESH_COOKIE_NAME);
+      return response;
+    }
+
     if (refreshedSession.status === 'unavailable') {
       if (!isPublicRoute) {
         return NextResponse.next();
@@ -152,20 +178,10 @@ export async function middleware(request: NextRequest) {
   const continuationPath = getSelfServiceContinuationPath(payload);
 
   if (!hasUsableSession && !isPublicRoute) {
-    if (activeRefreshToken) {
+    if (activeRefreshToken && refreshStatus === 'unavailable') {
       return NextResponse.next();
     }
-    const loginUrl = new URL('/login', request.url);
-    const currentPath = `${pathname}${request.nextUrl.search}`;
-    if (currentPath && currentPath !== '/login') {
-      loginUrl.searchParams.set('next', currentPath);
-    }
-    const response = NextResponse.redirect(loginUrl);
-    if (activeAccessToken) {
-      response.cookies.delete(TENANT_AUTH_COOKIE_NAME);
-    }
-    response.cookies.delete(TENANT_REFRESH_COOKIE_NAME);
-    return response;
+    return buildTenantLoginRedirect(request);
   }
 
   if (!hasUsableSession && isPublicRoute) {

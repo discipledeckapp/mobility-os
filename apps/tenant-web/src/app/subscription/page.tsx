@@ -112,8 +112,8 @@ export default async function SubscriptionPage() {
         <CardHeader>
           <CardTitle>Subscription overview</CardTitle>
           <CardDescription>
-            Subscription tiers control company scale only: driver limits, vehicle limits, seats,
-            and platform features. Verification tier and wallet funding are managed separately.
+            Subscription tiers control company scale only: vehicle limits, assignment scale, seats,
+            and platform features. Drivers are not capped. Verification tier and wallet funding are managed separately.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -127,7 +127,12 @@ export default async function SubscriptionPage() {
                 const daysRemaining = getDaysUntil(billingSummary.subscription.currentPeriodEnd);
                 const activePlans = [...plans]
                   .filter((plan) => plan.isActive)
-                  .sort((left, right) => left.basePriceMinorUnits - right.basePriceMinorUnits);
+                  .sort((left, right) => {
+                    if (left.isPreferredCurrency !== right.isPreferredCurrency) {
+                      return left.isPreferredCurrency ? -1 : 1;
+                    }
+                    return left.basePriceMinorUnits - right.basePriceMinorUnits;
+                  });
                 const currentPlan =
                   activePlans.find((plan) => plan.id === billingSummary.subscription.planId) ?? null;
 
@@ -143,7 +148,7 @@ export default async function SubscriptionPage() {
                             Keep your fleet moving with the right plan for your current scale.
                           </h2>
                           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                            Subscription tiers control platform scale, seats, and feature access.
+                            Subscription tiers control platform scale, assignment volume, seats, and feature access.
                             Verification requirements and verification funding stay separate.
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
@@ -205,6 +210,9 @@ export default async function SubscriptionPage() {
                         </div>
                       </div>
                     </section>
+                    <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                      On mobile, start with your current plan status and next invoice. Compare full plan details only when you are ready to switch tiers.
+                    </div>
 
                     {billingSummary.subscription.enforcement?.stage === 'grace' ? (
                       <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -243,8 +251,6 @@ export default async function SubscriptionPage() {
                       </div>
                       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         {activePlans.map((plan) => {
-                          const driverCap =
-                            typeof plan.features.driverCap === 'number' ? plan.features.driverCap : null;
                           const vehicleCap =
                             typeof plan.features.vehicleCap === 'number' ? plan.features.vehicleCap : null;
                           const assignmentCap =
@@ -260,16 +266,21 @@ export default async function SubscriptionPage() {
                                 <p className="text-lg font-semibold tracking-[-0.03em] text-slate-950">
                                   {plan.name}
                                 </p>
-                                {plan.id === billingSummary.subscription.planId ? (
-                                  <Badge tone="neutral">Current</Badge>
-                                ) : null}
+                                <div className="flex items-center gap-2">
+                                  {plan.isPreferredCurrency ? (
+                                    <Badge tone="success">Preferred currency</Badge>
+                                  ) : null}
+                                  {plan.id === billingSummary.subscription.planId ? (
+                                    <Badge tone="neutral">Current</Badge>
+                                  ) : null}
+                                </div>
                               </div>
                               <p className="mt-1 text-sm text-slate-500">
                                 {formatMoney(plan.basePriceMinorUnits, plan.currency, locale)} / {plan.billingInterval}
                               </p>
                               <div className="mt-4 grid gap-2 text-sm text-slate-600">
                                 <div className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] bg-slate-50 px-3 py-2">
-                                  {driverCap == null ? 'Unlimited drivers' : `${driverCap} drivers`}
+                                  Drivers are uncapped
                                 </div>
                                 <div className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] bg-slate-50 px-3 py-2">
                                   {vehicleCap == null ? 'Unlimited vehicles' : `${vehicleCap} vehicles`}
@@ -382,10 +393,8 @@ export default async function SubscriptionPage() {
                       {billingSummary.usage.driverCount}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Max drivers:{' '}
-                      {billingSummary.usage.driverCap == null
-                        ? 'Unlimited'
-                        : billingSummary.usage.driverCap}
+                      Drivers are not capped by subscription. Scale controls apply to vehicles,
+                      assignments, and operator seats.
                     </p>
                   </div>
                   <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">

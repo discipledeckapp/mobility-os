@@ -1,8 +1,9 @@
 import { TenantRole } from '@mobility-os/authz-model';
-import { getBusinessModel, getCountryConfig } from '@mobility-os/domain-config';
+import { getBusinessModel } from '@mobility-os/domain-config';
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from '../auth/internal-service-jwt';
 import { generateOtpCode, hashAuthSecret } from '../auth/auth-token-utils';
 import { hashPassword } from '../auth/password-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
@@ -36,9 +37,9 @@ export class SelfSignupService {
 
   private async ensureControlPlaneSubscription(tenantId: string, currency: string): Promise<void> {
     const controlPlaneApiUrl = this.config.get<string>('CONTROL_PLANE_API_URL');
-    const internalServiceToken = this.config.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.config.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!controlPlaneApiUrl || !internalServiceToken) {
+    if (!controlPlaneApiUrl || !internalServiceJwtSecret) {
       this.logger.warn(
         `Skipping control-plane subscription bootstrap for tenant '${tenantId}' because control-plane integration is not configured.`,
       );
@@ -46,13 +47,19 @@ export class SelfSignupService {
     }
 
     try {
+      const bearerToken = await signInternalServiceJwt({
+        secret: internalServiceJwtSecret,
+        callerId: this.config.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-core'),
+        audience: 'api-control-plane',
+        expiresIn: this.config.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+      });
       const response = await fetch(
         `${controlPlaneApiUrl.replace(/\/$/, '')}/api/internal/subscriptions/bootstrap`,
         {
           method: 'POST',
           headers: {
+            authorization: `Bearer ${bearerToken}`,
             'content-type': 'application/json',
-            'x-internal-service-token': internalServiceToken,
           },
           body: JSON.stringify({
             tenantId,
@@ -81,7 +88,7 @@ export class SelfSignupService {
     // Validate business model (throws if invalid)
     getBusinessModel(dto.businessModel);
 
-    const countryConfig = getCountryConfig(dto.country);
+    const bootstrapCurrency = dto.country.trim().toUpperCase() === 'NG' ? 'NGN' : 'USD';
 
     const { userId, tenantId, tenantSlug } = await this.prisma.$transaction(async (tx) => {
       const existingSlug = await tx.tenant.findUnique({
@@ -143,7 +150,7 @@ export class SelfSignupService {
         create: {
           tenantId: tenant.id,
           businessEntityId: businessEntity.id,
-          currency: countryConfig.currency,
+          currency: bootstrapCurrency,
         },
         update: {},
       });
@@ -194,7 +201,7 @@ export class SelfSignupService {
       code,
     });
 
-    await this.ensureControlPlaneSubscription(tenantId, countryConfig.currency);
+    await this.ensureControlPlaneSubscription(tenantId, bootstrapCurrency);
 
     return {
       userId,

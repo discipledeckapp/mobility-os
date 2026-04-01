@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-// biome-ignore lint/style/useImportType: NestJS DI requires runtime values for constructor metadata.
-import { Cron } from '@nestjs/schedule';
+import { randomUUID } from 'node:crypto';
+import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import { CronJob } from 'cron';
 // biome-ignore lint/style/useImportType: NestJS DI requires runtime values for constructor metadata.
 import { DriversService } from './drivers.service';
 
@@ -13,12 +13,43 @@ import { DriversService } from './drivers.service';
  * problems when providers come back online.
  */
 @Injectable()
-export class DriversVerificationSchedulerService {
+export class DriversVerificationSchedulerService
+  implements OnApplicationBootstrap, OnApplicationShutdown
+{
   private readonly logger = new Logger(DriversVerificationSchedulerService.name);
+  private readonly jobs: CronJob[] = [];
 
   constructor(private readonly driversService: DriversService) {}
 
-  @Cron('*/10 * * * *')
+  onApplicationBootstrap(): void {
+    if (process.env.DISABLE_SCHEDULER === 'true') {
+      this.logger.log('Driver verification scheduler disabled by environment flag.');
+      return;
+    }
+
+    this.jobs.push(
+      CronJob.from({
+        cronTime: '*/10 * * * *',
+        onTick: () => void this.retryPendingProviderVerifications(),
+        start: true,
+        name: `driver-verification-retry-${randomUUID()}`,
+      }),
+      CronJob.from({
+        cronTime: '0 */6 * * *',
+        onTick: () => void this.sendPendingGuarantorOnboardingReminders(),
+        start: true,
+        name: `driver-guarantor-reminder-${randomUUID()}`,
+      }),
+    );
+  }
+
+  onApplicationShutdown(): void {
+    for (const job of this.jobs) {
+      job.stop();
+    }
+    this.jobs.length = 0;
+  }
+
   async retryPendingProviderVerifications(): Promise<void> {
     let pending: Awaited<ReturnType<DriversService['findDriversPendingProviderRetry']>>;
     try {
@@ -89,7 +120,6 @@ export class DriversVerificationSchedulerService {
     );
   }
 
-  @Cron('0 */6 * * *')
   async sendPendingGuarantorOnboardingReminders(): Promise<void> {
     let pending: Awaited<ReturnType<DriversService['findDriversPendingGuarantorReminders']>>;
     try {

@@ -8,9 +8,9 @@ import { InternalProvisioningService } from './internal-provisioning.service';
 
 @ApiTags('Internal Provisioning')
 @ApiHeader({
-  name: 'x-internal-service-token',
+  name: 'Authorization',
   required: true,
-  description: 'Internal service token shared between platform services',
+  description: 'Bearer token for signed internal service authentication',
 })
 @UseGuards(InternalServiceAuthGuard)
 @Controller('internal/provisioning')

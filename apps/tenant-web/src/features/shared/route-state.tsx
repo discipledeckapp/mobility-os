@@ -25,6 +25,7 @@ type RouteErrorStateProps = RouteShellProps & {
 type RouteLoadingStateProps = RouteShellProps & {
   summaryCount?: number;
   tableRows?: number;
+  organisationName?: string;
 };
 
 export function RouteErrorState({
@@ -58,6 +59,7 @@ export function RouteLoadingState({
   description,
   summaryCount = 3,
   tableRows = 6,
+  organisationName = 'your organisation',
 }: RouteLoadingStateProps) {
   return (
     <TenantAppShell description={description} eyebrow={eyebrow} title={title}>
@@ -67,14 +69,14 @@ export function RouteLoadingState({
           message="Loading the latest records, summarising operational signals, and preparing the controls for this workspace."
           progressLabel="Preparing your workspace"
           steps={[
-            'Connecting to tenant data',
+            `Connecting to ${organisationName} data`,
             'Refreshing operational summaries',
             'Preparing actionable views',
           ]}
           tips={[
-            'Clear readiness signals reduce operational delays.',
-            'Well-scoped dashboards make exceptions easier to resolve.',
-            'Fresh operational data improves assignment and remittance decisions.',
+            'Assignment acceptance works best when driver readiness, vehicle availability, and verification status stay aligned.',
+            'Remittance exceptions are easier to resolve when due dates and recorded payments match the actual contract schedule.',
+            'Role-aware workspaces help operators, finance teams, and drivers act on the same operational truth.',
           ]}
           title="Preparing your dashboard"
           variant="reporting"

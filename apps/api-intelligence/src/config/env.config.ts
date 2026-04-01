@@ -35,7 +35,9 @@ const schema = z.object({
 
   // ── Control-plane settings consumption ─────────────────────────────────────
   CONTROL_PLANE_BASE_URL: z.string().url().optional(),
-  INTERNAL_SERVICE_TOKEN: z.string().min(16).optional(),
+  INTERNAL_SERVICE_JWT_SECRET: z.string().min(32).optional(),
+  INTERNAL_SERVICE_JWT_EXPIRES_IN: z.string().default('2m'),
+  INTERNAL_SERVICE_CALLER_ID: z.string().default('api-intelligence'),
   VERIFICATION_FEE_AMOUNT_MINOR_UNITS: z.coerce.number().int().min(0).default(0),
 
   // ── Country identity providers ─────────────────────────────────────────────
@@ -95,5 +97,11 @@ export function intelligenceEnvConfig(config: Record<string, unknown>): Intellig
     const lines = result.error.errors.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`[api-intelligence] Environment validation failed:\n${lines}`);
   }
-  return result.data;
+  const data = result.data;
+  if (data.CONTROL_PLANE_BASE_URL && !data.INTERNAL_SERVICE_JWT_SECRET) {
+    throw new Error(
+      '[api-intelligence] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_BASE_URL is configured.',
+    );
+  }
+  return data;
 }

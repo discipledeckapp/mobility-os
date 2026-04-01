@@ -15,11 +15,6 @@ if (process.env.NODE_ENV === 'production' && !configuredApiBaseUrl) {
 
 const apiBaseUrl = configuredApiBaseUrl ?? 'http://localhost:3001/api/v1';
 
-type TenantTokenPair = {
-  accessToken: string;
-  refreshToken: string;
-};
-
 export interface ApiCoreRequestOptions extends RequestInit {
   token?: string;
 }
@@ -44,29 +39,6 @@ export interface TenantApiContext {
   operatingUnitId?: string | undefined;
   assignedFleetIds?: string[] | undefined;
   customPermissions?: string[] | undefined;
-}
-
-async function refreshTenantTokens(refreshToken: string): Promise<TenantTokenPair> {
-  const response = await apiCoreFetch<{
-    accessToken?: string;
-    refreshToken?: string;
-    token?: string;
-    jwt?: string;
-  }>('/auth/refresh', {
-    method: 'POST',
-    body: JSON.stringify({ refreshToken }),
-    cache: 'no-store',
-  });
-
-  const accessToken = response.accessToken ?? response.token ?? response.jwt;
-  if (!accessToken || !response.refreshToken) {
-    throw new Error('Unable to refresh the tenant session. Please log in again.');
-  }
-
-  return {
-    accessToken,
-    refreshToken: response.refreshToken,
-  };
 }
 
 async function fetchBrowserTenantToken(): Promise<string> {
@@ -821,6 +793,15 @@ export interface ReportsOverviewRecord {
     atRiskAssignmentCount: number;
     overdueMaintenanceCount: number;
   }>;
+  recentActivity: Array<{
+    id: string;
+    kind: string;
+    title: string;
+    description: string;
+    href: string;
+    timestamp: string;
+    status: string;
+  }>;
 }
 
 export interface LicenceExpiryReportRecord {
@@ -1256,9 +1237,12 @@ export interface DriverSelfServiceAssignmentRecord {
   remittanceCurrency?: string | null;
   remittanceFrequency?: string | null;
   remittanceStartDate?: string | null;
+  contractStatus?: string | null;
+  driverConfirmedAt?: string | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  financialContract?: AssignmentRecord['financialContract'] | null;
   vehicle: {
     id: string;
     make?: string | null;
@@ -1558,6 +1542,7 @@ export interface TenantBillingPlanRecord {
   basePriceMinorUnits: number;
   currency: string;
   isActive: boolean;
+  isPreferredCurrency: boolean;
   features: Record<string, unknown>;
   customTerms?: Record<string, unknown> | null;
 }
@@ -1750,8 +1735,9 @@ export async function getTenantApiToken(explicitToken?: string): Promise<string>
 
   const refreshToken = forwardedRefreshToken ?? cookieStore.get(TENANT_REFRESH_COOKIE_NAME)?.value;
   if (refreshToken) {
-    const tokens = await refreshTenantTokens(refreshToken);
-    return tokens.accessToken;
+    throw new Error(
+      'The tenant session needs to be refreshed before this request can continue. Reload the page and try again.',
+    );
   }
 
   throw new Error('No tenant auth token is available. Log in to continue.');
@@ -2275,6 +2261,9 @@ export async function verifyAndApplyTenantPayment(
   currency: string;
   invoiceId?: string;
   tenantId?: string;
+  receiptDocumentId?: string;
+  receiptDocumentNumber?: string;
+  receiptEmailSentTo?: string[];
   paymentMethod?: {
     authorizationCode?: string | null;
     customerCode?: string | null;

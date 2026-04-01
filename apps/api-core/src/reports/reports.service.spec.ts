@@ -242,19 +242,52 @@ describe('ReportsService', () => {
         createdAt: new Date('2026-03-21T10:00:00.000Z'),
       },
     ]);
-    prisma.remittance.findMany.mockResolvedValue([
+    prisma.remittance.findMany
+      .mockResolvedValueOnce([
       {
         amountMinorUnits: 100000,
         createdAt: new Date(),
       },
-    ]);
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'rem_1',
+          driverId: 'driver_1',
+          vehicleId: 'vehicle_1',
+          amountMinorUnits: 100000,
+          currency: 'NGN',
+          status: 'completed',
+          updatedAt: new Date('2026-03-22T08:00:00.000Z'),
+        },
+      ]);
     prisma.fleet.findMany.mockResolvedValue([]);
     prisma.vehicleMaintenanceEvent.findMany.mockResolvedValue([]);
     prisma.vehicleIncident.findMany.mockResolvedValue([]);
     prisma.vehicleMaintenanceSchedule.findMany.mockResolvedValue([]);
     prisma.user.findMany.mockResolvedValue([]);
-    prisma.assignment.findMany.mockResolvedValue([]);
-    prisma.vehicle.findMany.mockResolvedValue([]);
+    prisma.assignment.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'assignment_1',
+          driverId: 'driver_1',
+          vehicleId: 'vehicle_1',
+          status: 'active',
+          updatedAt: new Date('2026-03-22T09:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    prisma.vehicle.findMany.mockResolvedValue([
+      {
+        id: 'vehicle_1',
+        fleetId: 'fleet_1',
+        status: 'available',
+        make: 'Toyota',
+        model: 'Corolla',
+        plate: 'ABC-123',
+      },
+    ]);
     prisma.driver.groupBy.mockResolvedValue([
       { status: 'active', _count: { _all: 4 } },
       { status: 'inactive', _count: { _all: 2 } },
@@ -278,5 +311,13 @@ describe('ReportsService', () => {
       activeUnverified: 1,
       onboardingPool: 2,
     });
+    expect(result.recentActivity).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'assignment',
+          href: '/assignments',
+        }),
+      ]),
+    );
   });
 });

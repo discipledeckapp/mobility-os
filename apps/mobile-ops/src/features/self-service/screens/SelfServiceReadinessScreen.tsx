@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Alert, Linking, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { initiateDriverKycCheckout, notifyDriverSelfServiceOrganisation } from '../../../api';
 import { Badge } from '../../../components/badge';
 import { Button } from '../../../components/button';
@@ -147,6 +147,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
   const mobileAccessTone = mobileAccessStatusTone(driver.mobileAccessStatus);
   const onboardingSteps = buildDriverOnboardingSteps(driver).filter((step) => step.key !== 'account');
   const nextAction = resolveNextDriverAction(driver, documents.length);
+  const [showBlockers, setShowBlockers] = useState(false);
 
   const openNextAction = () => {
     navigation.navigate(nextAction.target);
@@ -155,6 +156,7 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
   return (
     <Screen refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}>
       <PageShell
+        compact
         eyebrow="Mobiris Fleet OS"
         title="Your next driver step"
         subtitle={`We only show the steps needed for ${
@@ -186,6 +188,19 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           title="Do this next"
           subtitle="The current next action stays pinned so onboarding feels guided."
         />
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryMetric}>
+            <Text style={styles.summaryValue}>
+              {onboardingSteps.filter((step) => step.status === 'completed').length}/
+              {onboardingSteps.filter((step) => step.status !== 'not_required').length}
+            </Text>
+            <Text style={styles.meta}>required steps completed</Text>
+          </View>
+          <View style={styles.summaryMetric}>
+            <Text style={styles.summaryValue}>{allReasons.length}</Text>
+            <Text style={styles.meta}>current blocker{allReasons.length === 1 ? '' : 's'}</Text>
+          </View>
+        </View>
         <Text style={styles.label}>{nextAction.title}</Text>
         <Text style={styles.copy}>{nextAction.description}</Text>
         <Button label={nextAction.cta} onPress={openNextAction} />
@@ -244,12 +259,23 @@ export function SelfServiceReadinessScreen({ navigation }: ScreenProps<'SelfServ
           subtitle="Anything still preventing activation is listed here in plain language."
         />
         {allReasons.length ? (
-          allReasons.map((reason) => (
-            <View key={reason} style={styles.reasonRow}>
-              <View style={styles.reasonDot} />
-              <Text style={styles.reason}>{reason}</Text>
-            </View>
-          ))
+          <>
+            {(showBlockers ? allReasons : allReasons.slice(0, 2)).map((reason) => (
+              <View key={reason} style={styles.reasonRow}>
+                <View style={styles.reasonDot} />
+                <Text style={styles.reason}>{reason}</Text>
+              </View>
+            ))}
+            {allReasons.length > 2 ? (
+              <Pressable onPress={() => setShowBlockers((value) => !value)}>
+                <Text style={styles.expandLink}>
+                  {showBlockers
+                    ? 'Show fewer blockers'
+                    : `Show ${allReasons.length - 2} more blocker${allReasons.length - 2 === 1 ? '' : 's'}`}
+                </Text>
+              </Pressable>
+            ) : null}
+          </>
         ) : (
           <Text style={styles.meta}>No blockers are currently reported.</Text>
         )}
@@ -474,6 +500,24 @@ const styles = StyleSheet.create({
   section: {
     gap: tokens.spacing.sm,
   },
+  summaryCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.card,
+    backgroundColor: '#F8FAFC',
+    padding: tokens.spacing.md,
+    flexDirection: 'row',
+    gap: tokens.spacing.md,
+  },
+  summaryMetric: {
+    flex: 1,
+    gap: 2,
+  },
+  summaryValue: {
+    color: tokens.colors.ink,
+    fontSize: 22,
+    fontWeight: '800',
+  },
   copy: {
     color: tokens.colors.inkSoft,
     fontSize: 15,
@@ -511,6 +555,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: tokens.spacing.xs,
+  },
+  expandLink: {
+    color: tokens.colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   reasonDot: {
     width: 6,

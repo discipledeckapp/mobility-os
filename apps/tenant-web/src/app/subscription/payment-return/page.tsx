@@ -13,7 +13,7 @@ import {
   ProcessingStateCard,
   Text,
 } from '@mobility-os/ui';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TenantAppShell } from '../../../features/shared/tenant-app-shell';
 import { verifyAndApplyTenantPayment } from '../../../lib/api-core';
@@ -24,6 +24,8 @@ type PaymentVerificationResult = {
   purpose: string;
   reference: string;
   invoiceId?: string;
+  receiptDocumentNumber?: string;
+  receiptEmailSentTo?: string[];
   paymentMethod?: {
     last4?: string | null;
     brand?: string | null;
@@ -58,7 +60,6 @@ function PaymentReturnInner() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<PaymentVerificationResult | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const called = useRef(false);
 
   const provider = params?.get('provider') ?? null;
   const purpose = params?.get('purpose') ?? null;
@@ -71,25 +72,18 @@ function PaymentReturnInner() {
     null;
 
   useEffect(() => {
-    if (called.current) {
-      return;
-    }
-
     if (!provider || !purpose || !reference) {
-      called.current = true;
       setState('error');
       setError('This billing return is incomplete. Please restart the billing flow and try again.');
       return;
     }
 
     if (status === 'cancelled') {
-      called.current = true;
       setState('error');
       setError('The checkout was cancelled before payment completed.');
       return;
     }
 
-    called.current = true;
     const resolvedProvider = provider;
     const resolvedPurpose = purpose;
     const resolvedReference = reference;
@@ -115,6 +109,10 @@ function PaymentReturnInner() {
           purpose: response.purpose,
           reference: response.reference,
           ...(response.invoiceId ? { invoiceId: response.invoiceId } : {}),
+          ...(response.receiptDocumentNumber
+            ? { receiptDocumentNumber: response.receiptDocumentNumber }
+            : {}),
+          ...(response.receiptEmailSentTo ? { receiptEmailSentTo: response.receiptEmailSentTo } : {}),
           ...(response.paymentMethod
             ? {
                 paymentMethod: {
@@ -211,6 +209,12 @@ function PaymentReturnInner() {
                 <Text>Purpose: {result.purpose.replace(/_/g, ' ')}</Text>
                 <Text>Reference: {result.reference}</Text>
                 {result.invoiceId ? <Text>Invoice: {result.invoiceId}</Text> : null}
+                {result.receiptDocumentNumber ? (
+                  <Text>Receipt: {result.receiptDocumentNumber}</Text>
+                ) : null}
+                {result.receiptEmailSentTo?.length ? (
+                  <Text>Receipt emailed to: {result.receiptEmailSentTo.join(', ')}</Text>
+                ) : null}
                 {isBillingMethodSetup ? (
                   <Text>
                     Billing card:{' '}
@@ -253,7 +257,6 @@ function PaymentReturnInner() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={() => {
-                    called.current = false;
                     setAttempt(0);
                     setError('');
                     setResult(null);

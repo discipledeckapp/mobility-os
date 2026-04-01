@@ -597,6 +597,14 @@ export class AssignmentsService {
   ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
     if (
+      ['accepted', 'active'].includes(assignment.status) &&
+      assignment.contractStatus === 'accepted' &&
+      assignment.driverConfirmedAt
+    ) {
+      return assignment;
+    }
+
+    if (
       !['created', 'pending_driver_confirmation', 'driver_action_required'].includes(
         assignment.status,
       )

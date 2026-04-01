@@ -137,7 +137,7 @@ export function TenantShellChrome({
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <div className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
                   {eyebrow}
@@ -145,13 +145,11 @@ export function TenantShellChrome({
                 <Heading className="mt-0.5 text-xl leading-tight" size="h3">
                   {title}
                 </Heading>
-                <Text className="line-clamp-2 text-sm" tone="muted">
-                  {description}
+                <Text className="truncate text-xs" tone="muted">
+                  {organisationName}
                 </Text>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <GlobalSearch />
-                <NotificationCenter initialNotifications={notifications} />
                 <button
                   aria-label="Open navigation menu"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-[var(--mobiris-border)] bg-white text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
@@ -176,6 +174,9 @@ export function TenantShellChrome({
                 </button>
               </div>
             </div>
+            <Text className="mt-2 line-clamp-2 text-sm" tone="muted">
+              {description}
+            </Text>
           </div>
 
           <Header className="hidden lg:flex">
@@ -254,6 +255,10 @@ export function TenantShellChrome({
           <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
             <Text className="font-semibold text-[var(--mobiris-ink)]">Menu</Text>
             <Text tone="muted">Choose a workspace or account action.</Text>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <GlobalSearch />
+            <NotificationCenter initialNotifications={notifications} />
           </div>
           <NavLinks variant="mobile" />
           <div className="border-t border-slate-200 pt-4">

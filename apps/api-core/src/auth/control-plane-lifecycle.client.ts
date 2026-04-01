@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { ConfigService } from '@nestjs/config';
+import { signInternalServiceJwt } from './internal-service-jwt';
 
 export interface ControlPlaneTenantLifecycleState {
   tenantId: string;
@@ -25,9 +26,9 @@ export class ControlPlaneLifecycleClient {
 
   async getTenantLifecycleState(tenantId: string): Promise<ControlPlaneTenantLifecycleState> {
     const baseUrl = this.configService.get<string>('CONTROL_PLANE_API_URL');
-    const internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN');
+    const internalServiceJwtSecret = this.configService.get<string>('INTERNAL_SERVICE_JWT_SECRET');
 
-    if (!baseUrl || !internalToken) {
+    if (!baseUrl || !internalServiceJwtSecret) {
       throw new ServiceUnavailableException(
         'Control-plane lifecycle integration is not configured',
       );
@@ -35,11 +36,17 @@ export class ControlPlaneLifecycleClient {
 
     let response: Response;
     try {
+      const bearerToken = await signInternalServiceJwt({
+        secret: internalServiceJwtSecret,
+        callerId: this.configService.get<string>('INTERNAL_SERVICE_CALLER_ID', 'api-core'),
+        audience: 'api-control-plane',
+        expiresIn: this.configService.get<string>('INTERNAL_SERVICE_JWT_EXPIRES_IN', '2m'),
+      });
       response = await fetch(
         `${baseUrl.replace(/\/$/, '')}/api/internal/tenant-lifecycle/tenant/${tenantId}`,
         {
           headers: {
-            'x-internal-service-token': internalToken,
+            authorization: `Bearer ${bearerToken}`,
           },
         },
       );

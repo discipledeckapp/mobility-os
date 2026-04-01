@@ -14,8 +14,8 @@ type OperatorBottomNavTab =
 const tabs: Array<{ key: OperatorBottomNavTab; label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = [
   { key: 'OperatorDashboard', label: 'Dashboard', icon: 'grid' },
   { key: 'OperatorDrivers', label: 'Drivers', icon: 'users' },
-  { key: 'OperatorAssignments', label: 'Ops', icon: 'truck' },
-  { key: 'OperatorRemittance', label: 'Cash', icon: 'dollar-sign' },
+  { key: 'OperatorAssignments', label: 'Assignments', icon: 'truck' },
+  { key: 'OperatorRemittance', label: 'Remittance', icon: 'dollar-sign' },
   { key: 'OperatorMore', label: 'More', icon: 'more-horizontal' },
 ];
 
@@ -99,8 +99,9 @@ const styles = StyleSheet.create({
   },
   label: {
     color: tokens.colors.inkSoft,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
+    textAlign: 'center',
   },
   labelActive: {
     color: tokens.colors.ink,

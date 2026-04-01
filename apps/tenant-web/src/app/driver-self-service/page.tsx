@@ -584,6 +584,25 @@ function remittanceStatusTone(
   return 'neutral';
 }
 
+function mapAssignmentAcceptanceError(message?: string): string {
+  const normalized = message?.toLowerCase() ?? '';
+  if (
+    normalized.includes('too many requests') ||
+    normalized.includes('throttlerexception') ||
+    normalized.includes('throttl')
+  ) {
+    return 'We are confirming your acceptance. Please wait a moment and refresh if the status does not update immediately.';
+  }
+  if (
+    normalized.includes("cannot be accepted from status 'accepted'") ||
+    normalized.includes("cannot be accepted from status 'active'") ||
+    normalized.includes('already accepted')
+  ) {
+    return 'This assignment was already accepted successfully. Your assignment status has been refreshed.';
+  }
+  return message ?? 'Unable to accept this assignment right now.';
+}
+
 function AssignmentWorkspace({
   token,
   assignment,
@@ -595,6 +614,7 @@ function AssignmentWorkspace({
 }) {
   const [loading, setLoading] = useState<'accept' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const activationState = getDriverAssignmentActivationState(assignment);
   const supportsRemittance =
     assignment.paymentModel === null ||
@@ -605,11 +625,20 @@ function AssignmentWorkspace({
   async function handleAccept() {
     setLoading('accept');
     setError(null);
+    setSuccess(null);
     try {
       await acceptDriverSelfServiceAssignment(token, assignment.id);
+      setSuccess('Assignment accepted successfully. Your organisation can now move this vehicle into active duty.');
       await onRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to accept this assignment right now.');
+      const message = err instanceof Error ? err.message : undefined;
+      const friendlyMessage = mapAssignmentAcceptanceError(message);
+      if (friendlyMessage.includes('already accepted')) {
+        setSuccess(friendlyMessage);
+        await onRefresh();
+      } else {
+        setError(friendlyMessage);
+      }
     } finally {
       setLoading(null);
     }
@@ -659,23 +688,113 @@ function AssignmentWorkspace({
                   : formatAssignmentStatus(assignment.status)}
           </Text>
         </div>
-        {assignment.remittanceAmountMinorUnits ? (
-          <div className="rounded-2xl bg-slate-50 p-5">
-            <Text tone="muted">Expected amount</Text>
-            <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
-              {formatMinorCurrency(
-                assignment.remittanceAmountMinorUnits,
-                assignment.remittanceCurrency,
-              )}
-            </p>
-            {assignment.remittanceFrequency ? (
-              <Text className="font-semibold text-[var(--mobiris-primary-dark)]">
-                {formatAssignmentStatus(assignment.remittanceFrequency)}
-              </Text>
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            {assignment.remittanceAmountMinorUnits ? (
+              <div className="rounded-2xl bg-slate-50 p-5">
+                <Text tone="muted">
+                  {assignment.financialContract?.contractType === 'hire_purchase'
+                    ? 'Installment amount'
+                    : 'Expected amount'}
+                </Text>
+                <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--mobiris-ink)]">
+                  {formatMinorCurrency(
+                    assignment.remittanceAmountMinorUnits,
+                    assignment.remittanceCurrency,
+                  )}
+                </p>
+                {assignment.remittanceFrequency ? (
+                  <Text className="font-semibold text-[var(--mobiris-primary-dark)]">
+                    {formatAssignmentStatus(assignment.remittanceFrequency)}
+                  </Text>
+                ) : null}
+              </div>
+            ) : null}
+            {assignment.financialContract ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <Text tone="muted">Contract</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {assignment.financialContract.contractType === 'hire_purchase'
+                      ? 'Hire purchase'
+                      : 'Regular hire'}
+                  </Text>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <Text tone="muted">Contract status</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {formatAssignmentStatus(
+                      assignment.financialContract.summary.contractStatus ??
+                        assignment.contractStatus ??
+                        assignment.status,
+                    )}
+                  </Text>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <Text tone="muted">Next due date</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {assignment.financialContract.summary.nextDueDate
+                      ? formatShortDate(assignment.financialContract.summary.nextDueDate)
+                      : 'Awaiting schedule'}
+                  </Text>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <Text tone="muted">Remaining balance</Text>
+                  <Text className="font-semibold text-[var(--mobiris-ink)]">
+                    {assignment.financialContract.summary.outstandingBalanceMinorUnits != null
+                      ? formatMinorCurrency(
+                          assignment.financialContract.summary.outstandingBalanceMinorUnits,
+                          assignment.financialContract.currency,
+                        )
+                      : 'No outstanding balance'}
+                  </Text>
+                </div>
+                {assignment.financialContract.hirePurchase ? (
+                  <>
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <Text tone="muted">Asset value</Text>
+                      <Text className="font-semibold text-[var(--mobiris-ink)]">
+                        {formatMinorCurrency(
+                          assignment.financialContract.hirePurchase.totalTargetAmountMinorUnits,
+                          assignment.financialContract.currency,
+                        )}
+                      </Text>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <Text tone="muted">Deposit</Text>
+                      <Text className="font-semibold text-[var(--mobiris-ink)]">
+                        {assignment.financialContract.hirePurchase.depositAmountMinorUnits != null
+                          ? formatMinorCurrency(
+                              assignment.financialContract.hirePurchase.depositAmountMinorUnits,
+                              assignment.financialContract.currency,
+                            )
+                          : 'Not recorded'}
+                      </Text>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <Text tone="muted">Contract end date</Text>
+                      <Text className="font-semibold text-[var(--mobiris-ink)]">
+                        {assignment.financialContract.hirePurchase.installmentPlan.contractEndDate
+                          ? formatShortDate(
+                              assignment.financialContract.hirePurchase.installmentPlan.contractEndDate,
+                            )
+                          : 'Derived from final installment'}
+                      </Text>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <Text tone="muted">Completion</Text>
+                      <Text className="font-semibold text-[var(--mobiris-ink)]">
+                        {assignment.financialContract.summary.contractCompletionPercentage != null
+                          ? `${assignment.financialContract.summary.contractCompletionPercentage}%`
+                          : 'In progress'}
+                      </Text>
+                    </div>
+                  </>
+                ) : null}
+              </div>
             ) : null}
           </div>
-        ) : null}
-        <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1">
           <div className="rounded-xl bg-slate-50 p-4">
             <Text tone="muted">Vehicle</Text>
             <Text className="font-semibold text-[var(--mobiris-ink)]">
@@ -699,6 +818,15 @@ function AssignmentWorkspace({
             <Text className="font-semibold text-[var(--mobiris-ink)]">
               {getDriverAssignmentPaymentModelLabel(assignment)}
             </Text>
+          </div>
+          {assignment.driverConfirmedAt ? (
+            <div className="rounded-xl bg-slate-50 p-4">
+              <Text tone="muted">Accepted</Text>
+              <Text className="font-semibold text-[var(--mobiris-ink)]">
+                {formatNotificationDate(assignment.driverConfirmedAt)}
+              </Text>
+            </div>
+          ) : null}
           </div>
         </div>
         {assignment.notes ? <Text tone="muted">{assignment.notes}</Text> : null}
@@ -735,6 +863,7 @@ function AssignmentWorkspace({
                   : 'Your assignment is active. Use the assignment workspace for the next operational action.'}
           </Text>
         </div>
+        {success ? <Text className="text-emerald-700">{success}</Text> : null}
         {error ? <Text tone="danger">{error}</Text> : null}
       </CardContent>
     </Card>
@@ -2863,10 +2992,10 @@ function DriverVerificationFlow({
               Mobiris
             </p>
             <p className="text-lg font-semibold text-[var(--mobiris-ink)]">
-              Loading your onboarding
+              Loading your driver workspace
             </p>
             <p className="text-sm text-slate-500">
-              Fetching your progress — this only takes a moment.
+              Fetching your current assignment, verification, and account state.
             </p>
           </div>
           <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
@@ -3070,9 +3199,9 @@ function DriverVerificationFlow({
   ];
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_26%,#f8fbff_58%,#ffffff_100%)] pb-28">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pt-5">
-        <header className="sticky top-0 z-20 -mx-4 border-b border-white/70 bg-white/90 px-4 pb-4 pt-2 backdrop-blur">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_26%,#f8fbff_58%,#ffffff_100%)] pb-28 lg:pb-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pt-5 lg:px-6">
+        <header className="sticky top-0 z-20 -mx-4 border-b border-white/70 bg-white/90 px-4 pb-4 pt-2 backdrop-blur lg:mx-0 lg:rounded-[var(--mobiris-radius-card)] lg:border lg:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <Text className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
@@ -3090,7 +3219,48 @@ function DriverVerificationFlow({
           </div>
         </header>
 
-        <div className="flex-1 space-y-4 py-4">
+        <div className="flex-1 py-4">
+          <div className="grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+            <aside className="hidden lg:sticky lg:top-28 lg:block">
+              <Card className="border-slate-200 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.25)]">
+                <CardContent className="space-y-3 p-4">
+                  <div className="space-y-1">
+                    <Text className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
+                      Driver workspace
+                    </Text>
+                    <Text className="font-semibold text-[var(--mobiris-ink)]">{driverDisplayName}</Text>
+                    <Text tone="muted">{organisationName}</Text>
+                  </div>
+                  <div className="space-y-2">
+                    {tabs.map((tab) => (
+                      <button
+                        className={`relative flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+                          activeTab === tab.key
+                            ? 'bg-[var(--mobiris-primary)] text-white shadow-[0_18px_35px_-20px_rgba(37,99,235,0.8)]'
+                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        type="button"
+                      >
+                        <span>{tab.label}</span>
+                        {tab.badge ? (
+                          <span
+                            className={`min-w-[22px] rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'
+                            }`}
+                          >
+                            {tab.badge}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </aside>
+
+            <div className="space-y-4">
           <Card className="overflow-hidden border-slate-200 bg-white shadow-[0_30px_80px_-38px_rgba(15,23,42,0.38)]">
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-center gap-2">
@@ -3130,10 +3300,10 @@ function DriverVerificationFlow({
                         ? 'Your assignment has been accepted. Your organisation can begin operations when ready.'
                         : currentAssignment?.status === 'active'
                           ? 'Check your assignment, record remittance when needed, and keep up with alerts.'
-                          : 'Your verification is complete. We will show your next assignment here as soon as it is ready.'}
+                    : 'Your verification is complete. We will show your next assignment here as soon as it is ready.'}
                 </Text>
               </div>
-              <div className="grid gap-3 grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <Text tone="muted">Current assignment</Text>
                   <Text className="font-semibold text-[var(--mobiris-ink)]">
@@ -3152,9 +3322,9 @@ function DriverVerificationFlow({
                   </Text>
                 </div>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
-                  className="h-12 w-full text-base shadow-[0_18px_35px_-18px_rgba(37,99,235,0.75)]"
+                  className="h-12 w-full text-base shadow-[0_18px_35px_-18px_rgba(37,99,235,0.75)] sm:flex-1"
                   onClick={() =>
                     setActiveTab(
                       onboardingIncomplete
@@ -3174,7 +3344,7 @@ function DriverVerificationFlow({
                 </Button>
                 {activeAssignmentSupportsRemittance ? (
                   <Button
-                    className="h-11 w-full"
+                    className="h-11 w-full sm:w-auto"
                     onClick={() => setActiveTab('remittance')}
                     type="button"
                     variant="secondary"
@@ -3271,7 +3441,7 @@ function DriverVerificationFlow({
                     <CardHeader className="space-y-2">
                       <CardTitle>Today&apos;s overview</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid gap-3">
+                    <CardContent className="grid gap-3 lg:grid-cols-2">
                       <div className="rounded-2xl bg-slate-50 p-4">
                         <Text tone="muted">Vehicle</Text>
                         <Text className="font-semibold text-[var(--mobiris-ink)]">
@@ -3401,7 +3571,7 @@ function DriverVerificationFlow({
                 <CardHeader className="space-y-2">
                   <CardTitle>Your profile</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4 grid-cols-2">
+                <CardContent className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                   <div className="space-y-1">
                     <Text tone="muted">Full name</Text>
                     <Text>{driverDisplayName}</Text>
@@ -3451,9 +3621,11 @@ function DriverVerificationFlow({
               {onboardingIncomplete && currentStep === 'profile' ? onboardingPanel : null}
             </div>
           ) : null}
+            </div>
+          </div>
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur lg:hidden">
           <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
             {tabs.map((tab) => (
               <button

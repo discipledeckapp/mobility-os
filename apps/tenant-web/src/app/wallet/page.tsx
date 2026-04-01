@@ -155,13 +155,13 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 sm:w-auto"
                   href={'/verification-funding' as Route}
                 >
                   Open verification funding
                 </Link>
                 <Link
-                  className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold tracking-[-0.01em] text-[var(--mobiris-ink)] transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 sm:w-auto"
                   href={'/subscription' as Route}
                 >
                   Open subscription billing
@@ -206,6 +206,14 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
               </div>
             </CardContent>
           ) : null}
+        </Card>
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="space-y-2 px-5 py-4">
+            <Text tone="strong">Mobile focus</Text>
+            <Text tone="muted">
+              Use this page for wallet posture and latest ledger movement. Jump into verification funding or subscription only when you need to take action there.
+            </Text>
+          </CardContent>
         </Card>
 
         {entities.length > 1 ? (

@@ -7,9 +7,9 @@ import { TenantsService } from '../tenants/tenants.service';
 
 @ApiTags('Internal Tenants')
 @ApiHeader({
-  name: 'x-internal-service-token',
+  name: 'Authorization',
   required: true,
-  description: 'Internal service token shared between platform services',
+  description: 'Bearer token for signed internal service authentication',
 })
 @UseGuards(InternalServiceAuthGuard)
 @Controller('internal/tenants')

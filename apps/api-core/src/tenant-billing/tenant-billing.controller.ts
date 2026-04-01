@@ -43,8 +43,8 @@ export class TenantBillingController {
   @RequirePermissions(Permission.TenantsRead)
   @UseGuards(PermissionsGuard)
   @ApiOkResponse({ type: [TenantBillingPlanDto] })
-  listPlans(): Promise<TenantBillingPlanDto[]> {
-    return this.tenantBillingService.listPlans();
+  listPlans(@CurrentTenant() ctx: TenantContext): Promise<TenantBillingPlanDto[]> {
+    return this.tenantBillingService.listPlans(ctx.tenantId);
   }
 
   @Post('subscription/change-plan/:planId')

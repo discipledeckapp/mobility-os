@@ -655,6 +655,86 @@ describe('DriversService', () => {
     );
   });
 
+  it('blocks guarantor link delivery when the resolved verification tier does not require a guarantor', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantor: false,
+          requireGuarantorVerification: false,
+          verificationTier: 'basic',
+        },
+      },
+    });
+
+    await expect(service.sendGuarantorSelfServiceLink('tenant_1', 'driver_1')).rejects.toThrow(
+      'does not require a guarantor',
+    );
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  it('blocks guarantor link delivery until the guarantor verification add-on payment succeeds', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantor: true,
+          requireGuarantorVerification: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+    (
+      jest.spyOn(service as never, 'getDriverVerificationAddonPaymentPolicy') as unknown as {
+        mockResolvedValue: (value: unknown) => unknown;
+      }
+    ).mockResolvedValue({
+      key: 'guarantor_verification',
+      required: true,
+      paymentStatus: 'driver_payment_required',
+      paymentMessage:
+        'The guarantor verification add-on has not been paid yet. Complete payment before sending the guarantor link.',
+      amountMinorUnits: 500000,
+      currency: 'NGN',
+      payer: 'driver',
+      entitlementState: 'none',
+      entitlementCode: null,
+      paymentReference: null,
+    });
+
+    await expect(service.sendGuarantorSelfServiceLink('tenant_1', 'driver_1')).rejects.toThrow(
+      'has not been paid yet',
+    );
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+  });
+
   it('creates a guarantor self-service account linked back to the driver workflow', async () => {
     jwtService.verifyAsync.mockResolvedValue({
       purpose: 'guarantor_self_service',

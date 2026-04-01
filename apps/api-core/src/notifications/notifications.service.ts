@@ -49,6 +49,9 @@ type PushDeviceSummary = {
   disabledAt: string | null;
 };
 
+const EXPO_PUSH_CHUNK_SIZE = 100;
+const EXPO_PUSH_TIMEOUT_MS = 8_000;
+
 @Injectable()
 export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(NotificationsService.name);
@@ -156,29 +159,39 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(
-          activeTokens.map((to) => ({
-            to,
-            sound: 'default',
-            title: payload.title,
-            body: payload.body,
-            data: {
-              topic: payload.topic,
-              actionUrl: payload.actionUrl ?? null,
-              ...(payload.metadata ?? {}),
+      for (let index = 0; index < activeTokens.length; index += EXPO_PUSH_CHUNK_SIZE) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), EXPO_PUSH_TIMEOUT_MS);
+        let response: Response;
+        try {
+          response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
             },
-          })),
-        ),
-      });
+            body: JSON.stringify(
+              activeTokens.slice(index, index + EXPO_PUSH_CHUNK_SIZE).map((to) => ({
+                to,
+                sound: 'default',
+                title: payload.title,
+                body: payload.body,
+                data: {
+                  topic: payload.topic,
+                  actionUrl: payload.actionUrl ?? null,
+                  ...(payload.metadata ?? {}),
+                },
+              })),
+            ),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
 
-      if (!response.ok) {
-        this.logger.warn(`Push delivery failed with status ${response.status}`);
+        if (!response.ok) {
+          this.logger.warn(`Push delivery failed with status ${response.status}`);
+        }
       }
     } catch (error) {
       this.logger.warn(

@@ -139,6 +139,47 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
     !currentAssignment?.paymentModel ||
     currentAssignment.paymentModel === 'remittance' ||
     currentAssignment.paymentModel === 'hire_purchase';
+  const topTask = currentAssignment
+    ? currentAssignment.status === 'driver_action_required' ||
+      currentAssignment.status === 'pending_driver_confirmation'
+      ? {
+          title: 'Respond to your latest assignment',
+          description:
+            'Accept or reject the assignment before you continue with the rest of the day.',
+          cta: 'Review assignment',
+          onPress: () =>
+            navigation.navigate('AssignmentDetail', {
+              assignmentId: currentAssignment.id,
+            }),
+        }
+      : currentAssignment.status === 'active' && currentAssignmentSupportsRemittance
+        ? {
+            title: 'Keep remittance current',
+            description:
+              'Your active assignment is ready for collection capture and remittance follow-through.',
+            cta: 'Record remittance',
+            onPress: () =>
+              navigation.navigate('Remittance', {
+                assignmentId: currentAssignment.id,
+              }),
+          }
+        : {
+            title: 'Review current assignment',
+            description:
+              'Open the latest assignment to confirm its status and vehicle context.',
+            cta: 'Open assignment',
+            onPress: () =>
+              navigation.navigate('AssignmentDetail', {
+                assignmentId: currentAssignment.id,
+              }),
+          }
+    : {
+        title: 'Check readiness before dispatch',
+        description:
+          'No assignment is active yet. Review your readiness so dispatch can move quickly when work is available.',
+        cta: 'Open readiness',
+        onPress: () => navigation.navigate('Profile'),
+      };
 
   useFocusEffect(
     useCallback(
@@ -158,9 +199,10 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <PageShell
+          compact
           eyebrow="Driver home"
           title={session?.name ?? 'Your workday'}
-          subtitle="Review today’s assignment, clear the next required task, and keep remittance current."
+          subtitle="See the current work priority first, then move into assignment details, remittance, or alerts."
           badge={<Badge label={session?.role.replace(/_/g, ' ') ?? 'SIGNED IN'} tone="neutral" />}
           actions={
             <View style={styles.heroActions}>
@@ -201,6 +243,18 @@ export function AssignmentsScreen({ navigation }: ScreenProps<'Home'>) {
             onPress={() => setShowLogoutModal(true)}
           />
         </PageShell>
+
+        <Card style={styles.section}>
+          <SectionIntro
+            title="Top priority"
+            subtitle="This is the next thing most likely to unblock your day."
+          />
+          <Card style={styles.nextActionCard}>
+            <Text style={styles.nextActionTitle}>{topTask.title}</Text>
+            <Text style={styles.muted}>{topTask.description}</Text>
+            <Button label={topTask.cta} onPress={topTask.onPress} />
+          </Card>
+        </Card>
 
         <Card style={styles.section}>
           <SectionIntro
