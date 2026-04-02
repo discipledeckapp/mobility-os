@@ -277,6 +277,25 @@ describe('AuthService', () => {
         expiresAt: expect.any(Date),
       },
     });
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        sub: 'user_7',
+        tenantId: 'tenant_7',
+        jti: expect.any(String),
+      }),
+      expect.any(Object),
+    );
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        sub: 'user_7',
+        tenantId: 'tenant_7',
+        type: 'refresh',
+        jti: expect.any(String),
+      }),
+      expect.any(Object),
+    );
   });
 
   it('allows a linked driver mobile account to log in without an operator business-entity scope', async () => {
@@ -398,6 +417,59 @@ describe('AuthService', () => {
       where: { id: 'refresh_1' },
       data: { consumedAt: expect.any(Date) },
     });
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        sub: 'user_8',
+        tenantId: 'tenant_8',
+        jti: expect.any(String),
+      }),
+      expect.any(Object),
+    );
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        sub: 'user_8',
+        tenantId: 'tenant_8',
+        type: 'refresh',
+        jti: expect.any(String),
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('allows a recently consumed refresh token within the rotation grace window', async () => {
+    (jwtService.verifyAsync as jest.Mock).mockResolvedValue({
+      sub: 'user_8',
+      tenantId: 'tenant_8',
+      type: 'refresh',
+    });
+    prisma.authRefreshToken.findFirst.mockResolvedValue({
+      id: 'refresh_1',
+      userId: 'user_8',
+      tokenHash: hashAuthSecret('valid-refresh-token'),
+      consumedAt: new Date(Date.now() - 5_000),
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'user_8',
+      tenantId: 'tenant_8',
+      businessEntityId: 'be_8',
+      operatingUnitId: null,
+      role: 'FIELD_OFFICER',
+      driverId: 'driver_8',
+      isActive: true,
+    });
+    (jwtService.signAsync as jest.Mock)
+      .mockResolvedValueOnce('next-access-token')
+      .mockResolvedValueOnce('next-refresh-token');
+
+    await expect(service.refresh('valid-refresh-token')).resolves.toEqual({
+      accessToken: 'next-access-token',
+      refreshToken: 'next-refresh-token',
+    });
+
+    expect(prisma.authRefreshToken.update).not.toHaveBeenCalled();
   });
 
   it('rejects refresh when the token has already been consumed', async () => {

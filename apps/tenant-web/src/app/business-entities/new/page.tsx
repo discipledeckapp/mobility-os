@@ -27,15 +27,14 @@ export default async function NewBusinessEntityPage() {
             <div>
               <Text tone="strong">Business entity registry workflow</Text>
               <Text tone="muted">
-                Create the entity here first, then return to the registry to review its operating
-                units and fleets.
+                Create the entity here first, then return to Organisation Structure in Settings to manage its operating units and fleets.
               </Text>
             </div>
             <Link
               className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-              href="/business-entities"
+              href="/settings?section=structure"
             >
-              Back to business entities
+              Back to organisation structure
             </Link>
           </CardContent>
         </Card>

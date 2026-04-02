@@ -60,14 +60,14 @@ function getEntityHref(item: AuditLogRecord): Route | null {
     case 'remittance':
       return '/remittance' as Route;
     case 'work_order':
-      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=maintenance` as Route) : ('/maintenance' as Route);
+      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=maintenance` as Route) : ('/vehicles/health' as Route);
     case 'inspection':
-      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=history` as Route) : ('/inspections' as Route);
+      return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=history` as Route) : ('/vehicles/health' as Route);
     case 'vehicle_incident':
       return metadataVehicleId ? (`/vehicles/${metadataVehicleId}?tab=history` as Route) : ('/vehicles' as Route);
     case 'dispute':
     case 'document':
-      return '/records' as Route;
+      return '/operations' as Route;
     default:
       return null;
   }
@@ -109,9 +109,9 @@ export default async function AuditPage() {
 
   return (
     <TenantAppShell
-      description="Review the operational history behind driver, assignment, remittance, maintenance, inspection, and dispute changes across the tenant."
-      eyebrow="Governance"
-      title="Audit"
+      description="Use this only when you need deeper chronology, actor tracing, or debug-level investigation."
+      eyebrow="Advanced"
+      title="Advanced Audit"
     >
       <div className="space-y-6">
         <TenantHeroPanel
@@ -119,9 +119,9 @@ export default async function AuditPage() {
             <>
               <Link
                 className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-                href={'/records' as Route}
+                href={'/operations' as Route}
               >
-                Open records
+                Open operations
               </Link>
               <Link
                 className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
@@ -131,9 +131,9 @@ export default async function AuditPage() {
               </Link>
             </>
           }
-          description="This is the tenant-side operational audit trail. Use it to understand who changed what, when operational state shifted, and which workflow to reopen when something needs investigation."
-          eyebrow="Governance"
-          title="Operational audit trail"
+          description="This is the secondary trace view for deeper investigations. Use Operations first, then come here when you need exact chronology or actor-level debugging."
+          eyebrow="Advanced"
+          title="Operational trace audit"
         >
           <TenantToolbarPanel className="grid gap-3 md:grid-cols-3">
             <div>
@@ -229,17 +229,17 @@ export default async function AuditPage() {
             </Link>
             <Link
               className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
-              href={'/maintenance' as Route}
+              href={'/vehicles/health' as Route}
             >
               <Text tone="strong">Maintenance activity</Text>
-              <Text tone="muted">Review work-order creation, progression, and vehicle repair pressure.</Text>
+              <Text tone="muted">Review vehicle health queues, work-order progression, and repair pressure.</Text>
             </Link>
             <Link
               className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
-              href={'/records' as Route}
+              href={'/operations' as Route}
             >
-              <Text tone="strong">Disputes and evidence</Text>
-              <Text tone="muted">Trace record issuance, dispute handling, and supporting evidence history.</Text>
+              <Text tone="strong">Operations and evidence</Text>
+              <Text tone="muted">Return to the main operations surface for action queues, activity, and supporting evidence.</Text>
             </Link>
           </div>
         </TenantSurfaceCard>

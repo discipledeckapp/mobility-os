@@ -165,9 +165,9 @@ export async function initializeOutstandingInvoiceCheckoutAction(
 
 export async function initializeCardSetupCheckoutAction(
   _prevState: WalletCheckoutActionState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<WalletCheckoutActionState> {
-  const provider = 'paystack';
+  const provider = getTrimmedValue(formData, 'provider') || 'paystack';
   const amountMinorUnits = 10_000;
 
   try {

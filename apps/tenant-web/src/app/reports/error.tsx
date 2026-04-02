@@ -11,12 +11,12 @@ export default function ReportsError({
 }) {
   return (
     <RouteErrorState
-      description="We could not load the latest operations insight queues right now."
-      eyebrow="Insights"
+      description="We could not load the operations workspace right now."
+      eyebrow="Operations"
       error={error}
-      heading="Unable to load operations insights"
+      heading="Unable to load operations"
       reset={reset}
-      title="Operations Insights"
+      title="Operations"
     />
   );
 }

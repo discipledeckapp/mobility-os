@@ -215,6 +215,34 @@ model CpWalletEntry {
   @@map("cp_wallet_entries")
 }
 
+// ── Billing Payment Methods ───────────────────────────────────────────────────
+// Stored processor authorizations used for tenant subscription billing and
+// future collections. This remains distinct from verification funding cards in
+// the tenant operations plane.
+
+model CpBillingPaymentMethod {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  provider String
+
+  authorizationCodeCiphertext String
+  customerCodeCiphertext      String
+
+  last4            String
+  brand            String
+  status           String  @default("active")
+  active           Boolean @default(true)
+  autopayEnabled   Boolean @default(false)
+  initialReference String?
+  metadata         Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@map("cp_billing_payment_methods")
+}
+
 // ── Payment Attempts ─────────────────────────────────────────────────────────
 // Persistent checkout/payment tracking for external providers.
 // This records initialization, webhook callbacks, provider verification, and

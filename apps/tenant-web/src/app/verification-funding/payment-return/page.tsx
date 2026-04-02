@@ -224,9 +224,9 @@ function PaymentReturnInner() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
-                  href={'/verification-funding' as Route}
+                  href={'/subscription' as Route}
                 >
-                  Return to verification funding
+                  Return to billing
                 </Link>
               </div>
             </CardContent>
@@ -263,9 +263,9 @@ function PaymentReturnInner() {
                 >
                   Retry verification
                 </Button>
-                <Link href={'/verification-funding' as Route}>
+                <Link href={'/subscription' as Route}>
                   <Button type="button" variant="secondary">
-                    Return to verification funding
+                    Return to billing
                   </Button>
                 </Link>
               </div>
@@ -282,8 +282,8 @@ export default function VerificationFundingPaymentReturnPage() {
     <Suspense
       fallback={
         <TenantAppShell
-          description="Confirm the verification funding outcome and return to the verification funding page."
-          eyebrow="Verification Funding"
+          description="Confirm the verification credit outcome and return to billing."
+          eyebrow="Billing & Subscription"
           title="Funding return"
         >
           <div className="max-w-3xl">

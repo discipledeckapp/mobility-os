@@ -37,6 +37,9 @@ export class SubscriptionListItemDto {
   planTier!: string;
 
   @ApiProperty()
+  billingInterval!: string;
+
+  @ApiProperty()
   currency!: string;
 
   @ApiProperty()

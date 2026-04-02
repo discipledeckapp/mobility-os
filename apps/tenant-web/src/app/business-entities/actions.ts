@@ -53,7 +53,8 @@ export async function createBusinessEntityAction(
   }
 
   revalidatePath('/business-entities');
-  redirect('/business-entities');
+  revalidatePath('/settings');
+  redirect('/settings?section=structure');
 }
 
 export async function updateBusinessEntityAction(
@@ -81,5 +82,6 @@ export async function updateBusinessEntityAction(
   }
 
   revalidatePath('/business-entities');
-  redirect('/business-entities');
+  revalidatePath('/settings');
+  redirect('/settings?section=structure');
 }

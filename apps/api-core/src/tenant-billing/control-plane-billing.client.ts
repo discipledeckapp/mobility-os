@@ -9,7 +9,9 @@ export interface TenantSubscriptionSummary {
   planId: string;
   planName: string;
   planTier: string;
+  billingInterval: string;
   currency: string;
+  basePriceMinorUnits: number;
   features: Record<string, unknown>;
   status: string;
   currentPeriodStart: string;

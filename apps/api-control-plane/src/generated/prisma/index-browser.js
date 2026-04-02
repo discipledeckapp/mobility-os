@@ -223,6 +223,23 @@ exports.Prisma.CpWalletEntryScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.CpBillingPaymentMethodScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  provider: 'provider',
+  authorizationCodeCiphertext: 'authorizationCodeCiphertext',
+  customerCodeCiphertext: 'customerCodeCiphertext',
+  last4: 'last4',
+  brand: 'brand',
+  status: 'status',
+  active: 'active',
+  autopayEnabled: 'autopayEnabled',
+  initialReference: 'initialReference',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.CpPaymentAttemptScalarFieldEnum = {
   id: 'id',
   provider: 'provider',
@@ -452,6 +469,7 @@ exports.Prisma.ModelName = {
   CpInvoiceLineItem: 'CpInvoiceLineItem',
   CpPlatformWallet: 'CpPlatformWallet',
   CpWalletEntry: 'CpWalletEntry',
+  CpBillingPaymentMethod: 'CpBillingPaymentMethod',
   CpPaymentAttempt: 'CpPaymentAttempt',
   CpDispute: 'CpDispute',
   CpDisputeEvidence: 'CpDisputeEvidence',

@@ -86,6 +86,7 @@ export async function createInspectionAction(
 
   revalidatePath('/inspections');
   revalidatePath('/maintenance');
+  revalidatePath('/vehicles/health');
   revalidatePath('/reports/readiness');
   revalidatePath(`/vehicles/${vehicleId}`);
   return {

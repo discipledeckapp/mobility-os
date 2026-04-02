@@ -1,0 +1,3 @@
+lead_id,created_date,owner,full_name,role_title,company_name,segment_icp,company_url,source_url,source_platform,country,city_or_region,estimated_fleet_size,business_model,pain_signal_1,pain_signal_2,pain_signal_3,pain_hypothesis,priority_score,priority_bucket,outreach_angle,recommended_channel,status,sequence_stage,last_contact_date,next_follow_up_date,reply_status,positive_reply,demo_booked,signup_status,first_driver_added,first_driver_verified,first_assignment_created,notes
+LD-001,2026-04-02,founder,,,,,,,,Nigeria,,,,,,,,,0,D,,,,new,,,,FALSE,FALSE,,FALSE,FALSE,FALSE,
+LD-002,2026-04-02,founder,,,,,,,,Nigeria,,,,,,,,,0,D,,,,new,,,,FALSE,FALSE,,FALSE,FALSE,FALSE,

@@ -14,6 +14,12 @@ export class TenantBillingSubscriptionDto {
   planTier!: string;
 
   @ApiProperty()
+  billingInterval!: string;
+
+  @ApiProperty()
+  basePriceMinorUnits!: number;
+
+  @ApiProperty()
   currency!: string;
 
   @ApiProperty()
@@ -162,11 +168,17 @@ export class TenantBillingUsageDto {
   @ApiProperty()
   operatorSeatCount!: number;
 
+  @ApiProperty()
+  assignmentCount!: number;
+
   @ApiPropertyOptional()
   driverCap?: number | null;
 
   @ApiPropertyOptional()
   vehicleCap?: number | null;
+
+  @ApiPropertyOptional()
+  assignmentCap?: number | null;
 
   @ApiPropertyOptional()
   seatCap?: number | null;

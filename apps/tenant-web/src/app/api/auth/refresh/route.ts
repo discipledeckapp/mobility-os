@@ -6,9 +6,7 @@ import {
   getTenantAccessCookieOptions,
   getTenantRefreshCookieOptions,
 } from '../../../../lib/auth';
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
+import { refreshTenantSession } from '../../../../lib/tenant-session-refresh';
 
 function setSessionCookies(
   response: NextResponse,
@@ -26,38 +24,6 @@ function setSessionCookies(
   );
 }
 
-async function refreshSession(refreshToken: string) {
-  const refreshResponse = await fetch(`${apiBaseUrl}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ refreshToken }),
-    cache: 'no-store',
-  });
-
-  if (!refreshResponse.ok) {
-    return null;
-  }
-
-  const payload = (await refreshResponse.json()) as {
-    accessToken?: string;
-    refreshToken?: string;
-    token?: string;
-    jwt?: string;
-  };
-  const accessToken = payload.accessToken ?? payload.token ?? payload.jwt;
-
-  if (!accessToken || !payload.refreshToken) {
-    return null;
-  }
-
-  return {
-    accessToken,
-    refreshToken: payload.refreshToken,
-  };
-}
-
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { refreshToken?: string } | null;
 
@@ -65,10 +31,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Refresh token is required.' }, { status: 400 });
   }
 
-  const refreshedSession = await refreshSession(body.refreshToken);
-  if (!refreshedSession) {
+  const refreshedSession = await refreshTenantSession(body.refreshToken);
+  if (refreshedSession.status !== 'success') {
+    if (refreshedSession.status === 'unavailable') {
+      return NextResponse.json(
+        { error: 'We could not refresh the tenant session right now. Please try again shortly.' },
+        { status: 503 },
+      );
+    }
+
     const response = NextResponse.json(
-      { error: 'Unable to refresh the tenant session.' },
+      { error: 'Your session has expired. Log in again to continue.' },
       { status: 401 },
     );
     response.cookies.delete(TENANT_AUTH_COOKIE_NAME);
@@ -97,8 +70,16 @@ export async function GET(request: Request) {
     return response;
   }
 
-  const refreshedSession = await refreshSession(refreshToken);
-  if (!refreshedSession) {
+  const refreshedSession = await refreshTenantSession(refreshToken);
+  if (refreshedSession.status !== 'success') {
+    if (refreshedSession.status === 'unavailable') {
+      const recoveryUrl = new URL('/session-recovery', request.url);
+      if (returnTo && returnTo !== '/session-recovery') {
+        recoveryUrl.searchParams.set('next', returnTo);
+      }
+      return NextResponse.redirect(recoveryUrl);
+    }
+
     const loginUrl = new URL('/login', request.url);
     if (returnTo && returnTo !== '/login') {
       loginUrl.searchParams.set('next', returnTo);

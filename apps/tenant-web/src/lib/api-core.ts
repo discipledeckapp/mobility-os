@@ -1517,6 +1517,8 @@ export interface TenantBillingSubscriptionRecord {
   planId: string;
   planName: string;
   planTier: string;
+  billingInterval: string;
+  basePriceMinorUnits: number;
   currency: string;
   features: Record<string, unknown>;
   status: string;
@@ -1582,8 +1584,10 @@ export interface TenantBillingUsageRecord {
   driverCount: number;
   vehicleCount: number;
   operatorSeatCount: number;
+  assignmentCount: number;
   driverCap?: number | null;
   vehicleCap?: number | null;
+  assignmentCap?: number | null;
   seatCap?: number | null;
   openInvoiceCount: number;
   verificationLedgerEntryCount: number;

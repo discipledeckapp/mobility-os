@@ -67,7 +67,7 @@ export async function importAssignmentsCsvAction(
     const result = await importAssignmentsCsv(csvContent);
     revalidatePath('/assignments');
     revalidatePath('/remittance');
-    revalidatePath('/reports');
+    revalidatePath('/operations');
     return {
       success: `Imported ${result.createdCount} assignments. ${result.failedCount} rows failed.`,
       ...(result.errors.length > 0 ? { error: result.errors.slice(0, 5).join(' ') } : {}),

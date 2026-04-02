@@ -403,7 +403,7 @@ export async function resolveDriverVerificationAction(
     };
   }
 
-  if (!sessionId) {
+  if (!sessionId && !hasCapturedLivenessEvidence) {
     return {
       error: 'Start live verification before submitting this identity check.',
     };
@@ -446,11 +446,15 @@ export async function resolveDriverVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      livenessCheck: {
-        ...(providerName ? { provider: providerName } : {}),
-        sessionId,
-        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
-      },
+      ...(sessionId || hasCapturedLivenessEvidence
+        ? {
+            livenessCheck: {
+              ...(providerName ? { provider: providerName } : {}),
+              ...(sessionId ? { sessionId } : {}),
+              ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
+            },
+          }
+        : {}),
     });
 
     revalidatePath('/drivers');
@@ -491,7 +495,7 @@ export async function resolveDriverSelfServiceVerificationAction(
 
   // Biometric liveness is always required in the self-service flow. The 'manual'
   // mode is reserved for operator-initiated manual override only, not self-service.
-  if (!sessionId) {
+  if (!sessionId && !hasCapturedLivenessEvidence) {
     return {
       error: 'Complete the live selfie check before submitting your identity verification.',
     };
@@ -521,16 +525,20 @@ export async function resolveDriverSelfServiceVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      livenessCheck: {
-        ...(providerName ? { provider: providerName } : {}),
-        sessionId,
-        // Submit the observed SDK outcome alongside the backend-issued session id.
-        // Intelligence still prefers provider-side evaluation, but if the provider
-        // lookup is temporarily behind (for example YouVerify session sync lag),
-        // LivenessService can safely fall back to this same-session evidence instead
-        // of failing the verification submission outright.
-        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
-      },
+      ...(sessionId || hasCapturedLivenessEvidence
+        ? {
+            livenessCheck: {
+              ...(providerName ? { provider: providerName } : {}),
+              ...(sessionId ? { sessionId } : {}),
+              // Submit the observed SDK outcome alongside the backend-issued session id.
+              // Intelligence still prefers provider-side evaluation, but if the provider
+              // lookup is temporarily behind or the user is resuming with saved selfie
+              // evidence, this allows the verification to continue without forcing a
+              // duplicate portrait capture.
+              ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
+            },
+          }
+        : {}),
     });
 
     const feedback = getVerificationSubmissionFeedback(result);
@@ -595,7 +603,7 @@ export async function resolveGuarantorSelfServiceVerificationAction(
     return { error: 'The guarantor verification link is missing or expired.' };
   }
 
-  if (!sessionId) {
+  if (!sessionId && !hasCapturedLivenessEvidence) {
     return { error: 'Start live verification before submitting this identity check.' };
   }
 
@@ -618,11 +626,15 @@ export async function resolveGuarantorSelfServiceVerificationAction(
         value: identifier.value,
         ...(countryCode ? { countryCode } : {}),
       })),
-      livenessCheck: {
-        ...(providerName ? { provider: providerName } : {}),
-        sessionId,
-        ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
-      },
+      ...(sessionId || hasCapturedLivenessEvidence
+        ? {
+            livenessCheck: {
+              ...(providerName ? { provider: providerName } : {}),
+              ...(sessionId ? { sessionId } : {}),
+              ...(hasCapturedLivenessEvidence ? { passed: true } : {}),
+            },
+          }
+        : {}),
     });
 
     const feedback = getVerificationSubmissionFeedback(result);
@@ -1073,7 +1085,7 @@ export async function reviewDriverDocumentAction(
   revalidatePath(`/drivers/${driverId}`);
   revalidatePath('/drivers');
   revalidatePath('/drivers/review-queue');
-  revalidatePath('/records');
+  revalidatePath('/operations');
 
   return {
     success:

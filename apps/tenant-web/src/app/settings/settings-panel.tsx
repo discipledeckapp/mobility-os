@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+import type { Route } from 'next';
 import {
   Button,
   Card,
@@ -12,6 +14,8 @@ import {
 } from '@mobility-os/ui';
 import { useActionState, useState, useTransition } from 'react';
 import type {
+  BusinessEntityRecord,
+  OperatingUnitRecord,
   FleetRecord,
   PushDeviceRecord,
   TeamMemberRecord,
@@ -68,6 +72,7 @@ const NOTIFICATION_LABELS: Record<keyof NotificationPreferencesRecord, string> =
 type SettingsSection =
   | 'account'
   | 'organisation'
+  | 'structure'
   | 'drivers'
   | 'fleet'
   | 'notifications'
@@ -77,6 +82,7 @@ type SettingsSection =
 const NAV_ITEMS: { id: SettingsSection; label: string }[] = [
   { id: 'account', label: 'Account' },
   { id: 'organisation', label: 'Organisation' },
+  { id: 'structure', label: 'Organisation Structure' },
   { id: 'drivers', label: 'Drivers' },
   { id: 'fleet', label: 'Fleet' },
   { id: 'team', label: 'Team' },
@@ -302,6 +308,8 @@ export function SettingsPanel({
   pushDevices,
   privacySupport,
   members,
+  businessEntities,
+  operatingUnits,
   fleets,
   vehicles,
   canManage,
@@ -315,6 +323,8 @@ export function SettingsPanel({
   pushDevices: PushDeviceRecord[];
   privacySupport: PrivacySupportRecord | null;
   members: TeamMemberRecord[];
+  businessEntities: BusinessEntityRecord[];
+  operatingUnits: OperatingUnitRecord[];
   fleets: FleetRecord[];
   vehicles: VehicleRecord[];
   canManage: boolean;
@@ -395,6 +405,8 @@ export function SettingsPanel({
     getVerificationTierRank(selectedTier) >
     getVerificationTierRank(tenant.verificationTier ?? 'BASIC_IDENTITY');
   const activeRegisteredDeviceCount = registeredDevices.filter((device) => !device.disabledAt).length;
+  const businessEntityNameById = new Map(businessEntities.map((entity) => [entity.id, entity.name]));
+  const operatingUnitNameById = new Map(operatingUnits.map((unit) => [unit.id, unit.name]));
 
   function handleDisableDevice(deviceId: string) {
     setDeviceNotice({});
@@ -649,6 +661,141 @@ export function SettingsPanel({
                     </div>
                   </div>
                 ) : null}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Drivers section */}
+        {activeSection === 'structure' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Organisation structure</CardTitle>
+                <CardDescription>
+                  Keep business entities, operating units, and fleet hierarchy clean here. Operational monitoring stays on the main Fleets and Operations pages.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Business entities</CardTitle>
+                  <CardDescription>Top-level legal or organisational entities.</CardDescription>
+                </div>
+                <Link href={'/business-entities/new' as Route}>
+                  <Button size="sm">Add business entity</Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {businessEntities.length > 0 ? (
+                  businessEntities.map((entity) => {
+                    const entityUnits = operatingUnits.filter((unit) => unit.businessEntityId === entity.id);
+                    const entityFleets = fleets.filter((fleet) =>
+                      entityUnits.some((unit) => unit.id === fleet.operatingUnitId),
+                    );
+
+                    return (
+                      <div
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 p-4"
+                        key={entity.id}
+                      >
+                        <div className="space-y-1">
+                          <Text tone="strong">{entity.name}</Text>
+                          <Text tone="muted">
+                            {entityUnits.length} operating unit{entityUnits.length === 1 ? '' : 's'} · {entityFleets.length} fleet{entityFleets.length === 1 ? '' : 's'}
+                          </Text>
+                        </div>
+                        <Link href={`/business-entities/${entity.id}/edit` as Route}>
+                          <Button size="sm" variant="secondary">Edit</Button>
+                        </Link>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <Text className="text-sm text-slate-500">No business entities configured yet.</Text>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Operating units</CardTitle>
+                  <CardDescription>Branches, depots, or execution zones attached to each entity.</CardDescription>
+                </div>
+                <Link href={'/operating-units/new' as Route}>
+                  <Button size="sm">Add operating unit</Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {operatingUnits.length > 0 ? (
+                  operatingUnits.map((unit) => {
+                    const unitFleets = fleets.filter((fleet) => fleet.operatingUnitId === unit.id);
+                    return (
+                      <div
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 p-4"
+                        key={unit.id}
+                      >
+                        <div className="space-y-1">
+                          <Text tone="strong">{unit.name}</Text>
+                          <Text tone="muted">
+                            {businessEntityNameById.get(unit.businessEntityId) ?? unit.businessEntityId} · {unitFleets.length} fleet{unitFleets.length === 1 ? '' : 's'}
+                          </Text>
+                        </div>
+                        <Link href={`/operating-units/${unit.id}/edit` as Route}>
+                          <Button size="sm" variant="secondary">Edit</Button>
+                        </Link>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <Text className="text-sm text-slate-500">No operating units configured yet.</Text>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Fleet structure</CardTitle>
+                  <CardDescription>Structural fleet placement only. Go to Fleets for operational performance.</CardDescription>
+                </div>
+                <Link href={'/fleets/new' as Route}>
+                  <Button size="sm">Add fleet</Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {fleets.length > 0 ? (
+                  fleets.map((fleet) => {
+                    const operatingUnit = operatingUnits.find((unit) => unit.id === fleet.operatingUnitId);
+                    const businessEntityName = operatingUnit
+                      ? businessEntityNameById.get(operatingUnit.businessEntityId)
+                      : null;
+
+                    return (
+                      <div
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 p-4"
+                        key={fleet.id}
+                      >
+                        <div className="space-y-1">
+                          <Text tone="strong">{fleet.name}</Text>
+                          <Text tone="muted">
+                            {[businessEntityName, operatingUnitNameById.get(fleet.operatingUnitId), fleet.businessModel]
+                              .filter(Boolean)
+                              .join(' → ')}
+                          </Text>
+                        </div>
+                        <Link href={`/fleets/${fleet.id}/edit` as Route}>
+                          <Button size="sm" variant="secondary">Edit</Button>
+                        </Link>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <Text className="text-sm text-slate-500">No fleets configured yet.</Text>
+                )}
               </CardContent>
             </Card>
           </div>

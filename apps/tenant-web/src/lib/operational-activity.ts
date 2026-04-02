@@ -99,14 +99,14 @@ function getEventHref(event: AuditLogRecord): Route {
     case 'remittance':
       return '/remittance' as Route;
     case 'work_order':
-      return vehicleId ? (`/vehicles/${vehicleId}?tab=maintenance` as Route) : ('/maintenance' as Route);
+      return vehicleId ? (`/vehicles/${vehicleId}?tab=maintenance` as Route) : ('/vehicles/health' as Route);
     case 'inspection':
-      return vehicleId ? (`/vehicles/${vehicleId}?tab=history` as Route) : ('/inspections' as Route);
+      return vehicleId ? (`/vehicles/${vehicleId}?tab=history` as Route) : ('/vehicles/health' as Route);
     case 'vehicle_incident':
       return vehicleId ? (`/vehicles/${vehicleId}?tab=history` as Route) : ('/vehicles' as Route);
     case 'document':
     case 'dispute':
-      return '/records' as Route;
+      return '/operations' as Route;
     default:
       return '/audit' as Route;
   }

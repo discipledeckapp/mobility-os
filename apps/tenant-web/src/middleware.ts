@@ -2,18 +2,11 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import {
   TENANT_AUTH_COOKIE_NAME,
-  TENANT_FORWARDED_AUTH_HEADER,
-  TENANT_FORWARDED_REFRESH_HEADER,
   TENANT_REFRESH_COOKIE_NAME,
   getSelfServiceContinuationPath,
-  getTenantAccessCookieOptions,
-  getTenantRefreshCookieOptions,
   isTenantJwtUsable,
   parseTenantJwtPayload,
 } from './lib/auth';
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
 
 function isAuthEntryRoute(pathname: string) {
   return (
@@ -32,42 +25,8 @@ function isSelfServiceRoute(pathname: string) {
   );
 }
 
-async function refreshTenantSession(refreshToken: string) {
-  try {
-    const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ refreshToken }),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return {
-        status: response.status === 401 || response.status === 403 ? 'invalid' : 'unavailable',
-      } as const;
-    }
-
-    const payload = (await response.json()) as {
-      accessToken?: string;
-      refreshToken?: string;
-      token?: string;
-      jwt?: string;
-    };
-    const accessToken = payload.accessToken ?? payload.token ?? payload.jwt;
-    if (!accessToken || !payload.refreshToken) {
-      return { status: 'unavailable' } as const;
-    }
-
-    return {
-      status: 'success',
-      accessToken,
-      refreshToken: payload.refreshToken,
-    } as const;
-  } catch {
-    return { status: 'unavailable' } as const;
-  }
+function isInternalAuthRoute(pathname: string) {
+  return pathname === '/api/auth/token' || pathname === '/api/auth/refresh';
 }
 
 function buildTenantLoginRedirect(request: NextRequest) {
@@ -83,94 +42,40 @@ function buildTenantLoginRedirect(request: NextRequest) {
   return response;
 }
 
-function applySessionCookies(
-  response: NextResponse,
-  tokens: { accessToken: string; refreshToken: string },
-) {
-  response.cookies.set(
-    TENANT_AUTH_COOKIE_NAME,
-    tokens.accessToken,
-    getTenantAccessCookieOptions(tokens.accessToken),
-  );
-  response.cookies.set(
-    TENANT_REFRESH_COOKIE_NAME,
-    tokens.refreshToken,
-    getTenantRefreshCookieOptions(tokens.refreshToken),
-  );
-}
+function buildSessionRefreshRedirect(request: NextRequest) {
+  const refreshUrl = new URL('/api/auth/refresh', request.url);
+  const currentPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (currentPath && currentPath !== '/api/auth/refresh') {
+    refreshUrl.searchParams.set('returnTo', currentPath);
+  }
 
-function withForwardedSessionHeaders(
-  request: NextRequest,
-  tokens: { accessToken: string; refreshToken: string },
-) {
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(TENANT_FORWARDED_AUTH_HEADER, tokens.accessToken);
-  requestHeaders.set(TENANT_FORWARDED_REFRESH_HEADER, tokens.refreshToken);
-  return requestHeaders;
+  return NextResponse.redirect(refreshUrl);
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
   const refreshCookie = request.cookies.get(TENANT_REFRESH_COOKIE_NAME)?.value;
+  const isInternalApiRoute = pathname.startsWith('/api/');
   const isPublicRoute =
     isAuthEntryRoute(pathname) ||
     pathname === '/privacy' ||
     pathname === '/terms' ||
+    pathname === '/session-recovery' ||
+    isInternalAuthRoute(pathname) ||
     isSelfServiceRoute(pathname);
+  const shouldAttemptSessionRefresh =
+    !isInternalApiRoute &&
+    pathname !== '/privacy' &&
+    pathname !== '/terms' &&
+    pathname !== '/session-recovery' &&
+    !isSelfServiceRoute(pathname);
 
   let activeAccessToken = authCookie;
   let activeRefreshToken = refreshCookie;
-  let refreshStatus: 'idle' | 'success' | 'invalid' | 'unavailable' = 'idle';
 
-  if (!isTenantJwtUsable(activeAccessToken) && activeRefreshToken) {
-    const refreshedSession = await refreshTenantSession(activeRefreshToken);
-    refreshStatus = refreshedSession.status;
-    if (refreshedSession.status === 'success') {
-      activeAccessToken = refreshedSession.accessToken;
-      activeRefreshToken = refreshedSession.refreshToken;
-      const payload = parseTenantJwtPayload(activeAccessToken);
-      const continuationPath = getSelfServiceContinuationPath(payload);
-      const isAuthRoute = isAuthEntryRoute(pathname);
-      const forwardedHeaders = withForwardedSessionHeaders(request, refreshedSession);
-
-      if (continuationPath && !isSelfServiceRoute(pathname)) {
-        const response = NextResponse.redirect(new URL(continuationPath, request.url));
-        applySessionCookies(response, refreshedSession);
-        return response;
-      }
-
-      if (isAuthRoute) {
-        const response = NextResponse.redirect(new URL(continuationPath ?? '/', request.url));
-        applySessionCookies(response, refreshedSession);
-        return response;
-      }
-
-      const response = NextResponse.next({
-        request: {
-          headers: forwardedHeaders,
-        },
-      });
-      applySessionCookies(response, refreshedSession);
-      return response;
-    }
-
-    if (refreshedSession.status === 'invalid') {
-      if (!isPublicRoute) {
-        return buildTenantLoginRedirect(request);
-      }
-
-      const response = NextResponse.next();
-      response.cookies.delete(TENANT_AUTH_COOKIE_NAME);
-      response.cookies.delete(TENANT_REFRESH_COOKIE_NAME);
-      return response;
-    }
-
-    if (refreshedSession.status === 'unavailable') {
-      if (!isPublicRoute) {
-        return NextResponse.next();
-      }
-    }
+  if (!isTenantJwtUsable(activeAccessToken) && activeRefreshToken && shouldAttemptSessionRefresh) {
+    return buildSessionRefreshRedirect(request);
   }
 
   const hasUsableSession = isTenantJwtUsable(activeAccessToken);
@@ -178,9 +83,6 @@ export async function middleware(request: NextRequest) {
   const continuationPath = getSelfServiceContinuationPath(payload);
 
   if (!hasUsableSession && !isPublicRoute) {
-    if (activeRefreshToken && refreshStatus === 'unavailable') {
-      return NextResponse.next();
-    }
     return buildTenantLoginRedirect(request);
   }
 

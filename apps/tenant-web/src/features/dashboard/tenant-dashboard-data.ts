@@ -250,14 +250,9 @@ function getDashboardFeatureCards(): DashboardFeatureCard[] {
       description: 'Record collections and monitor outstanding remittance items.',
     },
     {
-      href: '/reports',
-      title: 'Insights',
-      description: 'Review remittance health, readiness blockers, utilization gaps, and fleet risk.',
-    },
-    {
-      href: '/records' as Route,
-      title: 'Records',
-      description: 'Inspect generated documents, dispute history, and operational audit evidence.',
+      href: '/operations' as Route,
+      title: 'Operations',
+      description: 'See what needs attention, what just happened, and the supporting evidence behind it.',
     },
   ];
 }

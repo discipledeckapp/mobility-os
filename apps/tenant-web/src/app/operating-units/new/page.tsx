@@ -21,15 +21,14 @@ export default async function NewOperatingUnitPage() {
             <div>
               <Text tone="strong">Operating unit registry workflow</Text>
               <Text tone="muted">
-                Create the operating unit here, then continue into its detail page to review linked
-                fleets and dispatch coverage.
+                Create the operating unit here, then return to Organisation Structure in Settings to manage linked fleets.
               </Text>
             </div>
             <Link
               className="text-sm font-semibold text-[var(--mobiris-primary-dark)] hover:underline"
-              href={'/operating-units' as Route}
+              href={'/settings?section=structure' as Route}
             >
-              Back to operating units
+              Back to organisation structure
             </Link>
           </CardContent>
         </Card>

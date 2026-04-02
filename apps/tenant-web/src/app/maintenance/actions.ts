@@ -84,6 +84,7 @@ export async function createWorkOrderAction(
   }
 
   revalidatePath('/maintenance');
+  revalidatePath('/vehicles/health');
   revalidatePath(`/vehicles/${vehicleId}`);
   revalidatePath('/reports/readiness');
   return {
@@ -145,6 +146,7 @@ export async function updateWorkOrderAction(
   }
 
   revalidatePath('/maintenance');
+  revalidatePath('/vehicles/health');
   revalidatePath(`/vehicles/${vehicleId}`);
   revalidatePath('/reports/readiness');
   return {

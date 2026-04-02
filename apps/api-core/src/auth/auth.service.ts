@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { TenantRole } from '@mobility-os/authz-model';
 import { getGrantedPermissions } from '@mobility-os/authz-model';
 import {
@@ -213,6 +214,7 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync(
       {
+        jti: randomUUID(),
         sub: user.id,
         tenantId: user.tenantId,
         role: user.role,
@@ -242,6 +244,7 @@ export class AuthService {
 
     const refreshToken = await this.jwtService.signAsync(
       {
+        jti: randomUUID(),
         sub: user.id,
         tenantId: user.tenantId,
         type: 'refresh',

@@ -76,6 +76,7 @@ export class SubscriptionsService {
           select: {
             name: true,
             tier: true,
+            billingInterval: true,
             currency: true,
             basePriceMinorUnits: true,
             features: true,
@@ -91,6 +92,7 @@ export class SubscriptionsService {
       planId: subscription.planId,
       planName: subscription.plan.name,
       planTier: subscription.plan.tier,
+      billingInterval: subscription.plan.billingInterval,
       currency: subscription.plan.currency,
       basePriceMinorUnits: subscription.plan.basePriceMinorUnits,
       features: subscription.plan.features,
@@ -126,6 +128,7 @@ export class SubscriptionsService {
           select: {
             name: true,
             tier: true,
+            billingInterval: true,
             currency: true,
             basePriceMinorUnits: true,
             features: true,
@@ -144,6 +147,7 @@ export class SubscriptionsService {
       planId: subscription.planId,
       planName: subscription.plan.name,
       planTier: subscription.plan.tier,
+      billingInterval: subscription.plan.billingInterval,
       currency: subscription.plan.currency,
       basePriceMinorUnits: subscription.plan.basePriceMinorUnits,
       features: subscription.plan.features,

@@ -1,5 +1,7 @@
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
+  listBusinessEntities,
+  listOperatingUnits,
   getTenantApiToken,
   getPrivacySupport,
   getNotificationPreferences,
@@ -23,6 +25,7 @@ function getSection(value: string | string[] | undefined) {
   if (
     first === 'account' ||
     first === 'organisation' ||
+    first === 'structure' ||
     first === 'drivers' ||
     first === 'fleet' ||
     first === 'notifications' ||
@@ -38,7 +41,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initialSection = getSection(resolvedSearchParams.section);
   const token = await getTenantApiToken().catch(() => undefined);
-  const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, pushDevices, privacySupport, dataRequests] = await Promise.all([
+  const [tenant, session, members, fleets, vehiclesPage, notificationPreferences, notifications, pushDevices, privacySupport, dataRequests, businessEntities, operatingUnits] = await Promise.all([
     getTenantMe(token),
     getTenantSession(token),
     listTeamMembers(token).catch(() => []),
@@ -49,6 +52,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     listPushDevices(token).catch(() => []),
     getPrivacySupport(token).catch(() => null),
     listDataSubjectRequests(token).catch(() => []),
+    listBusinessEntities(token).catch(() => []),
+    listOperatingUnits({}, token).catch(() => []),
   ]);
 
   const canManage = session.permissions.includes('tenants:write');
@@ -61,10 +66,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     >
       <SettingsPanel
         canManage={canManage}
+        businessEntities={businessEntities}
         fleets={fleets}
         members={members}
         notificationPreferences={notificationPreferences ?? session.notificationPreferences ?? null}
         notifications={notifications}
+        operatingUnits={operatingUnits}
         pushDevices={pushDevices}
         privacySupport={privacySupport}
         session={session}

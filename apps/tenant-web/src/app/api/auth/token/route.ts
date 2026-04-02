@@ -9,9 +9,7 @@ import {
   getTenantRefreshCookieOptions,
   isTenantJwtUsable,
 } from '../../../../lib/auth';
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
+import { refreshTenantSession } from '../../../../lib/tenant-session-refresh';
 
 function setSessionCookies(
   response: NextResponse,
@@ -48,23 +46,14 @@ export async function GET(request: Request) {
     );
   }
 
-  const refreshResponse = await fetch(`${apiBaseUrl}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ refreshToken }),
-    cache: 'no-store',
-  });
-
-  if (!refreshResponse.ok) {
-    if (refreshResponse.status !== 401 && refreshResponse.status !== 403) {
+  const refreshedSession = await refreshTenantSession(refreshToken);
+  if (refreshedSession.status !== 'success') {
+    if (refreshedSession.status === 'unavailable') {
       return NextResponse.json(
         { error: 'We could not refresh the tenant session right now. Please try again shortly.' },
         { status: 503 },
       );
     }
-
     const response = NextResponse.json(
       { error: 'Your session has expired. Log in again to continue.' },
       { status: 401 },
@@ -74,26 +63,10 @@ export async function GET(request: Request) {
     return response;
   }
 
-  const payload = (await refreshResponse.json()) as {
-    accessToken?: string;
-    refreshToken?: string;
-    token?: string;
-    jwt?: string;
-  };
-  const nextAccessToken = payload.accessToken ?? payload.token ?? payload.jwt;
-  const nextRefreshToken = payload.refreshToken;
-
-  if (!nextAccessToken || !nextRefreshToken) {
-    return NextResponse.json(
-      { error: 'Unable to refresh the tenant session. Log in again.' },
-      { status: 401 },
-    );
-  }
-
-  const response = NextResponse.json({ accessToken: nextAccessToken });
+  const response = NextResponse.json({ accessToken: refreshedSession.accessToken });
   setSessionCookies(response, {
-    accessToken: nextAccessToken,
-    refreshToken: nextRefreshToken,
+    accessToken: refreshedSession.accessToken,
+    refreshToken: refreshedSession.refreshToken,
   });
   return response;
 }

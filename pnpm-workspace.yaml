@@ -6,5 +6,6 @@ packages:
   - 'apps/tenant-web'
   - 'apps/control-plane-web'
   - 'apps/mobile-ops'
+  - 'apps/marketing-web'
   # Shared packages (canonical location)
   - 'packages/*'

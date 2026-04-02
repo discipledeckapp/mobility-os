@@ -32,7 +32,7 @@ interface TenantDashboardShellProps {
 
 const summaryHrefs: Record<string, Route> = {
   'Total drivers': '/drivers',
-  'Active drivers': '/reports',
+  'Active drivers': '/operations',
   'Total vehicles': '/vehicles',
   'Active assignments': '/assignments',
   'Pending remittances': '/remittance',
@@ -112,7 +112,7 @@ const featureCardIcons: Record<string, React.ReactNode> = {
       <path d="M5 8v5M15 8v5" />
     </svg>
   ),
-  '/records': (
+  '/operations': (
     <svg
       aria-hidden="true"
       fill="none"
@@ -499,9 +499,9 @@ export function TenantDashboardShell({
                   Review pending documents, identity readiness, and missing mobile access before activation.
                 </Text>
                 <div className="mt-3">
-                  <Link href="/reports">
+                  <Link href="/operations">
                     <Button size="sm" variant="secondary">
-                      Open insights
+                      Open operations
                     </Button>
                   </Link>
                 </div>
@@ -509,12 +509,12 @@ export function TenantDashboardShell({
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="strong">Keep vehicles assignment-ready</Text>
                 <Text tone="muted">
-                  Check availability status, maintenance posture, and fleet placement before dispatch.
+                  Check vehicle health, maintenance posture, and fleet placement before dispatch.
                 </Text>
                 <div className="mt-3">
-                  <Link href={'/maintenance' as Route}>
+                  <Link href={'/vehicles/health' as Route}>
                     <Button size="sm" variant="secondary">
-                      Open maintenance queue
+                      Open Vehicle Health
                     </Button>
                   </Link>
                 </div>
@@ -522,25 +522,25 @@ export function TenantDashboardShell({
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="strong">Close remittance gaps quickly</Text>
                 <Text tone="muted">
-                  Use the remittance queue and verification funding view to clear pending collections and keep driver verification moving.
+                  Use the remittance queue and billing view to clear pending collections and keep driver verification moving.
                 </Text>
                 <div className="mt-3">
-                  <Link href={'/verification-funding' as Route}>
+                  <Link href={'/subscription' as Route}>
                     <Button size="sm" variant="secondary">
-                      Open verification funding
+                      Open billing
                     </Button>
                   </Link>
                 </div>
               </div>
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-                <Text tone="strong">Keep the audit trail visible</Text>
+                <Text tone="strong">Keep operations visible</Text>
                 <Text tone="muted">
-                  Review signed documents and dispute history so assignment, remittance, and compliance records stay easy to verify.
+                  Review alerts, recent activity, and supporting evidence so assignment, remittance, and compliance issues stay easy to resolve.
                 </Text>
                 <div className="mt-3">
-                  <Link href={'/records' as Route}>
+                  <Link href={'/operations' as Route}>
                     <Button size="sm" variant="secondary">
-                      Open records
+                      Open operations
                     </Button>
                   </Link>
                 </div>

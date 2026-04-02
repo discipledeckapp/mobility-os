@@ -68,25 +68,6 @@ const VehiclesIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
-const BusinessEntitiesIcon: NavIcon = ({ className }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    focusable="false"
-    height="16"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.6"
-    viewBox="0 0 16 16"
-    width="16"
-  >
-    <rect height="10" rx="1.2" width="6" x="2" y="3" />
-    <path d="M10.5 6.5h3M10.5 9.5h3M4.5 5.5h1M4.5 8h1M4.5 10.5h1" />
-  </svg>
-);
-
 const FleetsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -105,27 +86,6 @@ const FleetsIcon: NavIcon = ({ className }) => (
     <path d="M3.5 10.5V7l1.5-2h6L12.5 7v3.5" />
     <circle cx="5" cy="12.5" r="1.2" />
     <circle cx="11" cy="12.5" r="1.2" />
-  </svg>
-);
-
-const OperatingUnitsIcon: NavIcon = ({ className }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    focusable="false"
-    height="16"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.6"
-    viewBox="0 0 16 16"
-    width="16"
-  >
-    <rect height="4" rx="1" width="5" x="1.5" y="2" />
-    <rect height="4" rx="1" width="5" x="9.5" y="2" />
-    <rect height="4" rx="1" width="5" x="5.5" y="10" />
-    <path d="M4 6v2.2h8V6M8 8.2v1.8" />
   </svg>
 );
 
@@ -170,26 +130,6 @@ const RemittanceIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
-const WalletIcon: NavIcon = ({ className }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    focusable="false"
-    height="16"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.6"
-    viewBox="0 0 16 16"
-    width="16"
-  >
-    <rect height="10" rx="1.5" width="14" x="1" y="4" />
-    <path d="M1 8h14" />
-    <rect height="3" rx="1" width="4" x="10" y="9" />
-  </svg>
-);
-
 const SubscriptionIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -230,7 +170,7 @@ const ReportsIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
-const InspectionsIcon: NavIcon = ({ className }) => (
+const VehicleHealthIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
     className={className}
@@ -244,47 +184,8 @@ const InspectionsIcon: NavIcon = ({ className }) => (
     viewBox="0 0 16 16"
     width="16"
   >
-    <rect height="11" rx="1.5" width="9" x="3.5" y="2.5" />
-    <path d="M6 2.5V1.6M10 2.5V1.6M5.5 6h5M5.5 8.5h3" />
-    <path d="m8 11.2 1 1 2-2.2" />
-  </svg>
-);
-
-const RecordsIcon: NavIcon = ({ className }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    focusable="false"
-    height="16"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.6"
-    viewBox="0 0 16 16"
-    width="16"
-  >
-    <rect height="11" rx="1.5" width="10" x="3" y="2.5" />
-    <path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" />
-  </svg>
-);
-
-const AuditIcon: NavIcon = ({ className }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    focusable="false"
-    height="16"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.6"
-    viewBox="0 0 16 16"
-    width="16"
-  >
-    <path d="M8 1.8 3 3.6v3.7c0 3.2 2 5.9 5 6.9 3-1 5-3.7 5-6.9V3.6L8 1.8Z" />
-    <path d="M6.2 7.9 7.4 9l2.5-2.6" />
+    <path d="M2 8h3l1.2-2.4L8.4 11l1.7-3H14" />
+    <rect height="11" rx="1.5" width="12" x="2" y="2.5" />
   </svg>
 );
 
@@ -312,7 +213,11 @@ type NavLinksProps = {
   collapsed?: boolean;
 };
 
-const navigationSections = [
+type NavChildItem = { href: Route; label: string; Icon: NavIcon };
+type NavItem = NavChildItem & { children?: NavChildItem[] };
+type NavSection = { label: string; items: NavItem[] };
+
+const navigationSections: NavSection[] = [
   {
     label: 'Overview',
     items: [{ href: '/', label: 'Dashboard', Icon: DashboardIcon }],
@@ -321,37 +226,29 @@ const navigationSections = [
     label: 'Operations',
     items: [
       { href: '/drivers', label: 'Drivers', Icon: DriversIcon },
-      { href: '/vehicles', label: 'Vehicles', Icon: VehiclesIcon },
-      { href: '/maintenance' as Route, label: 'Maintenance', Icon: VehiclesIcon },
-      { href: '/inspections' as Route, label: 'Inspections', Icon: InspectionsIcon },
+      {
+        href: '/vehicles',
+        label: 'Vehicles',
+        Icon: VehiclesIcon,
+        children: [
+          { href: '/vehicles', label: 'All Vehicles', Icon: VehiclesIcon },
+          { href: '/vehicles/health' as Route, label: 'Vehicle Health', Icon: VehicleHealthIcon },
+        ],
+      },
       { href: '/assignments', label: 'Assignments', Icon: AssignmentsIcon },
       { href: '/remittance', label: 'Remittance', Icon: RemittanceIcon },
     ],
   },
   {
-    label: 'Structure',
-    items: [
-      { href: '/business-entities', label: 'Business entities', Icon: BusinessEntitiesIcon },
-      { href: '/operating-units' as Route, label: 'Operating units', Icon: OperatingUnitsIcon },
-      { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
-    ],
-  },
-  {
     label: 'Insights',
     items: [
-      { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
-      { href: '/wallet', label: 'Operational wallet', Icon: WalletIcon },
-      { href: '/verification-funding' as Route, label: 'Verification funding', Icon: WalletIcon },
-      { href: '/records' as Route, label: 'Records', Icon: RecordsIcon },
-      { href: '/audit' as Route, label: 'Audit', Icon: AuditIcon },
-      { href: '/reports' as Route, label: 'Operations Insights', Icon: ReportsIcon },
+      { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
+      { href: '/subscription' as Route, label: 'Billing & Subscription', Icon: SubscriptionIcon },
+      { href: '/operations' as Route, label: 'Operations', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],
   },
-] as const satisfies ReadonlyArray<{
-  label: string;
-  items: ReadonlyArray<{ href: Route; label: string; Icon: NavIcon }>;
-}>;
+];
 
 export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksProps) {
   const pathname = usePathname();
@@ -363,7 +260,7 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
     { href: '/drivers' as Route, label: 'Drivers', Icon: DriversIcon },
     { href: '/assignments' as Route, label: 'Assignments', Icon: AssignmentsIcon },
     { href: '/remittance' as Route, label: 'Remittance', Icon: RemittanceIcon },
-    { href: '/reports' as Route, label: 'Insights', Icon: ReportsIcon },
+    { href: '/operations' as Route, label: 'Operations', Icon: ReportsIcon },
   ] as const;
 
   if (isBottom) {
@@ -409,10 +306,10 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
               {section.label}
             </p>
           ) : null}
-          {section.items.map(({ href, label, Icon }) => {
+          {section.items.map(({ href, label, Icon, children }) => {
             const isActive = href === '/' ? pathname === '/' : (pathname ?? '').startsWith(href);
             return (
-              <div className="group/nav relative" key={href}>
+              <div className="group/nav relative space-y-1" key={href}>
                 <Link
                   className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'gap-2.5'} rounded-[var(--mobiris-radius-button)] px-3 py-2.5 text-sm font-semibold tracking-[-0.01em] transition-all ${
                     isActive
@@ -429,6 +326,35 @@ export function NavLinks({ variant = 'sidebar', collapsed = false }: NavLinksPro
                   <Icon className={isActive ? 'opacity-100' : 'opacity-60'} />
                   {!collapsed || isMobile ? label : null}
                 </Link>
+                {children && (!collapsed || isMobile) ? (
+                  <div className={`space-y-1 pl-4 ${isMobile ? 'pl-3' : ''}`}>
+                    {children.map(({ href: childHref, label: childLabel, Icon: ChildIcon }: NavChildItem) => {
+                      const isChildActive =
+                        childHref === '/vehicles'
+                          ? pathname === '/vehicles'
+                          : (pathname ?? '').startsWith(childHref);
+
+                      return (
+                        <Link
+                          className={`flex items-center gap-2.5 rounded-[var(--mobiris-radius-button)] px-3 py-2 text-sm font-medium transition-all ${
+                            isChildActive
+                              ? isMobile
+                                ? 'bg-[var(--mobiris-primary)]/10 text-[var(--mobiris-primary-dark)]'
+                                : 'bg-white/8 text-white'
+                              : isMobile
+                                ? 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                : 'text-blue-50/55 hover:bg-white/5 hover:text-white'
+                          }`}
+                          href={childHref}
+                          key={childHref}
+                        >
+                          <ChildIcon className={isChildActive ? 'opacity-100' : 'opacity-55'} />
+                          {childLabel}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
                 {collapsed && !isMobile ? (
                   <div className="pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 z-20 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_20px_35px_-24px_rgba(15,23,42,0.45)] group-hover/nav:block">
                     {label}

@@ -85,6 +85,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { ttl: 60_000, limit: 120 } })
   @ApiOkResponse({ type: LoginResponseDto })
   async refresh(
     @Body() dto?: Partial<RefreshTokenDto>,

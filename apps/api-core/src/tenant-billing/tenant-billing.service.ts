@@ -30,6 +30,7 @@ function readNumericFeature(features: Record<string, unknown>, key: string): num
 // Growth plan limits used for the trial fallback when control-plane is unreachable.
 const TRIAL_FEATURES = {
   vehicleCap: 20,
+  assignmentCap: 50,
   seatLimit: 25,
   verificationEnabled: true,
   walletEnabled: true,
@@ -167,7 +168,8 @@ export class TenantBillingService {
 
   async getSummary(tenantId: string, userId: string): Promise<TenantBillingSummaryDto> {
     // Always fetch local counts — these come from our own DB, never the control plane.
-    const [user, tenant, driverCount, vehicleCount, operatorSeatCount] = await Promise.all([
+    const [user, tenant, driverCount, vehicleCount, operatorSeatCount, assignmentCount] =
+      await Promise.all([
       this.prisma.user.findFirst({
         where: { id: userId, tenantId, isActive: true },
         select: { email: true, name: true },
@@ -179,6 +181,21 @@ export class TenantBillingService {
       this.prisma.driver.count({ where: { tenantId } }),
       this.prisma.vehicle.count({ where: { tenantId } }),
       this.prisma.user.count({ where: { tenantId, isActive: true } }),
+      this.prisma.assignment.count({
+        where: {
+          tenantId,
+          status: {
+            in: [
+              'created',
+              'assigned',
+              'pending_driver_confirmation',
+              'driver_action_required',
+              'accepted',
+              'active',
+            ],
+          },
+        },
+      }),
     ]);
 
     if (!user) {
@@ -250,6 +267,8 @@ export class TenantBillingService {
           planId: 'trial',
           planName: 'Growth (Free Trial)',
           planTier: 'growth',
+          billingInterval: 'monthly',
+          basePriceMinorUnits: 0,
           currency,
           features: TRIAL_FEATURES,
         status: tenant?.status ?? 'trialing',
@@ -278,8 +297,10 @@ export class TenantBillingService {
           driverCount,
           vehicleCount,
           operatorSeatCount,
+          assignmentCount,
           driverCap: null,
           vehicleCap: TRIAL_FEATURES.vehicleCap,
+          assignmentCap: TRIAL_FEATURES.assignmentCap ?? null,
           seatCap: TRIAL_FEATURES.seatLimit,
           openInvoiceCount: 0,
           verificationLedgerEntryCount: 0,
@@ -295,6 +316,7 @@ export class TenantBillingService {
     const vehicleCap =
       readNumericFeature(subscription.features, 'vehicleCap') ??
       readNumericFeature(subscription.features, 'fleetCap');
+    const assignmentCap = readNumericFeature(subscription.features, 'assignmentCap');
     const seatCap = readNumericFeature(subscription.features, 'seatLimit');
     const walletCurrency = balance?.currency ?? subscription.currency;
     const verificationSpend = await this.verificationSpendService.getSpendSummary(
@@ -308,6 +330,8 @@ export class TenantBillingService {
         planId: subscription.planId,
         planName: subscription.planName,
         planTier: subscription.planTier,
+        billingInterval: subscription.billingInterval,
+        basePriceMinorUnits: subscription.basePriceMinorUnits,
         currency: subscription.currency,
         features: subscription.features,
         status: subscription.status,
@@ -362,8 +386,10 @@ export class TenantBillingService {
         driverCount,
         vehicleCount,
         operatorSeatCount,
+        assignmentCount,
         driverCap: null,
         vehicleCap,
+        assignmentCap,
         seatCap,
         openInvoiceCount: invoices.filter((invoice) => invoice.status === 'open').length,
         verificationLedgerEntryCount: entries.length,

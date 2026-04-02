@@ -12,8 +12,9 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useState, type ChangeEvent } from 'react';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
+import { SelectField } from '../../features/shared/select-field';
 import {
   initializeCardSetupCheckoutAction,
   initializeVerificationWalletTopUpAction,
@@ -75,11 +76,14 @@ function formatMoney(amountMinorUnits: number, currency: string, locale = 'en-NG
 export function PaymentActionPanel({
   summary,
   currencyMinorUnit,
+  locale = 'en-NG',
 }: {
   summary: TenantBillingSummaryRecord;
   currencyMinorUnit: number;
+  locale?: string;
 }) {
   const [walletProvider, setWalletProvider] = useState<'paystack' | 'flutterwave'>('paystack');
+  const [cardProvider, setCardProvider] = useState<'paystack' | 'flutterwave'>('paystack');
   const [amountInput, setAmountInput] = useState('');
   const [walletState, walletAction, walletPending] = useActionState(
     initializeVerificationWalletTopUpAction,
@@ -108,10 +112,7 @@ export function PaymentActionPanel({
     }
   }, [walletState.recommendedProvider]);
 
-  const amountState = useMemo(
-    () => parseFundingAmount(amountInput, currencyMinorUnit),
-    [amountInput, currencyMinorUnit],
-  );
+  const amountState = parseFundingAmount(amountInput, currencyMinorUnit);
   const fundingDisabled =
     walletPending ||
     Boolean(walletState.checkoutUrl) ||
@@ -123,10 +124,8 @@ export function PaymentActionPanel({
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <Card className="border-slate-200">
         <CardHeader>
-          <CardTitle>Fund verification funding</CardTitle>
-          <CardDescription>
-            Add funds with your preferred payment gateway. If one gateway fails, switch to the other and continue.
-          </CardDescription>
+          <CardTitle>Add verification credit</CardTitle>
+          <CardDescription>Enter an amount, confirm the formatted total, and continue.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-3">
@@ -171,14 +170,14 @@ export function PaymentActionPanel({
                 value={amountInput}
               />
               <Text className="text-xs text-slate-500">
-                This exact amount will be sent to checkout. Supported hosted gateways here are Paystack and Flutterwave.
+                This exact amount will be sent to checkout.
               </Text>
               {amountState.error ? (
                 <Text className="text-xs text-rose-700">{amountState.error}</Text>
               ) : amountState.minorUnits > 0 ? (
                 <Text className="text-xs text-emerald-700">
                   You are about to fund{' '}
-                  {formatMoney(amountState.minorUnits, summary.verificationWallet.currency)}.
+                  {formatMoney(amountState.minorUnits, summary.verificationWallet.currency, locale)}.
                 </Text>
               ) : null}
             </div>
@@ -205,7 +204,7 @@ export function PaymentActionPanel({
         <CardHeader>
           <CardTitle>Saved payment method</CardTitle>
           <CardDescription>
-            Add one reusable payment method for card-backed verification credit. A temporary NGN 100 card authorization may be used by the gateway to validate the card before future charges.
+            Add one reusable payment method for card-backed verification credit.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -240,11 +239,25 @@ export function PaymentActionPanel({
           <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/80 p-4">
             <Text tone="strong">Before you continue</Text>
             <Text tone="muted">
-              Verification funding payment methods are separate from subscription billing cards. If your bank shows a small authorization hold during setup, it is a gateway card-check and not your main funding amount.
+              Verification credit payment methods are separate from subscription billing cards. A small {formatMoney(10_000, summary.verificationWallet.currency, locale)} authorization may be used to confirm the card before future charges.
             </Text>
           </div>
 
-          <form action={cardAction}>
+          <form action={cardAction} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="verification-card-provider">Payment provider</Label>
+              <SelectField
+                id="verification-card-provider"
+                name="provider"
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                  setCardProvider(event.currentTarget.value as 'paystack' | 'flutterwave')
+                }
+                value={cardProvider}
+              >
+                <option value="paystack">Paystack</option>
+                <option value="flutterwave">Flutterwave</option>
+              </SelectField>
+            </div>
             <Button disabled={cardPending || Boolean(cardState.checkoutUrl)} type="submit" variant="secondary">
               {cardPending || cardState.checkoutUrl ? 'Opening setup...' : summary.verificationSpend.savedCard ? 'Replace payment method' : 'Add payment method'}
             </Button>

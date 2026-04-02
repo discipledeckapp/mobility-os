@@ -388,6 +388,10 @@ export function DriverIdentityVerification({
       Boolean(driver.identityReviewCaseId) ||
       Boolean(driver.identityProfile) ||
       Boolean(driver.reverificationRequired));
+  const persistedSelfieSeed =
+    driver.selfieImageUrl?.trim() ||
+    driver.identityProfile?.selfieImageUrl?.trim() ||
+    null;
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64 || selfieImageUrl);
@@ -410,6 +414,17 @@ export function DriverIdentityVerification({
       }
     };
   }, [selfiePreviewUrl]);
+
+  useEffect(() => {
+    if (!persistedSelfieSeed || selfieImageBase64 || selfieImageUrl || selfiePreviewUrl) {
+      return;
+    }
+
+    const normalizedSelfie = normalizeCapturedSelfie(persistedSelfieSeed);
+    setSelfieImageBase64(normalizedSelfie.selfieImageBase64);
+    setSelfieImageUrl(normalizedSelfie.selfieImageUrl);
+    setSelfiePreviewUrl(normalizedSelfie.previewUrl);
+  }, [persistedSelfieSeed, selfieImageBase64, selfieImageUrl, selfiePreviewUrl]);
 
   useEffect(() => {
     return () => {
@@ -1455,7 +1470,6 @@ export function DriverIdentityVerification({
                       !livenessDone ||
                       !idPhaseComplete ||
                       isResolving ||
-                      !session ||
                       !subjectConsent
                     }
                     type="submit"

@@ -54,6 +54,11 @@ export type CpPlatformWallet = $Result.DefaultSelection<Prisma.$CpPlatformWallet
  */
 export type CpWalletEntry = $Result.DefaultSelection<Prisma.$CpWalletEntryPayload>
 /**
+ * Model CpBillingPaymentMethod
+ * 
+ */
+export type CpBillingPaymentMethod = $Result.DefaultSelection<Prisma.$CpBillingPaymentMethodPayload>
+/**
  * Model CpPaymentAttempt
  * 
  */
@@ -311,6 +316,16 @@ export class PrismaClient<
     * ```
     */
   get cpWalletEntry(): Prisma.CpWalletEntryDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cpBillingPaymentMethod`: Exposes CRUD operations for the **CpBillingPaymentMethod** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CpBillingPaymentMethods
+    * const cpBillingPaymentMethods = await prisma.cpBillingPaymentMethod.findMany()
+    * ```
+    */
+  get cpBillingPaymentMethod(): Prisma.CpBillingPaymentMethodDelegate<ExtArgs>;
 
   /**
    * `prisma.cpPaymentAttempt`: Exposes CRUD operations for the **CpPaymentAttempt** model.
@@ -870,6 +885,7 @@ export namespace Prisma {
     CpInvoiceLineItem: 'CpInvoiceLineItem',
     CpPlatformWallet: 'CpPlatformWallet',
     CpWalletEntry: 'CpWalletEntry',
+    CpBillingPaymentMethod: 'CpBillingPaymentMethod',
     CpPaymentAttempt: 'CpPaymentAttempt',
     CpDispute: 'CpDispute',
     CpDisputeEvidence: 'CpDisputeEvidence',
@@ -896,7 +912,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "cpPlatformUser" | "cpPlan" | "cpSubscription" | "cpInvoice" | "cpCollectionAttempt" | "cpInvoiceLineItem" | "cpPlatformWallet" | "cpWalletEntry" | "cpPaymentAttempt" | "cpDispute" | "cpDisputeEvidence" | "cpDisputeTimeline" | "cpEvidenceRecord" | "cpIssuedDocument" | "cpFeatureFlag" | "cpFeatureFlagOverride" | "cpPlatformSetting" | "cpUsageEvent" | "cpTenantLifecycleEvent"
+      modelProps: "cpPlatformUser" | "cpPlan" | "cpSubscription" | "cpInvoice" | "cpCollectionAttempt" | "cpInvoiceLineItem" | "cpPlatformWallet" | "cpWalletEntry" | "cpBillingPaymentMethod" | "cpPaymentAttempt" | "cpDispute" | "cpDisputeEvidence" | "cpDisputeTimeline" | "cpEvidenceRecord" | "cpIssuedDocument" | "cpFeatureFlag" | "cpFeatureFlagOverride" | "cpPlatformSetting" | "cpUsageEvent" | "cpTenantLifecycleEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1457,6 +1473,76 @@ export namespace Prisma {
           count: {
             args: Prisma.CpWalletEntryCountArgs<ExtArgs>
             result: $Utils.Optional<CpWalletEntryCountAggregateOutputType> | number
+          }
+        }
+      }
+      CpBillingPaymentMethod: {
+        payload: Prisma.$CpBillingPaymentMethodPayload<ExtArgs>
+        fields: Prisma.CpBillingPaymentMethodFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CpBillingPaymentMethodFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CpBillingPaymentMethodFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          findFirst: {
+            args: Prisma.CpBillingPaymentMethodFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CpBillingPaymentMethodFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          findMany: {
+            args: Prisma.CpBillingPaymentMethodFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>[]
+          }
+          create: {
+            args: Prisma.CpBillingPaymentMethodCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          createMany: {
+            args: Prisma.CpBillingPaymentMethodCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CpBillingPaymentMethodCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>[]
+          }
+          delete: {
+            args: Prisma.CpBillingPaymentMethodDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          update: {
+            args: Prisma.CpBillingPaymentMethodUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          deleteMany: {
+            args: Prisma.CpBillingPaymentMethodDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CpBillingPaymentMethodUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CpBillingPaymentMethodUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CpBillingPaymentMethodPayload>
+          }
+          aggregate: {
+            args: Prisma.CpBillingPaymentMethodAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCpBillingPaymentMethod>
+          }
+          groupBy: {
+            args: Prisma.CpBillingPaymentMethodGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CpBillingPaymentMethodGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CpBillingPaymentMethodCountArgs<ExtArgs>
+            result: $Utils.Optional<CpBillingPaymentMethodCountAggregateOutputType> | number
           }
         }
       }
@@ -10682,6 +10768,988 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: CpWalletEntryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CpBillingPaymentMethod
+   */
+
+  export type AggregateCpBillingPaymentMethod = {
+    _count: CpBillingPaymentMethodCountAggregateOutputType | null
+    _min: CpBillingPaymentMethodMinAggregateOutputType | null
+    _max: CpBillingPaymentMethodMaxAggregateOutputType | null
+  }
+
+  export type CpBillingPaymentMethodMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    provider: string | null
+    authorizationCodeCiphertext: string | null
+    customerCodeCiphertext: string | null
+    last4: string | null
+    brand: string | null
+    status: string | null
+    active: boolean | null
+    autopayEnabled: boolean | null
+    initialReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpBillingPaymentMethodMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    provider: string | null
+    authorizationCodeCiphertext: string | null
+    customerCodeCiphertext: string | null
+    last4: string | null
+    brand: string | null
+    status: string | null
+    active: boolean | null
+    autopayEnabled: boolean | null
+    initialReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CpBillingPaymentMethodCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    provider: number
+    authorizationCodeCiphertext: number
+    customerCodeCiphertext: number
+    last4: number
+    brand: number
+    status: number
+    active: number
+    autopayEnabled: number
+    initialReference: number
+    metadata: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CpBillingPaymentMethodMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    authorizationCodeCiphertext?: true
+    customerCodeCiphertext?: true
+    last4?: true
+    brand?: true
+    status?: true
+    active?: true
+    autopayEnabled?: true
+    initialReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpBillingPaymentMethodMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    authorizationCodeCiphertext?: true
+    customerCodeCiphertext?: true
+    last4?: true
+    brand?: true
+    status?: true
+    active?: true
+    autopayEnabled?: true
+    initialReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CpBillingPaymentMethodCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    authorizationCodeCiphertext?: true
+    customerCodeCiphertext?: true
+    last4?: true
+    brand?: true
+    status?: true
+    active?: true
+    autopayEnabled?: true
+    initialReference?: true
+    metadata?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CpBillingPaymentMethodAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpBillingPaymentMethod to aggregate.
+     */
+    where?: CpBillingPaymentMethodWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpBillingPaymentMethods to fetch.
+     */
+    orderBy?: CpBillingPaymentMethodOrderByWithRelationInput | CpBillingPaymentMethodOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CpBillingPaymentMethodWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpBillingPaymentMethods from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpBillingPaymentMethods.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CpBillingPaymentMethods
+    **/
+    _count?: true | CpBillingPaymentMethodCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CpBillingPaymentMethodMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CpBillingPaymentMethodMaxAggregateInputType
+  }
+
+  export type GetCpBillingPaymentMethodAggregateType<T extends CpBillingPaymentMethodAggregateArgs> = {
+        [P in keyof T & keyof AggregateCpBillingPaymentMethod]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCpBillingPaymentMethod[P]>
+      : GetScalarType<T[P], AggregateCpBillingPaymentMethod[P]>
+  }
+
+
+
+
+  export type CpBillingPaymentMethodGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CpBillingPaymentMethodWhereInput
+    orderBy?: CpBillingPaymentMethodOrderByWithAggregationInput | CpBillingPaymentMethodOrderByWithAggregationInput[]
+    by: CpBillingPaymentMethodScalarFieldEnum[] | CpBillingPaymentMethodScalarFieldEnum
+    having?: CpBillingPaymentMethodScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CpBillingPaymentMethodCountAggregateInputType | true
+    _min?: CpBillingPaymentMethodMinAggregateInputType
+    _max?: CpBillingPaymentMethodMaxAggregateInputType
+  }
+
+  export type CpBillingPaymentMethodGroupByOutputType = {
+    id: string
+    tenantId: string
+    provider: string
+    authorizationCodeCiphertext: string
+    customerCodeCiphertext: string
+    last4: string
+    brand: string
+    status: string
+    active: boolean
+    autopayEnabled: boolean
+    initialReference: string | null
+    metadata: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CpBillingPaymentMethodCountAggregateOutputType | null
+    _min: CpBillingPaymentMethodMinAggregateOutputType | null
+    _max: CpBillingPaymentMethodMaxAggregateOutputType | null
+  }
+
+  type GetCpBillingPaymentMethodGroupByPayload<T extends CpBillingPaymentMethodGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CpBillingPaymentMethodGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CpBillingPaymentMethodGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CpBillingPaymentMethodGroupByOutputType[P]>
+            : GetScalarType<T[P], CpBillingPaymentMethodGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CpBillingPaymentMethodSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    provider?: boolean
+    authorizationCodeCiphertext?: boolean
+    customerCodeCiphertext?: boolean
+    last4?: boolean
+    brand?: boolean
+    status?: boolean
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpBillingPaymentMethod"]>
+
+  export type CpBillingPaymentMethodSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    provider?: boolean
+    authorizationCodeCiphertext?: boolean
+    customerCodeCiphertext?: boolean
+    last4?: boolean
+    brand?: boolean
+    status?: boolean
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["cpBillingPaymentMethod"]>
+
+  export type CpBillingPaymentMethodSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    provider?: boolean
+    authorizationCodeCiphertext?: boolean
+    customerCodeCiphertext?: boolean
+    last4?: boolean
+    brand?: boolean
+    status?: boolean
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: boolean
+    metadata?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $CpBillingPaymentMethodPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CpBillingPaymentMethod"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      provider: string
+      authorizationCodeCiphertext: string
+      customerCodeCiphertext: string
+      last4: string
+      brand: string
+      status: string
+      active: boolean
+      autopayEnabled: boolean
+      initialReference: string | null
+      metadata: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cpBillingPaymentMethod"]>
+    composites: {}
+  }
+
+  type CpBillingPaymentMethodGetPayload<S extends boolean | null | undefined | CpBillingPaymentMethodDefaultArgs> = $Result.GetResult<Prisma.$CpBillingPaymentMethodPayload, S>
+
+  type CpBillingPaymentMethodCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CpBillingPaymentMethodFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CpBillingPaymentMethodCountAggregateInputType | true
+    }
+
+  export interface CpBillingPaymentMethodDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CpBillingPaymentMethod'], meta: { name: 'CpBillingPaymentMethod' } }
+    /**
+     * Find zero or one CpBillingPaymentMethod that matches the filter.
+     * @param {CpBillingPaymentMethodFindUniqueArgs} args - Arguments to find a CpBillingPaymentMethod
+     * @example
+     * // Get one CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CpBillingPaymentMethodFindUniqueArgs>(args: SelectSubset<T, CpBillingPaymentMethodFindUniqueArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CpBillingPaymentMethod that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CpBillingPaymentMethodFindUniqueOrThrowArgs} args - Arguments to find a CpBillingPaymentMethod
+     * @example
+     * // Get one CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CpBillingPaymentMethodFindUniqueOrThrowArgs>(args: SelectSubset<T, CpBillingPaymentMethodFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CpBillingPaymentMethod that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodFindFirstArgs} args - Arguments to find a CpBillingPaymentMethod
+     * @example
+     * // Get one CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CpBillingPaymentMethodFindFirstArgs>(args?: SelectSubset<T, CpBillingPaymentMethodFindFirstArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CpBillingPaymentMethod that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodFindFirstOrThrowArgs} args - Arguments to find a CpBillingPaymentMethod
+     * @example
+     * // Get one CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CpBillingPaymentMethodFindFirstOrThrowArgs>(args?: SelectSubset<T, CpBillingPaymentMethodFindFirstOrThrowArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CpBillingPaymentMethods that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CpBillingPaymentMethods
+     * const cpBillingPaymentMethods = await prisma.cpBillingPaymentMethod.findMany()
+     * 
+     * // Get first 10 CpBillingPaymentMethods
+     * const cpBillingPaymentMethods = await prisma.cpBillingPaymentMethod.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cpBillingPaymentMethodWithIdOnly = await prisma.cpBillingPaymentMethod.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CpBillingPaymentMethodFindManyArgs>(args?: SelectSubset<T, CpBillingPaymentMethodFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CpBillingPaymentMethod.
+     * @param {CpBillingPaymentMethodCreateArgs} args - Arguments to create a CpBillingPaymentMethod.
+     * @example
+     * // Create one CpBillingPaymentMethod
+     * const CpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.create({
+     *   data: {
+     *     // ... data to create a CpBillingPaymentMethod
+     *   }
+     * })
+     * 
+     */
+    create<T extends CpBillingPaymentMethodCreateArgs>(args: SelectSubset<T, CpBillingPaymentMethodCreateArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CpBillingPaymentMethods.
+     * @param {CpBillingPaymentMethodCreateManyArgs} args - Arguments to create many CpBillingPaymentMethods.
+     * @example
+     * // Create many CpBillingPaymentMethods
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CpBillingPaymentMethodCreateManyArgs>(args?: SelectSubset<T, CpBillingPaymentMethodCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CpBillingPaymentMethods and returns the data saved in the database.
+     * @param {CpBillingPaymentMethodCreateManyAndReturnArgs} args - Arguments to create many CpBillingPaymentMethods.
+     * @example
+     * // Create many CpBillingPaymentMethods
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CpBillingPaymentMethods and only return the `id`
+     * const cpBillingPaymentMethodWithIdOnly = await prisma.cpBillingPaymentMethod.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CpBillingPaymentMethodCreateManyAndReturnArgs>(args?: SelectSubset<T, CpBillingPaymentMethodCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CpBillingPaymentMethod.
+     * @param {CpBillingPaymentMethodDeleteArgs} args - Arguments to delete one CpBillingPaymentMethod.
+     * @example
+     * // Delete one CpBillingPaymentMethod
+     * const CpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.delete({
+     *   where: {
+     *     // ... filter to delete one CpBillingPaymentMethod
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CpBillingPaymentMethodDeleteArgs>(args: SelectSubset<T, CpBillingPaymentMethodDeleteArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CpBillingPaymentMethod.
+     * @param {CpBillingPaymentMethodUpdateArgs} args - Arguments to update one CpBillingPaymentMethod.
+     * @example
+     * // Update one CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CpBillingPaymentMethodUpdateArgs>(args: SelectSubset<T, CpBillingPaymentMethodUpdateArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CpBillingPaymentMethods.
+     * @param {CpBillingPaymentMethodDeleteManyArgs} args - Arguments to filter CpBillingPaymentMethods to delete.
+     * @example
+     * // Delete a few CpBillingPaymentMethods
+     * const { count } = await prisma.cpBillingPaymentMethod.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CpBillingPaymentMethodDeleteManyArgs>(args?: SelectSubset<T, CpBillingPaymentMethodDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CpBillingPaymentMethods.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CpBillingPaymentMethods
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CpBillingPaymentMethodUpdateManyArgs>(args: SelectSubset<T, CpBillingPaymentMethodUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CpBillingPaymentMethod.
+     * @param {CpBillingPaymentMethodUpsertArgs} args - Arguments to update or create a CpBillingPaymentMethod.
+     * @example
+     * // Update or create a CpBillingPaymentMethod
+     * const cpBillingPaymentMethod = await prisma.cpBillingPaymentMethod.upsert({
+     *   create: {
+     *     // ... data to create a CpBillingPaymentMethod
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CpBillingPaymentMethod we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CpBillingPaymentMethodUpsertArgs>(args: SelectSubset<T, CpBillingPaymentMethodUpsertArgs<ExtArgs>>): Prisma__CpBillingPaymentMethodClient<$Result.GetResult<Prisma.$CpBillingPaymentMethodPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CpBillingPaymentMethods.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodCountArgs} args - Arguments to filter CpBillingPaymentMethods to count.
+     * @example
+     * // Count the number of CpBillingPaymentMethods
+     * const count = await prisma.cpBillingPaymentMethod.count({
+     *   where: {
+     *     // ... the filter for the CpBillingPaymentMethods we want to count
+     *   }
+     * })
+    **/
+    count<T extends CpBillingPaymentMethodCountArgs>(
+      args?: Subset<T, CpBillingPaymentMethodCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CpBillingPaymentMethodCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CpBillingPaymentMethod.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CpBillingPaymentMethodAggregateArgs>(args: Subset<T, CpBillingPaymentMethodAggregateArgs>): Prisma.PrismaPromise<GetCpBillingPaymentMethodAggregateType<T>>
+
+    /**
+     * Group by CpBillingPaymentMethod.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CpBillingPaymentMethodGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CpBillingPaymentMethodGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CpBillingPaymentMethodGroupByArgs['orderBy'] }
+        : { orderBy?: CpBillingPaymentMethodGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CpBillingPaymentMethodGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCpBillingPaymentMethodGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CpBillingPaymentMethod model
+   */
+  readonly fields: CpBillingPaymentMethodFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CpBillingPaymentMethod.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CpBillingPaymentMethodClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CpBillingPaymentMethod model
+   */ 
+  interface CpBillingPaymentMethodFieldRefs {
+    readonly id: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly tenantId: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly provider: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly authorizationCodeCiphertext: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly customerCodeCiphertext: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly last4: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly brand: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly status: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly active: FieldRef<"CpBillingPaymentMethod", 'Boolean'>
+    readonly autopayEnabled: FieldRef<"CpBillingPaymentMethod", 'Boolean'>
+    readonly initialReference: FieldRef<"CpBillingPaymentMethod", 'String'>
+    readonly metadata: FieldRef<"CpBillingPaymentMethod", 'Json'>
+    readonly createdAt: FieldRef<"CpBillingPaymentMethod", 'DateTime'>
+    readonly updatedAt: FieldRef<"CpBillingPaymentMethod", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CpBillingPaymentMethod findUnique
+   */
+  export type CpBillingPaymentMethodFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter, which CpBillingPaymentMethod to fetch.
+     */
+    where: CpBillingPaymentMethodWhereUniqueInput
+  }
+
+  /**
+   * CpBillingPaymentMethod findUniqueOrThrow
+   */
+  export type CpBillingPaymentMethodFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter, which CpBillingPaymentMethod to fetch.
+     */
+    where: CpBillingPaymentMethodWhereUniqueInput
+  }
+
+  /**
+   * CpBillingPaymentMethod findFirst
+   */
+  export type CpBillingPaymentMethodFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter, which CpBillingPaymentMethod to fetch.
+     */
+    where?: CpBillingPaymentMethodWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpBillingPaymentMethods to fetch.
+     */
+    orderBy?: CpBillingPaymentMethodOrderByWithRelationInput | CpBillingPaymentMethodOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpBillingPaymentMethods.
+     */
+    cursor?: CpBillingPaymentMethodWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpBillingPaymentMethods from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpBillingPaymentMethods.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpBillingPaymentMethods.
+     */
+    distinct?: CpBillingPaymentMethodScalarFieldEnum | CpBillingPaymentMethodScalarFieldEnum[]
+  }
+
+  /**
+   * CpBillingPaymentMethod findFirstOrThrow
+   */
+  export type CpBillingPaymentMethodFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter, which CpBillingPaymentMethod to fetch.
+     */
+    where?: CpBillingPaymentMethodWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpBillingPaymentMethods to fetch.
+     */
+    orderBy?: CpBillingPaymentMethodOrderByWithRelationInput | CpBillingPaymentMethodOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CpBillingPaymentMethods.
+     */
+    cursor?: CpBillingPaymentMethodWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpBillingPaymentMethods from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpBillingPaymentMethods.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CpBillingPaymentMethods.
+     */
+    distinct?: CpBillingPaymentMethodScalarFieldEnum | CpBillingPaymentMethodScalarFieldEnum[]
+  }
+
+  /**
+   * CpBillingPaymentMethod findMany
+   */
+  export type CpBillingPaymentMethodFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter, which CpBillingPaymentMethods to fetch.
+     */
+    where?: CpBillingPaymentMethodWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CpBillingPaymentMethods to fetch.
+     */
+    orderBy?: CpBillingPaymentMethodOrderByWithRelationInput | CpBillingPaymentMethodOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CpBillingPaymentMethods.
+     */
+    cursor?: CpBillingPaymentMethodWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CpBillingPaymentMethods from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CpBillingPaymentMethods.
+     */
+    skip?: number
+    distinct?: CpBillingPaymentMethodScalarFieldEnum | CpBillingPaymentMethodScalarFieldEnum[]
+  }
+
+  /**
+   * CpBillingPaymentMethod create
+   */
+  export type CpBillingPaymentMethodCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * The data needed to create a CpBillingPaymentMethod.
+     */
+    data: XOR<CpBillingPaymentMethodCreateInput, CpBillingPaymentMethodUncheckedCreateInput>
+  }
+
+  /**
+   * CpBillingPaymentMethod createMany
+   */
+  export type CpBillingPaymentMethodCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CpBillingPaymentMethods.
+     */
+    data: CpBillingPaymentMethodCreateManyInput | CpBillingPaymentMethodCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpBillingPaymentMethod createManyAndReturn
+   */
+  export type CpBillingPaymentMethodCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CpBillingPaymentMethods.
+     */
+    data: CpBillingPaymentMethodCreateManyInput | CpBillingPaymentMethodCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CpBillingPaymentMethod update
+   */
+  export type CpBillingPaymentMethodUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * The data needed to update a CpBillingPaymentMethod.
+     */
+    data: XOR<CpBillingPaymentMethodUpdateInput, CpBillingPaymentMethodUncheckedUpdateInput>
+    /**
+     * Choose, which CpBillingPaymentMethod to update.
+     */
+    where: CpBillingPaymentMethodWhereUniqueInput
+  }
+
+  /**
+   * CpBillingPaymentMethod updateMany
+   */
+  export type CpBillingPaymentMethodUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CpBillingPaymentMethods.
+     */
+    data: XOR<CpBillingPaymentMethodUpdateManyMutationInput, CpBillingPaymentMethodUncheckedUpdateManyInput>
+    /**
+     * Filter which CpBillingPaymentMethods to update
+     */
+    where?: CpBillingPaymentMethodWhereInput
+  }
+
+  /**
+   * CpBillingPaymentMethod upsert
+   */
+  export type CpBillingPaymentMethodUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * The filter to search for the CpBillingPaymentMethod to update in case it exists.
+     */
+    where: CpBillingPaymentMethodWhereUniqueInput
+    /**
+     * In case the CpBillingPaymentMethod found by the `where` argument doesn't exist, create a new CpBillingPaymentMethod with this data.
+     */
+    create: XOR<CpBillingPaymentMethodCreateInput, CpBillingPaymentMethodUncheckedCreateInput>
+    /**
+     * In case the CpBillingPaymentMethod was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CpBillingPaymentMethodUpdateInput, CpBillingPaymentMethodUncheckedUpdateInput>
+  }
+
+  /**
+   * CpBillingPaymentMethod delete
+   */
+  export type CpBillingPaymentMethodDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
+    /**
+     * Filter which CpBillingPaymentMethod to delete.
+     */
+    where: CpBillingPaymentMethodWhereUniqueInput
+  }
+
+  /**
+   * CpBillingPaymentMethod deleteMany
+   */
+  export type CpBillingPaymentMethodDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CpBillingPaymentMethods to delete
+     */
+    where?: CpBillingPaymentMethodWhereInput
+  }
+
+  /**
+   * CpBillingPaymentMethod without action
+   */
+  export type CpBillingPaymentMethodDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CpBillingPaymentMethod
+     */
+    select?: CpBillingPaymentMethodSelect<ExtArgs> | null
   }
 
 
@@ -22145,6 +23213,26 @@ export namespace Prisma {
   export type CpWalletEntryScalarFieldEnum = (typeof CpWalletEntryScalarFieldEnum)[keyof typeof CpWalletEntryScalarFieldEnum]
 
 
+  export const CpBillingPaymentMethodScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    provider: 'provider',
+    authorizationCodeCiphertext: 'authorizationCodeCiphertext',
+    customerCodeCiphertext: 'customerCodeCiphertext',
+    last4: 'last4',
+    brand: 'brand',
+    status: 'status',
+    active: 'active',
+    autopayEnabled: 'autopayEnabled',
+    initialReference: 'initialReference',
+    metadata: 'metadata',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CpBillingPaymentMethodScalarFieldEnum = (typeof CpBillingPaymentMethodScalarFieldEnum)[keyof typeof CpBillingPaymentMethodScalarFieldEnum]
+
+
   export const CpPaymentAttemptScalarFieldEnum: {
     id: 'id',
     provider: 'provider',
@@ -23130,6 +24218,103 @@ export namespace Prisma {
     referenceType?: StringNullableWithAggregatesFilter<"CpWalletEntry"> | string | null
     description?: StringNullableWithAggregatesFilter<"CpWalletEntry"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"CpWalletEntry"> | Date | string
+  }
+
+  export type CpBillingPaymentMethodWhereInput = {
+    AND?: CpBillingPaymentMethodWhereInput | CpBillingPaymentMethodWhereInput[]
+    OR?: CpBillingPaymentMethodWhereInput[]
+    NOT?: CpBillingPaymentMethodWhereInput | CpBillingPaymentMethodWhereInput[]
+    id?: StringFilter<"CpBillingPaymentMethod"> | string
+    tenantId?: StringFilter<"CpBillingPaymentMethod"> | string
+    provider?: StringFilter<"CpBillingPaymentMethod"> | string
+    authorizationCodeCiphertext?: StringFilter<"CpBillingPaymentMethod"> | string
+    customerCodeCiphertext?: StringFilter<"CpBillingPaymentMethod"> | string
+    last4?: StringFilter<"CpBillingPaymentMethod"> | string
+    brand?: StringFilter<"CpBillingPaymentMethod"> | string
+    status?: StringFilter<"CpBillingPaymentMethod"> | string
+    active?: BoolFilter<"CpBillingPaymentMethod"> | boolean
+    autopayEnabled?: BoolFilter<"CpBillingPaymentMethod"> | boolean
+    initialReference?: StringNullableFilter<"CpBillingPaymentMethod"> | string | null
+    metadata?: JsonNullableFilter<"CpBillingPaymentMethod">
+    createdAt?: DateTimeFilter<"CpBillingPaymentMethod"> | Date | string
+    updatedAt?: DateTimeFilter<"CpBillingPaymentMethod"> | Date | string
+  }
+
+  export type CpBillingPaymentMethodOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    authorizationCodeCiphertext?: SortOrder
+    customerCodeCiphertext?: SortOrder
+    last4?: SortOrder
+    brand?: SortOrder
+    status?: SortOrder
+    active?: SortOrder
+    autopayEnabled?: SortOrder
+    initialReference?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpBillingPaymentMethodWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tenantId?: string
+    AND?: CpBillingPaymentMethodWhereInput | CpBillingPaymentMethodWhereInput[]
+    OR?: CpBillingPaymentMethodWhereInput[]
+    NOT?: CpBillingPaymentMethodWhereInput | CpBillingPaymentMethodWhereInput[]
+    provider?: StringFilter<"CpBillingPaymentMethod"> | string
+    authorizationCodeCiphertext?: StringFilter<"CpBillingPaymentMethod"> | string
+    customerCodeCiphertext?: StringFilter<"CpBillingPaymentMethod"> | string
+    last4?: StringFilter<"CpBillingPaymentMethod"> | string
+    brand?: StringFilter<"CpBillingPaymentMethod"> | string
+    status?: StringFilter<"CpBillingPaymentMethod"> | string
+    active?: BoolFilter<"CpBillingPaymentMethod"> | boolean
+    autopayEnabled?: BoolFilter<"CpBillingPaymentMethod"> | boolean
+    initialReference?: StringNullableFilter<"CpBillingPaymentMethod"> | string | null
+    metadata?: JsonNullableFilter<"CpBillingPaymentMethod">
+    createdAt?: DateTimeFilter<"CpBillingPaymentMethod"> | Date | string
+    updatedAt?: DateTimeFilter<"CpBillingPaymentMethod"> | Date | string
+  }, "id" | "tenantId">
+
+  export type CpBillingPaymentMethodOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    authorizationCodeCiphertext?: SortOrder
+    customerCodeCiphertext?: SortOrder
+    last4?: SortOrder
+    brand?: SortOrder
+    status?: SortOrder
+    active?: SortOrder
+    autopayEnabled?: SortOrder
+    initialReference?: SortOrderInput | SortOrder
+    metadata?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CpBillingPaymentMethodCountOrderByAggregateInput
+    _max?: CpBillingPaymentMethodMaxOrderByAggregateInput
+    _min?: CpBillingPaymentMethodMinOrderByAggregateInput
+  }
+
+  export type CpBillingPaymentMethodScalarWhereWithAggregatesInput = {
+    AND?: CpBillingPaymentMethodScalarWhereWithAggregatesInput | CpBillingPaymentMethodScalarWhereWithAggregatesInput[]
+    OR?: CpBillingPaymentMethodScalarWhereWithAggregatesInput[]
+    NOT?: CpBillingPaymentMethodScalarWhereWithAggregatesInput | CpBillingPaymentMethodScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    tenantId?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    provider?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    authorizationCodeCiphertext?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    customerCodeCiphertext?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    last4?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    brand?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    status?: StringWithAggregatesFilter<"CpBillingPaymentMethod"> | string
+    active?: BoolWithAggregatesFilter<"CpBillingPaymentMethod"> | boolean
+    autopayEnabled?: BoolWithAggregatesFilter<"CpBillingPaymentMethod"> | boolean
+    initialReference?: StringNullableWithAggregatesFilter<"CpBillingPaymentMethod"> | string | null
+    metadata?: JsonNullableWithAggregatesFilter<"CpBillingPaymentMethod">
+    createdAt?: DateTimeWithAggregatesFilter<"CpBillingPaymentMethod"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CpBillingPaymentMethod"> | Date | string
   }
 
   export type CpPaymentAttemptWhereInput = {
@@ -24957,6 +26142,125 @@ export namespace Prisma {
     referenceType?: NullableStringFieldUpdateOperationsInput | string | null
     description?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpBillingPaymentMethodCreateInput = {
+    id?: string
+    tenantId: string
+    provider: string
+    authorizationCodeCiphertext: string
+    customerCodeCiphertext: string
+    last4: string
+    brand: string
+    status?: string
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpBillingPaymentMethodUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    provider: string
+    authorizationCodeCiphertext: string
+    customerCodeCiphertext: string
+    last4: string
+    brand: string
+    status?: string
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpBillingPaymentMethodUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    authorizationCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    customerCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    last4?: StringFieldUpdateOperationsInput | string
+    brand?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    active?: BoolFieldUpdateOperationsInput | boolean
+    autopayEnabled?: BoolFieldUpdateOperationsInput | boolean
+    initialReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpBillingPaymentMethodUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    authorizationCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    customerCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    last4?: StringFieldUpdateOperationsInput | string
+    brand?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    active?: BoolFieldUpdateOperationsInput | boolean
+    autopayEnabled?: BoolFieldUpdateOperationsInput | boolean
+    initialReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpBillingPaymentMethodCreateManyInput = {
+    id?: string
+    tenantId: string
+    provider: string
+    authorizationCodeCiphertext: string
+    customerCodeCiphertext: string
+    last4: string
+    brand: string
+    status?: string
+    active?: boolean
+    autopayEnabled?: boolean
+    initialReference?: string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CpBillingPaymentMethodUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    authorizationCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    customerCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    last4?: StringFieldUpdateOperationsInput | string
+    brand?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    active?: BoolFieldUpdateOperationsInput | boolean
+    autopayEnabled?: BoolFieldUpdateOperationsInput | boolean
+    initialReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CpBillingPaymentMethodUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    authorizationCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    customerCodeCiphertext?: StringFieldUpdateOperationsInput | string
+    last4?: StringFieldUpdateOperationsInput | string
+    brand?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    active?: BoolFieldUpdateOperationsInput | boolean
+    autopayEnabled?: BoolFieldUpdateOperationsInput | boolean
+    initialReference?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type CpPaymentAttemptCreateInput = {
@@ -26947,6 +28251,55 @@ export namespace Prisma {
 
   export type CpWalletEntrySumOrderByAggregateInput = {
     amountMinorUnits?: SortOrder
+  }
+
+  export type CpBillingPaymentMethodCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    authorizationCodeCiphertext?: SortOrder
+    customerCodeCiphertext?: SortOrder
+    last4?: SortOrder
+    brand?: SortOrder
+    status?: SortOrder
+    active?: SortOrder
+    autopayEnabled?: SortOrder
+    initialReference?: SortOrder
+    metadata?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpBillingPaymentMethodMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    authorizationCodeCiphertext?: SortOrder
+    customerCodeCiphertext?: SortOrder
+    last4?: SortOrder
+    brand?: SortOrder
+    status?: SortOrder
+    active?: SortOrder
+    autopayEnabled?: SortOrder
+    initialReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CpBillingPaymentMethodMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    authorizationCodeCiphertext?: SortOrder
+    customerCodeCiphertext?: SortOrder
+    last4?: SortOrder
+    brand?: SortOrder
+    status?: SortOrder
+    active?: SortOrder
+    autopayEnabled?: SortOrder
+    initialReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type CpPaymentAttemptCountOrderByAggregateInput = {
@@ -30043,6 +31396,10 @@ export namespace Prisma {
      * @deprecated Use CpWalletEntryDefaultArgs instead
      */
     export type CpWalletEntryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpWalletEntryDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CpBillingPaymentMethodDefaultArgs instead
+     */
+    export type CpBillingPaymentMethodArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CpBillingPaymentMethodDefaultArgs<ExtArgs>
     /**
      * @deprecated Use CpPaymentAttemptDefaultArgs instead
      */

@@ -1,0 +1,19 @@
+/*
+Theme Name:  Mobiris v3
+Theme URI:   https://mobiris.ng
+Author:      Growth Figures Limited
+Author URI:  https://mobiris.ng
+Description: Official marketing theme for Mobiris Fleet OS. Fully configurable via the WordPress Customizer — every section, headline, CTA, color, and copy block is editable without touching code.
+Version:     3.0.0
+Requires at least: 6.4
+Tested up to: 6.7
+Requires PHP: 8.1
+License:     Proprietary
+License URI: https://mobiris.ng
+Text Domain: mobiris-v3
+Tags:        landing-page, one-page, customizer, business, fleet
+*/
+
+/* Base reset — full styles live in assets/css/main.css */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
