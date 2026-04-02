@@ -49,6 +49,10 @@ const schema = z.object({
 
   // ── Internal service URLs ──────────────────────────────────────────────────
   CONTROL_PLANE_API_URL: z.string().url('CONTROL_PLANE_API_URL must be a valid URL').optional(),
+  INTERNAL_SERVICE_TOKEN: z
+    .string()
+    .min(32, 'INTERNAL_SERVICE_TOKEN must be at least 32 characters')
+    .optional(),
   INTERNAL_SERVICE_JWT_SECRET: z
     .string()
     .min(32, 'INTERNAL_SERVICE_JWT_SECRET must be at least 32 characters')
@@ -99,7 +103,11 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
     const lines = result.error.errors.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`[api-core] Environment validation failed:\n${lines}`);
   }
-  const data = result.data;
+  const data = {
+    ...result.data,
+    INTERNAL_SERVICE_JWT_SECRET:
+      result.data.INTERNAL_SERVICE_JWT_SECRET ?? result.data.INTERNAL_SERVICE_TOKEN,
+  };
 
   if (data.NODE_ENV === 'production' && data.DOCUMENT_STORAGE_PROVIDER !== 's3') {
     throw new Error(
@@ -117,7 +125,7 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
 
   if (data.CONTROL_PLANE_API_URL && !data.INTERNAL_SERVICE_JWT_SECRET) {
     throw new Error(
-      '[api-core] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_API_URL is configured.',
+      '[api-core] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_API_URL is configured. INTERNAL_SERVICE_TOKEN is still accepted temporarily as a legacy fallback.',
     );
   }
 
@@ -135,5 +143,5 @@ export function apiCoreEnvConfig(config: Record<string, unknown>): ApiCoreEnv {
     }
   }
 
-  return data;
+  return data as ApiCoreEnv;
 }

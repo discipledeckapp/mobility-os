@@ -35,6 +35,10 @@ const schema = z.object({
 
   // ── Control-plane settings consumption ─────────────────────────────────────
   CONTROL_PLANE_BASE_URL: z.string().url().optional(),
+  INTERNAL_SERVICE_TOKEN: z
+    .string()
+    .min(32, 'INTERNAL_SERVICE_TOKEN must be at least 32 characters')
+    .optional(),
   INTERNAL_SERVICE_JWT_SECRET: z.string().min(32).optional(),
   INTERNAL_SERVICE_JWT_EXPIRES_IN: z.string().default('2m'),
   INTERNAL_SERVICE_CALLER_ID: z.string().default('api-intelligence'),
@@ -97,11 +101,15 @@ export function intelligenceEnvConfig(config: Record<string, unknown>): Intellig
     const lines = result.error.errors.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`[api-intelligence] Environment validation failed:\n${lines}`);
   }
-  const data = result.data;
+  const data = {
+    ...result.data,
+    INTERNAL_SERVICE_JWT_SECRET:
+      result.data.INTERNAL_SERVICE_JWT_SECRET ?? result.data.INTERNAL_SERVICE_TOKEN,
+  };
   if (data.CONTROL_PLANE_BASE_URL && !data.INTERNAL_SERVICE_JWT_SECRET) {
     throw new Error(
-      '[api-intelligence] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_BASE_URL is configured.',
+      '[api-intelligence] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required when CONTROL_PLANE_BASE_URL is configured. INTERNAL_SERVICE_TOKEN is still accepted temporarily as a legacy fallback.',
     );
   }
-  return data;
+  return data as IntelligenceEnv;
 }

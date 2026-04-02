@@ -52,9 +52,14 @@ const schema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().optional(),
 
   // ── Internal service auth ──────────────────────────────────────────────────
+  INTERNAL_SERVICE_TOKEN: z
+    .string()
+    .min(32, 'INTERNAL_SERVICE_TOKEN must be at least 32 characters')
+    .optional(),
   INTERNAL_SERVICE_JWT_SECRET: z
     .string()
-    .min(32, 'INTERNAL_SERVICE_JWT_SECRET must be at least 32 characters'),
+    .min(32, 'INTERNAL_SERVICE_JWT_SECRET must be at least 32 characters')
+    .optional(),
   INTERNAL_SERVICE_JWT_EXPIRES_IN: z.string().default('2m'),
   INTERNAL_SERVICE_CALLER_ID: z.string().default('api-control-plane'),
   INTERNAL_SERVICE_AUDIENCE: z.string().default('api-control-plane'),
@@ -97,5 +102,17 @@ export function controlPlaneEnvConfig(config: Record<string, unknown>): ControlP
     const lines = result.error.errors.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`[api-control-plane] Environment validation failed:\n${lines}`);
   }
-  return result.data;
+  const data = {
+    ...result.data,
+    INTERNAL_SERVICE_JWT_SECRET:
+      result.data.INTERNAL_SERVICE_JWT_SECRET ?? result.data.INTERNAL_SERVICE_TOKEN,
+  };
+
+  if (!data.INTERNAL_SERVICE_JWT_SECRET) {
+    throw new Error(
+      '[api-control-plane] Environment validation failed:\n  INTERNAL_SERVICE_JWT_SECRET: is required. INTERNAL_SERVICE_TOKEN is still accepted temporarily as a legacy fallback.',
+    );
+  }
+
+  return data as ControlPlaneEnv;
 }
