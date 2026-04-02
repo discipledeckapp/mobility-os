@@ -736,7 +736,7 @@ export function SettingsScreen() {
           ['vehicles:write', 'Manage vehicles'],
           ['assignments:write', 'Manage assignments'],
           ['remittance:approve', 'Approve remittance'],
-          ['operational_wallets:write', 'Manage company wallet'],
+          ['operational_wallets:write', 'Manage verification credit'],
         ].map(([value, label]) => (
           <Button
             key={value}

@@ -227,9 +227,9 @@ function PaymentReturnInner() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
-                  href={'/subscription' as Route}
+                  href={'/billing' as Route}
                 >
-                  Return to subscription
+                  Return to billing
                 </Link>
               </div>
             </CardContent>
@@ -268,9 +268,9 @@ function PaymentReturnInner() {
                 </Button>
                 <Link
                   className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
-                  href={'/subscription' as Route}
+                  href={'/billing' as Route}
                 >
-                  Return to subscription
+                  Return to billing
                 </Link>
               </div>
             </CardContent>

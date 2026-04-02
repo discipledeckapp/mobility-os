@@ -121,6 +121,16 @@ export class CreateAssignmentDto {
   depositAmountMinorUnits?: number;
 
   @ApiPropertyOptional({
+    description:
+      'Manual final installment amount in minor currency units when overriding the suggested hire-purchase repayment structure.',
+    example: 270000000,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  finalInstallmentAmountMinorUnits?: number;
+
+  @ApiPropertyOptional({
     description: 'Number of repayment periods used to generate the expected installment.',
     example: 20,
   })

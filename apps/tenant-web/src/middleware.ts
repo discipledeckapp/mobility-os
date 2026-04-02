@@ -2,11 +2,16 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import {
   TENANT_AUTH_COOKIE_NAME,
+  TENANT_FORWARDED_AUTH_HEADER,
+  TENANT_FORWARDED_REFRESH_HEADER,
   TENANT_REFRESH_COOKIE_NAME,
+  getTenantAccessCookieOptions,
+  getTenantRefreshCookieOptions,
   getSelfServiceContinuationPath,
   isTenantJwtUsable,
   parseTenantJwtPayload,
 } from './lib/auth';
+import { refreshTenantSession } from './lib/tenant-session-refresh';
 
 function isAuthEntryRoute(pathname: string) {
   return (
@@ -42,16 +47,6 @@ function buildTenantLoginRedirect(request: NextRequest) {
   return response;
 }
 
-function buildSessionRefreshRedirect(request: NextRequest) {
-  const refreshUrl = new URL('/api/auth/refresh', request.url);
-  const currentPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-  if (currentPath && currentPath !== '/api/auth/refresh') {
-    refreshUrl.searchParams.set('returnTo', currentPath);
-  }
-
-  return NextResponse.redirect(refreshUrl);
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
@@ -75,7 +70,38 @@ export async function middleware(request: NextRequest) {
   let activeRefreshToken = refreshCookie;
 
   if (!isTenantJwtUsable(activeAccessToken) && activeRefreshToken && shouldAttemptSessionRefresh) {
-    return buildSessionRefreshRedirect(request);
+    const refreshedSession = await refreshTenantSession(activeRefreshToken, {
+      retryUnavailableOnce: true,
+    });
+
+    if (refreshedSession.status === 'success') {
+      activeAccessToken = refreshedSession.accessToken;
+      activeRefreshToken = refreshedSession.refreshToken;
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set(TENANT_FORWARDED_AUTH_HEADER, activeAccessToken);
+      requestHeaders.set(TENANT_FORWARDED_REFRESH_HEADER, activeRefreshToken);
+
+      const response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+      response.cookies.set(
+        TENANT_AUTH_COOKIE_NAME,
+        activeAccessToken,
+        getTenantAccessCookieOptions(activeAccessToken),
+      );
+      response.cookies.set(
+        TENANT_REFRESH_COOKIE_NAME,
+        activeRefreshToken,
+        getTenantRefreshCookieOptions(activeRefreshToken),
+      );
+      return response;
+    }
+
+    if (refreshedSession.status === 'invalid') {
+      return buildTenantLoginRedirect(request);
+    }
   }
 
   const hasUsableSession = isTenantJwtUsable(activeAccessToken);
@@ -83,6 +109,9 @@ export async function middleware(request: NextRequest) {
   const continuationPath = getSelfServiceContinuationPath(payload);
 
   if (!hasUsableSession && !isPublicRoute) {
+    if (activeRefreshToken) {
+      return NextResponse.next();
+    }
     return buildTenantLoginRedirect(request);
   }
 

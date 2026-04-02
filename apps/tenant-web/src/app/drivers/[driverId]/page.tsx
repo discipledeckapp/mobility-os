@@ -404,8 +404,7 @@ export default async function DriverDetailsPage({
     .slice(0, 10);
   const { identityProfile, selfieImageSrc, providerImageSrc, signatureImageSrc } =
     getDriverIdentityImageDisplaySources(driver);
-  const avatarImageSrc =
-    providerImageSrc ?? selfieImageSrc ?? (driver.photoUrl ? `/api/drivers/${driver.id}/portrait` : null);
+  const avatarImageSrc = providerImageSrc ?? selfieImageSrc;
   const verificationProviderValue = driver.verificationProvider ?? null;
   const verificationCountryValue = driver.verificationCountryCode ?? null;
   const identityAuthorityLabel =
@@ -529,8 +528,8 @@ export default async function DriverDetailsPage({
                 <p className="text-sm text-amber-800">
                   Your organisation wallet or credit cover may not be enough for {tierLabel}
                   {amount ? ` (${amount})` : ''} for this driver.{' '}
-                  <a className="font-semibold underline hover:no-underline" href="/subscription">
-                    Open billing
+                  <a className="font-semibold underline hover:no-underline" href="/verification-funding">
+                    Open verification credit
                   </a>{' '}
                   before starting verification, or switch to driver-pays mode in{' '}
                   <a className="font-semibold underline hover:no-underline" href="/settings?section=drivers">

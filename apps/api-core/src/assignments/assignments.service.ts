@@ -14,6 +14,11 @@ import { buildCsv, parseCsv } from '../common/csv-utils';
 import { AuditService } from '../audit/audit.service';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import {
+  isAssignmentActivelyRunning,
+  isAssignmentPendingDecision,
+  isAssignmentStartable,
+} from './assignment-lifecycle';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { DriversService } from '../drivers/drivers.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -604,11 +609,7 @@ export class AssignmentsService {
       return assignment;
     }
 
-    if (
-      !['created', 'pending_driver_confirmation', 'driver_action_required'].includes(
-        assignment.status,
-      )
-    ) {
+    if (!isAssignmentPendingDecision(assignment.status)) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be accepted from status '${assignment.status}'.`,
       );
@@ -693,11 +694,7 @@ export class AssignmentsService {
     input: { declinedFrom: string; note?: string },
   ): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
-    if (
-      !['created', 'pending_driver_confirmation', 'driver_action_required'].includes(
-        assignment.status,
-      )
-    ) {
+    if (!isAssignmentPendingDecision(assignment.status)) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be declined from status '${assignment.status}'.`,
       );
@@ -730,15 +727,11 @@ export class AssignmentsService {
   async start(tenantId: string, id: string): Promise<Assignment & { financialContract: unknown | null }> {
     const assignment = await this.findOne(tenantId, id);
 
-    if (assignment.status === 'active') {
+    if (isAssignmentActivelyRunning(assignment.status)) {
       return assignment;
     }
 
-    if (
-      !['created', 'pending_driver_confirmation', 'driver_action_required', 'accepted'].includes(
-        assignment.status,
-      )
-    ) {
+    if (!isAssignmentStartable(assignment.status)) {
       throw new BadRequestException(
         `Assignment '${id}' cannot be started from status '${assignment.status}'`,
       );

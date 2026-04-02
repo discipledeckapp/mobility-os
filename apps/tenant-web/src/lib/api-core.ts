@@ -14,6 +14,7 @@ if (process.env.NODE_ENV === 'production' && !configuredApiBaseUrl) {
 }
 
 const apiBaseUrl = configuredApiBaseUrl ?? 'http://localhost:3001/api/v1';
+let browserTenantTokenRequest: Promise<string> | null = null;
 
 export interface ApiCoreRequestOptions extends RequestInit {
   token?: string;
@@ -42,31 +43,57 @@ export interface TenantApiContext {
 }
 
 async function fetchBrowserTenantToken(): Promise<string> {
-  const response = await fetch('/api/auth/token', {
-    method: 'GET',
-    credentials: 'same-origin',
-    cache: 'no-store',
-  });
+  if (!browserTenantTokenRequest) {
+    browserTenantTokenRequest = (async () => {
+      const maxAttempts = 2;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const response = await fetch('/api/auth/token', {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
 
-  if (!response.ok) {
-    let message = 'No tenant auth token is available. Log in to continue.';
-    try {
-      const payload = (await response.json()) as { error?: string };
-      if (payload.error) {
-        message = payload.error;
+        if (!response.ok) {
+          let message = 'No tenant auth token is available. Log in to continue.';
+          try {
+            const payload = (await response.json()) as { error?: string };
+            if (payload.error) {
+              message = payload.error;
+            }
+          } catch {
+            // Keep default message when the response is not JSON.
+          }
+
+          const shouldRetry =
+            attempt + 1 < maxAttempts &&
+            (response.status === 502 || response.status === 503 || response.status === 504);
+          if (shouldRetry) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            continue;
+          }
+
+          throw new Error(message);
+        }
+
+        const payload = (await response.json()) as { accessToken?: string };
+        if (!payload.accessToken) {
+          if (attempt + 1 < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            continue;
+          }
+          throw new Error('No tenant auth token is available. Log in to continue.');
+        }
+
+        return payload.accessToken;
       }
-    } catch {
-      // Keep default message when the response is not JSON.
-    }
-    throw new Error(message);
+
+      throw new Error('No tenant auth token is available. Log in to continue.');
+    })().finally(() => {
+      browserTenantTokenRequest = null;
+    });
   }
 
-  const payload = (await response.json()) as { accessToken?: string };
-  if (!payload.accessToken) {
-    throw new Error('No tenant auth token is available. Log in to continue.');
-  }
-
-  return payload.accessToken;
+  return browserTenantTokenRequest;
 }
 
 export interface TenantRecord {
@@ -1289,6 +1316,7 @@ export interface CreateAssignmentInput {
   principalAmountMinorUnits?: number;
   totalTargetAmountMinorUnits?: number;
   depositAmountMinorUnits?: number;
+  finalInstallmentAmountMinorUnits?: number;
   contractDurationPeriods?: number;
   contractEndDate?: string;
 }
@@ -1303,6 +1331,7 @@ export interface UpdateAssignmentRemittancePlanInput {
   principalAmountMinorUnits?: number;
   totalTargetAmountMinorUnits?: number;
   depositAmountMinorUnits?: number;
+  finalInstallmentAmountMinorUnits?: number;
   contractDurationPeriods?: number;
   contractEndDate?: string;
 }
@@ -1745,9 +1774,17 @@ export async function getTenantApiToken(explicitToken?: string): Promise<string>
 
   const refreshToken = forwardedRefreshToken ?? cookieStore.get(TENANT_REFRESH_COOKIE_NAME)?.value;
   if (refreshToken) {
-    throw new Error(
-      'The tenant session needs to be refreshed before this request can continue. Reload the page and try again.',
-    );
+    const { refreshTenantSession } = await import('./tenant-session-refresh');
+    const refreshedSession = await refreshTenantSession(refreshToken, {
+      retryUnavailableOnce: true,
+    });
+    if (refreshedSession.status === 'success') {
+      return refreshedSession.accessToken;
+    }
+    if (refreshedSession.status === 'invalid') {
+      throw new Error('No tenant auth token is available. Log in to continue.');
+    }
+    throw new Error('We could not refresh the tenant session right now. Please try again shortly.');
   }
 
   throw new Error('No tenant auth token is available. Log in to continue.');

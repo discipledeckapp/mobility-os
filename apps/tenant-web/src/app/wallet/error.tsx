@@ -11,12 +11,12 @@ export default function WalletError({
 }) {
   return (
     <RouteErrorState
-      description="Review operational wallet balances and ledger activity for the selected business entity."
-      eyebrow="Operational Finance"
+      description="This legacy wallet route now points to verification credit."
+      eyebrow="Verification Credit"
       error={error}
-      heading="Unable to load operational wallet"
+      heading="Unable to open verification credit"
       reset={reset}
-      title="Operational wallet"
+      title="Verification Credit"
     />
   );
 }

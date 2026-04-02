@@ -11,12 +11,12 @@ export default function VerificationFundingError({
 }) {
   return (
     <RouteErrorState
-      description="Track verification funding, available credit, and company-paid verification readiness."
-      eyebrow="Verification Funding"
+      description="Load available verification credit, recent usage, and funding controls."
+      eyebrow="Verification Credit"
       error={error}
-      heading="Unable to load verification funding"
+      heading="Unable to load verification credit"
       reset={reset}
-      title="Verification funding"
+      title="Verification Credit"
     />
   );
 }

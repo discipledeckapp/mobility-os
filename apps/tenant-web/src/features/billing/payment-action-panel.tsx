@@ -14,14 +14,14 @@ import {
 } from '@mobility-os/ui';
 import { useActionState, useEffect, useState, type ChangeEvent } from 'react';
 import type { TenantBillingSummaryRecord } from '../../lib/api-core';
-import { SelectField } from '../../features/shared/select-field';
+import { SelectField } from '../shared/select-field';
 import {
   initializeCardSetupCheckoutAction,
-  initializeVerificationWalletTopUpAction,
-  type WalletCheckoutActionState,
-} from './actions';
+  initializeVerificationCreditTopUpAction,
+  type BillingCheckoutActionState,
+} from './payment-actions';
 
-const initialState: WalletCheckoutActionState = {};
+const initialState: BillingCheckoutActionState = {};
 
 function parseFundingAmount(amountRaw: string, currencyMinorUnit: number) {
   const normalized = amountRaw.replace(/,/g, '').trim();
@@ -86,7 +86,7 @@ export function PaymentActionPanel({
   const [cardProvider, setCardProvider] = useState<'paystack' | 'flutterwave'>('paystack');
   const [amountInput, setAmountInput] = useState('');
   const [walletState, walletAction, walletPending] = useActionState(
-    initializeVerificationWalletTopUpAction,
+    initializeVerificationCreditTopUpAction,
     initialState,
   );
   const [cardState, cardAction, cardPending] = useActionState(
@@ -157,9 +157,7 @@ export function PaymentActionPanel({
             <input name="currencyMinorUnit" type="hidden" value={String(currencyMinorUnit)} />
 
             <div className="space-y-2">
-              <Label htmlFor="wallet-amount">
-                Amount ({summary.verificationWallet.currency})
-              </Label>
+              <Label htmlFor="wallet-amount">Amount ({summary.verificationWallet.currency})</Label>
               <Input
                 id="wallet-amount"
                 inputMode="decimal"
@@ -169,9 +167,7 @@ export function PaymentActionPanel({
                 type="text"
                 value={amountInput}
               />
-              <Text className="text-xs text-slate-500">
-                This exact amount will be sent to checkout.
-              </Text>
+              <Text className="text-xs text-slate-500">This exact amount will be sent to checkout.</Text>
               {amountState.error ? (
                 <Text className="text-xs text-rose-700">{amountState.error}</Text>
               ) : amountState.minorUnits > 0 ? (
@@ -203,9 +199,7 @@ export function PaymentActionPanel({
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle>Saved payment method</CardTitle>
-          <CardDescription>
-            Add one reusable payment method for card-backed verification credit.
-          </CardDescription>
+          <CardDescription>Add one reusable payment method for card-backed verification credit.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/80 p-4">
@@ -233,7 +227,7 @@ export function PaymentActionPanel({
             <Text tone="muted">
               {canVerifyNow
                 ? 'You already have spend available for company-paid verification. Add a saved payment method only if you want more flexibility later.'
-                : 'If available spend is too low, either fund the wallet now or add a saved payment method to unlock card-backed credit.'}
+                : 'If available spend is too low, either fund the account now or add a saved payment method to unlock card-backed credit.'}
             </Text>
           </div>
           <div className="rounded-[var(--mobiris-radius-card)] border border-blue-100 bg-blue-50/80 p-4">

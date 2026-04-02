@@ -50,7 +50,7 @@ export type RootStackParamList = {
   OperatorFleets: { operatingUnitId?: string } | undefined;
   OperatorFleetDetail: { fleetId?: string; operatingUnitId?: string } | undefined;
   OperatorReports: undefined;
-  OperatorWallet: undefined;
+  OperatorVerificationCredit: undefined;
   OperatorSettings: undefined;
   OperatorMore: undefined;
 };

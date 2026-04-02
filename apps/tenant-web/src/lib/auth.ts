@@ -2,6 +2,7 @@ export const TENANT_AUTH_COOKIE_NAME = 'mobility_os_tenant_jwt';
 export const TENANT_REFRESH_COOKIE_NAME = 'mobility_os_refresh';
 export const TENANT_FORWARDED_AUTH_HEADER = 'x-mobility-os-tenant-access-token';
 export const TENANT_FORWARDED_REFRESH_HEADER = 'x-mobility-os-tenant-refresh-token';
+const TENANT_JWT_REFRESH_BUFFER_MS = 60_000;
 
 type TenantCookieOptions = {
   httpOnly: boolean;
@@ -95,7 +96,7 @@ export function isTenantJwtUsable(token: string | undefined): boolean {
     return false;
   }
 
-  return payload.exp * 1000 > Date.now() + 15_000;
+  return payload.exp * 1000 > Date.now() + TENANT_JWT_REFRESH_BUFFER_MS;
 }
 
 export function parseTenantJwtPayload(token: string | undefined): JwtPayload | null {

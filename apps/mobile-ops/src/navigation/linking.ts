@@ -68,7 +68,7 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
       OperatorFleets: 'operator/fleets/:operatingUnitId?',
       OperatorFleetDetail: 'operator/fleets/detail/:fleetId?',
       OperatorReports: 'operator/reports',
-      OperatorWallet: 'operator/wallet',
+      OperatorVerificationCredit: 'operator/verification-credit',
       OperatorSettings: 'operator/settings',
       OperatorMore: 'operator/more',
       OfflineQueue: 'offline-queue',

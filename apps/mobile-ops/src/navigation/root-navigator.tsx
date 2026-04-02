@@ -41,7 +41,7 @@ import { SettingsScreen } from '../features/operator/screens/SettingsScreen';
 import { VehicleCreateScreen } from '../features/operator/screens/VehicleCreateScreen';
 import { VehicleDetailScreen } from '../features/operator/screens/VehicleDetailScreen';
 import { VehiclesScreen } from '../features/operator/screens/VehiclesScreen';
-import { WalletScreen } from '../features/operator/screens/WalletScreen';
+import { VerificationCreditScreen } from '../features/operator/screens/VerificationCreditScreen';
 import { RemittanceHistoryScreen } from '../features/remittance/screens/RemittanceHistoryScreen';
 import { RemittanceScreen } from '../features/remittance/screens/RemittanceScreen';
 import { DriverAccountSetupScreen } from '../features/self-service/screens/DriverAccountSetupScreen';
@@ -381,9 +381,9 @@ export function RootNavigator() {
                 options={{ title: 'Reports' }}
               />
               <Stack.Screen
-                name="OperatorWallet"
-                component={WalletScreen}
-                options={{ title: 'Verification funding' }}
+                name="OperatorVerificationCredit"
+                component={VerificationCreditScreen}
+                options={{ title: 'Verification Credit' }}
               />
               <Stack.Screen
                 name="OperatorSettings"

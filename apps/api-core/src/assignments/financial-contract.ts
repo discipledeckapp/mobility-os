@@ -105,6 +105,7 @@ interface FinancialContractInput {
   totalTargetAmountMinorUnits?: number | null;
   principalAmountMinorUnits?: number | null;
   depositAmountMinorUnits?: number | null;
+  finalInstallmentAmountMinorUnits?: number | null;
   contractDurationPeriods?: number | null;
   contractEndDate?: string | null;
 }
@@ -243,20 +244,33 @@ function buildInstallmentPlan(input: {
   startDate: string;
   frequency: RemittanceFrequency;
   collectionDay?: number | null;
+  installmentAmountMinorUnits?: number | null;
+  finalInstallmentAmountMinorUnits?: number | null;
   contractDurationPeriods?: number | null;
   contractEndDate?: string | null;
 }): AssignmentContractInstallmentPlan {
+  const derivedPeriodCountFromEndDate = input.contractEndDate
+    ? calculatePeriodCountFromEndDate(
+        input.startDate,
+        input.contractEndDate,
+        input.frequency,
+        input.collectionDay,
+      )
+    : null;
   const periodCount =
     input.contractDurationPeriods && input.contractDurationPeriods > 0
       ? input.contractDurationPeriods
-      : input.contractEndDate
-        ? calculatePeriodCountFromEndDate(
-            input.startDate,
-            input.contractEndDate,
-            input.frequency,
-            input.collectionDay,
-          )
-        : null;
+      : derivedPeriodCountFromEndDate;
+
+  if (
+    input.contractDurationPeriods &&
+    derivedPeriodCountFromEndDate &&
+    input.contractDurationPeriods !== derivedPeriodCountFromEndDate
+  ) {
+    throw new BadRequestException(
+      'contractDurationPeriods and contractEndDate must describe the same repayment schedule.',
+    );
+  }
 
   if (!periodCount || periodCount < 1) {
     throw new BadRequestException(
@@ -264,12 +278,49 @@ function buildInstallmentPlan(input: {
     );
   }
 
-  const baseInstallmentAmountMinorUnits = Math.floor(
-    input.totalTargetAmountMinorUnits / periodCount,
-  );
-  const finalInstallmentAmountMinorUnits =
-    input.totalTargetAmountMinorUnits -
-    baseInstallmentAmountMinorUnits * Math.max(periodCount - 1, 0);
+  const hasManualBaseInstallment =
+    input.installmentAmountMinorUnits !== null &&
+    input.installmentAmountMinorUnits !== undefined;
+  const hasManualFinalInstallment =
+    input.finalInstallmentAmountMinorUnits !== null &&
+    input.finalInstallmentAmountMinorUnits !== undefined;
+
+  if (hasManualFinalInstallment && !hasManualBaseInstallment) {
+    throw new BadRequestException(
+      'finalInstallmentAmountMinorUnits requires remittanceAmountMinorUnits for hire purchase overrides.',
+    );
+  }
+
+  const baseInstallmentAmountMinorUnits = hasManualBaseInstallment
+    ? input.installmentAmountMinorUnits ?? 0
+    : Math.floor(input.totalTargetAmountMinorUnits / periodCount);
+  const finalInstallmentAmountMinorUnits = hasManualBaseInstallment
+    ? (input.finalInstallmentAmountMinorUnits ??
+      input.totalTargetAmountMinorUnits -
+        baseInstallmentAmountMinorUnits * Math.max(periodCount - 1, 0))
+    : input.totalTargetAmountMinorUnits -
+      baseInstallmentAmountMinorUnits * Math.max(periodCount - 1, 0);
+
+  if (baseInstallmentAmountMinorUnits < 1) {
+    throw new BadRequestException('remittanceAmountMinorUnits must be greater than 0.');
+  }
+
+  if (finalInstallmentAmountMinorUnits < 1) {
+    throw new BadRequestException(
+      'finalInstallmentAmountMinorUnits must be greater than 0 when provided.',
+    );
+  }
+
+  if (
+    baseInstallmentAmountMinorUnits * Math.max(periodCount - 1, 0) +
+      finalInstallmentAmountMinorUnits !==
+    input.totalTargetAmountMinorUnits
+  ) {
+    throw new BadRequestException(
+      'Installment amount, final installment, and repayment duration must reconcile with totalTargetAmountMinorUnits.',
+    );
+  }
+
   const dueDates = addSchedulePeriods(
     input.startDate,
     input.frequency,
@@ -282,7 +333,7 @@ function buildInstallmentPlan(input: {
     contractEndDate: dueDates[dueDates.length - 1] ?? input.contractEndDate ?? input.startDate,
     baseInstallmentAmountMinorUnits,
     finalInstallmentAmountMinorUnits,
-    generatedFromTarget: true,
+    generatedFromTarget: !hasManualBaseInstallment && !hasManualFinalInstallment,
   };
 }
 
@@ -405,9 +456,25 @@ export function normalizeFinancialContract(
     if (depositAmountMinorUnits !== null && depositAmountMinorUnits < 0) {
       throw new BadRequestException('depositAmountMinorUnits cannot be negative.');
     }
+    if (
+      depositAmountMinorUnits !== null &&
+      depositAmountMinorUnits > totalTargetAmountMinorUnits
+    ) {
+      throw new BadRequestException(
+        'depositAmountMinorUnits cannot exceed totalTargetAmountMinorUnits.',
+      );
+    }
     const principalAmountMinorUnits = input.principalAmountMinorUnits ?? null;
     if (principalAmountMinorUnits !== null && principalAmountMinorUnits < 1) {
       throw new BadRequestException('principalAmountMinorUnits must be greater than 0 when provided.');
+    }
+    if (
+      principalAmountMinorUnits !== null &&
+      principalAmountMinorUnits > totalTargetAmountMinorUnits
+    ) {
+      throw new BadRequestException(
+        'principalAmountMinorUnits cannot exceed totalTargetAmountMinorUnits.',
+      );
     }
 
     const installmentPlan = buildInstallmentPlan({
@@ -415,6 +482,8 @@ export function normalizeFinancialContract(
       startDate,
       frequency,
       collectionDay,
+      installmentAmountMinorUnits: input.remittanceAmountMinorUnits ?? null,
+      finalInstallmentAmountMinorUnits: input.finalInstallmentAmountMinorUnits ?? null,
       contractDurationPeriods: input.contractDurationPeriods ?? null,
       contractEndDate: input.contractEndDate ?? null,
     });

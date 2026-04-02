@@ -17,6 +17,7 @@ import type { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { buildCsv } from '../common/csv-utils';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { PrismaService } from '../database/prisma.service';
+import { canRecordRemittanceAgainstAssignment } from '../assignments/assignment-lifecycle';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime class metadata.
 import { OperationalWalletsService } from '../operational-wallets/operational-wallets.service';
 import { PolicyService } from '../policy/policy.service';
@@ -333,14 +334,14 @@ export class RemittanceService {
       );
     }
 
-    const assignmentEndedOn =
-      assignment.returnedAt?.toISOString().slice(0, 10) ?? assignment.endedAt?.toISOString().slice(0, 10);
-    const isSameDayFinalSubmission =
-      assignment.status === 'ended' &&
-      Boolean(assignmentEndedOn) &&
-      (dto.dueDate ? dto.dueDate === assignmentEndedOn : true);
-
-    if (!(assignment.status === 'active' || isSameDayFinalSubmission)) {
+    if (
+      !canRecordRemittanceAgainstAssignment({
+        status: assignment.status,
+        endedAt: assignment.endedAt,
+        returnedAt: assignment.returnedAt,
+        dueDate: dto.dueDate ?? null,
+      })
+    ) {
       throw new BadRequestException(
         `Cannot record remittance against assignment '${dto.assignmentId}' ` +
           `with status '${assignment.status}'`,

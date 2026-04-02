@@ -8,7 +8,7 @@ export default async function SessionRecoveryPage({
     resolvedSearchParams.next && resolvedSearchParams.next.startsWith('/')
       ? resolvedSearchParams.next
       : '/';
-  const retryHref = `/api/auth/refresh?returnTo=${encodeURIComponent(nextPath)}`;
+  const retryHref = nextPath;
   const loginHref = `/login?next=${encodeURIComponent(nextPath)}`;
 
   return (
@@ -22,14 +22,14 @@ export default async function SessionRecoveryPage({
             We&apos;re reconnecting your workspace
           </h1>
           <p className="text-sm leading-6 text-[var(--app-muted-foreground)]">
-            Your session still exists, but we could not refresh it right now. This usually means a
-            temporary network or service issue, not that you&apos;ve been logged out.
+            Your session still exists, but we could not reconnect it right now. We&apos;ll try the
+            normal app flow again instead of sending you through a separate refresh step.
           </p>
         </div>
 
         <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4 text-sm text-[var(--app-muted-foreground)]">
-          Retry to continue where you left off. If the problem persists, you can log in again
-          without losing your place.
+          Try your original page again. If the problem persists, log in again without losing your
+          place.
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -37,7 +37,7 @@ export default async function SessionRecoveryPage({
             href={retryHref}
             className="inline-flex items-center justify-center rounded-full bg-[var(--app-foreground)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            Retry session
+            Try again
           </a>
           <a
             href={loginHref}

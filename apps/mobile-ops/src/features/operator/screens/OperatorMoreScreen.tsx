@@ -45,7 +45,11 @@ export function OperatorMoreScreen({ navigation }: ScreenProps<'OperatorMore'>) 
         />
         <Button label="Vehicles" onPress={() => navigation.navigate('OperatorVehicles')} />
         <Button label="Reports" variant="secondary" onPress={() => navigation.navigate('OperatorReports')} />
-        <Button label="Wallet" variant="secondary" onPress={() => navigation.navigate('OperatorWallet')} />
+        <Button
+          label="Verification Credit"
+          variant="secondary"
+          onPress={() => navigation.navigate('OperatorVerificationCredit')}
+        />
         <Button label="Settings" variant="secondary" onPress={() => navigation.navigate('OperatorSettings')} />
       </Card>
     </Screen>

@@ -160,11 +160,11 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
 
       <View style={styles.metricGrid}>
         <Card style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Wallet balance</Text>
+          <Text style={styles.metricLabel}>Verification credit</Text>
           <Text style={styles.metricValue}>
             {currency} {overview ? formatMajorAmount(overview.wallet.totalBalanceMinorUnits, minorUnit, session?.formattingLocale) : '0.00'}
           </Text>
-          <Text style={styles.metricHint}>Operational wallet headline balance</Text>
+          <Text style={styles.metricHint}>Available company-paid verification credit headline balance</Text>
         </Card>
         <Card style={styles.metricCard}>
           <Text style={styles.metricLabel}>Expected / At risk</Text>
@@ -227,9 +227,9 @@ export function OperatorDashboardScreen({ navigation }: ScreenProps<'OperatorDas
             onPress={() => navigation.navigate('OperatorCompliance')}
           />
           <Button
-            label="Wallet"
+            label="Verification Credit"
             variant="secondary"
-            onPress={() => navigation.navigate('OperatorWallet')}
+            onPress={() => navigation.navigate('OperatorVerificationCredit')}
           />
         </View>
       </Card>

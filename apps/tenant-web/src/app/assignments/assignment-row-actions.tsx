@@ -91,13 +91,31 @@ export function AssignmentRowActions({
           <form action={cancelFormAction} ref={cancelFormRef}>
             <input name="assignmentId" type="hidden" value={assignmentId} />
             <ConfirmSubmitButton
-              confirmDescription="Cancellation removes this assignment from the operational pipeline so it can be reassigned cleanly."
-              confirmTitle="Cancel this assignment?"
+              confirmDescription="Cancel assignment"
+              confirmTitle="Are you sure you want to cancel this assignment?"
+              confirmLabel={isCancelling ? 'Cancelling...' : 'Cancel assignment'}
+              confirmClassName="border border-rose-700 bg-rose-600 text-white shadow-[0_16px_32px_-18px_rgba(190,24,93,0.65)] hover:bg-rose-700 focus-visible:ring-rose-600"
+              dismissLabel="Keep assignment"
               disabled={isBusy}
               formRef={cancelFormRef}
               label={isCancelling ? 'Cancelling...' : 'Cancel'}
-              variant="ghost"
-            />
+              variant="secondary"
+            >
+              <div className="space-y-4">
+                <p className="text-sm leading-6 text-slate-600">
+                  Cancelling this assignment will immediately remove the driver from it and return
+                  the vehicle to the available pool.
+                </p>
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/70 px-4 py-4">
+                  <Text tone="danger">This will happen next:</Text>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
+                    <li>The driver will be unassigned from this vehicle.</li>
+                    <li>The assignment will stop and be marked as cancelled.</li>
+                    <li>The vehicle will become available for reassignment.</li>
+                  </ul>
+                </div>
+              </div>
+            </ConfirmSubmitButton>
           </form>
         ) : null}
 

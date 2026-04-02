@@ -162,6 +162,10 @@ export async function createAssignmentAction(
     formData,
     'contractDurationPeriods' as keyof CreateAssignmentInput,
   );
+  const finalInstallmentAmount = getTrimmedValue(
+    formData,
+    'finalInstallmentAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
   const contractEndDate = getTrimmedValue(
     formData,
     'contractEndDate' as keyof CreateAssignmentInput,
@@ -195,7 +199,7 @@ export async function createAssignmentAction(
     if (remittanceCollectionDay) {
       payload.remittanceCollectionDay = Number(remittanceCollectionDay);
     }
-    if (principalAmount) {
+    if (principalAmount && Number(principalAmount) > 0) {
       payload.principalAmountMinorUnits = Number(principalAmount);
     }
     if (totalTargetAmount) {
@@ -203,6 +207,9 @@ export async function createAssignmentAction(
     }
     if (depositAmount) {
       payload.depositAmountMinorUnits = Number(depositAmount);
+    }
+    if (finalInstallmentAmount && Number(finalInstallmentAmount) > 0) {
+      payload.finalInstallmentAmountMinorUnits = Number(finalInstallmentAmount);
     }
     if (contractDurationPeriods) {
       payload.contractDurationPeriods = Number(contractDurationPeriods);
@@ -284,6 +291,10 @@ export async function updateAssignmentRemittancePlanAction(
     formData,
     'contractDurationPeriods' as keyof CreateAssignmentInput,
   );
+  const finalInstallmentAmount = getTrimmedValue(
+    formData,
+    'finalInstallmentAmountMinorUnits' as keyof CreateAssignmentInput,
+  );
   const contractEndDate = getTrimmedValue(
     formData,
     'contractEndDate' as keyof CreateAssignmentInput,
@@ -318,9 +329,14 @@ export async function updateAssignmentRemittancePlanAction(
       ...(remittanceCollectionDay
         ? { remittanceCollectionDay: Number(remittanceCollectionDay) }
         : {}),
-      ...(principalAmount ? { principalAmountMinorUnits: Number(principalAmount) } : {}),
+      ...(principalAmount && Number(principalAmount) > 0
+        ? { principalAmountMinorUnits: Number(principalAmount) }
+        : {}),
       ...(totalTargetAmount ? { totalTargetAmountMinorUnits: Number(totalTargetAmount) } : {}),
       ...(depositAmount ? { depositAmountMinorUnits: Number(depositAmount) } : {}),
+      ...(finalInstallmentAmount && Number(finalInstallmentAmount) > 0
+        ? { finalInstallmentAmountMinorUnits: Number(finalInstallmentAmount) }
+        : {}),
       ...(contractDurationPeriods
         ? { contractDurationPeriods: Number(contractDurationPeriods) }
         : {}),

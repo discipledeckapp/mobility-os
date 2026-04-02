@@ -525,7 +525,7 @@ export function TenantDashboardShell({
                   Use the remittance queue and billing view to clear pending collections and keep driver verification moving.
                 </Text>
                 <div className="mt-3">
-                  <Link href={'/subscription' as Route}>
+                  <Link href={'/billing' as Route}>
                     <Button size="sm" variant="secondary">
                       Open billing
                     </Button>

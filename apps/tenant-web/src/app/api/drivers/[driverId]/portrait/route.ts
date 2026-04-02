@@ -4,6 +4,7 @@ import { getTenantApiToken } from '../../../../../lib/api-core';
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:3001/api/v1';
 
+// Legacy compatibility route: portrait now resolves through the unified selfie image pipeline.
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ driverId: string }> },
@@ -11,7 +12,7 @@ export async function GET(
   const { driverId } = await context.params;
   const token = await getTenantApiToken();
 
-  const response = await fetch(`${apiBaseUrl}/drivers/${driverId}/portrait`, {
+  const response = await fetch(`${apiBaseUrl}/drivers/${driverId}/identity-image/selfie`, {
     method: 'GET',
     headers: { authorization: `Bearer ${token}` },
     cache: 'no-store',

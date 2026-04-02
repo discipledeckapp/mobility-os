@@ -3,11 +3,11 @@ import { RouteLoadingState } from '../../features/shared/route-state';
 export default function SubscriptionLoading() {
   return (
     <RouteLoadingState
-      description="Track plan status, subscription invoices, and usage limits for your organisation."
+      description="Load your current plan, usage, and upgrade options."
       eyebrow="Subscription"
       summaryCount={3}
       tableRows={5}
-      title="Plan and limits"
+      title="Subscription"
     />
   );
 }

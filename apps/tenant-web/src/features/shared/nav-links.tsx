@@ -149,6 +149,45 @@ const SubscriptionIcon: NavIcon = ({ className }) => (
   </svg>
 );
 
+const BillingIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <rect height="10" rx="1.5" width="12" x="2" y="3" />
+    <path d="M2 6.5h12" />
+    <path d="M5 10h2.5M9 10h2" />
+  </svg>
+);
+
+const CreditIcon: NavIcon = ({ className }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    focusable="false"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 16 16"
+    width="16"
+  >
+    <circle cx="8" cy="8" r="5.5" />
+    <path d="M8 5.25v5.5M5.25 8h5.5" />
+  </svg>
+);
+
 const ReportsIcon: NavIcon = ({ className }) => (
   <svg
     aria-hidden="true"
@@ -243,7 +282,9 @@ const navigationSections: NavSection[] = [
     label: 'Insights',
     items: [
       { href: '/fleets', label: 'Fleets', Icon: FleetsIcon },
-      { href: '/subscription' as Route, label: 'Billing & Subscription', Icon: SubscriptionIcon },
+      { href: '/subscription' as Route, label: 'Subscription', Icon: SubscriptionIcon },
+      { href: '/billing' as Route, label: 'Billing', Icon: BillingIcon },
+      { href: '/verification-funding' as Route, label: 'Verification Credit', Icon: CreditIcon },
       { href: '/operations' as Route, label: 'Operations', Icon: ReportsIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],

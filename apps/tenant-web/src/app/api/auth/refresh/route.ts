@@ -31,7 +31,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Refresh token is required.' }, { status: 400 });
   }
 
-  const refreshedSession = await refreshTenantSession(body.refreshToken);
+  const refreshedSession = await refreshTenantSession(body.refreshToken, {
+    retryUnavailableOnce: true,
+  });
   if (refreshedSession.status !== 'success') {
     if (refreshedSession.status === 'unavailable') {
       return NextResponse.json(
@@ -70,7 +72,9 @@ export async function GET(request: Request) {
     return response;
   }
 
-  const refreshedSession = await refreshTenantSession(refreshToken);
+  const refreshedSession = await refreshTenantSession(refreshToken, {
+    retryUnavailableOnce: true,
+  });
   if (refreshedSession.status !== 'success') {
     if (refreshedSession.status === 'unavailable') {
       const recoveryUrl = new URL('/session-recovery', request.url);

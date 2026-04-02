@@ -4,10 +4,11 @@ import {
   changeTenantBillingPlan,
   initializeTenantCardSetupCheckout,
   initializeTenantInvoiceCheckout,
+  initializeTenantSubscriptionBillingSetupCheckout,
   initializeTenantWalletTopUpCheckout,
 } from '../../lib/api-core';
 
-export interface WalletCheckoutActionState {
+export interface BillingCheckoutActionState {
   error?: string;
   success?: string;
   checkoutUrl?: string;
@@ -54,10 +55,10 @@ function parseAmountToMinorUnits(amountRaw: string, currencyMinorUnitRaw: string
 
 function sanitizeCheckoutError(
   error: unknown,
-  context: 'wallet_top_up' | 'card_setup' | 'invoice_payment',
+  context: 'wallet_top_up' | 'card_setup' | 'invoice_payment' | 'billing_payment_method',
   provider?: string,
-): WalletCheckoutActionState {
-  console.error(`[verification-funding] ${context} failed`, error);
+): BillingCheckoutActionState {
+  console.error(`[verification-credit] ${context} failed`, error);
 
   const message = error instanceof Error ? error.message : '';
   const isFlutterwave = provider === 'flutterwave';
@@ -74,8 +75,7 @@ function sanitizeCheckoutError(
 
   if (/502|503|504|bad gateway|service unavailable/i.test(message)) {
     return {
-      error:
-        'Verification funding is temporarily unavailable right now. Please try again in a moment.',
+      error: 'Verification credit funding is temporarily unavailable right now. Please try again in a moment.',
       ...(providerFallback ? { recommendedProvider: providerFallback } : {}),
     };
   }
@@ -96,8 +96,13 @@ function sanitizeCheckoutError(
 
   if (context === 'card_setup') {
     return {
-      error:
-        'We could not start saved payment method setup right now. Please try again shortly.',
+      error: 'We could not start saved payment method setup right now. Please try again shortly.',
+    };
+  }
+
+  if (context === 'billing_payment_method') {
+    return {
+      error: 'We could not start billing payment method setup right now. Please try again shortly.',
     };
   }
 
@@ -108,15 +113,14 @@ function sanitizeCheckoutError(
   }
 
   return {
-    error:
-      'We could not start verification funding right now. Please try again shortly.',
+    error: 'We could not start verification credit funding right now. Please try again shortly.',
   };
 }
 
-export async function initializeVerificationWalletTopUpAction(
-  _prevState: WalletCheckoutActionState,
+export async function initializeVerificationCreditTopUpAction(
+  _prevState: BillingCheckoutActionState,
   formData: FormData,
-): Promise<WalletCheckoutActionState> {
+): Promise<BillingCheckoutActionState> {
   const provider = getTrimmedValue(formData, 'provider');
   const amountRaw = getTrimmedValue(formData, 'amount');
   const currencyMinorUnitRaw = getTrimmedValue(formData, 'currencyMinorUnit');
@@ -127,7 +131,7 @@ export async function initializeVerificationWalletTopUpAction(
 
   const amountMinorUnits = parseAmountToMinorUnits(amountRaw, currencyMinorUnitRaw);
   if (!amountMinorUnits || amountMinorUnits <= 0) {
-    return { error: 'Enter an amount greater than zero to fund verification funding.' };
+    return { error: 'Enter an amount greater than zero to fund verification credit.' };
   }
 
   try {
@@ -142,9 +146,9 @@ export async function initializeVerificationWalletTopUpAction(
 }
 
 export async function initializeOutstandingInvoiceCheckoutAction(
-  _prevState: WalletCheckoutActionState,
+  _prevState: BillingCheckoutActionState,
   formData: FormData,
-): Promise<WalletCheckoutActionState> {
+): Promise<BillingCheckoutActionState> {
   const provider = getTrimmedValue(formData, 'provider');
   const invoiceId = getTrimmedValue(formData, 'invoiceId');
 
@@ -163,10 +167,27 @@ export async function initializeOutstandingInvoiceCheckoutAction(
   }
 }
 
-export async function initializeCardSetupCheckoutAction(
-  _prevState: WalletCheckoutActionState,
+export async function initializeSubscriptionBillingSetupAction(
+  _prevState: BillingCheckoutActionState,
   formData: FormData,
-): Promise<WalletCheckoutActionState> {
+): Promise<BillingCheckoutActionState> {
+  const provider = getTrimmedValue(formData, 'provider') || 'paystack';
+
+  try {
+    const checkout = await initializeTenantSubscriptionBillingSetupCheckout({
+      provider,
+      amountMinorUnits: 10_000,
+    });
+    return { checkoutUrl: checkout.checkoutUrl };
+  } catch (error) {
+    return sanitizeCheckoutError(error, 'billing_payment_method', provider);
+  }
+}
+
+export async function initializeCardSetupCheckoutAction(
+  _prevState: BillingCheckoutActionState,
+  formData: FormData,
+): Promise<BillingCheckoutActionState> {
   const provider = getTrimmedValue(formData, 'provider') || 'paystack';
   const amountMinorUnits = 10_000;
 
@@ -182,9 +203,9 @@ export async function initializeCardSetupCheckoutAction(
 }
 
 export async function changePlanAction(
-  _prevState: WalletCheckoutActionState,
+  _prevState: BillingCheckoutActionState,
   formData: FormData,
-): Promise<WalletCheckoutActionState> {
+): Promise<BillingCheckoutActionState> {
   const planId = getTrimmedValue(formData, 'planId');
 
   if (!planId) {
@@ -195,7 +216,7 @@ export async function changePlanAction(
     await changeTenantBillingPlan(planId);
     return { success: 'Plan updated successfully. Refresh to view the new billing status.' };
   } catch (error) {
-    console.error('[verification-funding] change plan failed', error);
+    console.error('[verification-credit] change plan failed', error);
     return {
       error: 'We could not change the subscription plan right now. Please try again shortly.',
     };

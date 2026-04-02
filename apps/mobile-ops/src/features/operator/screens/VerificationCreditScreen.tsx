@@ -26,7 +26,7 @@ import {
 import { tokens } from '../../../theme/tokens';
 import { formatDateOnly, formatDateTime, formatMajorAmount, formatStatusLabel } from '../../../utils/formatting';
 
-export function WalletScreen() {
+export function VerificationCreditScreen() {
   const { session } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -102,8 +102,8 @@ export function WalletScreen() {
       await Linking.openURL(checkout.checkoutUrl);
     } catch (error) {
       Alert.alert(
-        'Verification funding',
-        error instanceof Error ? error.message : 'Unable to initialize verification funding top-up.',
+        'Verification credit',
+        error instanceof Error ? error.message : 'Unable to initialize verification credit top-up.',
       );
     }
   };
@@ -129,8 +129,8 @@ export function WalletScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={billingQuery.isRefetching} onRefresh={() => void billingQuery.refetch()} />}>
       <Card style={styles.section}>
-        <Text style={styles.title}>Verification funding</Text>
-        <Text style={styles.copy}>Verification funding balance, outstanding subscription invoices, and mobile checkout links.</Text>
+        <Text style={styles.title}>Verification credit</Text>
+        <Text style={styles.copy}>Verification credit balance, outstanding subscription invoices, and mobile checkout links.</Text>
       </Card>
       {billingQuery.isLoading || !billingQuery.data ? (
         <Card><LoadingSkeleton height={120} /></Card>
@@ -164,10 +164,10 @@ export function WalletScreen() {
                 session?.formattingLocale,
               )}
             </Text>
-            <Text style={styles.meta}>Wallet: {billingQuery.data.verificationWallet.walletId}</Text>
+            <Text style={styles.meta}>Credit account: {billingQuery.data.verificationWallet.walletId}</Text>
             <Text style={styles.meta}>Plan: {billingQuery.data.subscription.planName}</Text>
             <Text style={styles.meta}>Subscription: {formatStatusLabel(billingQuery.data.subscription.status)}</Text>
-            <Button label="Top up wallet via Paystack" onPress={() => void topUp()} />
+            <Button label="Fund verification credit via Paystack" onPress={() => void topUp()} />
           </Card>
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Company plan</Text>
@@ -251,4 +251,4 @@ const styles = StyleSheet.create({
   meta: { color: tokens.colors.inkSoft, lineHeight: 20 },
 });
 
-export default WalletScreen;
+export default VerificationCreditScreen;

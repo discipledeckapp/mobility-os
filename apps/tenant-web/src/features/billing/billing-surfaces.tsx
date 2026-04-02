@@ -11,24 +11,21 @@ import {
   Label,
   Text,
 } from '@mobility-os/ui';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import type { TenantBillingPlanRecord, TenantBillingSummaryRecord } from '../../lib/api-core';
-import { SelectField } from '../../features/shared/select-field';
-import { PaymentActionPanel } from '../wallet/payment-action-panel';
+import { SelectField } from '../shared/select-field';
+import { PaymentActionPanel } from './payment-action-panel';
 import {
   changePlanAction,
   initializeOutstandingInvoiceCheckoutAction,
   initializeSubscriptionBillingSetupAction,
-  type SubscriptionActionState,
-} from './actions';
+  type BillingCheckoutActionState,
+} from './payment-actions';
 
-const initialState: SubscriptionActionState = {};
+const initialState: BillingCheckoutActionState = {};
 
-function formatMoney(
-  amountMinorUnits: number,
-  currency: string,
-  locale: string,
-): string {
+function formatMoney(amountMinorUnits: number, currency: string, locale: string): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
@@ -79,28 +76,12 @@ function getPlanCapabilities(plan: TenantBillingPlanRecord): string[] {
     capabilities.push('Core operations only');
   }
 
-  if (getPlanBooleanFeature(plan, 'walletEnabled')) {
-    capabilities.push('Billing wallet and payment method setup');
-  }
-
-  if (getPlanBooleanFeature(plan, 'intelligenceEnabled')) {
-    capabilities.push('Operational insights and risk visibility');
-  }
-
   if (getPlanBooleanFeature(plan, 'bulkAssignmentsEnabled')) {
     capabilities.push('Bulk assignment tools');
   }
 
   if (getPlanBooleanFeature(plan, 'exportsEnabled')) {
     capabilities.push('Operational exports');
-  }
-
-  if (getPlanBooleanFeature(plan, 'whiteLabelAvailable')) {
-    capabilities.push('White-label and enterprise controls');
-  }
-
-  if (getPlanBooleanFeature(plan, 'ssoAvailable')) {
-    capabilities.push('SSO support');
   }
 
   capabilities.push(getSupportLabel(plan));
@@ -133,7 +114,10 @@ function getAvailableIntervals(plans: TenantBillingPlanRecord[]): Array<'monthly
   const intervals = new Set(
     plans
       .map((plan) => plan.billingInterval)
-      .filter((interval): interval is 'monthly' | 'annual' => interval === 'monthly' || interval === 'annual'),
+      .filter(
+        (interval): interval is 'monthly' | 'annual' =>
+          interval === 'monthly' || interval === 'annual',
+      ),
   );
 
   return (['monthly', 'annual'] as const).filter((interval) => intervals.has(interval)) as Array<
@@ -166,7 +150,7 @@ function getVerificationDecision(summary: TenantBillingSummaryRecord, locale: st
   if (available > 0) {
     return {
       tone: 'success' as const,
-      title: 'You can verify 1 driver now',
+      title: 'You can verify now',
       detail: `${formatMoney(available, currency, locale)} is available for company-paid verification.`,
     };
   }
@@ -174,15 +158,15 @@ function getVerificationDecision(summary: TenantBillingSummaryRecord, locale: st
   if (savedCardActive) {
     return {
       tone: 'warning' as const,
-      title: 'You need more verification credit to continue',
-      detail: `Add funds to restore available spend. Current available spend is ${formatMoney(available, currency, locale)}.`,
+      title: 'Add more verification credit',
+      detail: `Available spend is ${formatMoney(available, currency, locale)}. Add funds to continue company-paid verification.`,
     };
   }
 
   return {
     tone: 'warning' as const,
-    title: 'You need funding before you can continue',
-    detail: `Add verification credit or save a payment method to unlock company-paid verification.`,
+    title: 'Fund verification before you continue',
+    detail: 'Add verification credit or save a payment method to unlock company-paid verification.',
   };
 }
 
@@ -193,7 +177,32 @@ function getLedgerEntryTone(type: string): 'success' | 'warning' | 'danger' | 'n
   return 'neutral';
 }
 
-export function SubscriptionManagementPanel({
+function SurfaceIntro({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="max-w-3xl space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
+          {eyebrow}
+        </p>
+        <h2 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">{title}</h2>
+        <p className="text-sm leading-6 text-slate-600">{description}</p>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+export function SubscriptionDecisionSurface({
   summary,
   plans,
   locale,
@@ -202,32 +211,35 @@ export function SubscriptionManagementPanel({
   plans: TenantBillingPlanRecord[];
   locale: string;
 }) {
+  const router = useRouter();
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>(
     normalizeInterval(summary.subscription.billingInterval),
   );
-  const [invoiceState, invoiceAction, invoicePending] = useActionState(
-    initializeOutstandingInvoiceCheckoutAction,
-    initialState,
-  );
   const [planState, planAction, planPending] = useActionState(changePlanAction, initialState);
-  const [billingMethodState, billingMethodAction, billingMethodPending] = useActionState(
-    initializeSubscriptionBillingSetupAction,
-    initialState,
-  );
+
+  useEffect(() => {
+    if (planState.success) {
+      router.refresh();
+    }
+  }, [planState.success, router]);
 
   const availableIntervals = getAvailableIntervals(plans);
   const displayCurrency = getDisplayCurrency(plans, summary);
-  const currentPlan =
-    plans.find((plan) => plan.id === summary.subscription.planId) ?? null;
+  const currentPlan = plans.find((plan) => plan.id === summary.subscription.planId) ?? null;
   const currentPlanCapabilities = currentPlan ? getPlanCapabilities(currentPlan) : [];
-  const verificationDecision = getVerificationDecision(summary, locale);
   const filteredPlans = plans
     .filter(
-      (plan) => plan.isActive && plan.currency === displayCurrency && plan.billingInterval === billingInterval,
+      (plan) =>
+        plan.isActive &&
+        plan.currency === displayCurrency &&
+        plan.billingInterval === billingInterval,
     )
     .sort((left, right) => {
       const tierOrder = { starter: 0, growth: 1, enterprise: 2 };
-      return tierOrder[left.tier as keyof typeof tierOrder] - tierOrder[right.tier as keyof typeof tierOrder];
+      return (
+        tierOrder[left.tier as keyof typeof tierOrder] -
+        tierOrder[right.tier as keyof typeof tierOrder]
+      );
     });
   const uniquePlans = filteredPlans.filter(
     (plan, index, collection) =>
@@ -235,48 +247,50 @@ export function SubscriptionManagementPanel({
   );
   const upgradeOptions = uniquePlans.filter((plan) => plan.id !== summary.subscription.planId);
 
-  useEffect(() => {
-    if (invoiceState.checkoutUrl) {
-      window.location.href = invoiceState.checkoutUrl;
-    }
-  }, [invoiceState.checkoutUrl]);
-
-  useEffect(() => {
-    if (billingMethodState.checkoutUrl) {
-      window.location.href = billingMethodState.checkoutUrl;
-    }
-  }, [billingMethodState.checkoutUrl]);
-
   return (
     <div className="space-y-6">
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-primary-light)] bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(239,246,255,0.98)_42%,rgba(219,234,254,0.86))] p-5 shadow-[0_28px_60px_-40px_rgba(37,99,235,0.55)]">
+      <SurfaceIntro
+        action={
+          <a
+            className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
+            href="#upgrade-options"
+          >
+            Upgrade plan
+          </a>
+        }
+        description="Decide whether your current plan still fits your fleet, seats, and assignment volume."
+        eyebrow="Subscription"
+        title="Plan and usage"
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="space-y-4 rounded-[var(--mobiris-radius-card)] border border-[var(--mobiris-primary-light)] bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(239,246,255,0.98)_42%,rgba(219,234,254,0.86))] p-6 shadow-[0_28px_60px_-40px_rgba(37,99,235,0.55)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mobiris-primary-dark)]">
-                Current plan
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">
-                {summary.subscription.planName}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {formatMoney(
-                  summary.subscription.basePriceMinorUnits,
-                  summary.subscription.currency,
-                  locale,
-                )}{' '}
-                / {summary.subscription.billingInterval}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="neutral">{summary.subscription.planTier}</Badge>
                 <Badge tone={getLifecycleTone(summary.subscription.enforcement?.stage)}>
                   {getLifecycleLabel(summary.subscription.enforcement?.stage)}
                 </Badge>
                 <Badge tone="neutral">{summary.subscription.currency}</Badge>
               </div>
+              <div>
+                <h3 className="text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                  {summary.subscription.planName}
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {formatMoney(
+                    summary.subscription.basePriceMinorUnits,
+                    summary.subscription.currency,
+                    locale,
+                  )}{' '}
+                  / {summary.subscription.billingInterval}
+                </p>
+              </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:w-[28rem]">
-              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] border border-white/70 bg-white/80 p-4">
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-white/70 bg-white/85 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Renewal
                 </p>
@@ -286,127 +300,105 @@ export function SubscriptionManagementPanel({
                     : formatDate(summary.subscription.currentPeriodEnd, locale)}
                 </p>
               </div>
-              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] border border-white/70 bg-slate-950 p-4 text-white">
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-950 bg-slate-950 p-4 text-white">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-100/70">
-                  What you get
+                  Best fit
                 </p>
                 <p className="mt-2 text-base font-semibold">
                   {currentPlanCapabilities[0] ?? 'Fleet operations access'}
                 </p>
-                <p className="mt-1 text-sm text-blue-100/80">
-                  Drivers are not capped on any plan.
-                </p>
-              </div>
-              <div className="rounded-[calc(var(--mobiris-radius-card)-0.4rem)] border border-white/70 bg-white/85 p-4 sm:col-span-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Verification credit
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge tone={verificationDecision.tone}>{verificationDecision.title}</Badge>
-                  <Badge tone="neutral">
-                    {formatMoney(
-                      summary.verificationSpend.availableSpendMinorUnits,
-                      summary.verificationSpend.currency,
-                      locale,
-                    )}{' '}
-                    available
-                  </Badge>
-                </div>
-                <p className="mt-2 text-sm text-slate-600">{verificationDecision.detail}</p>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {currentPlanCapabilities.slice(0, 4).map((capability) => (
               <div
-                className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] bg-white/85 px-3 py-2 text-sm text-slate-700"
+                className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] bg-white/85 px-3 py-3 text-sm text-slate-700"
                 key={capability}
               >
                 {capability}
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {summary.subscription.enforcement?.stage === 'grace' ? (
-          <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Renew within {summary.subscription.enforcement.graceDaysRemaining} day(s) to keep adding
-            vehicles and assignments without restrictions.
-          </div>
-        ) : null}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <Card className="border-slate-200/80 bg-white/95">
+            <CardHeader>
+              <CardTitle>Usage</CardTitle>
+              <CardDescription>See where your plan limits are being used.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="muted">Vehicles</Text>
+                <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                  {summary.usage.vehicleCount}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {formatUsage(summary.usage.vehicleCount, summary.usage.vehicleCap ?? null, 'vehicles')}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="muted">Assignments</Text>
+                <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                  {summary.usage.assignmentCount}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {formatUsage(
+                    summary.usage.assignmentCount,
+                    summary.usage.assignmentCap ?? null,
+                    'assignments',
+                  )}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="muted">Operator seats</Text>
+                <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                  {summary.usage.operatorSeatCount}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {formatUsage(
+                    summary.usage.operatorSeatCount,
+                    summary.usage.seatCap ?? null,
+                    'operator seats',
+                  )}
+                </p>
+              </div>
+              <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
+                <Text tone="muted">Drivers</Text>
+                <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
+                  {summary.usage.driverCount}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">Drivers are uncapped on every plan.</p>
+              </div>
+            </CardContent>
+          </Card>
 
-        {summary.subscription.enforcement?.stage === 'expired' ? (
-          <div className="rounded-[var(--mobiris-radius-card)] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
-            Your workspace is in degraded mode. Existing drivers can still work, but new vehicles and
-            new assignments stay blocked until billing is fixed.
-          </div>
-        ) : null}
-      </section>
+          {summary.subscription.enforcement?.stage === 'grace' ? (
+            <div className="rounded-[var(--mobiris-radius-card)] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Renew within {summary.subscription.enforcement.graceDaysRemaining} day(s) to keep adding
+              vehicles and assignments without restrictions.
+            </div>
+          ) : null}
 
-      <section>
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
-          <CardHeader>
-            <CardTitle>Usage vs limits</CardTitle>
-            <CardDescription>
-              Plans scale by vehicles, assignments, and operator seats. Drivers are always uncapped.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-              <Text tone="muted">Vehicles</Text>
-              <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                {summary.usage.vehicleCount}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {formatUsage(summary.usage.vehicleCount, summary.usage.vehicleCap ?? null, 'vehicles')}
-              </p>
+          {summary.subscription.enforcement?.stage === 'expired' ? (
+            <div className="rounded-[var(--mobiris-radius-card)] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+              Your workspace is in degraded mode. New vehicles and new assignments stay blocked until
+              billing is fixed.
             </div>
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-              <Text tone="muted">Active assignments</Text>
-              <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                {summary.usage.assignmentCount}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {formatUsage(
-                  summary.usage.assignmentCount,
-                  summary.usage.assignmentCap ?? null,
-                  'assignments',
-                )}
-              </p>
-            </div>
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-              <Text tone="muted">Operator seats</Text>
-              <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                {summary.usage.operatorSeatCount}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {formatUsage(
-                  summary.usage.operatorSeatCount,
-                  summary.usage.seatCap ?? null,
-                  'operator seats',
-                )}
-              </p>
-            </div>
-            <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
-              <Text tone="muted">Drivers</Text>
-              <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
-                {summary.usage.driverCount}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">Drivers are uncapped on every plan.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          ) : null}
+        </section>
+      </div>
 
-      <section>
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
+      <section className="space-y-4" id="upgrade-options">
+        <Card className="border-slate-200/80 bg-white/95">
           <CardHeader>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Upgrade options</CardTitle>
                 <CardDescription>
-                  Compare plans once by the billing interval you want. No duplicate cards. No mixed billing noise.
+                  Compare plans by one billing interval at a time and choose the next step.
                 </CardDescription>
               </div>
               <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
@@ -444,7 +436,7 @@ export function SubscriptionManagementPanel({
                   ? 'Current plan'
                   : isCustomPlan(plan)
                     ? 'Talk to support'
-                    : 'Switch plan';
+                    : 'Upgrade plan';
 
                 return (
                   <form
@@ -481,7 +473,7 @@ export function SubscriptionManagementPanel({
                       </Button>
                     </div>
 
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 grid gap-2">
                       {capabilities.map((capability) => (
                         <div
                           className="rounded-[calc(var(--mobiris-radius-card)-0.45rem)] border border-slate-200/80 bg-slate-50/75 px-3 py-2 text-sm text-slate-700"
@@ -506,14 +498,68 @@ export function SubscriptionManagementPanel({
           </CardContent>
         </Card>
       </section>
+    </div>
+  );
+}
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
+export function BillingOperationsSurface({
+  summary,
+  locale,
+}: {
+  summary: TenantBillingSummaryRecord;
+  locale: string;
+}) {
+  const router = useRouter();
+  const [invoiceState, invoiceAction, invoicePending] = useActionState(
+    initializeOutstandingInvoiceCheckoutAction,
+    initialState,
+  );
+  const [billingMethodState, billingMethodAction, billingMethodPending] = useActionState(
+    initializeSubscriptionBillingSetupAction,
+    initialState,
+  );
+
+  useEffect(() => {
+    if (invoiceState.checkoutUrl) {
+      window.location.href = invoiceState.checkoutUrl;
+    }
+  }, [invoiceState.checkoutUrl]);
+
+  useEffect(() => {
+    if (billingMethodState.checkoutUrl) {
+      window.location.href = billingMethodState.checkoutUrl;
+    }
+  }, [billingMethodState.checkoutUrl]);
+
+  useEffect(() => {
+    if (billingMethodState.success) {
+      router.refresh();
+    }
+  }, [billingMethodState.success, router]);
+
+  const settledInvoices = summary.invoices.filter((invoice) => invoice.status === 'paid');
+
+  return (
+    <div className="space-y-6">
+      <SurfaceIntro
+        action={
+          <a
+            className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
+            href="#payment-method"
+          >
+            Add payment method
+          </a>
+        }
+        description="Manage how subscription charges are paid and review invoice history without wallet or funding details getting in the way."
+        eyebrow="Billing"
+        title="Payment methods and invoices"
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card className="border-slate-200/80 bg-white/95">
           <CardHeader>
-            <CardTitle>Billing</CardTitle>
-            <CardDescription>
-              Keep your subscription current and keep new vehicles and assignments flowing.
-            </CardDescription>
+            <CardTitle>Open invoice</CardTitle>
+            <CardDescription>Pay any outstanding subscription invoice to keep your workspace current.</CardDescription>
           </CardHeader>
           <CardContent>
             {summary.outstandingInvoice ? (
@@ -537,7 +583,7 @@ export function SubscriptionManagementPanel({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="invoice-provider">Payment provider</Label>
-                  <SelectField id="invoice-provider" name="provider" defaultValue="paystack">
+                  <SelectField defaultValue="paystack" id="invoice-provider" name="provider">
                     <option value="paystack">Paystack</option>
                     <option value="flutterwave">Flutterwave</option>
                   </SelectField>
@@ -545,24 +591,24 @@ export function SubscriptionManagementPanel({
                 <Button
                   disabled={invoicePending || Boolean(invoiceState.checkoutUrl)}
                   type="submit"
-                  variant="secondary"
+                  variant="primary"
                 >
                   {invoicePending || invoiceState.checkoutUrl ? 'Redirecting to payment...' : 'Pay invoice'}
                 </Button>
                 {invoiceState.error ? <Text className="text-rose-700">{invoiceState.error}</Text> : null}
               </form>
             ) : (
-              <Text>No open subscription invoice needs payment right now.</Text>
+              <div className="rounded-[var(--mobiris-radius-card)] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                No open subscription invoice needs payment right now.
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
+        <Card className="border-slate-200/80 bg-white/95" id="payment-method">
           <CardHeader>
-            <CardTitle>Billing payment method</CardTitle>
-            <CardDescription>
-              Save or replace the card used for future subscription billing.
-            </CardDescription>
+            <CardTitle>Payment method</CardTitle>
+            <CardDescription>Save or replace the card used for future subscription billing.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200/80 bg-slate-50/70 p-4">
@@ -570,10 +616,14 @@ export function SubscriptionManagementPanel({
                 <div className="space-y-2 text-sm text-slate-600">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={summary.billingPaymentMethod.active ? 'success' : 'warning'}>
-                      {summary.billingPaymentMethod.active ? 'Active' : summary.billingPaymentMethod.status}
+                      {summary.billingPaymentMethod.active
+                        ? 'Active'
+                        : summary.billingPaymentMethod.status}
                     </Badge>
                     <Badge tone="neutral">
-                      {summary.billingPaymentMethod.autopayEnabled ? 'Autopay enabled' : 'Autopay not enabled'}
+                      {summary.billingPaymentMethod.autopayEnabled
+                        ? 'Autopay enabled'
+                        : 'Autopay not enabled'}
                     </Badge>
                   </div>
                   <p className="font-medium text-slate-900">
@@ -583,7 +633,7 @@ export function SubscriptionManagementPanel({
                 </div>
               ) : (
                 <Text className="text-sm text-slate-600">
-                  No billing payment method has been saved yet.
+                  No subscription billing card has been saved yet.
                 </Text>
               )}
             </div>
@@ -603,8 +653,8 @@ export function SubscriptionManagementPanel({
                 {billingMethodPending || billingMethodState.checkoutUrl
                   ? 'Redirecting to provider...'
                   : summary.billingPaymentMethod
-                    ? 'Replace billing payment method'
-                    : 'Add billing payment method'}
+                    ? 'Replace payment method'
+                    : 'Add payment method'}
               </Button>
               {billingMethodState.error ? (
                 <Text className="text-rose-700">{billingMethodState.error}</Text>
@@ -615,18 +665,116 @@ export function SubscriptionManagementPanel({
             </form>
           </CardContent>
         </Card>
-      </section>
+      </div>
 
-      <section className="space-y-4">
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="border-slate-200/80 bg-white/95">
           <CardHeader>
-            <CardTitle>Verification credit</CardTitle>
-            <CardDescription>
-              See available credit, decide if you can verify now, and add funds or a payment method.
-            </CardDescription>
+            <CardTitle>Invoices</CardTitle>
+            <CardDescription>Review recent subscription invoices and their current status.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {summary.invoices.length > 0 ? (
+              summary.invoices.slice(0, 6).map((invoice) => (
+                <div
+                  className="flex flex-col gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between"
+                  key={invoice.id}
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Text tone="strong">Invoice {invoice.id}</Text>
+                      <Badge tone={invoice.status === 'paid' ? 'success' : 'warning'}>
+                        {invoice.status}
+                      </Badge>
+                    </div>
+                    <Text tone="muted">
+                      Period {formatDate(invoice.periodStart, locale)} to{' '}
+                      {formatDate(invoice.periodEnd, locale)}
+                      {invoice.dueAt ? ` · due ${formatDate(invoice.dueAt, locale)}` : ''}
+                    </Text>
+                  </div>
+                  <Text tone="strong">
+                    {formatMoney(invoice.amountDueMinorUnits, invoice.currency, locale)}
+                  </Text>
+                </div>
+              ))
+            ) : (
+              <Text className="text-sm text-slate-500">No subscription invoices yet.</Text>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 bg-white/95">
+          <CardHeader>
+            <CardTitle>Receipts</CardTitle>
+            <CardDescription>Recent settled subscription payments appear here once invoices are paid.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {settledInvoices.length > 0 ? (
+              settledInvoices.slice(0, 6).map((invoice) => (
+                <div
+                  className="flex flex-col gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between"
+                  key={`${invoice.id}-receipt`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Text tone="strong">Receipt for {invoice.id}</Text>
+                      <Badge tone="success">paid</Badge>
+                    </div>
+                    <Text tone="muted">
+                      {invoice.paidAt
+                        ? `Paid ${formatDate(invoice.paidAt, locale)}`
+                        : `Settled for billing period ending ${formatDate(invoice.periodEnd, locale)}`}
+                    </Text>
+                  </div>
+                  <Text tone="strong">
+                    {formatMoney(invoice.amountPaidMinorUnits, invoice.currency, locale)}
+                  </Text>
+                </div>
+              ))
+            ) : (
+              <Text className="text-sm text-slate-500">No paid receipts yet.</Text>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export function VerificationCreditSurface({
+  summary,
+  locale,
+}: {
+  summary: TenantBillingSummaryRecord;
+  locale: string;
+}) {
+  const verificationDecision = getVerificationDecision(summary, locale);
+
+  return (
+    <div className="space-y-6">
+      <SurfaceIntro
+        action={
+          <a
+            className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-18px_rgba(37,99,235,0.7)] transition-all hover:bg-[var(--mobiris-primary-dark)]"
+            href="#fund-account"
+          >
+            Fund account
+          </a>
+        }
+        description="Decide whether you have enough verification credit, then fund the account or add a payment method if you need more."
+        eyebrow="Verification Credit"
+        title="Balance, usage, and funding"
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+        <Card className="border-slate-200/80 bg-white/95">
+          <CardHeader>
+            <CardTitle>Available verification credit</CardTitle>
+            <CardDescription>See the balance that can be used right now for company-paid verification.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/80 p-4">
                 <Text tone="muted">Available credit</Text>
                 <p className="mt-2 text-2xl font-semibold text-[var(--mobiris-ink)]">
@@ -658,14 +806,16 @@ export function SubscriptionManagementPanel({
                 </p>
               </div>
               <div className="rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-950 bg-slate-950 p-4 text-white">
-                <Text className="text-blue-100/70">Saved payment method</Text>
+                <Text className="text-blue-100/70">Saved funding card</Text>
                 <p className="mt-2 text-base font-semibold">
                   {summary.verificationSpend.savedCard
                     ? `${summary.verificationSpend.savedCard.brand} •••• ${summary.verificationSpend.savedCard.last4}`
                     : 'Not set up'}
                 </p>
                 <p className="mt-1 text-sm text-blue-100/80">
-                  {summary.verificationSpend.savedCard?.active ? 'Active' : 'Add one for card-backed credit'}
+                  {summary.verificationSpend.savedCard?.active
+                    ? 'Active'
+                    : 'Add one for card-backed credit'}
                 </p>
               </div>
             </div>
@@ -680,56 +830,54 @@ export function SubscriptionManagementPanel({
               <p className="text-sm font-semibold">{verificationDecision.title}</p>
               <p className="mt-1 text-sm">{verificationDecision.detail}</p>
             </div>
-
-            <PaymentActionPanel
-              currencyMinorUnit={2}
-              locale={locale}
-              summary={summary}
-            />
           </CardContent>
         </Card>
-      </section>
 
-      <section>
-        <Card className="border-slate-200/80 bg-white/95 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.2)]">
+        <Card className="border-slate-200/80 bg-white/95" id="fund-account">
           <CardHeader>
-            <CardTitle>Transactions</CardTitle>
-            <CardDescription>
-              One ledger for verification credit activity. Subscription invoices stay above in Billing.
-            </CardDescription>
+            <CardTitle>Fund account</CardTitle>
+            <CardDescription>Add verification credit or a funding card without mixing it with subscription billing.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.verificationWallet.entries.length > 0 ? (
-              summary.verificationWallet.entries.map((entry) => (
-                <div
-                  className="flex flex-col gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between"
-                  key={entry.id}
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Text tone="strong">
-                        {entry.description || `${entry.referenceType ?? 'Billing'} activity`}
-                      </Text>
-                      <Badge tone={getLedgerEntryTone(entry.type)}>{entry.type}</Badge>
-                    </div>
-                    <Text tone="muted">
-                      {formatDate(entry.createdAt, locale)}
-                      {entry.referenceId ? ` · ${entry.referenceId}` : ''}
+          <CardContent>
+            <PaymentActionPanel currencyMinorUnit={2} locale={locale} summary={summary} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-200/80 bg-white/95">
+        <CardHeader>
+          <CardTitle>Verification credit activity</CardTitle>
+          <CardDescription>Review recent funding and verification credit usage in one ledger.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {summary.verificationWallet.entries.length > 0 ? (
+            summary.verificationWallet.entries.map((entry) => (
+              <div
+                className="flex flex-col gap-3 rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between"
+                key={entry.id}
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Text tone="strong">
+                      {entry.description || `${entry.referenceType ?? 'Billing'} activity`}
                     </Text>
+                    <Badge tone={getLedgerEntryTone(entry.type)}>{entry.type}</Badge>
                   </div>
-                  <Text tone="strong">
-                    {formatMoney(entry.amountMinorUnits, summary.verificationWallet.currency, locale)}
+                  <Text tone="muted">
+                    {formatDate(entry.createdAt, locale)}
+                    {entry.referenceId ? ` · ${entry.referenceId}` : ''}
                   </Text>
                 </div>
-              ))
-            ) : (
-              <Text className="text-sm text-slate-500">
-                No verification credit transactions yet.
-              </Text>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+                <Text tone="strong">
+                  {formatMoney(entry.amountMinorUnits, summary.verificationWallet.currency, locale)}
+                </Text>
+              </div>
+            ))
+          ) : (
+            <Text className="text-sm text-slate-500">No verification credit activity yet.</Text>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

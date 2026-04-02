@@ -46,7 +46,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const refreshedSession = await refreshTenantSession(refreshToken);
+  const refreshedSession = await refreshTenantSession(refreshToken, {
+    retryUnavailableOnce: true,
+  });
   if (refreshedSession.status !== 'success') {
     if (refreshedSession.status === 'unavailable') {
       return NextResponse.json(

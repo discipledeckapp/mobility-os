@@ -2312,10 +2312,7 @@ export class DriversService {
       settings.operations,
       driver,
     );
-    const requiredByTier = this.getEffectiveDriverVerificationPolicy(
-      settings.operations,
-      driver,
-    ).components.includes('guarantor');
+    const requiredByTier = effectiveOperations.requireGuarantor === true;
     const currency =
       tenant?.country && isCountrySupported(tenant.country)
         ? getCountryConfig(tenant.country).currency
@@ -2330,6 +2327,12 @@ export class DriversService {
       verificationRequired:
         requiredByTier || settings.operations.requireGuarantorVerification === true,
     };
+  }
+
+  private throwGuarantorNotRequiredError(): never {
+    throw new BadRequestException(
+      'A guarantor is not required for this driver under the current verification policy.',
+    );
   }
 
   private getGuarantorReminderCount(guarantor: DriverGuarantorRecord): number {
@@ -7776,9 +7779,7 @@ export class DriversService {
       'guarantor_verification',
     );
     if (!guarantorRequirement.verificationRequired) {
-      throw new BadRequestException(
-        'A guarantor is not required for this driver under the current verification policy.',
-      );
+      this.throwGuarantorNotRequiredError();
     }
     const invitation =
       paymentPolicy.required &&
@@ -7831,9 +7832,7 @@ export class DriversService {
     );
 
     if (!guarantorRequirement.verificationRequired) {
-      throw new BadRequestException(
-        'A guarantor is not required for this driver under the current verification policy.',
-      );
+      this.throwGuarantorNotRequiredError();
     }
 
     if (!guarantor || guarantor.disconnectedAt !== null) {
