@@ -438,6 +438,12 @@ model DriverGuarantor {
   selfieImageUrl   String?
   providerImageUrl String?
   status       String @default("active")
+  inviteStatus String @default("not_sent")
+  lastInviteSentAt DateTime?
+  inviteExpiresAt DateTime?
+  guarantorReminderCount Int @default(0)
+  lastGuarantorReminderSentAt DateTime?
+  guarantorReminderSuppressed Boolean @default(false)
   disconnectedAt DateTime?
   disconnectedReason String?
   responsibilityAcceptedAt DateTime?

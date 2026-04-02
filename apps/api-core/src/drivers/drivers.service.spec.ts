@@ -103,6 +103,7 @@ describe('DriversService', () => {
   const documentStorageService = {
     uploadFile: jest.fn(),
     readFile: jest.fn(),
+    readFileByUrl: jest.fn(),
     deleteFile: jest.fn(),
   };
   const subscriptionEntitlementsService = {
@@ -167,6 +168,7 @@ describe('DriversService', () => {
       storageKey: 'doc-key',
       storageUrl: 'https://storage.example.com/driver-documents/doc-key',
     });
+    documentStorageService.readFileByUrl.mockResolvedValue(Buffer.from('image'));
     prisma.driverDocumentVerification.findMany.mockResolvedValue([]);
     intelligenceClient.queryPersonRisk.mockResolvedValue({
       riskBand: 'low',
@@ -237,6 +239,60 @@ describe('DriversService', () => {
       }),
     });
     expect(result.driverId).toBe('driver_1');
+  });
+
+  it('falls back to the stored portrait document when a live selfie exists only on the portrait record', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      archivedAt: null,
+      identityStatus: 'pending_verification',
+      identityProfile: null,
+      identityProviderRawData: null,
+      selfieImageUrl: null,
+      providerImageUrl: null,
+      identitySignatureImageUrl: null,
+    });
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      documentType: 'portrait',
+      fileName: 'portrait.jpg',
+      contentType: 'image/jpeg',
+      storageKey: 'portrait-doc-key',
+      status: 'approved',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    documentStorageService.readFile.mockResolvedValue(Buffer.from('portrait-image'));
+
+    const result = await service.getIdentityImage('tenant_1', 'driver_1', 'selfie');
+
+    expect(documentStorageService.readFile).toHaveBeenCalledWith('portrait-doc-key');
+    expect(result.contentType).toBe('image/jpeg');
+    expect(result.buffer).toEqual(Buffer.from('portrait-image'));
+  });
+
+  it('reads the NIN portrait from legacy provider photo fields when providerImageUrl is not populated', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      archivedAt: null,
+      identityStatus: 'verified',
+      identityProfile: null,
+      identityProviderRawData: {
+        photoUrl: 'data:image/png;base64,aGVsbG8=',
+      },
+      selfieImageUrl: null,
+      providerImageUrl: null,
+      identitySignatureImageUrl: null,
+    });
+
+    const result = await service.getIdentityImage('tenant_1', 'driver_1', 'provider');
+
+    expect(result.contentType).toBe('image/png');
+    expect(result.buffer).toEqual(Buffer.from('hello'));
   });
 
   it('requires full international format when guarantor phone country is omitted', async () => {
@@ -735,6 +791,48 @@ describe('DriversService', () => {
     expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
   });
 
+  it('allows guarantor link delivery for an active full-verification flow without the separate add-on flag', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+          requireGuarantorVerification: false,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+    jwtService.signAsync.mockResolvedValue('guarantor-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({
+      id: 'otp_1',
+      otpCode: 'ABC123',
+    });
+
+    const result = await service.sendGuarantorSelfServiceLink('tenant_1', 'driver_1');
+
+    expect(result.destination).toBe('grace@example.com');
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).toHaveBeenCalled();
+  });
+
   it('creates a guarantor self-service account linked back to the driver workflow', async () => {
     jwtService.verifyAsync.mockResolvedValue({
       purpose: 'guarantor_self_service',
@@ -781,6 +879,291 @@ describe('DriversService', () => {
         }),
       }),
     });
+  });
+
+  it('sends a guarantor reminder when the guarantor is still required, invited, and pending', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+          requireGuarantorVerification: false,
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      inviteStatus: 'sent',
+      inviteExpiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+      guarantorReminderCount: 0,
+      guarantorReminderSuppressed: false,
+      disconnectedAt: null,
+    });
+    jwtService.signAsync.mockResolvedValue('guarantor-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({
+      id: 'otp_1',
+      otpCode: 'ABC123',
+    });
+
+    const result = await service.sendPendingGuarantorReminder('tenant_1', 'driver_1');
+
+    expect(result.status).toBe('sent');
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).toHaveBeenCalled();
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { driverId: 'driver_1' },
+        data: expect.objectContaining({
+          inviteStatus: 'sent',
+          guarantorReminderCount: 1,
+        }),
+      }),
+    );
+  });
+
+  it('stops guarantor reminders after guarantor verification is complete', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'verified',
+      personId: 'person_1',
+      inviteStatus: 'sent',
+      disconnectedAt: null,
+    });
+
+    const result = await service.sendPendingGuarantorReminder('tenant_1', 'driver_1');
+
+    expect(result.status).toBe('not_ready');
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { driverId: 'driver_1' },
+        data: expect.objectContaining({
+          inviteStatus: 'verified',
+        }),
+      }),
+    );
+  });
+
+  it('stops guarantor reminders when policy no longer requires a guarantor', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'BASIC_IDENTITY',
+          requireGuarantorVerification: false,
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      inviteStatus: 'sent',
+      disconnectedAt: null,
+    });
+
+    const result = await service.sendPendingGuarantorReminder('tenant_1', 'driver_1');
+
+    expect(result.status).toBe('not_ready');
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          inviteStatus: 'not_required',
+        }),
+      }),
+    );
+  });
+
+  it('stops guarantor reminders after the maximum reminder count is reached', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+        },
+      },
+    });
+    prisma.driverGuarantor.findMany.mockResolvedValue([
+      {
+        id: 'guarantor_1',
+        tenantId: 'tenant_1',
+        driverId: 'driver_1',
+        inviteStatus: 'sent',
+        inviteExpiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+        guarantorReminderCount: 3,
+        lastInviteSentAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+        lastGuarantorReminderSentAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+        guarantorReminderSuppressed: false,
+        status: 'pending_verification',
+        disconnectedAt: null,
+      },
+    ]);
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      inviteStatus: 'sent',
+      inviteExpiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+      guarantorReminderCount: 3,
+      guarantorReminderSuppressed: false,
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+
+    const result = await service.findDriversPendingGuarantorReminders();
+
+    expect(result).toEqual([]);
+  });
+
+  it('does not continue reminders on an expired invite chain', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      inviteStatus: 'sent',
+      inviteExpiresAt: new Date(Date.now() - 60 * 1000),
+      guarantorReminderCount: 1,
+      guarantorReminderSuppressed: false,
+      disconnectedAt: null,
+    });
+
+    const result = await service.sendPendingGuarantorReminder('tenant_1', 'driver_1');
+
+    expect(result.status).toBe('not_ready');
+    expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          inviteStatus: 'expired',
+        }),
+      }),
+    );
+  });
+
+  it('a fresh resend starts a new reminder chain instead of continuing the stale one', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      nationality: 'NG',
+      identityStatus: 'verified',
+      firstName: 'Ada',
+      lastName: 'Okafor',
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      name: 'Acme Mobility',
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      status: 'pending_verification',
+      inviteStatus: 'expired',
+      inviteExpiresAt: new Date(Date.now() - 60 * 1000),
+      guarantorReminderCount: 3,
+      guarantorReminderSuppressed: true,
+      disconnectedAt: null,
+    });
+    jwtService.signAsync.mockResolvedValue('guarantor-token');
+    prisma.selfServiceOtp.create.mockResolvedValue({
+      id: 'otp_1',
+      otpCode: 'ABC123',
+    });
+
+    const result = await service.sendGuarantorSelfServiceLink('tenant_1', 'driver_1');
+
+    expect(result.destination).toBe('grace@example.com');
+    expect(prisma.driverGuarantor.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          inviteStatus: 'sent',
+          guarantorReminderCount: 0,
+          guarantorReminderSuppressed: false,
+        }),
+      }),
+    );
   });
 
   it('blocks guarantor self-service account creation when the email is already bound to another verified identity', async () => {

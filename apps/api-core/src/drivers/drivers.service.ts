@@ -457,6 +457,12 @@ type DriverGuarantorRecord = {
   selfieImageUrl?: string | null;
   providerImageUrl?: string | null;
   status: string;
+  inviteStatus?: string | null;
+  lastInviteSentAt?: Date | null;
+  inviteExpiresAt?: Date | null;
+  guarantorReminderCount?: number | null;
+  lastGuarantorReminderSentAt?: Date | null;
+  guarantorReminderSuppressed?: boolean | null;
   responsibilityAcceptedAt?: Date | null;
   responsibilityAcceptanceEvidence?: Prisma.JsonValue | null;
   disconnectedAt?: Date | null;
@@ -472,6 +478,9 @@ const ALLOWED_DRIVER_DOCUMENT_CONTENT_TYPES = new Set([
   'image/png',
   'image/webp',
 ]);
+const SELF_SERVICE_INVITE_TTL_MS = 48 * 60 * 60 * 1000;
+const GUARANTOR_REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const MAX_GUARANTOR_REMINDER_COUNT = 3;
 
 type MobileAccessUserRecord = {
   id: string;
@@ -2228,24 +2237,19 @@ export class DriversService {
     entitlementCode?: string | null;
     paymentReference?: string | null;
   }> {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { country: true, metadata: true },
-    });
-    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-    const effectiveOperations = this.getEffectiveDriverOperationsSettings(
-      settings.operations,
-      driver,
-    );
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(tenantId, driver);
+    const tenant = guarantorRequirement.tenant;
+    const settings = guarantorRequirement.settings;
+    const effectiveOperations = guarantorRequirement.effectiveOperations;
     const addonRequired =
       key === 'guarantor_verification'
-        ? settings.operations.requireGuarantorVerification === true &&
+        ? guarantorRequirement.verificationRequired &&
+          !guarantorRequirement.requiredByTier &&
           driver.identityStatus === 'verified'
-        : effectiveOperations.requiredDriverDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE);
-    const currency =
-      tenant?.country && isCountrySupported(tenant.country)
-        ? getCountryConfig(tenant.country).currency
-        : 'NGN';
+        : (effectiveOperations.requiredDriverDocumentSlugs ?? []).includes(
+            DRIVER_LICENCE_DOCUMENT_TYPE,
+          );
+    const currency = guarantorRequirement.currency;
     const addonPrice = getVerificationAddonPrice(key, currency);
     const entitlement = await this.getLatestVerificationEntitlement(
       tenantId,
@@ -2280,6 +2284,167 @@ export class DriversService {
       entitlementCode: entitlement?.entitlementCode ?? null,
       paymentReference: entitlement?.paymentReference ?? null,
     };
+  }
+
+  private async getDriverGuarantorRequirement(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+  ): Promise<{
+    tenant: { country: string | null; metadata: Prisma.JsonValue | null } | null;
+    settings: ReturnType<typeof readOrganisationSettings>;
+    effectiveOperations: {
+      verificationTier?: VerificationTier;
+      requireGuarantor?: boolean;
+      requiredDriverDocumentSlugs?: string[];
+      driverPaysKyc?: boolean;
+      requireGuarantorVerification?: boolean;
+    };
+    currency: string;
+    requiredByTier: boolean;
+    verificationRequired: boolean;
+  }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { country: true, metadata: true },
+    });
+    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const effectiveOperations = this.getEffectiveDriverOperationsSettings(
+      settings.operations,
+      driver,
+    );
+    const requiredByTier = this.getEffectiveDriverVerificationPolicy(
+      settings.operations,
+      driver,
+    ).components.includes('guarantor');
+    const currency =
+      tenant?.country && isCountrySupported(tenant.country)
+        ? getCountryConfig(tenant.country).currency
+        : 'NGN';
+
+    return {
+      tenant,
+      settings,
+      effectiveOperations,
+      currency,
+      requiredByTier,
+      verificationRequired:
+        requiredByTier || settings.operations.requireGuarantorVerification === true,
+    };
+  }
+
+  private getGuarantorReminderCount(guarantor: DriverGuarantorRecord): number {
+    return guarantor.guarantorReminderCount ?? 0;
+  }
+
+  private async updateGuarantorLifecycleState(
+    driverId: string,
+    data: Partial<
+      Pick<
+        DriverGuarantorRecord,
+        | 'inviteStatus'
+        | 'lastInviteSentAt'
+        | 'inviteExpiresAt'
+        | 'guarantorReminderCount'
+        | 'lastGuarantorReminderSentAt'
+        | 'guarantorReminderSuppressed'
+        | 'status'
+        | 'personId'
+        | 'disconnectedAt'
+        | 'disconnectedReason'
+        | 'responsibilityAcceptedAt'
+        | 'responsibilityAcceptanceEvidence'
+      >
+    >,
+  ): Promise<void> {
+    try {
+      await this.driverGuarantors.update({
+        where: { driverId },
+        data,
+      });
+    } catch {
+      // Best-effort lifecycle updates should not block the main flow in tests
+      // or during stale-record cleanup.
+    }
+  }
+
+  private async createAndStoreSelfServiceOtp(
+    tenantId: string,
+    subjectType: 'driver' | 'guarantor',
+    subjectId: string,
+  ): Promise<{ otpCode: string; expiresAt: Date }> {
+    const expiresAt = new Date(Date.now() + SELF_SERVICE_INVITE_TTL_MS);
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const otpCode = this.generateOtpCode();
+      try {
+        await this.prisma.selfServiceOtp.create({
+          data: { tenantId, subjectType, subjectId, otpCode, expiresAt },
+        });
+        return { otpCode, expiresAt };
+      } catch {
+        if (attempt === 4) throw new Error('Failed to generate a unique OTP after 5 attempts');
+      }
+    }
+
+    throw new Error('OTP generation failed');
+  }
+
+  private async syncGuarantorReminderLifecycleState(
+    tenantId: string,
+    driver: DriverWithIdentityState,
+    guarantor: DriverGuarantorRecord,
+  ): Promise<{
+    shouldStop: boolean;
+    reason?:
+      | 'verified'
+      | 'not_required'
+      | 'driver_not_ready'
+      | 'suppressed'
+      | 'maxed_out'
+      | 'expired';
+  }> {
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(tenantId, driver);
+    const now = Date.now();
+
+    if (guarantor.status === 'verified' || guarantor.personId) {
+      await this.updateGuarantorLifecycleState(driver.id, {
+        inviteStatus: 'verified',
+        inviteExpiresAt: null,
+      });
+      return { shouldStop: true, reason: 'verified' };
+    }
+
+    if (!guarantorRequirement.verificationRequired) {
+      await this.updateGuarantorLifecycleState(driver.id, {
+        inviteStatus: 'not_required',
+        inviteExpiresAt: null,
+      });
+      return { shouldStop: true, reason: 'not_required' };
+    }
+
+    if (driver.identityStatus !== 'verified') {
+      await this.updateGuarantorLifecycleState(driver.id, {
+        inviteStatus: 'queued_until_driver_verified',
+      });
+      return { shouldStop: true, reason: 'driver_not_ready' };
+    }
+
+    if (guarantor.guarantorReminderSuppressed) {
+      return { shouldStop: true, reason: 'suppressed' };
+    }
+
+    if (this.getGuarantorReminderCount(guarantor) >= MAX_GUARANTOR_REMINDER_COUNT) {
+      return { shouldStop: true, reason: 'maxed_out' };
+    }
+
+    if (guarantor.inviteExpiresAt && guarantor.inviteExpiresAt.getTime() < now) {
+      await this.updateGuarantorLifecycleState(driver.id, {
+        inviteStatus: 'expired',
+      });
+      return { shouldStop: true, reason: 'expired' };
+    }
+
+    return { shouldStop: false };
   }
 
   private async assertDriverVerificationAddonPaymentReady(
@@ -2433,9 +2598,16 @@ export class DriversService {
 
   private get driverGuarantors(): {
     findUnique(args: { where: { driverId: string } }): Promise<DriverGuarantorRecord | null>;
-    findMany(args: { where: { tenantId: string; driverId?: { in: string[] } } }): Promise<
-      DriverGuarantorRecord[]
-    >;
+    findMany(args: {
+      where: {
+        tenantId?: string;
+        driverId?: { in: string[] };
+        status?: string;
+        disconnectedAt?: null;
+        guarantorReminderSuppressed?: boolean;
+      };
+      select?: Record<string, boolean>;
+    }): Promise<any>;
     upsert(args: {
       where: { driverId: string };
       create: Omit<DriverGuarantorRecord, 'id' | 'createdAt' | 'updatedAt'>;
@@ -2452,6 +2624,12 @@ export class DriversService {
         | 'gender'
         | 'selfieImageUrl'
         | 'providerImageUrl'
+        | 'inviteStatus'
+        | 'lastInviteSentAt'
+        | 'inviteExpiresAt'
+        | 'guarantorReminderCount'
+        | 'lastGuarantorReminderSentAt'
+        | 'guarantorReminderSuppressed'
         | 'responsibilityAcceptedAt'
         | 'responsibilityAcceptanceEvidence'
         | 'disconnectedAt'
@@ -2467,6 +2645,12 @@ export class DriversService {
           | 'disconnectedAt'
           | 'disconnectedReason'
           | 'personId'
+          | 'inviteStatus'
+          | 'lastInviteSentAt'
+          | 'inviteExpiresAt'
+          | 'guarantorReminderCount'
+          | 'lastGuarantorReminderSentAt'
+          | 'guarantorReminderSuppressed'
           | 'responsibilityAcceptedAt'
           | 'responsibilityAcceptanceEvidence'
         >
@@ -2499,6 +2683,14 @@ export class DriversService {
               | 'gender'
               | 'selfieImageUrl'
               | 'providerImageUrl'
+              | 'inviteStatus'
+              | 'lastInviteSentAt'
+              | 'inviteExpiresAt'
+              | 'guarantorReminderCount'
+              | 'lastGuarantorReminderSentAt'
+              | 'guarantorReminderSuppressed'
+              | 'responsibilityAcceptedAt'
+              | 'responsibilityAcceptanceEvidence'
               | 'disconnectedAt'
               | 'disconnectedReason'
             >;
@@ -2508,7 +2700,18 @@ export class DriversService {
             data: Partial<
               Pick<
                 DriverGuarantorRecord,
-                'status' | 'disconnectedAt' | 'disconnectedReason' | 'personId'
+                | 'status'
+                | 'disconnectedAt'
+                | 'disconnectedReason'
+                | 'personId'
+                | 'inviteStatus'
+                | 'lastInviteSentAt'
+                | 'inviteExpiresAt'
+                | 'guarantorReminderCount'
+                | 'lastGuarantorReminderSentAt'
+                | 'guarantorReminderSuppressed'
+                | 'responsibilityAcceptedAt'
+                | 'responsibilityAcceptanceEvidence'
               >
             >;
           }): Promise<DriverGuarantorRecord>;
@@ -3658,7 +3861,7 @@ export class DriversService {
       });
     }
 
-    const [token, otpCode] = await Promise.all([
+    const [token, otp] = await Promise.all([
       this.createSelfServiceToken(driver.tenantId, driver.id),
       this.createAndStoreSelfServiceOtp(driver.tenantId, 'driver', driver.id),
     ]);
@@ -3674,14 +3877,14 @@ export class DriversService {
           tenant.name)
         : null,
       verificationUrl,
-      otpCode,
+      otpCode: otp.otpCode,
     });
 
     return {
       delivery: 'email',
       verificationUrl,
       destination: driver.email,
-      otpCode,
+      otpCode: otp.otpCode,
     };
   }
 
@@ -3689,22 +3892,22 @@ export class DriversService {
     tenantId: string,
     driverId: string,
   ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
+    return this.dispatchGuarantorSelfServiceLink(tenantId, driverId, { deliveryKind: 'invite' });
+  }
+
+  private async dispatchGuarantorSelfServiceLink(
+    tenantId: string,
+    driverId: string,
+    options: { deliveryKind: 'invite' | 'reminder' },
+  ): Promise<{ delivery: 'email'; verificationUrl: string; destination: string; otpCode: string }> {
     const driver = await this.findOne(tenantId, driverId);
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(tenantId, driver);
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: driver.tenantId },
       select: { country: true, metadata: true, name: true },
     });
-    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-    const verificationTierPolicy = this.getEffectiveDriverVerificationPolicy(
-      settings.operations,
-      driver,
-      tenant?.country && isCountrySupported(tenant.country)
-        ? getCountryConfig(tenant.country).currency
-        : 'NGN',
-    );
-    const requiresGuarantor = verificationTierPolicy.components.includes('guarantor');
 
-    if (!requiresGuarantor) {
+    if (!guarantorRequirement.verificationRequired) {
       throw new BadRequestException(
         'This verification tier does not require a guarantor, so no guarantor link can be sent.',
       );
@@ -3736,7 +3939,8 @@ export class DriversService {
       );
     }
 
-    const [token, otpCode] = await Promise.all([
+    const inviteSentAt = new Date();
+    const [token, otp] = await Promise.all([
       this.createGuarantorSelfServiceToken(driver.tenantId, driver.id),
       this.createAndStoreSelfServiceOtp(driver.tenantId, 'guarantor', driver.id),
     ]);
@@ -3752,14 +3956,55 @@ export class DriversService {
           tenant.name)
         : null,
       verificationUrl,
-      otpCode,
+      otpCode: otp.otpCode,
+    });
+
+    await this.driverGuarantors.update({
+      where: { driverId: driver.id },
+      data:
+        options.deliveryKind === 'reminder'
+          ? {
+              inviteStatus: 'sent',
+              lastInviteSentAt: inviteSentAt,
+              inviteExpiresAt: otp.expiresAt,
+              guarantorReminderCount: this.getGuarantorReminderCount(guarantor) + 1,
+              lastGuarantorReminderSentAt: inviteSentAt,
+            }
+          : {
+              inviteStatus: 'sent',
+              lastInviteSentAt: inviteSentAt,
+              inviteExpiresAt: otp.expiresAt,
+              guarantorReminderCount: 0,
+              lastGuarantorReminderSentAt: null,
+              guarantorReminderSuppressed: false,
+            },
+    });
+
+    await this.auditService.recordTenantAction({
+      tenantId,
+      entityType: 'driver',
+      entityId: driver.id,
+      action:
+        options.deliveryKind === 'reminder'
+          ? 'driver.guarantor.reminder.sent'
+          : 'driver.guarantor.invitation.sent',
+      beforeState: null,
+      afterState: {
+        guarantorEmail: guarantor.email,
+        guarantorStatus: guarantor.status,
+        inviteExpiresAt: otp.expiresAt.toISOString(),
+      },
+      metadata: {
+        delivery: 'email',
+        destination: guarantor.email,
+      },
     });
 
     return {
       delivery: 'email',
       verificationUrl,
       destination: guarantor.email,
-      otpCode,
+      otpCode: otp.otpCode,
     };
   }
 
@@ -3779,17 +4024,15 @@ export class DriversService {
     message: string;
     destination?: string;
   }> {
-    const [driver, tenant] = await Promise.all([
-      this.findOne(tenantId, driverId),
-      this.prisma.tenant.findUnique({
-        where: { id: tenantId },
-        select: { country: true, metadata: true },
-      }),
-    ]);
-    const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
+    const driver = await this.findOne(tenantId, driverId);
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(tenantId, driver);
     const driverName = this.formatDriverName(driver);
 
-    if (settings.operations.requireGuarantorVerification !== true) {
+    if (!guarantorRequirement.verificationRequired) {
+      await this.updateGuarantorLifecycleState(driverId, {
+        inviteStatus: 'not_required',
+        inviteExpiresAt: null,
+      });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
         driverId,
@@ -3806,6 +4049,9 @@ export class DriversService {
     }
 
     if (driver.identityStatus !== 'verified') {
+      await this.updateGuarantorLifecycleState(driverId, {
+        inviteStatus: 'queued_until_driver_verified',
+      });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
         driverId,
@@ -3833,6 +4079,10 @@ export class DriversService {
     }
 
     if (guarantor.status === 'verified') {
+      await this.updateGuarantorLifecycleState(driverId, {
+        inviteStatus: 'verified',
+        inviteExpiresAt: null,
+      });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
         driverId,
@@ -3851,6 +4101,9 @@ export class DriversService {
     }
 
     if (!guarantor.email) {
+      await this.updateGuarantorLifecycleState(driverId, {
+        inviteStatus: 'missing_email',
+      });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
         driverId,
@@ -3867,7 +4120,9 @@ export class DriversService {
     }
 
     try {
-      const delivery = await this.sendGuarantorSelfServiceLink(tenantId, driverId);
+      const delivery = await this.dispatchGuarantorSelfServiceLink(tenantId, driverId, {
+        deliveryKind: reason === 'reminder' ? 'reminder' : 'invite',
+      });
       this.logger.log(
         JSON.stringify({
           event: 'guarantor_self_service_link_auto_sent',
@@ -3903,6 +4158,9 @@ export class DriversService {
           error: error instanceof Error ? error.message : 'unknown error',
         }),
       );
+      await this.updateGuarantorLifecycleState(driverId, {
+        inviteStatus: 'failed',
+      });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
         driverId,
@@ -3924,32 +4182,70 @@ export class DriversService {
   async findDriversPendingGuarantorReminders(): Promise<
     Array<{ tenantId: string; driverId: string }>
   > {
-    const filteredPending = await this.prisma.driverGuarantor.findMany({
+    const filteredPending = (await this.driverGuarantors.findMany({
       where: {
         status: 'pending_verification',
         disconnectedAt: null,
+        guarantorReminderSuppressed: false,
       },
       select: {
+        id: true,
         tenantId: true,
         driverId: true,
+        inviteStatus: true,
+        lastInviteSentAt: true,
+        inviteExpiresAt: true,
+        guarantorReminderCount: true,
+        lastGuarantorReminderSentAt: true,
+        guarantorReminderSuppressed: true,
       },
-    });
+    })) as Array<{
+      tenantId: string;
+      driverId: string;
+      inviteStatus?: string | null;
+      lastInviteSentAt?: Date | null;
+      inviteExpiresAt?: Date | null;
+      guarantorReminderCount?: number | null;
+      lastGuarantorReminderSentAt?: Date | null;
+      guarantorReminderSuppressed?: boolean | null;
+    }>;
 
     const reminders: Array<{ tenantId: string; driverId: string }> = [];
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - GUARANTOR_REMINDER_INTERVAL_MS;
+    const now = Date.now();
 
     for (const item of filteredPending) {
-      const latestOtp = await this.prisma.selfServiceOtp.findFirst({
-        where: {
-          tenantId: item.tenantId,
-          subjectType: 'guarantor',
-          subjectId: item.driverId,
-        },
-        orderBy: { createdAt: 'desc' },
-        select: { createdAt: true },
-      });
+      const [driver, guarantor] = await Promise.all([
+        this.findOne(item.tenantId, item.driverId),
+        this.driverGuarantors.findUnique({ where: { driverId: item.driverId } }),
+      ]);
+      if (!guarantor) {
+        continue;
+      }
+      const lifecycle = await this.syncGuarantorReminderLifecycleState(
+        item.tenantId,
+        driver,
+        guarantor,
+      );
+      if (lifecycle.shouldStop) {
+        continue;
+      }
 
-      if (latestOtp && latestOtp.createdAt.getTime() >= cutoff) {
+      if (item.inviteStatus !== 'sent') {
+        continue;
+      }
+
+      if (item.inviteExpiresAt && item.inviteExpiresAt.getTime() < now) {
+        continue;
+      }
+
+      if ((item.guarantorReminderCount ?? 0) >= MAX_GUARANTOR_REMINDER_COUNT) {
+        continue;
+      }
+
+      const lastReminderContactAt =
+        item.lastGuarantorReminderSentAt ?? item.lastInviteSentAt ?? null;
+      if (lastReminderContactAt && lastReminderContactAt.getTime() >= cutoff) {
         continue;
       }
 
@@ -3974,6 +4270,37 @@ export class DriversService {
     message: string;
     destination?: string;
   }> {
+    const [driver, guarantor] = await Promise.all([
+      this.findOne(tenantId, driverId),
+      this.driverGuarantors.findUnique({ where: { driverId } }),
+    ]);
+
+    if (!guarantor || guarantor.disconnectedAt !== null) {
+      return {
+        status: 'not_ready',
+        message: DriversService.guarantorInvitationMessages.not_ready,
+      };
+    }
+
+    const lifecycle = await this.syncGuarantorReminderLifecycleState(tenantId, driver, guarantor);
+    if (lifecycle.shouldStop) {
+      return {
+        status: 'not_ready',
+        message:
+          lifecycle.reason === 'verified'
+            ? DriversService.guarantorInvitationMessages.already_verified
+            : lifecycle.reason === 'not_required'
+              ? 'Guarantor reminders stopped because this driver no longer requires a guarantor.'
+              : lifecycle.reason === 'driver_not_ready'
+                ? DriversService.guarantorInvitationMessages.queued_until_driver_verified
+                : lifecycle.reason === 'suppressed'
+                  ? 'Guarantor reminders are currently paused for this driver.'
+                  : lifecycle.reason === 'maxed_out'
+                    ? 'Guarantor reminders stopped because the maximum reminder count has been reached.'
+                    : 'The guarantor invite has expired. Send a fresh invitation to restart reminders.',
+      };
+    }
+
     return this.maybeSendGuarantorSelfServiceLinkIfEligible(tenantId, driverId, 'reminder');
   }
 
@@ -4628,19 +4955,11 @@ export class DriversService {
     kind: 'selfie' | 'provider' | 'signature',
   ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
     const driver = await this.findOne(tenantId, driverId);
-    const identityProfile =
-      driver.identityProfile && typeof driver.identityProfile === 'object' && !Array.isArray(driver.identityProfile)
-        ? (driver.identityProfile as Record<string, unknown>)
-        : null;
+    const source = this.getDriverIdentityImageSource(driver, kind);
 
-    const source =
-      kind === 'selfie'
-        ? this.readJsonString(identityProfile, 'selfieImageUrl') ?? driver.selfieImageUrl ?? null
-        : kind === 'provider'
-          ? this.readJsonString(identityProfile, 'providerImageUrl') ?? driver.providerImageUrl ?? null
-          : this.readJsonString(identityProfile, 'signatureImageUrl') ??
-            driver.identitySignatureImageUrl ??
-            null;
+    if (!source?.trim() && kind === 'selfie') {
+      return this.getPortrait(tenantId, driverId);
+    }
 
     if (!source?.trim()) {
       throw new NotFoundException('Identity image not found');
@@ -4682,6 +5001,41 @@ export class DriversService {
       contentType,
       fileName: `${kind}.${this.getImageExtension(contentType)}`,
     };
+  }
+
+  private getDriverIdentityImageSource(
+    driver: DriverWithIdentityState & Partial<DriverIntelligenceSummary>,
+    kind: 'selfie' | 'provider' | 'signature',
+  ): string | null {
+    const identityProfile = isVerificationMetadataRecord(driver.identityProfile)
+      ? driver.identityProfile
+      : null;
+    const providerRaw = isVerificationMetadataRecord(driver.identityProviderRawData)
+      ? driver.identityProviderRawData
+      : null;
+
+    if (kind === 'selfie') {
+      return this.readJsonString(identityProfile, 'selfieImageUrl') ?? driver.selfieImageUrl ?? null;
+    }
+
+    if (kind === 'provider') {
+      return (
+        this.readJsonString(identityProfile, 'providerImageUrl') ??
+        this.readJsonString(identityProfile, 'photoUrl') ??
+        driver.providerImageUrl ??
+        this.readJsonString(providerRaw, 'providerImageUrl') ??
+        this.readJsonString(providerRaw, 'photoUrl') ??
+        this.readJsonString(providerRaw, 'portraitUrl') ??
+        null
+      );
+    }
+
+    return (
+      this.readJsonString(identityProfile, 'signatureImageUrl') ??
+      driver.identitySignatureImageUrl ??
+      this.readJsonString(providerRaw, 'signatureUrl') ??
+      null
+    );
   }
 
   async listDocumentReviewQueue(
@@ -5276,6 +5630,12 @@ export class DriversService {
         countryCode: dto.countryCode?.trim().toUpperCase() || null,
         relationship: dto.relationship?.trim() || null,
         status: 'pending_verification',
+        inviteStatus: dto.email?.trim() ? 'not_sent' : 'missing_email',
+        lastInviteSentAt: null,
+        inviteExpiresAt: null,
+        guarantorReminderCount: 0,
+        lastGuarantorReminderSentAt: null,
+        guarantorReminderSuppressed: false,
         responsibilityAcceptedAt: null,
         responsibilityAcceptanceEvidence: null,
         disconnectedAt: null,
@@ -5288,6 +5648,12 @@ export class DriversService {
         countryCode: dto.countryCode?.trim().toUpperCase() || null,
         relationship: dto.relationship?.trim() || null,
         status: 'pending_verification',
+        inviteStatus: dto.email?.trim() ? 'not_sent' : 'missing_email',
+        lastInviteSentAt: null,
+        inviteExpiresAt: null,
+        guarantorReminderCount: 0,
+        lastGuarantorReminderSentAt: null,
+        guarantorReminderSuppressed: false,
         personId: null,
         dateOfBirth: null,
         gender: null,
@@ -5325,6 +5691,9 @@ export class DriversService {
       where: { driverId: driver.id },
       data: {
         status: 'disconnected',
+        inviteStatus: 'not_sent',
+        inviteExpiresAt: null,
+        guarantorReminderSuppressed: true,
         disconnectedAt: new Date(),
         disconnectedReason: reason?.trim() || 'Disconnected by operator request',
       },
@@ -5359,6 +5728,28 @@ export class DriversService {
       message:
         'You are no longer listed as this driver’s guarantor. The driver and organisation have been notified for immediate follow-up.',
     };
+  }
+
+  async updateGuarantorReminderSuppression(
+    tenantId: string,
+    driverId: string,
+    suppressed: boolean,
+  ): Promise<DriverGuarantorRecord> {
+    const driver = await this.findOne(tenantId, driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: driver.id },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor has been linked to this driver yet.');
+    }
+
+    return this.driverGuarantors.update({
+      where: { driverId: driver.id },
+      data: {
+        guarantorReminderSuppressed: suppressed,
+      },
+    });
   }
 
   /**
@@ -5530,6 +5921,8 @@ export class DriversService {
         ...(persistedSelfieImageUrl ? { selfieImageUrl: persistedSelfieImageUrl } : {}),
         ...(persistedProviderImageUrl ? { providerImageUrl: persistedProviderImageUrl } : {}),
         status: result.personId ? 'verified' : 'pending_verification',
+        inviteStatus: result.personId ? 'verified' : 'sent',
+        ...(result.personId ? { inviteExpiresAt: null } : {}),
       },
     });
 
@@ -7376,12 +7769,13 @@ export class DriversService {
       triggerInvitation: false,
     });
     const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(payload.tenantId, driver);
     const paymentPolicy = await this.getDriverVerificationAddonPaymentPolicy(
       payload.tenantId,
       driver,
       'guarantor_verification',
     );
-    if (!paymentPolicy.required) {
+    if (!guarantorRequirement.verificationRequired) {
       throw new BadRequestException(
         'A guarantor is not required for this driver under the current verification policy.',
       );
@@ -7412,6 +7806,70 @@ export class DriversService {
       },
       invitation,
     };
+  }
+
+  async resendGuarantorInviteFromSelfService(token: string): Promise<{
+    status:
+      | 'sent'
+      | 'already_verified'
+      | 'missing_email'
+      | 'operator_action_required'
+      | 'queued_until_driver_verified'
+      | 'failed'
+      | 'not_ready';
+    message: string;
+    destination?: string;
+  }> {
+    const payload = await this.verifySelfServiceToken(token);
+    const [driver, guarantor] = await Promise.all([
+      this.findOne(payload.tenantId, payload.driverId),
+      this.driverGuarantors.findUnique({ where: { driverId: payload.driverId } }),
+    ]);
+    const guarantorRequirement = await this.getDriverGuarantorRequirement(
+      payload.tenantId,
+      driver,
+    );
+
+    if (!guarantorRequirement.verificationRequired) {
+      throw new BadRequestException(
+        'A guarantor is not required for this driver under the current verification policy.',
+      );
+    }
+
+    if (!guarantor || guarantor.disconnectedAt !== null) {
+      throw new NotFoundException('No active guarantor has been linked to this driver yet.');
+    }
+
+    if (guarantor.status === 'verified') {
+      throw new BadRequestException('This guarantor has already completed verification.');
+    }
+
+    const invitation = await this.maybeSendGuarantorSelfServiceLinkIfEligible(
+      payload.tenantId,
+      payload.driverId,
+      'reminder',
+    );
+
+    await this.auditService.recordTenantAction({
+      tenantId: payload.tenantId,
+      entityType: 'driver',
+      entityId: payload.driverId,
+      action: 'driver.guarantor.invitation.resent_by_driver',
+      beforeState: {
+        guarantorStatus: guarantor.status,
+        guarantorEmail: guarantor.email ?? null,
+      },
+      afterState: {
+        guarantorStatus: guarantor.status,
+        guarantorEmail: guarantor.email ?? null,
+      },
+      metadata: {
+        invitationStatus: invitation.status,
+        destination: invitation.destination ?? guarantor.email ?? null,
+      },
+    });
+
+    return invitation;
   }
 
   private assertGuarantorReplacementAllowed(
@@ -9505,12 +9963,12 @@ export class DriversService {
     if (drivers.length === 0) return [];
 
     const guarantors =
-      (await this.driverGuarantors.findMany({
+      ((await this.driverGuarantors.findMany({
         where: {
           tenantId,
           driverId: { in: drivers.map((driver) => driver.id) },
         },
-      })) ?? [];
+      })) as DriverGuarantorRecord[] | null) ?? [];
 
     const guarantorsByDriverId = new Map(
       guarantors.map((guarantor) => [guarantor.driverId, guarantor]),
@@ -9879,30 +10337,6 @@ export class DriversService {
     return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
       '',
     );
-  }
-
-  private async createAndStoreSelfServiceOtp(
-    tenantId: string,
-    subjectType: 'driver' | 'guarantor',
-    subjectId: string,
-  ): Promise<string> {
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h
-
-    // Retry up to 5 times on collision (theoretical only with 6 chars / 1B possibilities)
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const otpCode = this.generateOtpCode();
-      try {
-        await this.prisma.selfServiceOtp.create({
-          data: { tenantId, subjectType, subjectId, otpCode, expiresAt },
-        });
-        return otpCode;
-      } catch {
-        // Unique constraint violation — retry with a new code
-        if (attempt === 4) throw new Error('Failed to generate a unique OTP after 5 attempts');
-      }
-    }
-
-    throw new Error('OTP generation failed');
   }
 
   private async listLinkedUserIdsForDriver(

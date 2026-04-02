@@ -1505,7 +1505,14 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
   beforeEach(() => {
     jest.clearAllMocks();
     prisma = makePrisma();
-    prisma.tenant.findUnique.mockResolvedValue({ country: 'NG', metadata: {} });
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+        },
+      },
+    });
     prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'verified' }));
     prisma.driverGuarantor.findUnique.mockResolvedValue({
       id: 'guarantor_1',
@@ -1798,6 +1805,42 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     expect(authEmailService.sendGuarantorSelfServiceVerificationEmail).not.toHaveBeenCalled();
   });
 
+  it('keeps the guarantor flow active for a paid full-verification journey even when the optional add-on flag is off', async () => {
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+      }),
+    );
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+          requireGuarantorVerification: false,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    (jest.spyOn(service as never, 'maybeSendGuarantorSelfServiceLinkIfEligible') as unknown as {
+      mockResolvedValue: (value: unknown) => unknown;
+    }).mockResolvedValue({
+      status: 'sent',
+      message: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+      destination: 'grace@example.com',
+    });
+
+    const result = await service.submitGuarantorFromSelfService('valid-token', {
+      name: 'Grace Eze',
+      phone: '08000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+    });
+
+    expect(result.payment.paymentStatus).toBe('not_required');
+    expect(result.invitation.status).toBe('sent');
+  });
+
   it('starts a driver-paid guarantor verification checkout with an add-on payment key', async () => {
     prisma.tenant.findUnique.mockResolvedValue({
       country: 'NG',
@@ -1893,6 +1936,53 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     expect(result.guarantor.name).toBe('Grace Eze');
     expect(result.invitation.status).toBe('failed');
     expect(result.invitation.destination).toBe('grace@example.com');
+  });
+
+  it('resends a pending guarantor invite without creating a duplicate guarantor record', async () => {
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'verified',
+      }),
+    );
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+          requireGuarantorVerification: false,
+        },
+      },
+    });
+    prisma.driverGuarantor.findUnique.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      personId: null,
+      name: 'Grace Eze',
+      phone: '+2348000000000',
+      email: 'grace@example.com',
+      countryCode: 'NG',
+      relationship: 'Sibling',
+      status: 'pending_verification',
+      disconnectedAt: null,
+      disconnectedReason: null,
+      responsibilityAcceptedAt: null,
+      responsibilityAcceptanceEvidence: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    (jest.spyOn(service as never, 'maybeSendGuarantorSelfServiceLinkIfEligible') as unknown as {
+      mockResolvedValue: (value: unknown) => unknown;
+    }).mockResolvedValue({
+      status: 'sent',
+      message: 'Guarantor saved. A verification link has been sent to the guarantor email address.',
+      destination: 'grace@example.com',
+    });
+
+    const result = await service.resendGuarantorInviteFromSelfService('valid-token');
+
+    expect(result.status).toBe('sent');
+    expect(prisma.driverGuarantor.upsert).not.toHaveBeenCalled();
   });
 
   it('blocks driver-side guarantor replacement once the existing guarantor has accepted responsibility', async () => {

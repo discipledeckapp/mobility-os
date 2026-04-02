@@ -567,6 +567,12 @@ export interface DriverGuarantorRecord {
   selfieImageUrl?: string | null;
   providerImageUrl?: string | null;
   status: string;
+  inviteStatus?: string | null;
+  lastInviteSentAt?: string | null;
+  inviteExpiresAt?: string | null;
+  guarantorReminderCount?: number | null;
+  lastGuarantorReminderSentAt?: string | null;
+  guarantorReminderSuppressed?: boolean | null;
   disconnectedAt?: string | null;
   disconnectedReason?: string | null;
   createdAt: string;
@@ -2597,6 +2603,19 @@ export async function sendGuarantorSelfServiceLink(
   );
 }
 
+export async function updateGuarantorReminderControls(
+  driverId: string,
+  input: { suppressed: boolean },
+  token?: string,
+): Promise<DriverGuarantorRecord> {
+  return apiCoreFetch<DriverGuarantorRecord>(`/drivers/${driverId}/guarantor/reminder-controls`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    cache: 'no-store',
+    token: await getTenantApiToken(token),
+  });
+}
+
 export async function createOrUpdateDriverGuarantor(
   driverId: string,
   input: {
@@ -3178,6 +3197,16 @@ export async function assessDriverSelfServiceGuarantorCapacity(
   return apiCoreFetch<DriverGuarantorCapacityAssessment>('/driver-self-service/guarantor-capacity', {
     method: 'POST',
     body: JSON.stringify({ token, ...input }),
+    cache: 'no-store',
+  });
+}
+
+export async function resendDriverSelfServiceGuarantorInvite(
+  token: string,
+): Promise<DriverGuarantorInvitationResult> {
+  return apiCoreFetch<DriverGuarantorInvitationResult>('/driver-self-service/guarantor/resend-invite', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
     cache: 'no-store',
   });
 }

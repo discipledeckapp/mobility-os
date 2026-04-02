@@ -21,6 +21,7 @@ import {
   sendGuarantorSelfServiceLinkAction,
   type DriverGuarantorActionState,
   type SendDriverSelfServiceLinkActionState,
+  updateGuarantorReminderControlsAction,
 } from './actions';
 
 const initialState: DriverGuarantorActionState = {};
@@ -73,8 +74,18 @@ export function DriverGuarantorPanel({
     sendGuarantorSelfServiceLinkAction,
     initialSendLinkState,
   );
+  const [reminderState, reminderAction, isUpdatingReminderState] = useActionState(
+    updateGuarantorReminderControlsAction,
+    initialState,
+  );
   const isDisconnected = guarantor?.status === 'disconnected';
   const guarantorBadge = getGuarantorBadge(guarantor?.status, Boolean(guarantor?.personId));
+  const inviteActionLabel =
+    guarantor?.status === 'pending_verification' ? 'Resend invitation' : 'Send invitation';
+  const inviteHelperText =
+    guarantor?.status === 'pending_verification'
+      ? 'The guarantor is still pending verification. Resend the invitation without creating a duplicate guarantor record to'
+      : 'Send an invitation to';
 
   return (
     <Card className={isDisconnected ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-white'}>
@@ -135,6 +146,34 @@ export function DriverGuarantorPanel({
             <div className="space-y-1">
               <Text tone="muted">Status</Text>
               <Text>{guarantorBadge.label}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Invite status</Text>
+              <Text>{guarantor.inviteStatus || 'Not sent yet'}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Last invite sent</Text>
+              <Text>{guarantor.lastInviteSentAt ? formatDate(guarantor.lastInviteSentAt) : 'Not sent yet'}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Invite expires</Text>
+              <Text>{guarantor.inviteExpiresAt ? formatDate(guarantor.inviteExpiresAt) : 'No active invite'}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Reminder count</Text>
+              <Text>{guarantor.guarantorReminderCount ?? 0}</Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Last reminder sent</Text>
+              <Text>
+                {guarantor.lastGuarantorReminderSentAt
+                  ? formatDate(guarantor.lastGuarantorReminderSentAt)
+                  : 'No reminder sent yet'}
+              </Text>
+            </div>
+            <div className="space-y-1">
+              <Text tone="muted">Reminder status</Text>
+              <Text>{guarantor.guarantorReminderSuppressed ? 'Paused' : 'Active'}</Text>
             </div>
             <div className="space-y-1">
               <Text tone="muted">Disconnected on</Text>
@@ -306,13 +345,29 @@ export function DriverGuarantorPanel({
               <div className="space-y-0.5">
                 <Text>Guarantor self-service verification</Text>
                 <Text tone="muted">
-                  Send a link to <span className="font-medium text-slate-700">{guarantor.email}</span> so the guarantor can complete their own identity verification.
+                  {inviteHelperText}{' '}
+                  <span className="font-medium text-slate-700">{guarantor.email}</span>.
                 </Text>
               </div>
               <form action={sendLinkAction}>
                 <input name="driverId" type="hidden" value={driverId} />
                 <Button disabled={isSendingLink} size="sm" type="submit" variant="ghost">
-                  {isSendingLink ? 'Sending…' : 'Send verification link'}
+                  {isSendingLink ? 'Sending…' : inviteActionLabel}
+                </Button>
+              </form>
+              <form action={reminderAction}>
+                <input name="driverId" type="hidden" value={driverId} />
+                <input
+                  name="suppressed"
+                  type="hidden"
+                  value={guarantor.guarantorReminderSuppressed ? 'false' : 'true'}
+                />
+                <Button disabled={isUpdatingReminderState} size="sm" type="submit" variant="ghost">
+                  {isUpdatingReminderState
+                    ? 'Updating…'
+                    : guarantor.guarantorReminderSuppressed
+                      ? 'Resume reminders'
+                      : 'Pause reminders'}
                 </Button>
               </form>
             </div>
@@ -321,6 +376,12 @@ export function DriverGuarantorPanel({
             ) : null}
             {sendLinkState.success ? (
               <Text tone="success" className="mt-2">{sendLinkState.success}</Text>
+            ) : null}
+            {reminderState.error ? (
+              <Text tone="danger" className="mt-2">{reminderState.error}</Text>
+            ) : null}
+            {reminderState.success ? (
+              <Text tone="success" className="mt-2">{reminderState.success}</Text>
             ) : null}
           </div>
         ) : guarantor && !isDisconnected && !guarantor.email ? (

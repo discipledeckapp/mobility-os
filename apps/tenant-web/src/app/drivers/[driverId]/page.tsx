@@ -199,13 +199,20 @@ function formatRiskFlag(flag: string): string {
 
 function getDriverIdentityProfile(driver: {
   identityProfile?: Record<string, unknown> | null;
+  identityProviderRawData?: Record<string, unknown> | null;
+  photoUrl?: string | null;
   selfieImageUrl?: string | null;
   providerImageUrl?: string | null;
   identitySignatureImageUrl?: string | null;
 }) {
   const profile = driver.identityProfile ?? {};
+  const providerRaw = driver.identityProviderRawData ?? {};
   const read = (key: string): string | null => {
     const value = profile[key];
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  };
+  const readProviderRaw = (key: string): string | null => {
+    const value = providerRaw[key];
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
   };
 
@@ -229,8 +236,16 @@ function getDriverIdentityProfile(driver: {
     gender: read('gender'),
     nationality: read('nationality'),
     selfieImageUrl: read('selfieImageUrl') ?? driver.selfieImageUrl ?? null,
-    providerImageUrl: read('providerImageUrl') ?? driver.providerImageUrl ?? null,
+    providerImageUrl:
+      read('providerImageUrl') ??
+      read('photoUrl') ??
+      driver.providerImageUrl ??
+      readProviderRaw('providerImageUrl') ??
+      readProviderRaw('photoUrl') ??
+      readProviderRaw('portraitUrl') ??
+      null,
     signatureImageUrl: read('signatureImageUrl') ?? driver.identitySignatureImageUrl ?? null,
+    portraitFallbackUrl: driver.photoUrl ?? null,
   };
 }
 
@@ -240,6 +255,39 @@ function getDriverIdentityImageProxyUrl(
   source?: string | null,
 ): string | null {
   return source ? `/api/drivers/${driverId}/identity-image/${kind}` : null;
+}
+
+function getDriverIdentityImageDisplaySources(
+  driver: {
+    id: string;
+    photoUrl?: string | null;
+    identityProfile?: Record<string, unknown> | null;
+    identityProviderRawData?: Record<string, unknown> | null;
+    selfieImageUrl?: string | null;
+    providerImageUrl?: string | null;
+    identitySignatureImageUrl?: string | null;
+  },
+) {
+  const identityProfile = getDriverIdentityProfile(driver);
+  const hasStoredSelfie =
+    Boolean(identityProfile.selfieImageUrl) || Boolean(driver.selfieImageUrl);
+
+  return {
+    identityProfile,
+    selfieImageSrc: hasStoredSelfie
+      ? getDriverIdentityImageProxyUrl(driver.id, 'selfie', identityProfile.selfieImageUrl)
+      : identityProfile.portraitFallbackUrl,
+    providerImageSrc: getDriverIdentityImageProxyUrl(
+      driver.id,
+      'provider',
+      identityProfile.providerImageUrl,
+    ),
+    signatureImageSrc: getDriverIdentityImageProxyUrl(
+      driver.id,
+      'signature',
+      identityProfile.signatureImageUrl,
+    ),
+  };
 }
 
 function getDriverOperationalProfile(driver: {
@@ -354,22 +402,8 @@ export default async function DriverDetailsPage({
       }),
     )
     .slice(0, 10);
-  const identityProfile = getDriverIdentityProfile(driver);
-  const selfieImageSrc = getDriverIdentityImageProxyUrl(
-    driver.id,
-    'selfie',
-    identityProfile.selfieImageUrl ?? driver.photoUrl,
-  );
-  const providerImageSrc = getDriverIdentityImageProxyUrl(
-    driver.id,
-    'provider',
-    identityProfile.providerImageUrl,
-  );
-  const signatureImageSrc = getDriverIdentityImageProxyUrl(
-    driver.id,
-    'signature',
-    identityProfile.signatureImageUrl,
-  );
+  const { identityProfile, selfieImageSrc, providerImageSrc, signatureImageSrc } =
+    getDriverIdentityImageDisplaySources(driver);
   const avatarImageSrc =
     providerImageSrc ?? selfieImageSrc ?? (driver.photoUrl ? `/api/drivers/${driver.id}/portrait` : null);
   const verificationProviderValue = driver.verificationProvider ?? null;
@@ -1092,7 +1126,7 @@ export default async function DriverDetailsPage({
                   <div className="space-y-3">
                     <Text tone="muted">Live Selfie</Text>
                     <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
-                      {(identityProfile.selfieImageUrl ?? driver.photoUrl) ? (
+                      {selfieImageSrc ? (
                         <DriverEvidenceImage
                           alt={`${driver.firstName} ${driver.lastName} live selfie`}
                           className="aspect-[4/3] w-full object-cover"
@@ -1145,7 +1179,7 @@ export default async function DriverDetailsPage({
                   <div className="space-y-3">
                     <Text tone="muted">Government record image</Text>
                     <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
-                      {identityProfile.providerImageUrl ? (
+                      {providerImageSrc ? (
                         <DriverEvidenceImage
                           alt={`${driver.firstName} ${driver.lastName} government record`}
                           className="aspect-[4/3] w-full object-cover"
@@ -1385,7 +1419,7 @@ export default async function DriverDetailsPage({
                         <div className="space-y-3">
                           <Text tone="muted">Live selfie</Text>
                           <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
-                            {identityProfile.selfieImageUrl ? (
+                            {selfieImageSrc ? (
                               <DriverEvidenceImage
                                 alt={`${driverDisplayName} live selfie`}
                                 className="aspect-[4/3] w-full object-cover"
@@ -1406,7 +1440,7 @@ export default async function DriverDetailsPage({
                         <div className="space-y-3">
                           <Text tone="muted">NIN portrait</Text>
                           <div className="overflow-hidden rounded-[calc(var(--mobiris-radius-card)-0.35rem)] border border-slate-200 bg-slate-50">
-                            {identityProfile.providerImageUrl ? (
+                            {providerImageSrc ? (
                               <DriverEvidenceImage
                                 alt={`${driverDisplayName} NIN portrait`}
                                 className="aspect-[4/3] w-full object-cover"

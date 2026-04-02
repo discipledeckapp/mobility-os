@@ -41,6 +41,24 @@ export class DriverGuarantorResponseDto {
   status!: string;
 
   @ApiPropertyOptional()
+  inviteStatus?: string | null;
+
+  @ApiPropertyOptional()
+  lastInviteSentAt?: Date | null;
+
+  @ApiPropertyOptional()
+  inviteExpiresAt?: Date | null;
+
+  @ApiPropertyOptional()
+  guarantorReminderCount?: number | null;
+
+  @ApiPropertyOptional()
+  lastGuarantorReminderSentAt?: Date | null;
+
+  @ApiPropertyOptional()
+  guarantorReminderSuppressed?: boolean | null;
+
+  @ApiPropertyOptional()
   disconnectedAt?: Date | null;
 
   @ApiPropertyOptional()

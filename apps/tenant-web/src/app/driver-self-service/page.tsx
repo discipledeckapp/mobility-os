@@ -38,6 +38,7 @@ import {
   loginDriverSelfServiceWithPassword,
   recordDriverSelfServiceRemittance,
   recordDriverSelfServiceVerificationConsent,
+  resendDriverSelfServiceGuarantorInvite,
   submitDriverSelfServiceGuarantor,
   updateDriverSelfServiceContact,
   updateDriverSelfServiceProfile,
@@ -2248,6 +2249,7 @@ function GuarantorStep({
     tone: 'success' | 'danger';
     message: string;
   } | null>(null);
+  const [isResendingInvite, setIsResendingInvite] = useState(false);
   const [paymentRequirement, setPaymentRequirement] = useState<{
     paymentStatus: 'not_required' | 'ready' | 'driver_payment_required';
     paymentMessage: string;
@@ -2282,6 +2284,8 @@ function GuarantorStep({
     Boolean(onboardingStep.guarantorName?.trim()) &&
     !onboardingStep.guarantorVerified &&
     guarantorStatus !== 'verified';
+  const invitationSent =
+    guarantorPending && Boolean(onboardingStep.guarantorEmail?.trim());
 
   function inputClass(hasError: boolean) {
     return `w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
@@ -2444,6 +2448,31 @@ function GuarantorStep({
     }
   }
 
+  async function handleResendInvite() {
+    setError(null);
+    setSubmissionNotice(null);
+    setIsResendingInvite(true);
+    try {
+      const invitation = await resendDriverSelfServiceGuarantorInvite(token);
+      setSubmissionNotice({
+        tone:
+          invitation.status === 'failed' || invitation.status === 'not_ready'
+            ? 'danger'
+            : 'success',
+        message: getInvitationMessage(invitation),
+      });
+      await onComplete();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'We could not resend the guarantor invitation right now.',
+      );
+    } finally {
+      setIsResendingInvite(false);
+    }
+  }
+
   return (
     <Card className="border-slate-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
       <CardHeader className="space-y-2">
@@ -2501,12 +2530,31 @@ function GuarantorStep({
         {!submissionNotice && guarantorPending ? (
           <Card className="border-emerald-200 bg-emerald-50/70 shadow-none">
             <CardContent className="space-y-2 px-4 py-4">
-              <Text tone="strong">Guarantor saved and awaiting verification</Text>
+              <Text tone="strong">
+                {invitationSent
+                  ? 'Invitation sent and awaiting guarantor verification'
+                  : 'Guarantor saved and awaiting verification'}
+              </Text>
               <Text tone="muted">
                 {onboardingStep.guarantorEmail
                   ? `${onboardingStep.guarantorName ?? 'Your guarantor'} has been saved with ${onboardingStep.guarantorEmail}. They must complete their verification before your onboarding can finish.`
                   : `${onboardingStep.guarantorName ?? 'Your guarantor'} has been saved. Add an email address or contact your operator if a verification link still needs to be sent.`}
               </Text>
+              {invitationSent ? (
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Badge tone="neutral">Invitation sent</Badge>
+                  <Button
+                    disabled={isResendingInvite}
+                    onClick={() => {
+                      void handleResendInvite();
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    {isResendingInvite ? 'Resending invitation…' : 'Resend invitation'}
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}

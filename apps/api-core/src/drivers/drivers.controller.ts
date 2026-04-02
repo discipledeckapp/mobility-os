@@ -500,6 +500,18 @@ export class DriversController {
     return this.service.sendGuarantorSelfServiceLink(ctx.tenantId, id);
   }
 
+  @Post(':id/guarantor/reminder-controls')
+  @RequirePermissions(Permission.GuarantorsWrite)
+  @UseGuards(PermissionsGuard)
+  @ApiCreatedResponse({ type: DriverGuarantorResponseDto })
+  updateGuarantorReminderControls(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body('suppressed') suppressed: boolean,
+  ): Promise<DriverGuarantorResponseDto> {
+    return this.service.updateGuarantorReminderSuppression(ctx.tenantId, id, suppressed === true);
+  }
+
   @Post(':id/guarantor/identity-resolution')
   @RequirePermissions(Permission.GuarantorsWrite)
   @UseGuards(PermissionsGuard)
@@ -1653,6 +1665,15 @@ export class DriverSelfServiceController {
       ...(email ? { email } : {}),
       ...(countryCode ? { countryCode } : {}),
     });
+  }
+
+  @Post('guarantor/resend-invite')
+  @ApiCreatedResponse({ type: Object })
+  resendGuarantorInvite(@Body('token') token: string) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.service.resendGuarantorInviteFromSelfService(token);
   }
 
   @Post('kyc-checkout')

@@ -27,6 +27,7 @@ import {
   reviewDriverDocument,
   sendDriverSelfServiceLink,
   sendGuarantorSelfServiceLink,
+  updateGuarantorReminderControls,
   unlinkDriverMobileAccessUser,
   updateDriverMobileAccessStatus,
   updateDriverStatus,
@@ -665,14 +666,42 @@ export async function sendGuarantorSelfServiceLinkAction(
 
   try {
     const delivery = await sendGuarantorSelfServiceLink(driverId);
+    revalidatePath(`/drivers/${driverId}`);
     return {
       delivery,
-      success: `A guarantor verification link was sent to ${delivery.destination}.`,
+      success: `Guarantor invitation sent to ${delivery.destination}.`,
     };
   } catch (error) {
     return {
       error:
         error instanceof Error ? error.message : 'Unable to send the guarantor verification link.',
+    };
+  }
+}
+
+export async function updateGuarantorReminderControlsAction(
+  _prevState: DriverGuarantorActionState,
+  formData: FormData,
+): Promise<DriverGuarantorActionState> {
+  const driverId = getOptionalTrimmedValue(formData, 'driverId');
+  const suppressed = formData.get('suppressed') === 'true';
+
+  if (!driverId) {
+    return { error: 'Driver is required before updating guarantor reminders.' };
+  }
+
+  try {
+    await updateGuarantorReminderControls(driverId, { suppressed });
+    revalidatePath(`/drivers/${driverId}`);
+    return {
+      success: suppressed
+        ? 'Guarantor reminders are now paused.'
+        : 'Guarantor reminders are active again.',
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Unable to update guarantor reminders right now.',
     };
   }
 }
