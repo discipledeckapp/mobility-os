@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { buildCreateAssignmentPayload } from './action-helpers';
 import {
   acceptAssignmentTerms,
   cancelAssignment,
@@ -38,7 +39,7 @@ export interface AssignmentBulkImportActionState {
 
 function getTrimmedValue(
   formData: FormData,
-  key: keyof CreateAssignmentInput | 'notes' | 'assignmentId',
+  key: keyof CreateAssignmentInput | 'assignmentId',
 ): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
@@ -83,148 +84,15 @@ export async function createAssignmentAction(
   _prevState: CreateAssignmentActionState,
   formData: FormData,
 ): Promise<CreateAssignmentActionState> {
-  const paymentModel = getTrimmedValue(
-    formData,
-    'paymentModel' as keyof CreateAssignmentInput,
-  );
-  const usesRemittance =
-    paymentModel === 'hire_purchase' ||
-    paymentModel === 'remittance' ||
-    paymentModel === '';
-  const remittanceAmount = getTrimmedValue(
-    formData,
-    'remittanceAmountMinorUnits' as keyof CreateAssignmentInput,
-  );
-  const parsedAmount = Number(remittanceAmount);
-  if (usesRemittance && (!Number.isFinite(parsedAmount) || parsedAmount < 1)) {
+  const createPayload = buildCreateAssignmentPayload(formData);
+  if (createPayload.error || !createPayload.payload) {
     return {
-      error: 'Expected remittance amount must be greater than 0.',
+      error: createPayload.error ?? 'Fleet, driver, and vehicle are required.',
     };
-  }
-
-  const payload: CreateAssignmentInput = {
-    fleetId: getTrimmedValue(formData, 'fleetId'),
-    driverId: getTrimmedValue(formData, 'driverId'),
-    vehicleId: getTrimmedValue(formData, 'vehicleId'),
-    ...(paymentModel
-      ? {
-          paymentModel:
-            paymentModel === 'salary'
-              ? 'salary'
-              : paymentModel === 'commission'
-                ? 'commission'
-                : paymentModel === 'hire_purchase'
-                  ? 'hire_purchase'
-                  : 'remittance',
-        }
-      : {}),
-    ...(usesRemittance ? { remittanceAmountMinorUnits: Math.round(parsedAmount) } : {}),
-  };
-
-  const notes = getTrimmedValue(formData, 'notes');
-  const remittanceFrequency = getTrimmedValue(
-    formData,
-    'remittanceFrequency' as keyof CreateAssignmentInput,
-  );
-  const remittanceCurrency = getTrimmedValue(
-    formData,
-    'remittanceCurrency' as keyof CreateAssignmentInput,
-  );
-  const remittanceModel = getTrimmedValue(
-    formData,
-    'remittanceModel' as keyof CreateAssignmentInput,
-  );
-  const remittanceStartDate = getTrimmedValue(
-    formData,
-    'remittanceStartDate' as keyof CreateAssignmentInput,
-  );
-  const remittanceCollectionDay = getTrimmedValue(
-    formData,
-    'remittanceCollectionDay' as keyof CreateAssignmentInput,
-  );
-  const contractType = getTrimmedValue(
-    formData,
-    'contractType' as keyof CreateAssignmentInput,
-  );
-  const principalAmount = getTrimmedValue(
-    formData,
-    'principalAmountMinorUnits' as keyof CreateAssignmentInput,
-  );
-  const totalTargetAmount = getTrimmedValue(
-    formData,
-    'totalTargetAmountMinorUnits' as keyof CreateAssignmentInput,
-  );
-  const depositAmount = getTrimmedValue(
-    formData,
-    'depositAmountMinorUnits' as keyof CreateAssignmentInput,
-  );
-  const contractDurationPeriods = getTrimmedValue(
-    formData,
-    'contractDurationPeriods' as keyof CreateAssignmentInput,
-  );
-  const finalInstallmentAmount = getTrimmedValue(
-    formData,
-    'finalInstallmentAmountMinorUnits' as keyof CreateAssignmentInput,
-  );
-  const contractEndDate = getTrimmedValue(
-    formData,
-    'contractEndDate' as keyof CreateAssignmentInput,
-  );
-
-  if (!payload.fleetId || !payload.driverId || !payload.vehicleId) {
-    return {
-      error: 'Fleet, driver, and vehicle are required.',
-    };
-  }
-
-  if (usesRemittance) {
-    payload.contractType =
-      contractType === 'hire_purchase' ? 'hire_purchase' : 'regular_hire';
-    payload.remittanceFrequency =
-      remittanceFrequency === 'weekly'
-        ? 'weekly'
-        : remittanceFrequency === 'monthly'
-          ? 'monthly'
-          : 'daily';
-    payload.remittanceModel =
-      remittanceModel === 'hire_purchase' || payload.contractType === 'hire_purchase'
-        ? 'hire_purchase'
-        : 'fixed';
-    if (remittanceCurrency) {
-      payload.remittanceCurrency = remittanceCurrency.toUpperCase();
-    }
-    if (remittanceStartDate) {
-      payload.remittanceStartDate = remittanceStartDate;
-    }
-    if (remittanceCollectionDay) {
-      payload.remittanceCollectionDay = Number(remittanceCollectionDay);
-    }
-    if (principalAmount && Number(principalAmount) > 0) {
-      payload.principalAmountMinorUnits = Number(principalAmount);
-    }
-    if (totalTargetAmount) {
-      payload.totalTargetAmountMinorUnits = Number(totalTargetAmount);
-    }
-    if (depositAmount) {
-      payload.depositAmountMinorUnits = Number(depositAmount);
-    }
-    if (finalInstallmentAmount && Number(finalInstallmentAmount) > 0) {
-      payload.finalInstallmentAmountMinorUnits = Number(finalInstallmentAmount);
-    }
-    if (contractDurationPeriods) {
-      payload.contractDurationPeriods = Number(contractDurationPeriods);
-    }
-    if (contractEndDate) {
-      payload.contractEndDate = contractEndDate;
-    }
-  }
-
-  if (notes) {
-    payload.notes = notes;
   }
 
   try {
-    const assignment = await createAssignment(payload);
+    const assignment = await createAssignment(createPayload.payload);
     revalidatePath('/assignments');
     revalidatePath(`/assignments/${assignment.id}`);
     revalidatePath('/');

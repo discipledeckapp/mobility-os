@@ -4,7 +4,11 @@ import { getCountryConfig, isCountrySupported } from '@mobility-os/domain-config
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
-  type CreateDriverInput,
+  buildCreateDriverPayload,
+  getVerificationSubmissionFeedback,
+  sanitizeSelfServiceErrorMessage,
+} from './action-helpers';
+import {
   type DriverIdentityResolutionResult,
   type DriverLivenessSessionRecord,
   type DriverSelfServiceDeliveryRecord,
@@ -102,97 +106,19 @@ export interface DriverBulkImportActionState {
   success?: string;
 }
 
-function sanitizeSelfServiceErrorMessage(message: string): string {
-  const normalized = message.toLowerCase();
-  if (
-    normalized.includes('provider') ||
-    normalized.includes('fallback') ||
-    normalized.includes('internal_free_service')
-  ) {
-    return 'Live verification is unavailable right now. Please try again.';
-  }
-  if (
-    normalized.includes('intelligence service') ||
-    normalized.includes('temporarily unavailable') ||
-    normalized.includes('status 500')
-  ) {
-    return 'Identity verification is temporarily unavailable. Please try again.';
-  }
-  return message;
-}
-
-function getVerificationSubmissionFeedback(
-  result: DriverIdentityResolutionResult,
-): Pick<ResolveDriverVerificationActionState, 'error' | 'success'> {
-  if (result.providerPending) {
-    return {
-      success:
-        'Identity verification was submitted successfully. The provider result is still being recovered.',
-    };
-  }
-
-  if (result.decision === 'failed' || result.providerLookupStatus === 'no_match') {
-    return {
-      error:
-        'Identity verification failed. Confirm the identifier and live selfie, then try again.',
-    };
-  }
-
-  if (
-    result.decision === 'review_needed' ||
-    result.decision === 'review_required' ||
-    result.providerLookupStatus === 'manual_review'
-  ) {
-    return {
-      success: 'Identity verification was submitted and is now awaiting review.',
-    };
-  }
-
-  if (result.isVerifiedMatch === true || result.decision === 'verified') {
-    return {
-      success: 'Identity verification completed successfully.',
-    };
-  }
-
-  return {
-    success: 'Identity verification was submitted and is still being processed.',
-  };
-}
-
-function getTrimmedValue(formData: FormData, key: keyof CreateDriverInput): string {
-  const value = formData.get(key);
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 export async function createDriverAction(
   _prevState: CreateDriverActionState,
   formData: FormData,
 ): Promise<CreateDriverActionState> {
-  const fleetId = getTrimmedValue(formData, 'fleetId');
-  const email = getTrimmedValue(formData, 'email');
-
-  if (!fleetId || !email) {
-    return { error: 'Fleet and email are required.' };
+  const createPayload = buildCreateDriverPayload(formData);
+  if (createPayload.error || !createPayload.payload) {
+    return { error: createPayload.error ?? 'Fleet and email are required.' };
   }
-
-  const payload: CreateDriverInput = { fleetId, email };
-
-  const firstName = getTrimmedValue(formData, 'firstName');
-  const lastName = getTrimmedValue(formData, 'lastName');
-  const phone = getTrimmedValue(formData, 'phone');
-  const dateOfBirth = getTrimmedValue(formData, 'dateOfBirth');
-  const nationality = getTrimmedValue(formData, 'nationality').toUpperCase();
-
-  if (firstName) payload.firstName = firstName;
-  if (lastName) payload.lastName = lastName;
-  if (phone) payload.phone = phone;
-  if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
-  if (nationality) payload.nationality = nationality;
 
   let driverId: string;
   let inviteStatus: 'sent' | 'skipped' | 'failed' | null = null;
   try {
-    const driver = await createDriver(payload);
+    const driver = await createDriver(createPayload.payload);
     driverId = driver.id;
     inviteStatus = driver.selfServiceInviteStatus ?? null;
   } catch (error) {

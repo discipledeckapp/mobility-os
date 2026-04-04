@@ -1556,6 +1556,58 @@ export interface WalletEntryRecord {
   createdAt: string;
 }
 
+export interface AccountingLedgerEntryRecord {
+  id: string;
+  walletId: string;
+  type: 'credit' | 'debit' | 'reversal';
+  direction: 'inflow' | 'outflow';
+  category: string;
+  amountMinorUnits: number;
+  signedAmountMinorUnits: number;
+  currency: string;
+  referenceId?: string | null;
+  referenceType?: string | null;
+  description?: string | null;
+  createdAt: string;
+  remittance?: {
+    remittanceId: string;
+    driverId: string;
+    assignmentId: string;
+    status: string;
+    dueDate: string;
+  } | null;
+}
+
+export interface AccountingBalanceSummaryRecord {
+  businessEntityId: string;
+  currency: string;
+  currentBalanceMinorUnits: number;
+  totalCreditsMinorUnits: number;
+  totalDebitsMinorUnits: number;
+  remittanceCollectedMinorUnits: number;
+  pendingRemittanceMinorUnits: number;
+  overdueRemittanceCount: number;
+  disputedRemittanceCount: number;
+  ledgerEntryCount: number;
+}
+
+export interface AccountingCategoryBreakdownRecord {
+  category: string;
+  amountMinorUnits: number;
+}
+
+export interface AccountingProfitAndLossRecord {
+  businessEntityId: string;
+  currency: string;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  revenueMinorUnits: number;
+  expenseMinorUnits: number;
+  netProfitMinorUnits: number;
+  revenueBreakdown: AccountingCategoryBreakdownRecord[];
+  expenseBreakdown: AccountingCategoryBreakdownRecord[];
+}
+
 export interface TenantAuthSessionRecord {
   userId: string;
   tenantId: string;
@@ -4205,6 +4257,56 @@ export async function listOperationalWalletEntries(
     cache: 'no-store',
     token: await getTenantApiToken(token),
   });
+}
+
+export async function getAccountingBalanceSummary(
+  businessEntityId: string,
+  token?: string,
+): Promise<AccountingBalanceSummaryRecord> {
+  return apiCoreFetch<AccountingBalanceSummaryRecord>(
+    `/accounting/${businessEntityId}/balance-summary`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function listAccountingLedger(
+  businessEntityId: string,
+  input: { page?: number; limit?: number; type?: 'credit' | 'debit' | 'reversal' } = {},
+  token?: string,
+): Promise<PaginatedApiResponse<AccountingLedgerEntryRecord>> {
+  const params = new URLSearchParams();
+  if (input.page) params.set('page', String(input.page));
+  if (input.limit) params.set('limit', String(input.limit));
+  if (input.type) params.set('type', input.type);
+
+  return apiCoreFetch<PaginatedApiResponse<AccountingLedgerEntryRecord>>(
+    `/accounting/${businessEntityId}/ledger${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
+}
+
+export async function getAccountingProfitAndLoss(
+  businessEntityId: string,
+  input: { dateFrom?: string; dateTo?: string } = {},
+  token?: string,
+): Promise<AccountingProfitAndLossRecord> {
+  const params = new URLSearchParams();
+  if (input.dateFrom) params.set('dateFrom', input.dateFrom);
+  if (input.dateTo) params.set('dateTo', input.dateTo);
+
+  return apiCoreFetch<AccountingProfitAndLossRecord>(
+    `/accounting/${businessEntityId}/profit-and-loss${params.toString() ? `?${params.toString()}` : ''}`,
+    {
+      cache: 'no-store',
+      token: await getTenantApiToken(token),
+    },
+  );
 }
 
 // ── Team management ────────────────────────────────────────────────────────────

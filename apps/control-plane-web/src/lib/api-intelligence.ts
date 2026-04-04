@@ -183,6 +183,39 @@ export interface IdentifierRecord {
   createdAt: string;
 }
 
+export function buildIntelligencePersonsQuery(
+  input: {
+    q?: string;
+    riskBand?: string;
+    countryCode?: string;
+    watchlistStatus?: string;
+    reviewState?: string;
+    roleType?: string;
+    reverificationRequired?: string;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (input.q) params.set('q', input.q);
+  if (input.riskBand) params.set('riskBand', input.riskBand);
+  if (input.countryCode) params.set('countryCode', input.countryCode);
+  if (input.watchlistStatus) params.set('watchlistStatus', input.watchlistStatus);
+  if (input.reviewState) params.set('reviewState', input.reviewState);
+  if (input.roleType) params.set('roleType', input.roleType);
+  if (input.reverificationRequired) params.set('reverificationRequired', input.reverificationRequired);
+  return params.toString() ? `?${params.toString()}` : '';
+}
+
+export function buildReviewCasesQuery(input: { status?: string; personId?: string } = {}) {
+  const params = new URLSearchParams();
+  if (input.status) {
+    params.set('status', input.status);
+  }
+  if (input.personId) {
+    params.set('personId', input.personId);
+  }
+  return params.toString() ? `?${params.toString()}` : '';
+}
+
 export function listIntelligencePersons(
   input: {
     q?: string;
@@ -195,15 +228,7 @@ export function listIntelligencePersons(
   } = {},
   token?: string,
 ) {
-  const params = new URLSearchParams();
-  if (input.q) params.set('q', input.q);
-  if (input.riskBand) params.set('riskBand', input.riskBand);
-  if (input.countryCode) params.set('countryCode', input.countryCode);
-  if (input.watchlistStatus) params.set('watchlistStatus', input.watchlistStatus);
-  if (input.reviewState) params.set('reviewState', input.reviewState);
-  if (input.roleType) params.set('roleType', input.roleType);
-  if (input.reverificationRequired) params.set('reverificationRequired', input.reverificationRequired);
-  const query = params.toString() ? `?${params.toString()}` : '';
+  const query = buildIntelligencePersonsQuery(input);
   return intelligenceFetch<IntelligencePersonRecord[]>(`/staff/persons${query}`, {}, token);
 }
 
@@ -247,14 +272,7 @@ export function listReviewCases(
   input: { status?: string; personId?: string } = {},
   token?: string,
 ) {
-  const params = new URLSearchParams();
-  if (input.status) {
-    params.set('status', input.status);
-  }
-  if (input.personId) {
-    params.set('personId', input.personId);
-  }
-  const query = params.toString();
+  const query = buildReviewCasesQuery(input);
   return intelligenceFetch<ReviewCaseRecord[]>(`/staff/review-cases${query}`, {}, token);
 }
 

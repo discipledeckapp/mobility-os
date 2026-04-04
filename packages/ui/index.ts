@@ -1,5 +1,6 @@
 export * from './badge';
 export * from './brand/mobiris-brand';
+export * from './brand/mobiris-mark';
 export * from './button';
 export * from './card';
 export * from './input';

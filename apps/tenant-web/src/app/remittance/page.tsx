@@ -11,7 +11,7 @@ import {
 import { TenantAppShell } from '../../features/shared/tenant-app-shell';
 import {
   TenantEmptyStateCard,
-  TenantHeroPanel,
+  TenantInlineSummary,
   TenantMetricCard,
   TenantMetricGrid,
   TenantSurfaceCard,
@@ -37,6 +37,11 @@ import {
 import { getFormattingLocale } from '../../lib/locale';
 import { CreateRemittanceForm } from './create-remittance-form';
 import { RemittanceRecordsPanel } from './remittance-records-panel';
+import {
+  getFriendlyRemittanceErrorMessage,
+  summarizeRemittanceAttention,
+  supportsRemittance,
+} from './view-helpers';
 
 function formatAmount(amountMinorUnits: number, currency: string, locale: string): string {
   return new Intl.NumberFormat(locale, {
@@ -56,27 +61,6 @@ function getDisputeTone(status: string): 'danger' | 'warning' | 'success' | 'neu
   if (status === 'resolved') return 'success';
   if (status === 'rejected') return 'danger';
   return 'neutral';
-}
-
-function getFriendlyRemittanceErrorMessage(message: string | null): string | null {
-  if (!message) {
-    return null;
-  }
-
-  const normalized = message.toLowerCase();
-  if (
-    normalized.includes('required database table') ||
-    normalized.includes('migration') ||
-    normalized.includes('prisma')
-  ) {
-    return 'We could not load remittance records right now. Please try again shortly.';
-  }
-
-  return message;
-}
-
-function supportsRemittance(paymentModel?: string | null): boolean {
-  return !paymentModel || paymentModel === 'remittance' || paymentModel === 'hire_purchase';
 }
 
 export default async function RemittancePage({
@@ -188,19 +172,10 @@ export default async function RemittancePage({
   const receivedMinorUnits = remittances
     .filter((remittance) => ['completed', 'partially_settled'].includes(remittance.status))
     .reduce((sum, remittance) => sum + remittance.amountMinorUnits, 0);
-  const typicalMinorUnits =
-    remittances.length > 0
-      ? Math.round(
-          remittances.reduce(
-            (sum, remittance) => sum + remittance.amountMinorUnits,
-            0,
-          ) / remittances.length,
-        )
-      : 0;
   const leakageMinorUnits = Math.max(0, expectedTodayMinorUnits - receivedMinorUnits);
-  const flaggedDrivers = drivers.filter(
-    (driver) => driver.enforcementStatus && driver.enforcementStatus !== 'clear',
-  ).length;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const { overdueCount, partiallySettledCount, outstandingMinorUnits } =
+    summarizeRemittanceAttention(remittances, todayIso);
   const recentDisputes = disputes.slice(0, 6);
   const recentDocuments = documents.slice(0, 6);
 
@@ -210,33 +185,61 @@ export default async function RemittancePage({
       eyebrow="Collections"
       title="Remittance"
     >
-      <TenantHeroPanel
-        actions={
-          showExportCard ? (
+      <section className="mb-6 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Collections
+            </p>
+            <h2 className="text-xl font-semibold tracking-[-0.04em] text-slate-950">
+              Collections needing attention
+            </h2>
+          </div>
+          {showExportCard ? (
             <a
               className="inline-flex h-11 items-center justify-center rounded-[var(--mobiris-radius-button)] border border-transparent bg-[var(--mobiris-primary)] px-5 text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_18px_32px_-18px_rgba(37,99,235,0.72)] transition-all duration-150 hover:bg-[var(--mobiris-primary-dark)]"
               href="/api/download/remittance-export"
             >
               Export remittance CSV
             </a>
-          ) : null
-        }
-        description="Record daily collections, compare expected versus settled cash, and keep reconciliation context close to every remittance record."
-        eyebrow="Collections workflow"
-        title="Operate remittance with the same clarity as your driver registry."
+          ) : null}
+        </div>
+        <TenantInlineSummary
+          items={[
+            { label: 'active', value: activeAssignments.length, tone: activeAssignments.length > 0 ? 'success' : 'neutral' },
+            { label: 'records', value: remittances.length, tone: 'neutral' },
+            {
+              label: 'overdue',
+              value: overdueCount,
+              tone: overdueCount > 0 ? 'warning' : 'neutral',
+            },
+          ]}
+        />
+      </section>
+
+      <TenantSurfaceCard
+        className="mb-6"
+        contentClassName="py-4"
+        description="Pending collections, disputes, and reconciliation issues"
+        title="Needs attention"
       >
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
-            {activeAssignments.length} active assignments ready for collection
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Pending</p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--mobiris-ink)]">
+              {remittances.filter((record) => record.status === 'pending').length}
+            </p>
           </div>
-          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
-            {remittances.length} recorded remittance entries
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Overdue</p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--mobiris-ink)]">{overdueCount}</p>
           </div>
-          <div className="rounded-[var(--mobiris-radius-card)] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700">
-            {disputes.length} disputes and {documents.length} linked documents
+          <div className="rounded-[var(--mobiris-radius-card)] border border-slate-200 bg-slate-50/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Disputes</p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--mobiris-ink)]">{disputes.length}</p>
           </div>
         </div>
-      </TenantHeroPanel>
+      </TenantSurfaceCard>
 
       {assignmentContextUnavailable ? (
         <div className="mb-6">
@@ -291,9 +294,9 @@ export default async function RemittancePage({
           />
           <TenantMetricCard
             accent="violet"
-            label="Flagged drivers"
-            note={`Today vs average ${formatAmount(typicalMinorUnits, operatingCurrency, locale)}`}
-            value={String(flaggedDrivers)}
+            label="Outstanding"
+            note={`${overdueCount} overdue · ${partiallySettledCount} partially settled`}
+            value={formatAmount(outstandingMinorUnits, operatingCurrency, locale)}
           />
         </TenantMetricGrid>
       ) : null}
@@ -319,13 +322,15 @@ export default async function RemittancePage({
               title="No remittance records yet"
             />
           ) : (
-            <RemittanceRecordsPanel
-              assignments={assignments}
-              drivers={drivers}
-              locale={locale}
-              remittances={remittances}
-              vehicles={vehicles}
-            />
+      <RemittanceRecordsPanel
+        assignments={assignments}
+        description="Review the full collection ledger."
+        drivers={drivers}
+        locale={locale}
+        remittances={remittances}
+        title="All remittance records"
+        vehicles={vehicles}
+      />
           )}
       </TenantSurfaceCard>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge, Button, Input, RegistryTable, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from '@mobility-os/ui';
@@ -12,7 +13,7 @@ import {
   type VehicleRecord,
 } from '../../lib/api-core';
 import { getVehiclePrimaryLabel } from '../../lib/vehicle-display';
-import { TenantMetricCard, TenantMetricGrid } from '../../features/shared/tenant-page-patterns';
+import { TenantInlineSummary, TenantMetricCard, TenantMetricGrid } from '../../features/shared/tenant-page-patterns';
 import { RemittanceRowActions } from './remittance-row-actions';
 
 function formatAmount(amountMinorUnits: number, currency: string, locale: string): string {
@@ -36,12 +37,18 @@ export function RemittanceRecordsPanel({
   drivers,
   vehicles,
   locale,
+  title = 'Collection ledger',
+  description = 'Confirm pending collections, resolve disputes in batches, and keep remittance decisions close to the live ledger.',
+  summary,
 }: {
   remittances: RemittanceRecord[];
   assignments: AssignmentRecord[];
   drivers: DriverRecord[];
   vehicles: VehicleRecord[];
   locale: string;
+  title?: string;
+  description?: string;
+  summary?: ReactNode;
 }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -100,7 +107,7 @@ export function RemittanceRecordsPanel({
 
   return (
     <RegistryTable
-      description="Confirm pending collections, resolve disputes in batches, and keep remittance decisions close to the live ledger."
+      description={description}
       emptyState={<Text tone="muted">No remittance entries match the current view.</Text>}
       filteredItems={remittances.length}
       onPageChange={() => undefined}
@@ -109,14 +116,27 @@ export function RemittanceRecordsPanel({
       pageSize={Math.max(remittances.length, 1)}
       pageSizeOptions={[Math.max(remittances.length, 1)]}
       summary={
-        <TenantMetricGrid>
-          <TenantMetricCard accent="primary" label="Total records" note="Current history" value={remittances.length} />
-          <TenantMetricCard accent="warning" label="Pending" note="Ready for confirmation" value={pendingCount} />
-          <TenantMetricCard accent="success" label="Settled" note="Completed or partially settled" value={completedCount} />
-          <TenantMetricCard accent="danger" label="Disputed" note="Need review or resolution" value={disputedCount} />
-        </TenantMetricGrid>
+        summary ?? (
+          <>
+            <TenantInlineSummary
+              className="md:hidden"
+              items={[
+                { label: 'records', value: remittances.length, tone: 'neutral' },
+                { label: 'pending', value: pendingCount, tone: pendingCount > 0 ? 'warning' : 'neutral' },
+                { label: 'settled', value: completedCount, tone: completedCount > 0 ? 'success' : 'neutral' },
+                { label: 'disputed', value: disputedCount, tone: disputedCount > 0 ? 'danger' : 'neutral' },
+              ]}
+            />
+            <TenantMetricGrid className="hidden md:grid">
+              <TenantMetricCard accent="primary" label="Total records" note="Current history" value={remittances.length} />
+              <TenantMetricCard accent="warning" label="Pending" note="Ready for confirmation" value={pendingCount} />
+              <TenantMetricCard accent="success" label="Settled" note="Completed or partially settled" value={completedCount} />
+              <TenantMetricCard accent="danger" label="Disputed" note="Need review or resolution" value={disputedCount} />
+            </TenantMetricGrid>
+          </>
+        )
       }
-      title="Collection ledger"
+      title={title}
       toolbar={
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">

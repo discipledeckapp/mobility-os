@@ -40,7 +40,12 @@ const navigationGroups: NavGroup[] = [
   },
   {
     label: 'Intelligence and governance',
-    items: [{ href: '/governance', label: 'Governance' }],
+    items: [
+      { href: '/intelligence', label: 'Intelligence' },
+      { href: '/intelligence/review-cases', label: 'Review cases' },
+      { href: '/intelligence/flagged-persons', label: 'Flagged persons' },
+      { href: '/governance', label: 'Governance' },
+    ],
   },
 ] as const;
 

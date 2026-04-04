@@ -161,8 +161,13 @@ describe('DriversService', () => {
         },
       },
     });
-    prisma.$transaction.mockImplementation(async (operations: unknown[]) =>
-      Promise.all(operations),
+    prisma.$transaction.mockImplementation(
+      async (input: unknown[] | ((tx: typeof prisma) => Promise<unknown> | unknown)) => {
+        if (typeof input === 'function') {
+          return input(prisma as never);
+        }
+        return Promise.all(input);
+      },
     );
     documentStorageService.uploadFile.mockResolvedValue({
       storageKey: 'doc-key',
@@ -239,6 +244,95 @@ describe('DriversService', () => {
       }),
     });
     expect(result.driverId).toBe('driver_1');
+  });
+
+  it('keeps activation and assignment non-ready when full-trust guarantor verification is still pending', () => {
+    const readiness = (service as unknown as {
+      computeReadiness: (
+        driver: Record<string, unknown>,
+        settings: Record<string, unknown>,
+      ) => {
+        activationReadiness: string;
+        assignmentReadiness: string;
+        activationReadinessReasons: string[];
+        assignmentReadinessReasons: string[];
+        verificationComponents: Array<{ key: string; required: boolean; status: string }>;
+      };
+    }).computeReadiness(
+      {
+        status: 'active',
+        identityStatus: 'verified',
+        guarantorStatus: 'pending_verification',
+        guarantorPersonId: null,
+        hasApprovedLicence: true,
+        hasMobileAccess: true,
+        approvedDocumentTypes: ['drivers-license'],
+        adminAssignmentOverride: false,
+      },
+      {
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: ['drivers-license'],
+        requireGuarantor: true,
+        guarantorBlocking: true,
+        requireGuarantorVerification: true,
+        allowAdminAssignmentOverride: true,
+        verificationTier: 'FULL_TRUST_VERIFICATION',
+      },
+    );
+
+    expect(readiness.activationReadiness).not.toBe('ready');
+    expect(readiness.assignmentReadiness).not.toBe('ready');
+    expect(readiness.activationReadinessReasons).toContain('A verified guarantor is required.');
+    expect(readiness.assignmentReadinessReasons).toContain('A verified guarantor is required.');
+    expect(readiness.verificationComponents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'guarantor',
+          required: true,
+          status: 'pending',
+        }),
+      ]),
+    );
+  });
+
+  it('blocks admin assignment override when active fraud flags are present', () => {
+    const readiness = (service as unknown as {
+      computeReadiness: (
+        driver: Record<string, unknown>,
+        settings: Record<string, unknown>,
+      ) => {
+        assignmentReadiness: string;
+        assignmentReadinessReasons: string[];
+      };
+    }).computeReadiness(
+      {
+        status: 'active',
+        identityStatus: 'verified',
+        guarantorStatus: 'verified',
+        guarantorPersonId: 'person_1',
+        hasApprovedLicence: true,
+        hasMobileAccess: true,
+        approvedDocumentTypes: ['drivers-license'],
+        adminAssignmentOverride: true,
+        isWatchlisted: true,
+        duplicateIdentityFlag: false,
+        riskBand: 'critical',
+      },
+      {
+        requireIdentityVerificationForActivation: true,
+        requiredDriverDocumentSlugs: ['drivers-license'],
+        requireGuarantor: true,
+        guarantorBlocking: true,
+        requireGuarantorVerification: true,
+        allowAdminAssignmentOverride: true,
+        verificationTier: 'FULL_TRUST_VERIFICATION',
+      },
+    );
+
+    expect(readiness.assignmentReadiness).not.toBe('ready');
+    expect(readiness.assignmentReadinessReasons).toContain(
+      'Admin override is blocked because active fraud flags are present on this driver.',
+    );
   });
 
   it('falls back to the stored portrait document when a live selfie exists only on the portrait record', async () => {
@@ -656,6 +750,87 @@ describe('DriversService', () => {
     expect(result.step).toBe('guarantor');
     expect(result.requiresGuarantor).toBe(true);
     expect(result.guarantorVerified).toBe(false);
+  });
+
+  it('allows onboarding to continue while guarantor verification is pending', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requiredDriverDocumentSlugs: ['drivers-license'],
+          driverPaysKyc: false,
+          requireGuarantor: true,
+          requireGuarantorVerification: true,
+        },
+      },
+    });
+    jest.spyOn(service as never, 'getSelfServiceVerificationPolicy' as never).mockResolvedValue({
+      enabledDriverIdentifierTypes: ['NATIONAL_ID'],
+      requiredDriverIdentifierTypes: ['NATIONAL_ID'],
+      requiredDriverDocumentSlugs: ['drivers-license'],
+      driverPaysKyc: false,
+      kycPaymentVerified: true,
+      verificationPaymentState: 'not_required',
+      verificationEntitlementState: 'none',
+      verificationState: 'success',
+      verificationEntitlementCode: null,
+      verificationPaymentReference: null,
+      verificationConsumedAt: null,
+      verificationAttemptCount: 1,
+      verificationBlockedReason: null,
+      verificationPayer: 'organisation',
+      verificationAmountMinorUnits: 0,
+      verificationCurrency: 'NGN',
+      verificationPaymentStatus: 'ready',
+      verificationPaymentMessage: null,
+    } as never);
+    jwtService.verifyAsync.mockResolvedValue({
+      purpose: 'driver_self_service',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+    });
+    prisma.driver.findUnique.mockResolvedValue({
+      id: 'driver_1',
+      tenantId: 'tenant_1',
+      status: 'inactive',
+      identityStatus: 'verified',
+      nationality: 'NG',
+      operationalProfile: {
+        phoneNumber: '+2348012345678',
+        address: '12 Marina Road',
+        town: 'Lagos',
+        localGovernmentArea: 'Eti-Osa',
+        state: 'Lagos',
+        nextOfKinName: 'Ngozi Okonkwo',
+        nextOfKinPhone: '+2348099999999',
+        emergencyContactName: 'Emeka Okonkwo',
+        emergencyContactPhone: '+2348088888888',
+      },
+    });
+    prisma.user.findFirst
+      .mockResolvedValueOnce({ id: 'user_1' })
+      .mockResolvedValueOnce({ id: 'user_1', tenantId: 'tenant_1', driverId: 'driver_1' });
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.driverDocumentVerification.findMany.mockResolvedValue([
+      { documentType: 'drivers-license', status: 'verified' },
+    ]);
+    prisma.driverGuarantor.findFirst.mockResolvedValue({
+      id: 'guarantor_1',
+      tenantId: 'tenant_1',
+      driverId: 'driver_1',
+      name: 'Chinwe Okafor',
+      phone: '+2348012345678',
+      email: 'chinwe@example.com',
+      status: 'pending_verification',
+      disconnectedAt: null,
+    });
+
+    const result = await service.getOnboardingStep('driver-self-service-token');
+
+    expect(result.step).toBe('complete');
+    expect(result.requiresGuarantor).toBe(true);
+    expect(result.guarantorVerified).toBe(false);
+    expect(result.guarantorStatus).toBe('pending_verification');
   });
 
   it('auto-sends the guarantor link when a verified driver adds a guarantor with email', async () => {

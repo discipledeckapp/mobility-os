@@ -14,6 +14,7 @@ describe('RemittanceService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -54,6 +55,7 @@ describe('RemittanceService', () => {
     );
     prisma.remittance.findFirst.mockResolvedValue(null);
     prisma.remittance.findMany.mockResolvedValue([]);
+    prisma.remittance.count.mockResolvedValue(0);
     prisma.assignment.findMany.mockResolvedValue([]);
     prisma.vehicle.findUnique.mockResolvedValue({
       id: 'vehicle_1',
@@ -127,6 +129,163 @@ describe('RemittanceService', () => {
       }),
     );
     expect(result.status).toBe('pending');
+  });
+
+  it('lists remittances with reconciliation context and applied filters', async () => {
+    prisma.remittance.findMany.mockResolvedValue([
+      {
+        id: 'rem_1',
+        tenantId: 'tenant_1',
+        assignmentId: 'assignment_1',
+        driverId: 'driver_1',
+        vehicleId: 'vehicle_1',
+        fleetId: 'fleet_1',
+        businessEntityId: 'be_1',
+        amountMinorUnits: 150000,
+        currency: 'NGN',
+        dueDate: '2026-03-20',
+        paidDate: null,
+        status: 'pending',
+        notes: null,
+        clientReferenceId: null,
+        createdAt: new Date('2026-03-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-20T00:00:00.000Z'),
+      },
+    ]);
+    prisma.remittance.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'rem_1',
+          tenantId: 'tenant_1',
+          assignmentId: 'assignment_1',
+          driverId: 'driver_1',
+          vehicleId: 'vehicle_1',
+          fleetId: 'fleet_1',
+          businessEntityId: 'be_1',
+          amountMinorUnits: 150000,
+          currency: 'NGN',
+          dueDate: '2026-03-20',
+          paidDate: null,
+          status: 'pending',
+          notes: null,
+          clientReferenceId: null,
+          createdAt: new Date('2026-03-20T00:00:00.000Z'),
+          updatedAt: new Date('2026-03-20T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          assignmentId: 'assignment_1',
+          dueDate: '2026-03-20',
+          amountMinorUnits: 150000,
+          status: 'pending',
+        },
+      ]);
+    prisma.remittance.count.mockResolvedValue(1);
+    prisma.assignment.findMany.mockResolvedValue([
+      {
+        id: 'assignment_1',
+        status: 'active',
+        contractSnapshot: {
+          contractType: 'regular_hire',
+          currency: 'NGN',
+          regularHire: {
+            expectedPerPeriodAmountMinorUnits: 200000,
+          },
+        },
+        remittanceModel: 'fixed',
+        remittanceFrequency: 'daily',
+        remittanceAmountMinorUnits: 200000,
+        remittanceCurrency: 'NGN',
+        remittanceStartDate: '2026-03-20',
+        remittanceCollectionDay: null,
+      },
+    ]);
+
+    const result = await service.list('tenant_1', {
+      fleetIds: ['fleet_1'],
+      status: 'pending',
+      page: 1,
+      limit: 20,
+    });
+
+    expect(prisma.remittance.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant_1',
+          fleetId: { in: ['fleet_1'] },
+          status: 'pending',
+        }),
+      }),
+    );
+    expect(result.total).toBe(1);
+    expect(result.data[0]?.reconciliation).toEqual(
+      expect.objectContaining({
+        contractType: 'regular_hire',
+        expectedAmountMinorUnits: 200000,
+        varianceMinorUnits: -50000,
+      }),
+    );
+  });
+
+  it('exports CSV with reconciliation and outstanding-balance fields', async () => {
+    prisma.remittance.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'rem_1',
+          tenantId: 'tenant_1',
+          assignmentId: 'assignment_1',
+          driverId: 'driver_1',
+          vehicleId: 'vehicle_1',
+          fleetId: 'fleet_1',
+          businessEntityId: 'be_1',
+          amountMinorUnits: 150000,
+          currency: 'NGN',
+          dueDate: '2026-03-20',
+          paidDate: null,
+          status: 'pending',
+          notes: 'First remittance',
+          clientReferenceId: null,
+          createdAt: new Date('2026-03-20T00:00:00.000Z'),
+          updatedAt: new Date('2026-03-20T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          assignmentId: 'assignment_1',
+          dueDate: '2026-03-20',
+          amountMinorUnits: 150000,
+          status: 'pending',
+        },
+      ]);
+    prisma.assignment.findMany.mockResolvedValue([
+      {
+        id: 'assignment_1',
+        status: 'active',
+        contractSnapshot: {
+          contractType: 'regular_hire',
+          currency: 'NGN',
+          regularHire: {
+            expectedPerPeriodAmountMinorUnits: 200000,
+          },
+        },
+        remittanceModel: 'fixed',
+        remittanceFrequency: 'daily',
+        remittanceAmountMinorUnits: 200000,
+        remittanceCurrency: 'NGN',
+        remittanceStartDate: '2026-03-20',
+        remittanceCollectionDay: null,
+      },
+    ]);
+
+    const csv = await service.exportCsv('tenant_1', { fleetIds: ['fleet_1'] });
+
+    expect(csv).toContain('expectedAmountMinorUnits');
+    expect(csv).toContain('outstandingBalanceMinorUnits');
+    expect(csv).toContain('regular_hire');
+    expect(csv).toContain('50000');
+    expect(csv).toContain('First remittance');
   });
 
   it('derives the remittance due date from the hire-purchase contract schedule when none is supplied', async () => {

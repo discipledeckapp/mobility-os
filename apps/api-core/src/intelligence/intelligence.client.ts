@@ -232,6 +232,7 @@ export class IntelligenceClient {
     countryCode: string;
     identifierType: string;
     identifierValue: string;
+    livenessPassed?: boolean;
     validationData?: {
       firstName?: string;
       middleName?: string;
@@ -244,6 +245,7 @@ export class IntelligenceClient {
   }): Promise<MatchingResult> {
     return this.post<MatchingResult>('/api/v1/internal/matching/enrollments', {
       tenantId: input.tenantId,
+      ...(input.livenessPassed !== undefined ? { livenessPassed: input.livenessPassed } : {}),
       countryCode: input.countryCode,
       identifiers: [
         {

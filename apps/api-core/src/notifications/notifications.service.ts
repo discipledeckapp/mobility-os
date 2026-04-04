@@ -769,6 +769,42 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async sendDriverInviteRequestEmail(input: {
+    companyEmail: string;
+    companyName?: string | null;
+    driverName: string;
+    driverEmail?: string | null;
+    driverPhone?: string | null;
+  }): Promise<void> {
+    const recipientName = input.companyName?.trim() || 'Fleet operator';
+    const driverContactSummary = [
+      input.driverEmail?.trim() ? `Email: ${input.driverEmail.trim()}` : null,
+      input.driverPhone?.trim() ? `Phone: ${input.driverPhone.trim()}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const body = [
+      `${input.driverName.trim()} asked to be invited into your Mobiris Fleet OS driver onboarding flow.`,
+      driverContactSummary
+        ? `Contact details: ${driverContactSummary}.`
+        : 'The driver did not include a contact detail in the request.',
+      'If this person should continue onboarding, open your Drivers workspace and send a driver invitation.',
+    ].join(' ');
+
+    await this.mailer.sendEmail({
+      to: [{ address: input.companyEmail.trim().toLowerCase(), name: recipientName }],
+      subject: `${recipientName}: Driver invite request`,
+      htmlBody: this.buildNotificationEmailHtml({
+        recipientName,
+        title: 'Driver invite request',
+        body,
+        organisationName: 'Mobiris Fleet OS',
+        actionUrl: '/drivers',
+      }),
+    });
+  }
+
   private formatDriverName(input: {
     firstName?: string | null;
     lastName?: string | null;

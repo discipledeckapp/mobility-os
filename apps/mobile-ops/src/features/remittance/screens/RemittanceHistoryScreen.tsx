@@ -16,6 +16,7 @@ import { getCurrencyLabel } from '../../../lib/currency';
 import type { ScreenProps } from '../../../navigation/types';
 import { getCurrencyMultiplier } from '../../../services/remittance-service';
 import { tokens } from '../../../theme/tokens';
+import { historyTone, summarizeRemittanceHistory } from '../history-helpers';
 
 export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceHistory'>) {
   const { session } = useAuth();
@@ -63,26 +64,7 @@ export function RemittanceHistoryScreen({ navigation }: ScreenProps<'RemittanceH
     }
   };
 
-  const totals = useMemo(() => {
-    const totalMinorUnits = history.reduce((sum, record) => sum + record.amountMinorUnits, 0);
-    const pendingMinorUnits = history
-      .filter((record) => record.status === 'pending')
-      .reduce((sum, record) => sum + record.amountMinorUnits, 0);
-    const settledMinorUnits = history
-      .filter((record) => record.status === 'completed' || record.status === 'partially_settled')
-      .reduce((sum, record) => sum + record.amountMinorUnits, 0);
-    const outstandingMinorUnits = history.reduce(
-      (sum, record) => sum + (record.reconciliation?.outstandingBalanceMinorUnits ?? 0),
-      0,
-    );
-
-    return {
-      totalMinorUnits,
-      pendingMinorUnits,
-      settledMinorUnits,
-      outstandingMinorUnits,
-    };
-  }, [history]);
+  const totals = useMemo(() => summarizeRemittanceHistory(history), [history]);
 
   return (
     <Screen
@@ -226,18 +208,6 @@ function formatMajorAmount(amountMinorUnits: number, minorUnit?: number | null) 
   return (amountMinorUnits / getCurrencyMultiplier(safeMinorUnit)).toFixed(safeMinorUnit);
 }
 
-function historyTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
-  if (status === 'completed' || status === 'partially_settled') {
-    return 'success';
-  }
-  if (status === 'disputed' || status === 'cancelled_due_to_assignment_end') {
-    return 'danger';
-  }
-  if (status === 'pending') {
-    return 'warning';
-  }
-  return 'neutral';
-}
 
 function formatStatusLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());

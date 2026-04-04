@@ -41,6 +41,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { VehicleCatalogModule } from './vehicle-catalog/vehicle-catalog.module';
 import { VehicleRiskModule } from './vehicle-risk/vehicle-risk.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
+import { AccountingModule } from './accounting/accounting.module';
 
 function createLoggerModule() {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -58,6 +59,8 @@ function createLoggerModule() {
         'req.body.token',
         'req.body.code',
         'req.body.selfieImageBase64',
+        'req.body.images',
+        'req.body.imageGallery',
         'req.body.identifiers[*].value',
       ],
       censor: '[Redacted]',
@@ -129,7 +132,7 @@ function createLoggerModule() {
     ThrottlerModule.forRoot([
       {
         ttl: 60_000,
-        limit: 10,
+        limit: 120,
       },
     ]),
 
@@ -165,11 +168,11 @@ function createLoggerModule() {
     AssignmentsModule,
     RemittanceModule,
     OperationalWalletsModule,
+    AccountingModule,
     InternalProvisioningModule,
     InternalTenantsModule,
     SelfSignupModule,
     TeamModule,
-    // AccountingModule,
 
     // ── Ancillary ─────────────────────────────────────────────────────────────
     // ValuationsModule,

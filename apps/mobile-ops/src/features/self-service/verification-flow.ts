@@ -144,3 +144,8 @@ export function resolveNextDriverAction(driver: DriverRecord, uploadedDocuments:
     target: uploadedDocuments > 0 ? ('SelfServiceReadiness' as const) : ('SelfServiceVerification' as const),
   };
 }
+
+export function isDriverOnboardingComplete(driver: DriverRecord): boolean {
+  const requiredSteps = buildDriverOnboardingSteps(driver).filter((step) => step.required);
+  return requiredSteps.every((step) => step.status === 'completed');
+}

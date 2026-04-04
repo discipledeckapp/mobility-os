@@ -591,6 +591,180 @@ type DriverAdminOverrideState = {
   adminAssignmentOverrideConfirmedBy?: string | null;
 };
 
+type DriverWriteData = {
+  tenantId?: string;
+  fleetId?: string | null;
+  operatingUnitId?: string | null;
+  businessEntityId?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  dateOfBirth?: string | null;
+  nationality?: string | null;
+  status?: string;
+  identityStatus?: string;
+  operationalProfile?: Prisma.InputJsonValue;
+  identitySignatureImageUrl?: string | null;
+  identityProfile?: Prisma.InputJsonValue;
+  identityVerificationMetadata?: Prisma.InputJsonValue;
+  identityProviderRawData?: Prisma.InputJsonValue;
+  identityReviewCaseId?: string | null;
+  identityReviewStatus?: string | null;
+  identityLastDecision?: string | null;
+  identityVerificationConfidence?: number | null;
+  identityLastVerifiedAt?: Date | null;
+  identityLivenessPassed?: boolean | null;
+  identityLivenessProvider?: string | null;
+  identityLivenessConfidence?: number | null;
+  identityLivenessReason?: string | null;
+  kycPaymentReference?: string | null;
+  kycPaymentVerifiedAt?: Date | null;
+  adminAssignmentOverride?: boolean;
+  adminAssignmentOverrideRequestedAt?: Date | null;
+  adminAssignmentOverrideRequestedBy?: string | null;
+  adminAssignmentOverrideReason?: string | null;
+  adminAssignmentOverrideEvidence?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  adminAssignmentOverrideOtpHash?: string | null;
+  adminAssignmentOverrideOtpExpiresAt?: Date | null;
+  adminAssignmentOverrideConfirmedAt?: Date | null;
+  adminAssignmentOverrideConfirmedBy?: string | null;
+};
+
+type DriverWriteDelegate = {
+  create(args: { data: DriverWriteData }): Promise<Driver>;
+  update(args: { where: { id: string }; data: DriverWriteData }): Promise<Driver>;
+};
+
+type VerificationEntitlementDelegate = {
+  findFirst(args: Record<string, unknown>): Promise<VerificationEntitlementRecord | null>;
+};
+
+type VerificationAttemptDelegate = {
+  findFirst(args: Record<string, unknown>): Promise<VerificationAttemptRecord | null>;
+};
+
+type DriverDocumentVerificationDelegate = {
+  create(args: {
+    data: Record<string, unknown>;
+  }): Promise<DriverDocumentVerificationRecord>;
+  findFirst(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord | null>;
+  update(args: {
+    where: { id: string };
+    data: Record<string, unknown>;
+  }): Promise<DriverDocumentVerificationRecord>;
+  findMany(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord[]>;
+};
+
+type DriverDocumentDelegate = {
+  findMany(args: {
+    where: { tenantId: string; driverId?: string | { in: string[] } };
+    orderBy?: { createdAt: 'desc' };
+    select?: { driverId?: boolean; documentType?: boolean; status?: boolean };
+  }): Promise<
+    Array<
+      Pick<DriverDocumentRecord, 'driverId' | 'documentType' | 'status'> | DriverDocumentRecord
+    >
+  >;
+  create(args: {
+    data: Omit<DriverDocumentRecord, 'id' | 'createdAt' | 'updatedAt'>;
+  }): Promise<DriverDocumentRecord>;
+  findUnique(args: { where: { id: string } }): Promise<DriverDocumentRecord | null>;
+  findFirst(args: {
+    where: { tenantId: string; driverId: string; documentType: string; status: string };
+    orderBy?: { createdAt: 'desc' };
+  }): Promise<DriverDocumentRecord | null>;
+  update(args: {
+    where: { id: string };
+    data: Partial<
+      Pick<DriverDocumentRecord, 'status' | 'expiresAt' | 'reviewedBy' | 'reviewedAt'>
+    >;
+  }): Promise<DriverDocumentRecord>;
+  updateMany(args: {
+    where: {
+      tenantId: string;
+      status: string;
+      expiresAt: { lt: Date };
+      driverId?: { in: string[] };
+    };
+    data: Pick<DriverDocumentRecord, 'status'>;
+  }): Promise<{ count: number }>;
+  delete(args: { where: { id: string } }): Promise<DriverDocumentRecord>;
+};
+
+type DriverGuarantorDelegate = {
+  findUnique(args: { where: { driverId: string } }): Promise<DriverGuarantorRecord | null>;
+  findMany<TRecord = DriverGuarantorRecord>(args: {
+    where: {
+      tenantId?: string;
+      driverId?: { in: string[] };
+      status?: string;
+      disconnectedAt?: null;
+      guarantorReminderSuppressed?: boolean;
+      OR?: Array<{ phone: string } | { email: string }>;
+    };
+    orderBy?: { createdAt: 'asc' };
+    select?: Record<string, boolean>;
+  }): Promise<TRecord[]>;
+  upsert(args: {
+    where: { driverId: string };
+    create: Omit<DriverGuarantorRecord, 'id' | 'createdAt' | 'updatedAt'>;
+    update: Pick<
+      DriverGuarantorRecord,
+      | 'name'
+      | 'phone'
+      | 'email'
+      | 'countryCode'
+      | 'relationship'
+      | 'status'
+      | 'personId'
+      | 'dateOfBirth'
+      | 'gender'
+      | 'selfieImageUrl'
+      | 'providerImageUrl'
+      | 'inviteStatus'
+      | 'lastInviteSentAt'
+      | 'inviteExpiresAt'
+      | 'guarantorReminderCount'
+      | 'lastGuarantorReminderSentAt'
+      | 'guarantorReminderSuppressed'
+      | 'responsibilityAcceptedAt'
+      | 'responsibilityAcceptanceEvidence'
+      | 'disconnectedAt'
+      | 'disconnectedReason'
+    >;
+  }): Promise<DriverGuarantorRecord>;
+  update(args: {
+    where: { driverId: string };
+    data: Partial<
+      Pick<
+        DriverGuarantorRecord,
+        | 'status'
+        | 'disconnectedAt'
+        | 'disconnectedReason'
+        | 'personId'
+        | 'inviteStatus'
+        | 'lastInviteSentAt'
+        | 'inviteExpiresAt'
+        | 'guarantorReminderCount'
+        | 'lastGuarantorReminderSentAt'
+        | 'guarantorReminderSuppressed'
+        | 'responsibilityAcceptedAt'
+        | 'responsibilityAcceptanceEvidence'
+      >
+    >;
+  }): Promise<DriverGuarantorRecord>;
+};
+
+type DriversPrismaExtensions = {
+  driver: DriverWriteDelegate;
+  verificationEntitlement?: VerificationEntitlementDelegate;
+  verificationAttempt?: VerificationAttemptDelegate;
+  driverDocumentVerification: DriverDocumentVerificationDelegate;
+  driverDocument: DriverDocumentDelegate;
+  driverGuarantor: DriverGuarantorDelegate;
+};
+
 const DRIVER_LICENCE_DOCUMENT_TYPE = 'drivers-license';
 const DOCUMENT_SLUG_TO_IDENTIFIER_TYPE: Record<string, string> = {
   'national-id': 'NATIONAL_ID',
@@ -614,12 +788,6 @@ const DRIVER_MOBILE_CUSTOM_PERMISSIONS = [
   Permission.RemittanceRead,
   Permission.RemittanceWrite,
 ] as const;
-
-// TODO: Remove the narrow write casts in this service after the api-core Prisma
-// generation paths are unified. This repo currently has a stale secondary client
-// under src/generated/prisma while application code imports @prisma/client.
-// Runtime generation includes the new driver identity fields, but TypeScript
-// write inputs can lag behind until the client path inconsistency is cleaned up.
 
 @Injectable()
 export class DriversService {
@@ -1388,34 +1556,24 @@ export class DriversService {
     };
   }
 
-  private get driverDocumentVerifications(): {
-    create(args: {
-      data: Record<string, unknown>;
-    }): Promise<DriverDocumentVerificationRecord>;
-    findFirst(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord | null>;
-    update(args: {
-      where: { id: string };
-      data: Record<string, unknown>;
-    }): Promise<DriverDocumentVerificationRecord>;
-    findMany(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord[]>;
-  } {
-    return (
-      this.prisma as PrismaService & {
-        driverDocumentVerification: {
-          create(args: {
-            data: Record<string, unknown>;
-          }): Promise<DriverDocumentVerificationRecord>;
-          findFirst(
-            args: Record<string, unknown>,
-          ): Promise<DriverDocumentVerificationRecord | null>;
-          update(args: {
-            where: { id: string };
-            data: Record<string, unknown>;
-          }): Promise<DriverDocumentVerificationRecord>;
-          findMany(args: Record<string, unknown>): Promise<DriverDocumentVerificationRecord[]>;
-        };
-      }
-    ).driverDocumentVerification;
+  private get driverDocumentVerifications(): DriverDocumentVerificationDelegate {
+    return this.prismaExtensions.driverDocumentVerification;
+  }
+
+  private get prismaExtensions(): PrismaService & DriversPrismaExtensions {
+    return this.prisma as PrismaService & DriversPrismaExtensions;
+  }
+
+  private get driverWriter(): DriverWriteDelegate {
+    return this.prismaExtensions.driver;
+  }
+
+  private get verificationEntitlementDelegate(): VerificationEntitlementDelegate | null {
+    return this.prismaExtensions.verificationEntitlement ?? null;
+  }
+
+  private get verificationAttemptDelegate(): VerificationAttemptDelegate | null {
+    return this.prismaExtensions.verificationAttempt ?? null;
   }
 
   constructor(
@@ -1511,13 +1669,7 @@ export class DriversService {
       return rows[0];
     }
 
-    const fallbackDelegate = (
-      this.prisma as PrismaService & {
-        verificationEntitlement?: {
-          findFirst(args: Record<string, unknown>): Promise<VerificationEntitlementRecord | null>;
-        };
-      }
-    ).verificationEntitlement;
+    const fallbackDelegate = this.verificationEntitlementDelegate;
 
     if (!fallbackDelegate) {
       return null;
@@ -1552,13 +1704,7 @@ export class DriversService {
       return rows[0];
     }
 
-    const fallbackDelegate = (
-      this.prisma as PrismaService & {
-        verificationAttempt?: {
-          findFirst(args: Record<string, unknown>): Promise<VerificationAttemptRecord | null>;
-        };
-      }
-    ).verificationAttempt;
+    const fallbackDelegate = this.verificationAttemptDelegate;
 
     if (!fallbackDelegate) {
       return null;
@@ -2634,208 +2780,12 @@ export class DriversService {
     ) as Prisma.InputJsonValue;
   }
 
-  private get driverDocuments(): {
-    findMany(args: {
-      where: { tenantId: string; driverId?: string | { in: string[] } };
-      orderBy?: { createdAt: 'desc' };
-      select?: { driverId?: boolean; documentType?: boolean; status?: boolean };
-    }): Promise<
-      Array<
-        Pick<DriverDocumentRecord, 'driverId' | 'documentType' | 'status'> | DriverDocumentRecord
-      >
-    >;
-    create(args: {
-      data: Omit<DriverDocumentRecord, 'id' | 'createdAt' | 'updatedAt'>;
-    }): Promise<DriverDocumentRecord>;
-    findUnique(args: { where: { id: string } }): Promise<DriverDocumentRecord | null>;
-    findFirst(args: {
-      where: { tenantId: string; driverId: string; documentType: string; status: string };
-      orderBy?: { createdAt: 'desc' };
-    }): Promise<DriverDocumentRecord | null>;
-    update(args: {
-      where: { id: string };
-      data: Partial<
-        Pick<DriverDocumentRecord, 'status' | 'expiresAt' | 'reviewedBy' | 'reviewedAt'>
-      >;
-    }): Promise<DriverDocumentRecord>;
-    updateMany(args: {
-      where: {
-        tenantId: string;
-        status: string;
-        expiresAt: { lt: Date };
-        driverId?: { in: string[] };
-      };
-      data: Pick<DriverDocumentRecord, 'status'>;
-    }): Promise<{ count: number }>;
-    delete(args: { where: { id: string } }): Promise<DriverDocumentRecord>;
-  } {
-    // TODO: Remove this narrow delegate cast after the repo's Prisma client path
-    // inconsistency is resolved. Runtime Prisma includes the driver document
-    // lifecycle fields, but api-core type-checking can lag behind schema additions.
-    return (
-      this.prisma as never as {
-        driverDocument: {
-          findMany(args: {
-            where: { tenantId: string; driverId?: string | { in: string[] } };
-            orderBy?: { createdAt: 'desc' };
-            select?: { driverId?: boolean; documentType?: boolean; status?: boolean };
-          }): Promise<
-            Array<
-              | Pick<DriverDocumentRecord, 'driverId' | 'documentType' | 'status'>
-              | DriverDocumentRecord
-            >
-          >;
-          create(args: {
-            data: Omit<DriverDocumentRecord, 'id' | 'createdAt' | 'updatedAt'>;
-          }): Promise<DriverDocumentRecord>;
-          findUnique(args: { where: { id: string } }): Promise<DriverDocumentRecord | null>;
-          findFirst(args: {
-            where: { tenantId: string; driverId: string; documentType: string; status: string };
-            orderBy?: { createdAt: 'desc' };
-          }): Promise<DriverDocumentRecord | null>;
-          update(args: {
-            where: { id: string };
-            data: Partial<
-              Pick<DriverDocumentRecord, 'status' | 'expiresAt' | 'reviewedBy' | 'reviewedAt'>
-            >;
-          }): Promise<DriverDocumentRecord>;
-          updateMany(args: {
-            where: {
-              tenantId: string;
-              status: string;
-              expiresAt: { lt: Date };
-              driverId?: { in: string[] };
-            };
-            data: Pick<DriverDocumentRecord, 'status'>;
-          }): Promise<{ count: number }>;
-          delete(args: { where: { id: string } }): Promise<DriverDocumentRecord>;
-        };
-      }
-    ).driverDocument;
+  private get driverDocuments(): DriverDocumentDelegate {
+    return this.prismaExtensions.driverDocument;
   }
 
-  private get driverGuarantors(): {
-    findUnique(args: { where: { driverId: string } }): Promise<DriverGuarantorRecord | null>;
-    findMany(args: {
-      where: {
-        tenantId?: string;
-        driverId?: { in: string[] };
-        status?: string;
-        disconnectedAt?: null;
-        guarantorReminderSuppressed?: boolean;
-      };
-      select?: Record<string, boolean>;
-    }): Promise<any>;
-    upsert(args: {
-      where: { driverId: string };
-      create: Omit<DriverGuarantorRecord, 'id' | 'createdAt' | 'updatedAt'>;
-      update: Pick<
-        DriverGuarantorRecord,
-        | 'name'
-        | 'phone'
-        | 'email'
-        | 'countryCode'
-        | 'relationship'
-        | 'status'
-        | 'personId'
-        | 'dateOfBirth'
-        | 'gender'
-        | 'selfieImageUrl'
-        | 'providerImageUrl'
-        | 'inviteStatus'
-        | 'lastInviteSentAt'
-        | 'inviteExpiresAt'
-        | 'guarantorReminderCount'
-        | 'lastGuarantorReminderSentAt'
-        | 'guarantorReminderSuppressed'
-        | 'responsibilityAcceptedAt'
-        | 'responsibilityAcceptanceEvidence'
-        | 'disconnectedAt'
-        | 'disconnectedReason'
-      >;
-    }): Promise<DriverGuarantorRecord>;
-    update(args: {
-      where: { driverId: string };
-      data: Partial<
-        Pick<
-          DriverGuarantorRecord,
-          | 'status'
-          | 'disconnectedAt'
-          | 'disconnectedReason'
-          | 'personId'
-          | 'inviteStatus'
-          | 'lastInviteSentAt'
-          | 'inviteExpiresAt'
-          | 'guarantorReminderCount'
-          | 'lastGuarantorReminderSentAt'
-          | 'guarantorReminderSuppressed'
-          | 'responsibilityAcceptedAt'
-          | 'responsibilityAcceptanceEvidence'
-        >
-      >;
-    }): Promise<DriverGuarantorRecord>;
-  } {
-    // TODO: Remove this narrow delegate cast after the repo's Prisma client path
-    // inconsistency is resolved. The runtime client has driverGuarantor, but
-    // api-core type-checking still lags behind generated schema additions.
-    return (
-      this.prisma as never as {
-        driverGuarantor: {
-          findUnique(args: { where: { driverId: string } }): Promise<DriverGuarantorRecord | null>;
-          findMany(args: { where: { tenantId: string; driverId?: { in: string[] } } }): Promise<
-            DriverGuarantorRecord[]
-          >;
-          upsert(args: {
-            where: { driverId: string };
-            create: Omit<DriverGuarantorRecord, 'id' | 'createdAt' | 'updatedAt'>;
-            update: Pick<
-              DriverGuarantorRecord,
-              | 'name'
-              | 'phone'
-              | 'email'
-              | 'countryCode'
-              | 'relationship'
-              | 'status'
-              | 'personId'
-              | 'dateOfBirth'
-              | 'gender'
-              | 'selfieImageUrl'
-              | 'providerImageUrl'
-              | 'inviteStatus'
-              | 'lastInviteSentAt'
-              | 'inviteExpiresAt'
-              | 'guarantorReminderCount'
-              | 'lastGuarantorReminderSentAt'
-              | 'guarantorReminderSuppressed'
-              | 'responsibilityAcceptedAt'
-              | 'responsibilityAcceptanceEvidence'
-              | 'disconnectedAt'
-              | 'disconnectedReason'
-            >;
-          }): Promise<DriverGuarantorRecord>;
-          update(args: {
-            where: { driverId: string };
-            data: Partial<
-              Pick<
-                DriverGuarantorRecord,
-                | 'status'
-                | 'disconnectedAt'
-                | 'disconnectedReason'
-                | 'personId'
-                | 'inviteStatus'
-                | 'lastInviteSentAt'
-                | 'inviteExpiresAt'
-                | 'guarantorReminderCount'
-                | 'lastGuarantorReminderSentAt'
-                | 'guarantorReminderSuppressed'
-                | 'responsibilityAcceptedAt'
-                | 'responsibilityAcceptanceEvidence'
-              >
-            >;
-          }): Promise<DriverGuarantorRecord>;
-        };
-      }
-    ).driverGuarantor;
+  private get driverGuarantors(): DriverGuarantorDelegate {
+    return this.prismaExtensions.driverGuarantor;
   }
 
   async list(
@@ -4974,12 +4924,12 @@ export class DriversService {
       ['paid', 'reserved', 'consumed'].includes(existingEntitlementState)
     ) {
       if (existingEntitlementState !== 'consumed') {
-        await this.prisma.driver.update({
+        await this.driverWriter.update({
           where: { id: payload.driverId },
           data: {
             kycPaymentReference: normalizedReference,
             kycPaymentVerifiedAt: existingEntitlement.paidAt ?? new Date(),
-          } as never,
+          },
         });
       }
 
@@ -5016,12 +4966,12 @@ export class DriversService {
       });
     }
 
-    await this.prisma.driver.update({
+    await this.driverWriter.update({
       where: { id: payload.driverId },
       data: {
         kycPaymentReference: normalizedReference,
         kycPaymentVerifiedAt: new Date(),
-      } as never,
+      },
     });
 
     return { status: applied.status === 'already_applied' ? 'already_applied' : 'verified' };
@@ -5853,20 +5803,7 @@ export class DriversService {
       };
     }
 
-    const matches = await (
-      this.prisma as never as {
-        driverGuarantor: {
-          findMany(args: {
-            where: {
-              tenantId: string;
-              disconnectedAt: null;
-              OR: Array<{ phone: string } | { email: string }>;
-            };
-            orderBy: { createdAt: 'asc' };
-          }): Promise<DriverGuarantorRecord[]>;
-        };
-      }
-    ).driverGuarantor.findMany({
+    const matches = (await this.driverGuarantors.findMany({
       where: {
         tenantId,
         disconnectedAt: null,
@@ -5876,7 +5813,7 @@ export class DriversService {
         ],
       },
       orderBy: { createdAt: 'asc' },
-    });
+    })) as DriverGuarantorRecord[];
 
     const matchedDrivers = matches.map((record) => record.driverId);
     const activeDrivers =
@@ -8128,14 +8065,14 @@ export class DriversService {
       );
     }
 
-    await this.prisma.driver.update({
+    await this.driverWriter.update({
       where: { id: payload.driverId },
       data: {
         ...(nextOperationalProfile.phoneNumber
           ? { phone: nextOperationalProfile.phoneNumber }
           : {}),
         operationalProfile: nextOperationalProfile as Prisma.InputJsonValue,
-      } as never,
+      },
     });
     return { message: 'Operational profile updated.' };
   }
@@ -8658,7 +8595,7 @@ export class DriversService {
     });
     await this.subscriptionEntitlementsService.enforceDriverCapacity(tenantId, currentDriverCount);
 
-    const createdDriver = await this.prisma.driver.create({
+    const createdDriver = await this.driverWriter.create({
       data: {
         tenantId,
         fleetId: dto.fleetId,
@@ -8672,7 +8609,7 @@ export class DriversService {
         nationality: dto.nationality ?? null,
         status: 'inactive', // drivers start inactive until onboarding completes
         identityStatus: 'unverified',
-      } as never,
+      },
     });
 
     this.meteringClient.fireEvent(tenantId, 'active_driver');
@@ -9138,7 +9075,7 @@ export class DriversService {
     // Canonical enrichment (verified name, DOB, etc.) is stored on intel_persons
     // by the intelligence plane — see person-graph.md Principle 4. Only operational
     // identity state and the cross-plane personId FK are written back here.
-    await this.prisma.driver.update({
+    await this.driverWriter.update({
       where: { id: driver.id },
       data: {
         ...verifiedProfileUpdate,
@@ -9165,7 +9102,7 @@ export class DriversService {
         identityLivenessProvider: result.livenessProviderName ?? null,
         identityLivenessConfidence: result.livenessConfidenceScore ?? null,
         identityLivenessReason: result.livenessReason ?? null,
-      } as never,
+      },
     });
 
     this.logger.log(
@@ -10277,13 +10214,7 @@ export class DriversService {
       );
     }
 
-    await (
-      this.prisma as never as {
-        driver: {
-          update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
-        };
-      }
-    ).driver.update({
+    await this.driverWriter.update({
       where: { id: driverId },
       data: {
         adminAssignmentOverride: false,
@@ -10378,13 +10309,7 @@ export class DriversService {
       `driver-admin-override-${driver.id}-${Date.now()}`,
     );
 
-    await (
-      this.prisma as never as {
-        driver: {
-          update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
-        };
-      }
-    ).driver.update({
+    await this.driverWriter.update({
       where: { id: driverId },
       data: {
         adminAssignmentOverride: false,
@@ -10458,13 +10383,7 @@ export class DriversService {
       throw new UnauthorizedException('Invalid or expired override OTP.');
     }
 
-    await (
-      this.prisma as never as {
-        driver: {
-          update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Driver>;
-        };
-      }
-    ).driver.update({
+    await this.driverWriter.update({
       where: { id: driverId },
       data: {
         adminAssignmentOverride: true,

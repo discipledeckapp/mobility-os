@@ -28,17 +28,17 @@ export function TenantHeroPanel({
   children,
 }: TenantHeroPanelProps) {
   return (
-    <Card className="mb-6 overflow-hidden border-slate-200 bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(239,246,255,0.95)_45%,rgba(219,234,254,0.84))] shadow-[0_22px_48px_-34px_rgba(37,99,235,0.34)]">
-      <CardContent className="space-y-5 py-5">
+    <Card className="mb-4 overflow-hidden border-slate-200 bg-[linear-gradient(140deg,rgba(255,255,255,0.98),rgba(239,246,255,0.95)_45%,rgba(219,234,254,0.84))] shadow-[0_16px_36px_-30px_rgba(37,99,235,0.26)] sm:mb-6 sm:shadow-[0_22px_48px_-34px_rgba(37,99,235,0.34)]">
+      <CardContent className="space-y-4 py-4 sm:space-y-5 sm:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mobiris-primary-dark)]">
               {eyebrow}
             </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2rem]">
               {title}
             </h2>
-            <p className="mt-2 text-sm leading-5 text-slate-600 sm:leading-6">
+            <p className="mt-2 hidden text-sm leading-5 text-slate-600 sm:block sm:leading-6">
               {description}
             </p>
           </div>
@@ -131,6 +131,45 @@ export function TenantMetricCard({
         </p>
         {note ? <Text tone="muted">{note}</Text> : null}
       </div>
+    </div>
+  );
+}
+
+type TenantInlineSummaryItem = {
+  label: string;
+  value: ReactNode;
+  tone?: 'primary' | 'neutral' | 'success' | 'warning' | 'danger';
+};
+
+const inlineSummaryToneClasses: Record<NonNullable<TenantInlineSummaryItem['tone']>, string> = {
+  primary: 'border-[var(--mobiris-primary)]/20 bg-[var(--mobiris-primary)]/5 text-[var(--mobiris-primary-dark)]',
+  neutral: 'border-slate-200 bg-white text-slate-700',
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  warning: 'border-amber-200 bg-amber-50 text-amber-700',
+  danger: 'border-rose-200 bg-rose-50 text-rose-700',
+};
+
+export function TenantInlineSummary({
+  items,
+  className,
+}: {
+  items: TenantInlineSummaryItem[];
+  className?: string;
+}) {
+  return (
+    <div className={cx('flex flex-wrap gap-2', className)}>
+      {items.map((item) => (
+        <div
+          className={cx(
+            'inline-flex min-h-11 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium',
+            inlineSummaryToneClasses[item.tone ?? 'neutral'],
+          )}
+          key={item.label}
+        >
+          <span className="text-base font-semibold text-[var(--mobiris-ink)]">{item.value}</span>
+          <span className="text-xs uppercase tracking-[0.14em]">{item.label}</span>
+        </div>
+      ))}
     </div>
   );
 }

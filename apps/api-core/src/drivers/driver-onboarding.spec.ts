@@ -547,6 +547,7 @@ describe('Driver onboarding — payment decision logic', () => {
   let service: DriversService;
   let controlPlaneBillingClient: {
     initializeDriverKycCheckout: jest.Mock;
+    verifyAndApplyPayment: jest.Mock;
   };
   let verificationSpendService: {
     getSpendSummary: jest.Mock;
@@ -561,6 +562,7 @@ describe('Driver onboarding — payment decision logic', () => {
     intelligenceClient = makeIntelligenceClient();
     controlPlaneBillingClient = {
       initializeDriverKycCheckout: jest.fn(),
+      verifyAndApplyPayment: jest.fn(),
     };
     verificationSpendService = {
       getSpendSummary: jest.fn().mockResolvedValue({
@@ -670,6 +672,43 @@ describe('Driver onboarding — payment decision logic', () => {
     );
   });
 
+  it('does not re-prompt for payment when org sponsorship is unfunded but the driver already paid', async () => {
+    setup({ operations: { driverPaysKyc: false, requireIdentityVerificationForActivation: true } });
+    verificationSpendService.getSpendSummary.mockResolvedValue({
+      currency: 'NGN',
+      walletBalanceMinorUnits: 0,
+      creditLimitMinorUnits: 0,
+      creditUsedMinorUnits: 0,
+      availableSpendMinorUnits: 0,
+      starterCreditActive: false,
+      starterCreditEligible: false,
+      cardCreditActive: false,
+      unlockedTiers: [],
+      savedCard: null,
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'unverified',
+        kycPaymentReference: 'ref_driver_paid_1',
+        kycPaymentVerifiedAt: new Date(),
+      }),
+    );
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(
+      makeEntitlement({
+        payerType: 'driver',
+        status: 'paid',
+        paidAt: new Date(),
+      }),
+    );
+    prisma.verificationAttempt.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+
+    const context = await service.getSelfServiceContext(VALID_TOKEN);
+
+    expect(context.verificationPaymentStatus).toBe('ready');
+    expect(context.verificationPaymentMessage).not.toContain('has not prepaid');
+  });
+
   it('lets invited drivers pay immediately when organisation sponsorship is not prepaid', async () => {
     setup({ operations: { driverPaysKyc: false, requireIdentityVerificationForActivation: true } });
     verificationSpendService.getSpendSummary.mockResolvedValue({
@@ -705,6 +744,97 @@ describe('Driver onboarding — payment decision logic', () => {
     expect(step.step).toBe('payment');
     expect(checkout.status).toBe('checkout_required');
     expect(controlPlaneBillingClient.initializeDriverKycCheckout).toHaveBeenCalled();
+  });
+
+  it('rejects a driver payment reference that is already linked to another driver', async () => {
+    setup({ operations: { driverPaysKyc: true } });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.driver.findFirst.mockResolvedValue({ id: 'driver_other' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.verifyKycPaymentFromSelfService(VALID_TOKEN, 'paystack', 'ref_duplicate_1'),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(controlPlaneBillingClient.verifyAndApplyPayment).not.toHaveBeenCalled();
+  });
+
+  it('returns already_applied for the same paid entitlement reference without re-verifying payment', async () => {
+    setup({ operations: { driverPaysKyc: true } });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver());
+    prisma.driver.findFirst.mockResolvedValue({ id: 'driver_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(
+      makeEntitlement({
+        paymentReference: 'ref_paid_same_1',
+        status: 'paid',
+        paidAt: new Date(),
+      }),
+    );
+
+    const result = await service.verifyKycPaymentFromSelfService(
+      VALID_TOKEN,
+      'paystack',
+      'ref_paid_same_1',
+    );
+
+    expect(result).toEqual({ status: 'already_applied' });
+    expect(controlPlaneBillingClient.verifyAndApplyPayment).not.toHaveBeenCalled();
+    expect(prisma.driver.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'driver_1' },
+        data: expect.objectContaining({
+          kycPaymentReference: 'ref_paid_same_1',
+        }),
+      }),
+    );
+  });
+
+  it('moves onboarding from payment to identity verification after driver payment is applied', async () => {
+    setup({ operations: { driverPaysKyc: true, requireIdentityVerificationForActivation: true } });
+    prisma.driver.findUnique
+      .mockResolvedValueOnce(makeDriver())
+      .mockResolvedValueOnce(
+        makeDriver({
+          kycPaymentReference: 'ref_paid_transition_1',
+          kycPaymentVerifiedAt: new Date(),
+        }),
+      );
+    prisma.driver.findFirst.mockResolvedValue({ id: 'driver_1' });
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        makeEntitlement({
+          paymentReference: 'ref_paid_transition_1',
+          status: 'paid',
+          paidAt: new Date(),
+        }),
+      )
+      .mockResolvedValue(
+        makeEntitlement({
+          paymentReference: 'ref_paid_transition_1',
+          status: 'paid',
+          paidAt: new Date(),
+        }),
+      );
+    prisma.verificationAttempt.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.count.mockResolvedValue(0);
+    controlPlaneBillingClient.verifyAndApplyPayment.mockResolvedValue({
+      status: 'applied',
+      amountMinorUnits: 100000,
+      currency: 'NGN',
+    });
+
+    const paymentResult = await service.verifyKycPaymentFromSelfService(
+      VALID_TOKEN,
+      'paystack',
+      'ref_paid_transition_1',
+    );
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+
+    expect(['verified', 'already_applied']).toContain(paymentResult.status);
+    expect(step.step).toBe('identity_verification');
   });
 
   it('keeps full trust context, pricing, and onboarding step aligned when the driver pays', async () => {
@@ -743,18 +873,82 @@ describe('Driver onboarding — payment decision logic', () => {
     expect(step.verificationTierLabel).toBe(context.verificationTierLabel);
     expect(step.verificationTierComponents).toEqual(context.verificationTierComponents);
   });
+
+  it('does not fall back to payment once verification has started even if organisation prepaid cover is no longer available', async () => {
+    setup({ operations: { driverPaysKyc: false, requireIdentityVerificationForActivation: true } });
+    verificationSpendService.getSpendSummary.mockResolvedValue({
+      currency: 'NGN',
+      walletBalanceMinorUnits: 0,
+      creditLimitMinorUnits: 0,
+      creditUsedMinorUnits: 0,
+      availableSpendMinorUnits: 0,
+      starterCreditActive: false,
+      starterCreditEligible: false,
+      cardCreditActive: false,
+      unlockedTiers: [],
+      savedCard: null,
+    });
+    prisma.driver.findUnique.mockResolvedValue(
+      makeDriver({
+        identityStatus: 'pending_verification',
+        selfieImageUrl: 'https://cdn.mobiris.local/selfie.jpg',
+      }),
+    );
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(null);
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_1',
+      status: 'in_progress',
+      failureReason: null,
+      metadata: null,
+      completedAt: null,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(1);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+
+    expect(step.step).not.toBe('payment');
+    expect(['identity_verification', 'manual_review']).toContain(step.step);
+  });
 });
 
 describe('Driver onboarding — document ID verification (zero-trust)', () => {
   let prisma: ReturnType<typeof makePrisma>;
   let intelligenceClient: ReturnType<typeof makeIntelligenceClient>;
   let service: DriversService;
+  let verificationSpendService: {
+    getSpendSummary: jest.Mock;
+    saveAuthorizedCard: jest.Mock;
+    ensureVerificationSpendApplied: jest.Mock;
+  };
   const VALID_TOKEN = 'valid.token';
 
   beforeEach(() => {
     jest.clearAllMocks();
     prisma = makePrisma();
     intelligenceClient = makeIntelligenceClient();
+    verificationSpendService = {
+      getSpendSummary: jest.fn().mockResolvedValue({
+        currency: 'NGN',
+        walletBalanceMinorUnits: 2_000_000,
+        creditLimitMinorUnits: 0,
+        creditUsedMinorUnits: 0,
+        availableSpendMinorUnits: 2_000_000,
+        starterCreditActive: false,
+        starterCreditEligible: false,
+        cardCreditActive: false,
+        unlockedTiers: ['BASIC_IDENTITY', 'VERIFIED_IDENTITY', 'FULL_TRUST_VERIFICATION'],
+        savedCard: null,
+      }),
+      saveAuthorizedCard: jest.fn(),
+      ensureVerificationSpendApplied: jest.fn().mockResolvedValue({
+        status: 'applied',
+        fundingSource: 'wallet',
+      }),
+    };
     prisma.tenant.findUnique.mockResolvedValue({ country: 'NG', metadata: {} });
 
     const jwtService = {
@@ -785,6 +979,7 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
         notifyDriverLicenceReviewResolved: jest.fn(),
       } as never,
       { recordTenantAction: jest.fn() } as never,
+      verificationSpendService as never,
     );
   });
 
@@ -992,6 +1187,59 @@ describe('Driver onboarding — document ID verification (zero-trust)', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('does not reopen organisation funding checks for driver licence verification after tier payment is already satisfied', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          driverPaysKyc: false,
+          verificationTier: 'FULL_TRUST_VERIFICATION',
+          requiredDriverDocumentSlugs: ['drivers-license'],
+          requireIdentityVerificationForActivation: true,
+        },
+      },
+    });
+    setupDriver('paid', {
+      identityStatus: 'verified',
+      selfieImageUrl: 'https://storage.example.com/driver-documents/selfie.jpg',
+      kycPaymentReference: 'ref_paid_1',
+      kycPaymentVerifiedAt: new Date(),
+    });
+    prisma.driverDocumentVerification.create.mockResolvedValue({
+      id: 'docver_licence_2',
+      documentType: 'drivers-license',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.driverDocumentVerification.update.mockResolvedValue({
+      id: 'docver_licence_2',
+      documentType: 'drivers-license',
+      status: 'verified',
+    });
+    intelligenceClient.verifyDocumentIdentifier.mockResolvedValue({
+      decision: 'matched',
+      isVerifiedMatch: true,
+      providerName: 'youverify',
+      verificationMetadata: {
+        validity: 'valid',
+      },
+    });
+    verificationSpendService.ensureVerificationSpendApplied.mockResolvedValue({
+      status: 'insufficient',
+      reason: 'No active card or credit is available for this verification tier.',
+    });
+
+    const result = await service.verifyDocumentIdFromSelfService(VALID_TOKEN, {
+      documentType: 'drivers-license',
+      idNumber: 'LIC-FTD-009',
+      countryCode: 'NG',
+    });
+
+    expect(result.status).not.toBe('provider_unavailable');
+    expect(verificationSpendService.ensureVerificationSpendApplied).not.toHaveBeenCalled();
+  });
 });
 
 describe('Driver onboarding — onboarding step state machine', () => {
@@ -1143,6 +1391,43 @@ describe('Driver onboarding — onboarding step state machine', () => {
     );
     prisma.verificationAttempt.findFirst.mockResolvedValue(null);
     prisma.verificationAttempt.count.mockResolvedValue(0);
+
+    const step = await service.getOnboardingStep(VALID_TOKEN);
+    expect(step.step).toBe('identity_verification');
+  });
+
+  it('returns identity_verification after payment is consumed but verification is still not complete', async () => {
+    setup({ operations: { driverPaysKyc: true, requireIdentityVerificationForActivation: true } });
+    prisma.driver.findUnique.mockResolvedValue(makeDriver({ identityStatus: 'unverified' }));
+    prisma.user.findFirst.mockResolvedValue(makeLinkedUser());
+    prisma.userConsent.findFirst.mockResolvedValue({ id: 'consent_1' });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(
+      makeEntitlement({
+        status: 'consumed',
+        paidAt: new Date(),
+        consumedAt: new Date(),
+      }),
+    );
+    prisma.verificationAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_failed_1',
+      tenantId: 'tenant_local_demo',
+      subjectType: 'driver',
+      subjectId: 'driver_demo_local',
+      attemptType: 'driver_verification',
+      status: 'failed',
+      entitlementId: 'entitlement_1',
+      requestFingerprint: null,
+      livenessCallCount: 1,
+      metadata: null,
+      failureReason: 'provider_failed',
+      reviewOutcome: null,
+      initiatedAt: new Date(),
+      completedAt: new Date(),
+      expiresAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.verificationAttempt.count.mockResolvedValue(1);
 
     const step = await service.getOnboardingStep(VALID_TOKEN);
     expect(step.step).toBe('identity_verification');
@@ -1913,6 +2198,41 @@ describe('Driver onboarding — guarantor self-service submission outcomes', () 
     );
     expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(sendInviteSpy).toHaveBeenCalledWith('tenant_1', 'driver_1', 'guarantor_updated');
+  });
+
+  it('returns already_applied for the same guarantor add-on payment reference without reapplying or resending', async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      country: 'NG',
+      metadata: {
+        operations: {
+          requireGuarantorVerification: true,
+          driverPaysKyc: true,
+        },
+      },
+    });
+    prisma.verificationEntitlement.findFirst.mockResolvedValue(
+      makeEntitlement({
+        purpose: 'guarantor_verification',
+        paymentReference: 'ref_guarantor_paid_1',
+        status: 'paid',
+        paidAt: new Date(),
+      }),
+    );
+    const sendInviteSpy = jest.spyOn(
+      service as never,
+      'maybeSendGuarantorSelfServiceLinkIfEligible',
+    ) as unknown as { mockResolvedValue: (value: unknown) => unknown };
+
+    const result = await service.verifyVerificationAddonPaymentFromSelfService(
+      'valid-token',
+      'guarantor_verification',
+      'paystack',
+      'ref_guarantor_paid_1',
+    );
+
+    expect(result).toEqual({ status: 'already_applied' });
+    expect(controlPlaneBillingClient.verifyAndApplyPayment).not.toHaveBeenCalled();
+    expect(sendInviteSpy).not.toHaveBeenCalled();
   });
 
   it('preserves the save result and surfaces invitation delivery failure instead of swallowing it', async () => {

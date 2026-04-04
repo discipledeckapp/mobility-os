@@ -30,6 +30,11 @@ import {
   submitRemittance,
 } from '../../../services/remittance-service';
 import { tokens } from '../../../theme/tokens';
+import {
+  formatCurrencyFromMinorUnits,
+  formatMajorAmount as formatMajorAmountSafely,
+} from '../../../utils/formatting';
+import { describeVariance } from '../form-helpers';
 
 export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'>) {
   const { session } = useAuth();
@@ -162,6 +167,10 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
     }
     return enteredAmountMinorUnits - expectedAmountMinorUnits;
   }, [enteredAmountMinorUnits, expectedAmountMinorUnits]);
+  const amountVariance = useMemo(
+    () => describeVariance(amountVarianceMinorUnits),
+    [amountVarianceMinorUnits],
+  );
 
   useEffect(() => {
     if (selectedAssignment && suggestedAmount) {
@@ -478,51 +487,52 @@ export function RemittanceScreen({ navigation, route }: ScreenProps<'Remittance'
         ) : null}
         {selectedAssignment?.financialContract ? (
           <Text style={styles.helper}>
-            Paid so far {(
-              selectedAssignment.financialContract.summary.cumulativePaidAmountMinorUnits / 100
-            ).toLocaleString(session?.formattingLocale ?? 'en-NG', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{' '}
-            {selectedAssignment.financialContract.currency}. Remaining balance{' '}
-            {(
-              (selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits ?? 0) / 100
-            ).toLocaleString(session?.formattingLocale ?? 'en-NG', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{' '}
-            {selectedAssignment.financialContract.currency}.
+            Paid so far{' '}
+            {formatCurrencyFromMinorUnits(
+              selectedAssignment.financialContract.summary.cumulativePaidAmountMinorUnits,
+              selectedAssignment.financialContract.currency,
+              session?.currencyMinorUnit,
+              session?.formattingLocale,
+            )}
+            . Remaining balance{' '}
+            {formatCurrencyFromMinorUnits(
+              selectedAssignment.financialContract.summary.outstandingBalanceMinorUnits ?? 0,
+              selectedAssignment.financialContract.currency,
+              session?.currencyMinorUnit,
+              session?.formattingLocale,
+            )}
+            .
           </Text>
         ) : null}
-        {amountVarianceMinorUnits !== null && expectedAmountMinorUnits ? (
+        {amountVariance && expectedAmountMinorUnits ? (
           <View
             style={[
               styles.variancePanel,
-              amountVarianceMinorUnits < 0
+              amountVariance.direction === 'under'
                 ? styles.variancePanelWarning
-                : amountVarianceMinorUnits > 0
+                : amountVariance.direction === 'over'
                   ? styles.variancePanelInfo
                   : styles.variancePanelSuccess,
             ]}
           >
             <Text style={styles.varianceTitle}>
-              {amountVarianceMinorUnits < 0
+              {amountVariance.direction === 'under'
                 ? 'Underpayment detected'
-                : amountVarianceMinorUnits > 0
+                : amountVariance.direction === 'over'
                   ? 'Overpayment detected'
                   : 'Amount matches the expected collection'}
             </Text>
             <Text style={styles.helper}>
               Expected {currencyLabel}{' '}
               {formatMajorAmount(expectedAmountMinorUnits, session?.currencyMinorUnit)}.
-              {amountVarianceMinorUnits < 0
+              {amountVariance.direction === 'under'
                 ? ` Outstanding after this payment: ${currencyLabel} ${formatMajorAmount(
-                    Math.abs(amountVarianceMinorUnits),
+                    amountVariance.absoluteMinorUnits,
                     session?.currencyMinorUnit,
                   )}.`
-                : amountVarianceMinorUnits > 0
+                : amountVariance.direction === 'over'
                   ? ` Excess received: ${currencyLabel} ${formatMajorAmount(
-                      amountVarianceMinorUnits,
+                      amountVariance.absoluteMinorUnits,
                       session?.currencyMinorUnit,
                     )}.`
                   : ' No outstanding balance remains for this period.'}
@@ -618,9 +628,7 @@ function formatDateOnly(value: string, locale?: string | null) {
 }
 
 function formatMajorAmount(amountMinorUnits: number, minorUnit?: number | null) {
-  const safeMinorUnit =
-    typeof minorUnit === 'number' && Number.isInteger(minorUnit) && minorUnit >= 0 ? minorUnit : 2;
-  return (amountMinorUnits / getCurrencyMultiplier(safeMinorUnit)).toFixed(safeMinorUnit);
+  return formatMajorAmountSafely(amountMinorUnits, minorUnit ?? undefined, 'en-NG');
 }
 
 function historyTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
