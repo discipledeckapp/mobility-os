@@ -111,7 +111,7 @@ function normalizeCapturedSelfie(rawValue?: string | null): {
     };
   }
 
-  if (/^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith('blob:')) {
+  if (/^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith('blob:') || trimmed.startsWith('file://')) {
     return {
       previewUrl: trimmed,
       selfieImageBase64: '',
@@ -363,6 +363,12 @@ export function DriverIdentityVerification({
   const result = resolveState.result;
   const identityTone = getDriverIdentityTone(identityStatus);
   const identityLabel = getDriverIdentityLabel(identityStatus);
+  const shouldAdvanceAfterResult = Boolean(
+    result &&
+      (result.providerPending === true ||
+        Boolean(result.personId) ||
+        result.decision === 'review_required'),
+  );
   const canSendSelfServiceLink = Boolean(driver.email);
   const verificationTierLabel = driver.verificationTierLabel ?? 'Basic Identity';
   const formattedVerificationAmount =
@@ -388,10 +394,16 @@ export function DriverIdentityVerification({
       Boolean(driver.identityReviewCaseId) ||
       Boolean(driver.identityProfile) ||
       Boolean(driver.reverificationRequired));
-  const persistedSelfieSeed =
+  const rawPersistedSelfieSeed =
     driver.selfieImageUrl?.trim() ||
     driver.identityProfile?.selfieImageUrl?.trim() ||
     null;
+  const persistedSelfieSeed =
+    mode === 'self_service' && selfServiceToken
+      ? `/api/driver-self-service/identity-image/selfie?token=${encodeURIComponent(selfServiceToken)}`
+      : mode === 'guarantor_self_service' && selfServiceToken
+        ? `/api/guarantor-self-service/identity-image/selfie?token=${encodeURIComponent(selfServiceToken)}`
+        : rawPersistedSelfieSeed;
 
   // Selfie captured = liveness step done; identifier phase = step 2
   const livenessDone = Boolean(selfieImageBase64 || selfieImageUrl);
@@ -492,10 +504,10 @@ export function DriverIdentityVerification({
     if (mode === 'operator' && resolveState.result) {
       router.refresh();
     }
-    if (mode !== 'operator' && resolveState.result && onVerificationSubmitted) {
+    if (mode !== 'operator' && shouldAdvanceAfterResult && resolveState.result && onVerificationSubmitted) {
       onVerificationSubmitted(resolveState.result);
     }
-  }, [mode, onVerificationSubmitted, resolveState.result, router]);
+  }, [mode, onVerificationSubmitted, resolveState.result, router, shouldAdvanceAfterResult]);
 
   useEffect(() => {
     setSendLinkPaysKyc(driver.driverPaysKyc ?? orgDriverPaysKyc);
@@ -1365,14 +1377,14 @@ export function DriverIdentityVerification({
                   <Text>
                     {result.providerPending
                       ? 'Your verification request was submitted successfully, but the provider result is still being recovered. Please wait for the saved result to refresh.'
-                      : identityStatus === 'verified'
+                      : shouldAdvanceAfterResult && identityStatus === 'verified'
                         ? 'Verification successful. Loading next step…'
                         : identityStatus === 'review_needed'
                           ? 'Your verification has been submitted and is under manual review. You will be notified of the outcome.'
+                          : mode === 'guarantor_self_service'
+                            ? 'The returned identity could not be confirmed as this guarantor. Check the NIN and try again.'
                           : identityStatus === 'failed'
-                            ? mode === 'guarantor_self_service'
-                              ? 'Verification could not be completed. Please review your details and try again or contact the organisation that invited you.'
-                              : 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
+                            ? 'Verification could not be completed. Your payment entitlement is preserved. Contact your organisation if you need assistance.'
                             : 'Verification submitted. Loading next step…'}
                   </Text>
                   {getDisplayIdentityName(result.verifiedProfile) ? (
@@ -1401,7 +1413,8 @@ export function DriverIdentityVerification({
                       ) : null}
                     </div>
                   ) : null}
-                  {mode === 'self_service' || mode === 'guarantor_self_service' ? (
+                  {(mode === 'self_service' || mode === 'guarantor_self_service') &&
+                  shouldAdvanceAfterResult ? (
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[var(--mobiris-primary)]" />
                       <span>Please wait…</span>

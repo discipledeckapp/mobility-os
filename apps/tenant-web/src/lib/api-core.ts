@@ -321,6 +321,7 @@ export interface DriverRecord {
     holderGender: string | null;
     stateOfIssuance: string | null;
     licenceClass: string | null;
+    portraitAvailable: boolean;
     portraitUrl: string | null;
     linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
     demographicMatchScore: number | null;
@@ -941,9 +942,51 @@ export interface VehicleRecord {
   color?: string | null;
   vin?: string | null;
   odometerKm?: number | null;
+  imageGallery?: VehicleImageAssetRecord[] | null;
   createdAt: string;
   updatedAt: string;
   locked?: boolean;
+}
+
+export interface VehicleImageAssetRecord {
+  id: string;
+  category: 'exterior' | 'interior' | 'other';
+  slot:
+    | 'front'
+    | 'back'
+    | 'left'
+    | 'right'
+    | 'front_cabin'
+    | 'back_seat'
+    | 'dashboard'
+    | 'seats'
+    | 'plate'
+    | 'vin';
+  imageUrl: string;
+  contentType?: string | null;
+  fileName?: string | null;
+  label?: string | null;
+  capturedAt: string;
+}
+
+export interface InspectionImageAssetRecord {
+  id: string;
+  tag: 'clean' | 'issue' | 'damage';
+  imageUrl: string;
+  viewpoint?: string | null;
+  contentType?: string | null;
+  fileName?: string | null;
+  capturedAt: string;
+}
+
+export interface IncidentImageAssetRecord {
+  id: string;
+  imageUrl: string;
+  tag?: 'clean' | 'issue' | 'damage' | null;
+  label?: string | null;
+  contentType?: string | null;
+  fileName?: string | null;
+  capturedAt: string;
 }
 
 export interface CreateVehicleInput {
@@ -962,6 +1005,7 @@ export interface CreateVehicleInput {
   acquisitionDate?: string;
   currentEstimatedValueMinorUnits?: number;
   valuationSource?: string;
+  images?: VehicleImageAssetRecord[];
 }
 
 export interface UpdateVehicleInput {
@@ -975,6 +1019,7 @@ export interface UpdateVehicleInput {
   currentEstimatedValueMinorUnits?: number;
   valuationSource?: string;
   odometerKm?: number;
+  images?: VehicleImageAssetRecord[];
 }
 
 export interface VehicleInspectionRecord {
@@ -989,6 +1034,7 @@ export interface VehicleInspectionRecord {
   summary: string;
   reportUrl?: string | null;
   nextInspectionDueAt?: string | null;
+  imageGallery?: InspectionImageAssetRecord[] | null;
   createdAt: string;
 }
 
@@ -1090,6 +1136,7 @@ export interface VehicleIncidentRecord {
   status: string;
   estimatedCostMinorUnits?: number | null;
   currency?: string | null;
+  imageGallery?: IncidentImageAssetRecord[] | null;
   createdAt: string;
 }
 
@@ -3415,6 +3462,9 @@ export async function getGuarantorSelfServiceContext(selfServiceToken: string): 
   guarantorSelfieImageUrl: string | null;
   guarantorProviderImageUrl: string | null;
   driverName: string;
+  driverMaskedPhone: string | null;
+  driverMaskedEmail: string | null;
+  driverPreviewImageAvailable: boolean;
   driverId: string;
   tenantId: string;
   organisationName: string | null;
@@ -3469,6 +3519,17 @@ export async function recordGuarantorSelfServiceVerificationConsent(
   return apiCoreFetch<{ message: string }>('/guarantor-self-service/verification-consent', {
     method: 'POST',
     body: JSON.stringify({ token }),
+    cache: 'no-store',
+  });
+}
+
+export async function disconnectGuarantorSelfService(
+  token: string,
+  reason: string,
+): Promise<{ message: string }> {
+  return apiCoreFetch<{ message: string }>('/guarantor-self-service/disconnect', {
+    method: 'POST',
+    body: JSON.stringify({ token, reason }),
     cache: 'no-store',
   });
 }
@@ -3595,6 +3656,7 @@ export async function createVehicleInspection(
     summary: string;
     reportUrl?: string;
     nextInspectionDueAt?: string;
+    images?: InspectionImageAssetRecord[];
   },
   token?: string,
 ): Promise<VehicleInspectionRecord> {
@@ -3702,6 +3764,7 @@ export async function createVehicleIncident(
     description?: string;
     estimatedCostMinorUnits?: number;
     currency?: string;
+    images?: IncidentImageAssetRecord[];
   },
   token?: string,
 ): Promise<VehicleIncidentRecord> {

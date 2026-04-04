@@ -34,6 +34,24 @@ function clampPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function buildLocalFallbackPersonId(
+  identifiers: NormalizedIdentifier[],
+  countryCode?: string,
+): string | undefined {
+  const primaryIdentifier = identifiers.find((identifier) =>
+    ['NATIONAL_ID', 'DRIVERS_LICENSE', 'PASSPORT', 'BANK_ID', 'TAX_ID'].includes(identifier.type),
+  );
+
+  if (!primaryIdentifier) {
+    return undefined;
+  }
+
+  const normalizedCountry = (primaryIdentifier.countryCode ?? countryCode ?? 'XX').toUpperCase();
+  const normalizedType = primaryIdentifier.type.trim().toUpperCase();
+  const normalizedValue = primaryIdentifier.value.trim().toUpperCase();
+  return `local:${normalizedCountry}:${normalizedType}:${normalizedValue}`;
+}
+
 function summarizeImageValue(value: string | undefined): string | null {
   if (!value) {
     return null;
@@ -148,6 +166,30 @@ export class MatchingService {
       this.normalizeIdentifier(identifier),
     );
 
+    try {
+      return await this.resolveEnrollmentWithPersonGraph(dto, normalizedIdentifiers);
+    } catch (error) {
+      if (this.shouldUseLocalVerificationFallback(error, dto)) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'enrollment_local_fallback_activated',
+            tenantId: dto.tenantId,
+            countryCode: dto.countryCode ?? null,
+            error: error instanceof Error ? error.message : 'unknown_error',
+          }),
+        );
+
+        return this.resolveEnrollmentWithoutPersonGraph(dto, normalizedIdentifiers);
+      }
+
+      throw error;
+    }
+  }
+
+  private async resolveEnrollmentWithPersonGraph(
+    dto: ResolveEnrollmentDto,
+    normalizedIdentifiers: NormalizedIdentifier[],
+  ): Promise<MatchingResultDto> {
     const existingMatches = await this.findExistingIdentifierMatches(normalizedIdentifiers);
     const candidatePersonIds = [...new Set(existingMatches.map((m) => m.personId))];
 
@@ -317,6 +359,76 @@ export class MatchingService {
       ...(crossRoleConflict ? { crossRoleConflict: true } : {}),
       ...intelligenceResult,
     };
+  }
+
+  private async resolveEnrollmentWithoutPersonGraph(
+    dto: ResolveEnrollmentDto,
+    normalizedIdentifiers: NormalizedIdentifier[],
+  ): Promise<MatchingResultDto> {
+    const providerVerification = await this.identityVerificationService.verifyForEnrollment({
+      tenantId: dto.tenantId,
+      identifiers: normalizedIdentifiers,
+      ...(dto.countryCode ? { countryCode: dto.countryCode } : {}),
+      ...(dto.livenessPassed !== undefined ? { livenessPassed: dto.livenessPassed } : {}),
+      ...(dto.providerVerification ? { providerVerification: dto.providerVerification } : {}),
+    });
+
+    const verification = providerVerification.verification;
+    const liveness = providerVerification.liveness;
+    const isVerifiedMatch =
+      verification?.status === 'verified' &&
+      isSuccessfulVerificationMessage(verification.verificationStatus);
+    const verificationMetadata = verification
+      ? this.buildVerificationMetadata(verification, liveness)
+      : undefined;
+
+    const decision =
+      verification?.status === 'verified'
+        ? ResolutionDecision.AutoLinked
+        : ResolutionDecision.NewPerson;
+    const localFallbackPersonId =
+      verification?.status === 'verified'
+        ? buildLocalFallbackPersonId(normalizedIdentifiers, dto.countryCode)
+        : undefined;
+
+    return {
+      decision,
+      ...(localFallbackPersonId ? { personId: localFallbackPersonId } : {}),
+      ...(verification?.status ? { providerLookupStatus: verification.status } : {}),
+      ...(verification?.verificationStatus
+        ? { providerVerificationStatus: verification.verificationStatus }
+        : {}),
+      ...(verification?.providerName ? { providerName: verification.providerName } : {}),
+      ...(verification?.matchedIdentifierType
+        ? { matchedIdentifierType: verification.matchedIdentifierType }
+        : {}),
+      isVerifiedMatch,
+      ...(liveness ? { livenessPassed: liveness.passed } : {}),
+      ...(liveness?.providerName ? { livenessProviderName: liveness.providerName } : {}),
+      ...(liveness?.confidenceScore !== undefined
+        ? { livenessConfidenceScore: liveness.confidenceScore }
+        : {}),
+      ...(liveness?.reason ? { livenessReason: liveness.reason } : {}),
+      ...(verification?.enrichment ? { verifiedProfile: verification.enrichment } : {}),
+      ...(verification?.auditData ? { providerAudit: verification.auditData } : {}),
+      ...(verificationMetadata ? { verificationMetadata } : {}),
+    };
+  }
+
+  private shouldUseLocalVerificationFallback(
+    error: unknown,
+    dto: ResolveEnrollmentDto,
+  ): boolean {
+    if (process.env.NODE_ENV === 'production') {
+      return false;
+    }
+
+    if ((dto.countryCode ?? '').toUpperCase() !== 'NG') {
+      return false;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return /intel_person_|intel_biometric_|intel_review_case|intel_persons/i.test(message);
   }
 
   private async runEnrollmentPostProcessing(input: {

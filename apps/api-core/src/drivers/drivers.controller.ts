@@ -69,8 +69,28 @@ import { ResolveDriverIdentityDto } from './dto/resolve-driver-identity.dto';
 import { UpdateDriverDocumentReviewDto } from './dto/update-driver-document-review.dto';
 
 type HeaderWritableResponse = {
-  setHeader(name: string, value: string): void;
+  setHeader?(name: string, value: string | string[]): void;
+  header?(name: string, value: string | string[]): void;
 };
+
+function setResponseHeader(
+  response: HeaderWritableResponse | undefined,
+  name: string,
+  value: string | string[],
+) {
+  if (!response) {
+    return;
+  }
+
+  if (typeof response.setHeader === 'function') {
+    response.setHeader(name, value);
+    return;
+  }
+
+  if (typeof response.header === 'function') {
+    response.header(name, value);
+  }
+}
 
 function mapUserNotification(notification: UserNotification): UserNotificationResponseDto {
   return {
@@ -309,8 +329,8 @@ export class DriversController {
       'fleetName,firstName,lastName,phone,email,dateOfBirth,nationality',
       'Lagos Core Fleet,Seyi,Adelaju,08012345678,seyi@example.com,1992-05-20,NG',
     ].join('\n');
-    res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', 'attachment; filename="driver-import-template.csv"');
+    setResponseHeader(res, 'content-type', 'text/csv; charset=utf-8');
+    setResponseHeader(res, 'content-disposition', 'attachment; filename="driver-import-template.csv"');
     return new StreamableFile(Buffer.from(csv, 'utf-8'));
   }
 
@@ -325,8 +345,8 @@ export class DriversController {
     const csv = await this.service.exportDriversCsv(ctx.tenantId, {
       ...(getAssignedFleetIds(ctx).length ? { fleetIds: getAssignedFleetIds(ctx) } : {}),
     });
-    res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', 'attachment; filename="drivers.csv"');
+    setResponseHeader(res, 'content-type', 'text/csv; charset=utf-8');
+    setResponseHeader(res, 'content-disposition', 'attachment; filename="drivers.csv"');
     return new StreamableFile(Buffer.from(csv, 'utf-8'));
   }
 
@@ -556,8 +576,8 @@ export class DriversController {
     @Res({ passthrough: true }) response: HeaderWritableResponse,
   ): Promise<StreamableFile> {
     const portrait = await this.service.getPortrait(ctx.tenantId, id);
-    response.setHeader('content-type', portrait.contentType);
-    response.setHeader('content-disposition', 'inline');
+    setResponseHeader(response, 'content-type', portrait.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
     return new StreamableFile(portrait.buffer);
   }
 
@@ -575,8 +595,42 @@ export class DriversController {
     }
 
     const image = await this.service.getIdentityImage(ctx.tenantId, id, kind);
-    response.setHeader('content-type', image.contentType);
-    response.setHeader('content-disposition', 'inline');
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
+  }
+
+  @Get(':id/guarantor-identity-image/:kind')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  async getGuarantorIdentityImage(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('kind') kind: 'selfie' | 'provider',
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!['selfie', 'provider'].includes(kind)) {
+      throw new BadRequestException("kind must be one of 'selfie' or 'provider'");
+    }
+
+    const image = await this.service.getGuarantorIdentityImage(ctx.tenantId, id, kind);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
+  }
+
+  @Get(':id/document-verifications/:verificationId/portrait')
+  @RequirePermissions(Permission.DriversRead)
+  @UseGuards(PermissionsGuard)
+  async getDocumentVerificationPortrait(
+    @CurrentTenant() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('verificationId') verificationId: string,
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    const image = await this.service.getDocumentVerificationPortrait(ctx.tenantId, id, verificationId);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
     return new StreamableFile(image.buffer);
   }
 
@@ -621,8 +675,9 @@ export class DriversController {
     @Res({ passthrough: true }) response: HeaderWritableResponse,
   ): Promise<StreamableFile> {
     const document = await this.service.getDocumentContent(ctx.tenantId, id, documentId);
-    response.setHeader('content-type', document.contentType);
-    response.setHeader(
+    setResponseHeader(response, 'content-type', document.contentType);
+    setResponseHeader(
+      response,
       'content-disposition',
       `inline; filename="${document.fileName.replace(/"/g, '')}"`,
     );
@@ -1046,6 +1101,41 @@ export class DriverSelfServiceController {
     return this.service.loginDriverSelfServiceWithPassword(identifier, password);
   }
 
+  @Post('request-invite')
+  @ApiCreatedResponse({ type: Object })
+  async requestInvite(
+    @Body()
+    body: {
+      companyEmail?: string;
+      companyName?: string;
+      driverName?: string;
+      driverEmail?: string;
+      driverPhone?: string;
+    },
+  ): Promise<{ message: string }> {
+    if (!body.companyEmail?.trim()) {
+      throw new BadRequestException('companyEmail is required');
+    }
+    if (!body.driverName?.trim()) {
+      throw new BadRequestException('driverName is required');
+    }
+    if (!body.driverEmail?.trim() && !body.driverPhone?.trim()) {
+      throw new BadRequestException('driverEmail or driverPhone is required');
+    }
+
+    await this.notificationsService.sendDriverInviteRequestEmail({
+      companyEmail: body.companyEmail,
+      driverName: body.driverName,
+      ...(body.companyName?.trim() ? { companyName: body.companyName } : {}),
+      ...(body.driverEmail?.trim() ? { driverEmail: body.driverEmail } : {}),
+      ...(body.driverPhone?.trim() ? { driverPhone: body.driverPhone } : {}),
+    });
+
+    return {
+      message: 'Your invite request has been sent to the company contact you provided.',
+    };
+  }
+
   // Backend-driven state machine: returns the single next required onboarding step.
   // The frontend must call this after each step completion instead of computing
   // flow state itself from raw driver fields.
@@ -1348,6 +1438,26 @@ export class DriverSelfServiceController {
       updatedAt: driver.updatedAt,
       locked: false, // self-service context is never subscription-locked
     };
+  }
+
+  @Get('identity-image/:kind')
+  async getSelfServiceIdentityImage(
+    @Query('token') token: string,
+    @Param('kind') kind: 'selfie' | 'provider' | 'signature',
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    if (!['selfie', 'provider', 'signature'].includes(kind)) {
+      throw new BadRequestException("kind must be one of 'selfie', 'provider', or 'signature'");
+    }
+
+    const image = await this.service.getSelfServiceIdentityImage(token, kind);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
   }
 
   @Post('notify-organisation')
@@ -1797,12 +1907,29 @@ export class DriverSelfServiceController {
     @Res({ passthrough: true }) response: HeaderWritableResponse,
   ): Promise<StreamableFile> {
     const document = await this.service.getDocumentContentFromSelfService(token, documentId);
-    response.setHeader('content-type', document.contentType);
-    response.setHeader(
+    setResponseHeader(response, 'content-type', document.contentType);
+    setResponseHeader(
+      response,
       'content-disposition',
       `inline; filename="${document.fileName.replace(/"/g, '')}"`,
     );
     return new StreamableFile(document.buffer);
+  }
+
+  @Get('document-verifications/:verificationId/portrait')
+  async getDocumentVerificationPortraitFromSelfService(
+    @Query('token') token: string,
+    @Param('verificationId') verificationId: string,
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    const image = await this.service.getSelfServiceDocumentVerificationPortrait(token, verificationId);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
   }
 }
 
@@ -1868,6 +1995,41 @@ export class GuarantorSelfServiceController {
   @ApiCreatedResponse({ type: Object })
   issueAuthenticatedContinuationToken(@CurrentTenant() ctx: TenantContext) {
     return this.service.issueGuarantorSelfServiceContinuationToken(ctx.tenantId, ctx.userId);
+  }
+
+  @Get('identity-image/:kind')
+  async getSelfServiceIdentityImage(
+    @Query('token') token: string,
+    @Param('kind') kind: 'selfie' | 'provider',
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    if (!['selfie', 'provider'].includes(kind)) {
+      throw new BadRequestException("kind must be one of 'selfie' or 'provider'");
+    }
+
+    const image = await this.service.getGuarantorSelfServiceIdentityImage(token, kind);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
+  }
+
+  @Get('driver-preview-image')
+  async getDriverPreviewImage(
+    @Query('token') token: string,
+    @Res({ passthrough: true }) response: HeaderWritableResponse,
+  ): Promise<StreamableFile> {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+
+    const image = await this.service.getGuarantorSelfServiceDriverPreviewImage(token);
+    setResponseHeader(response, 'content-type', image.contentType);
+    setResponseHeader(response, 'content-disposition', 'inline');
+    return new StreamableFile(image.buffer);
   }
 
   @Post('update-profile')

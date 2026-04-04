@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { readFileSync } from 'node:fs';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import path from 'node:path';
 // biome-ignore lint/style/useImportType: NestJS DI requires a runtime value for constructor metadata.
 import { ConfigService } from '@nestjs/config';
 import {
@@ -409,12 +411,97 @@ type NigeriaMockIdentity = {
   outcome?: 'verified' | 'face_mismatch';
 };
 
+function normalizeComparableValue(value?: string): string {
+  return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function doesLocalMockMatchValidation(
+  mockIdentity: NigeriaMockIdentity,
+  providerVerification?: {
+    validationData?: {
+      firstName?: string;
+      middleName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+      gender?: string;
+    };
+  },
+): boolean {
+  const validation = providerVerification?.validationData;
+  if (!validation) {
+    return true;
+  }
+
+  const expectedFullName = normalizeComparableValue(
+    [validation.firstName, validation.middleName, validation.lastName].filter(Boolean).join(' '),
+  );
+  const mockFullName = normalizeComparableValue(mockIdentity.fullName);
+  const expectedDob = normalizeComparableValue(validation.dateOfBirth);
+  const mockDob = normalizeComparableValue(mockIdentity.dateOfBirth);
+  const expectedGender = normalizeComparableValue(validation.gender);
+  const mockGender = normalizeComparableValue(mockIdentity.gender);
+
+  if (expectedFullName && mockFullName && expectedFullName !== mockFullName) {
+    return false;
+  }
+
+  if (expectedDob && mockDob && expectedDob !== mockDob) {
+    return false;
+  }
+
+  if (expectedGender && mockGender && expectedGender !== mockGender) {
+    return false;
+  }
+
+  return true;
+}
+
 function toMockPhotoDataUrl(initials: string, fill: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480"><rect width="480" height="480" rx="48" fill="${fill}"/><circle cx="240" cy="180" r="84" fill="rgba(255,255,255,0.85)"/><path d="M120 390c22-71 86-112 120-112s98 41 120 112" fill="rgba(255,255,255,0.85)"/><text x="240" y="452" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="700" fill="#0f172a">${initials}</text></svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+function toFixturePhotoDataUrl(fileName: string): string {
+  const absolutePath = path.resolve(process.cwd(), '..', '..', 'fixtures', 'demo-images', fileName);
+  const payload = readFileSync(absolutePath).toString('base64');
+  return `data:image/jpeg;base64,${payload}`;
+}
+
+const LEASE_DRIVER_PROVIDER_PHOTO = toFixturePhotoDataUrl('lease-driver-provider.jpg');
+
 const LOCAL_NIGERIA_MOCK_IDENTITIES: Record<string, NigeriaMockIdentity> = {
+  'NATIONAL_ID:11111111111': {
+    fullName: 'Lease Driver',
+    dateOfBirth: '1989-04-21',
+    address: '18 Admiralty Way, Lekki, Lagos',
+    gender: 'male',
+    photoUrl: LEASE_DRIVER_PROVIDER_PHOTO,
+    verificationStatus: 'successful_match',
+  },
+  'NATIONAL_ID:44444444444': {
+    fullName: 'Ifeanyi Duru',
+    dateOfBirth: '1990-08-14',
+    address: '27 Isaac John Street, Ikeja GRA, Lagos',
+    gender: 'male',
+    photoUrl: toMockPhotoDataUrl('ID', '#a7f3d0'),
+    verificationStatus: 'successful_match',
+  },
+  'NATIONAL_ID:55555555555': {
+    fullName: 'Oluwaseyi Adelaju',
+    dateOfBirth: '1988-09-12',
+    address: '14 Admiralty Way, Lekki, Lagos',
+    gender: 'male',
+    photoUrl: toMockPhotoDataUrl('OA', '#fcd34d'),
+    verificationStatus: 'successful_match',
+  },
+  'DRIVERS_LICENSE:LIC-FTD-009': {
+    fullName: 'Ifeanyi Duru',
+    dateOfBirth: '1990-08-14',
+    address: '27 Isaac John Street, Ikeja GRA, Lagos',
+    gender: 'male',
+    photoUrl: toMockPhotoDataUrl('ID', '#a7f3d0'),
+    verificationStatus: 'successful_match',
+  },
   'NATIONAL_ID:12345678901': {
     fullName: 'Adaobi Okafor',
     dateOfBirth: '1992-04-16',
@@ -470,7 +557,7 @@ function getLocalNigeriaMockVerification(
     return null;
   }
 
-  if (!providerVerification?.selfieImageBase64) {
+  if (!providerVerification?.selfieImageBase64 && !providerVerification?.selfieImageUrl) {
     return {
       status: 'no_match',
       providerName: 'youverify',
@@ -488,6 +575,24 @@ function getLocalNigeriaMockVerification(
       matchedIdentifierType: identifier.type,
       verificationStatus: 'no_match',
       reason: 'No local mock identity matched the submitted identifier.',
+    };
+  }
+
+  if (!doesLocalMockMatchValidation(mockIdentity, providerVerification)) {
+    return {
+      status: 'no_match',
+      providerName: 'youverify',
+      matchedIdentifierType: identifier.type,
+      verificationStatus: 'validation_mismatch',
+      enrichment: {
+        fullName: mockIdentity.fullName,
+        dateOfBirth: mockIdentity.dateOfBirth,
+        address: mockIdentity.address,
+        gender: mockIdentity.gender,
+        photoUrl: mockIdentity.photoUrl,
+      },
+      reason:
+        'The submitted identity details do not match the verification record for this identifier.',
     };
   }
 
@@ -518,6 +623,8 @@ function getLocalNigeriaMockVerification(
       portraitAvailable: true,
       ...(identifier.type === 'DRIVERS_LICENSE' ? { issueDate: '2022-01-14' } : {}),
       ...(identifier.type === 'DRIVERS_LICENSE' ? { expiryDate: '2028-01-14' } : {}),
+      ...(identifier.type === 'DRIVERS_LICENSE' ? { stateOfIssuance: 'Lagos' } : {}),
+      ...(identifier.type === 'DRIVERS_LICENSE' ? { licenceClass: 'B' } : {}),
     },
     enrichment: {
       fullName: mockIdentity.fullName,
@@ -526,7 +633,29 @@ function getLocalNigeriaMockVerification(
       gender: mockIdentity.gender,
       photoUrl: mockIdentity.photoUrl,
     },
+    auditData: {
+      validations: {
+        selfie: {
+          match: true,
+          confidenceLevel: 98,
+        },
+      },
+    },
   };
+}
+
+function shouldPreferLocalNigeriaMock(configService: ConfigService): boolean {
+  const explicitMode = configService.get<string>('IDENTITY_PROVIDER_MOCK_MODE');
+  if (explicitMode === 'true') {
+    return true;
+  }
+
+  const explicitPreference = configService.get<string>('PREFER_LOCAL_NIGERIA_IDENTITY_MOCK');
+  if (explicitPreference === 'true') {
+    return true;
+  }
+
+  return configService.get<string>('NODE_ENV') !== 'production';
 }
 
 @Injectable()
@@ -572,6 +701,11 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
       };
     }
 
+    const localNigeriaMock = getLocalNigeriaMockVerification(identifier, providerVerification);
+    if (localNigeriaMock && shouldPreferLocalNigeriaMock(this.configService)) {
+      return localNigeriaMock;
+    }
+
     const mockResponse = this.configService.get<string>('YOUVERIFY_MOCK_RESPONSE');
     if (mockResponse) {
       return this.normalizeMockResponse(identifier.type, mockResponse);
@@ -586,9 +720,8 @@ export class YouVerifyProvider implements IdentityProviderAdapter {
         this.configService.get<string>('IDENTITY_PROVIDER_MOCK_MODE') === 'true' ||
         this.configService.get<string>('NODE_ENV') !== 'production';
       if (localMockMode) {
-        const localMock = getLocalNigeriaMockVerification(identifier, providerVerification);
-        if (localMock) {
-          return localMock;
+        if (localNigeriaMock) {
+          return localNigeriaMock;
         }
       }
       return {

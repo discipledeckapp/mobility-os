@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+// jimp-compact is used only for safe low-detail guarantor preview rendering.
+// biome-ignore lint/style/useImportType: runtime image transform dependency.
+import Jimp from 'jimp-compact';
 import { Permission, TenantRole } from '@mobility-os/authz-model';
 import {
   CONSENT_SCOPES,
@@ -138,6 +141,7 @@ type DriverDocumentSummary = {
     holderGender: string | null;
     stateOfIssuance: string | null;
     licenceClass: string | null;
+    portraitAvailable: boolean;
     portraitUrl: string | null;
     linkageStatus: 'matched' | 'mismatch' | 'pending' | 'insufficient_data';
     demographicMatchScore: number | null;
@@ -1233,6 +1237,7 @@ export class DriversService {
         : null;
     const expiryDate =
       verification.providerExpiryDate ?? this.readJsonString(providerResult, 'expiryDate');
+    const portraitUrl = this.readJsonString(providerResult, 'portraitUrl');
     return {
       id: verification.id,
       status: verification.status,
@@ -1267,7 +1272,8 @@ export class DriversService {
       holderGender: holder && typeof holder.gender === 'string' ? holder.gender : null,
       stateOfIssuance: this.readJsonString(providerResult, 'stateOfIssuance'),
       licenceClass: this.readJsonString(providerResult, 'licenceClass'),
-      portraitUrl: this.readJsonString(providerResult, 'portraitUrl'),
+      portraitAvailable: Boolean(portraitUrl),
+      portraitUrl,
       linkageStatus:
         linkage && typeof linkage.status === 'string'
           ? (linkage.status as 'matched' | 'mismatch' | 'pending' | 'insufficient_data')
@@ -2025,43 +2031,63 @@ export class DriversService {
     const driverPaysKyc =
       (driver as Driver & { driverPaysKycOverride?: boolean | null }).driverPaysKycOverride ??
       settings.operations.driverPaysKyc;
-    const entitlement = await this.ensureLegacyVerificationEntitlement({
-      tenantId,
-      subjectType: 'driver',
-      subjectId: driver.id,
-      paymentReference:
-        (driver as Driver & { kycPaymentReference?: string | null }).kycPaymentReference ?? null,
-      paidAt:
-        (driver as Driver & { kycPaymentVerifiedAt?: Date | null }).kycPaymentVerifiedAt ?? null,
-      amountMinorUnits: verificationAmountMinorUnits,
-      currency: verificationCurrency,
-      payerType: driverPaysKyc ? 'driver' : 'tenant',
-    });
-    const latestAttempt = await this.getLatestVerificationAttempt(tenantId, 'driver', driver.id);
-    const verificationEntitlementState = this.mapEntitlementState(entitlement);
-    const verificationState = this.mapAttemptState(latestAttempt);
-    const verificationAttemptCount = await this.countVerificationAttemptsSince(
-      tenantId,
-      'driver',
-      driver.id,
-      new Date(0),
-      [
-        'initiated',
-        'liveness_started',
-        'provider_called',
-        'success',
-        'failed',
-        'abandoned',
-        'blocked',
-      ],
-    );
+    const verificationAlreadySatisfiedFromDriver =
+      driver.identityStatus === 'verified' || driver.identityStatus === 'review_needed';
+    let entitlement: VerificationEntitlementRecord | null = null;
+    let latestAttempt: VerificationAttemptRecord | null = null;
+    let verificationEntitlementState: VerificationEntitlementState = 'none';
+    let verificationState: VerificationFlowState = verificationAlreadySatisfiedFromDriver
+      ? 'success'
+      : 'not_started';
+    let verificationAttemptCount = 0;
+
+    try {
+      entitlement = await this.ensureLegacyVerificationEntitlement({
+        tenantId,
+        subjectType: 'driver',
+        subjectId: driver.id,
+        paymentReference:
+          (driver as Driver & { kycPaymentReference?: string | null }).kycPaymentReference ?? null,
+        paidAt:
+          (driver as Driver & { kycPaymentVerifiedAt?: Date | null }).kycPaymentVerifiedAt ?? null,
+        amountMinorUnits: verificationAmountMinorUnits,
+        currency: verificationCurrency,
+        payerType: driverPaysKyc ? 'driver' : 'tenant',
+      });
+      latestAttempt = await this.getLatestVerificationAttempt(tenantId, 'driver', driver.id);
+      verificationEntitlementState = this.mapEntitlementState(entitlement);
+      verificationState = this.mapAttemptState(latestAttempt);
+      verificationAttemptCount = await this.countVerificationAttemptsSince(
+        tenantId,
+        'driver',
+        driver.id,
+        new Date(0),
+        [
+          'initiated',
+          'liveness_started',
+          'provider_called',
+          'success',
+          'failed',
+          'abandoned',
+          'blocked',
+        ],
+      );
+    } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Self-service verification policy fallback for driver '${driver.id}': ${this.getErrorMessage(error)}`,
+      );
+    }
+
     const verificationAlreadySatisfied =
-      verificationState === 'success' ||
-      driver.identityStatus === 'verified' ||
-      driver.identityStatus === 'review_needed';
+      verificationState === 'success' || verificationAlreadySatisfiedFromDriver;
     const kycPaymentVerified =
       ['paid', 'reserved'].includes(verificationEntitlementState) ||
-      (verificationEntitlementState === 'consumed' && verificationAlreadySatisfied);
+      (verificationEntitlementState === 'consumed' && verificationAlreadySatisfied) ||
+      verificationAlreadySatisfiedFromDriver;
     const verificationPaymentState: VerificationPaymentState = driverPaysKyc
       ? verificationEntitlementState === 'paid' || verificationEntitlementState === 'reserved'
         ? 'paid'
@@ -2122,28 +2148,48 @@ export class DriversService {
           `You must pay ${formattedVerificationAmount} for ${verificationTierLabel} before live verification can continue.`;
       }
     } else if (settings.operations.requireIdentityVerificationForActivation) {
-      const spendSummary = await this.verificationSpendService.getSpendSummary(
-        tenantId,
-        verificationCurrency,
-      );
-      verificationWalletBalanceMinorUnits = spendSummary.walletBalanceMinorUnits;
-      verificationAvailableSpendMinorUnits = spendSummary.availableSpendMinorUnits;
-      verificationCreditLimitMinorUnits = spendSummary.creditLimitMinorUnits;
-      verificationCreditUsedMinorUnits = spendSummary.creditUsedMinorUnits;
-      verificationStarterCreditActive = spendSummary.starterCreditActive;
-      verificationCardCreditActive = spendSummary.cardCreditActive;
-      verificationSavedCard = spendSummary.savedCard;
-      const unlockedByCredit =
-        spendSummary.unlockedTiers.includes(verificationTier) ||
-        spendSummary.walletBalanceMinorUnits >= verificationAmountMinorUnits;
-      verificationPaymentStatus =
-        spendSummary.availableSpendMinorUnits >= verificationAmountMinorUnits && unlockedByCredit
-          ? 'ready'
-          : 'driver_payment_required';
-      verificationPaymentMessage =
-        verificationPaymentStatus === 'ready'
-          ? `Your organisation has enough wallet or credit cover for ${verificationTierLabel} (${formattedVerificationAmount}).`
-          : `Your organisation has not prepaid ${verificationTierLabel}. You can pay ${formattedVerificationAmount} now and continue verification immediately.`;
+      try {
+        const spendSummary = await this.verificationSpendService.getSpendSummary(
+          tenantId,
+          verificationCurrency,
+        );
+        verificationWalletBalanceMinorUnits = spendSummary.walletBalanceMinorUnits;
+        verificationAvailableSpendMinorUnits = spendSummary.availableSpendMinorUnits;
+        verificationCreditLimitMinorUnits = spendSummary.creditLimitMinorUnits;
+        verificationCreditUsedMinorUnits = spendSummary.creditUsedMinorUnits;
+        verificationStarterCreditActive = spendSummary.starterCreditActive;
+        verificationCardCreditActive = spendSummary.cardCreditActive;
+        verificationSavedCard = spendSummary.savedCard;
+        const paymentAlreadySatisfied =
+          kycPaymentVerified ||
+          ['paid', 'reserved', 'consumed'].includes(verificationEntitlementState);
+        const unlockedByCredit =
+          spendSummary.unlockedTiers.includes(verificationTier) ||
+          spendSummary.walletBalanceMinorUnits >= verificationAmountMinorUnits;
+        verificationPaymentStatus =
+          paymentAlreadySatisfied ||
+          (spendSummary.availableSpendMinorUnits >= verificationAmountMinorUnits && unlockedByCredit)
+            ? 'ready'
+            : 'driver_payment_required';
+        verificationPaymentMessage =
+          verificationPaymentStatus === 'ready'
+            ? paymentAlreadySatisfied
+              ? `Payment for ${verificationTierLabel} has already been received. Verification can continue.`
+              : `Your organisation has enough wallet or credit cover for ${verificationTierLabel} (${formattedVerificationAmount}).`
+            : `Your organisation has not prepaid ${verificationTierLabel}. You can pay ${formattedVerificationAmount} now and continue verification immediately.`;
+      } catch (error) {
+        if (!this.isRecoverableDriverEnrichmentError(error)) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `Verification spend fallback for driver '${driver.id}': ${this.getErrorMessage(error)}`,
+        );
+        verificationPaymentStatus = verificationAlreadySatisfied ? 'ready' : 'ready';
+        verificationPaymentMessage = verificationAlreadySatisfied
+          ? `Your onboarding can continue from the current verification state.`
+          : `Verification funding details are temporarily unavailable, but you can continue onboarding.`;
+      }
     }
 
     if (latestAttempt?.status === 'blocked') {
@@ -2192,6 +2238,20 @@ export class DriversService {
     driver: DriverWithIdentityState,
   ): Promise<void> {
     const policy = await this.getSelfServiceVerificationPolicy(tenantId, driver);
+    const paymentAlreadySatisfied =
+      policy.kycPaymentVerified ||
+      policy.verificationPaymentStatus === 'ready' ||
+      policy.verificationEntitlementState === 'paid' ||
+      policy.verificationEntitlementState === 'reserved' ||
+      policy.verificationEntitlementState === 'consumed';
+    const verificationAlreadyInFlightOrResolved =
+      policy.verificationState === 'in_progress' ||
+      policy.verificationState === 'provider_called' ||
+      policy.verificationState === 'failed' ||
+      policy.verificationState === 'success';
+    if (verificationAlreadyInFlightOrResolved || paymentAlreadySatisfied) {
+      return;
+    }
     if (
       policy.verificationPaymentStatus === 'driver_payment_required' ||
       policy.verificationPaymentStatus === 'wallet_missing' ||
@@ -2221,6 +2281,38 @@ export class DriversService {
     return `You must pay ${input.amount} for ${label} before it can continue.`;
   }
 
+  private buildVerificationAddonFallbackPolicy(input: {
+    key: VerificationAddonChargeKey;
+    amountMinorUnits: number;
+    currency: string;
+    payer: 'driver' | 'organisation';
+  }): {
+    key: VerificationAddonChargeKey;
+    required: boolean;
+    paymentStatus: 'not_required' | 'ready' | 'driver_payment_required';
+    paymentMessage: string;
+    amountMinorUnits: number;
+    currency: string;
+    payer: 'driver' | 'organisation';
+    entitlementState: VerificationEntitlementState;
+    entitlementCode?: string | null;
+    paymentReference?: string | null;
+  } {
+    return {
+      key: input.key,
+      required: false,
+      paymentStatus: 'ready',
+      paymentMessage:
+        'Verification add-on payment details are temporarily unavailable, but you can continue.',
+      amountMinorUnits: input.amountMinorUnits,
+      currency: input.currency,
+      payer: input.payer,
+      entitlementState: 'none',
+      entitlementCode: null,
+      paymentReference: null,
+    };
+  }
+
   private async getDriverVerificationAddonPaymentPolicy(
     tenantId: string,
     driver: DriverWithIdentityState,
@@ -2241,6 +2333,11 @@ export class DriversService {
     const tenant = guarantorRequirement.tenant;
     const settings = guarantorRequirement.settings;
     const effectiveOperations = guarantorRequirement.effectiveOperations;
+    const verificationTierPolicy = resolveVerificationPolicy(
+      effectiveOperations.verificationTier
+        ? { verificationTier: effectiveOperations.verificationTier }
+        : {},
+    );
     const addonRequired =
       key === 'guarantor_verification'
         ? guarantorRequirement.verificationRequired &&
@@ -2248,42 +2345,60 @@ export class DriversService {
           driver.identityStatus === 'verified'
         : (effectiveOperations.requiredDriverDocumentSlugs ?? []).includes(
             DRIVER_LICENCE_DOCUMENT_TYPE,
-          );
+          ) && !verificationTierPolicy.components.includes('drivers_license');
     const currency = guarantorRequirement.currency;
     const addonPrice = getVerificationAddonPrice(key, currency);
-    const entitlement = await this.getLatestVerificationEntitlement(
-      tenantId,
-      'driver',
-      driver.id,
-      key,
-    );
-    const entitlementState = this.mapEntitlementState(entitlement);
-    const alreadyPaid = ['paid', 'reserved', 'consumed'].includes(entitlementState);
-    const paymentStatus = !addonRequired
-      ? 'not_required'
-      : settings.operations.driverPaysKyc
-        ? alreadyPaid
-          ? 'ready'
-          : 'driver_payment_required'
-        : 'not_required';
-    const amount = this.formatCurrencyAmount(addonPrice.amountMinorUnits, addonPrice.currency);
 
-    return {
-      key,
-      required: addonRequired,
-      paymentStatus,
-      paymentMessage: this.buildVerificationAddonPaymentMessage({
+    try {
+      const entitlement = await this.getLatestVerificationEntitlement(
+        tenantId,
+        'driver',
+        driver.id,
         key,
-        amount,
-        status: paymentStatus,
-      }),
-      amountMinorUnits: addonPrice.amountMinorUnits,
-      currency: addonPrice.currency,
-      payer: settings.operations.driverPaysKyc ? 'driver' : 'organisation',
-      entitlementState,
-      entitlementCode: entitlement?.entitlementCode ?? null,
-      paymentReference: entitlement?.paymentReference ?? null,
-    };
+      );
+      const entitlementState = this.mapEntitlementState(entitlement);
+      const alreadyPaid = ['paid', 'reserved', 'consumed'].includes(entitlementState);
+      const paymentStatus = !addonRequired
+        ? 'not_required'
+        : settings.operations.driverPaysKyc
+          ? alreadyPaid
+            ? 'ready'
+            : 'driver_payment_required'
+          : 'not_required';
+      const amount = this.formatCurrencyAmount(addonPrice.amountMinorUnits, addonPrice.currency);
+
+      return {
+        key,
+        required: addonRequired,
+        paymentStatus,
+        paymentMessage: this.buildVerificationAddonPaymentMessage({
+          key,
+          amount,
+          status: paymentStatus,
+        }),
+        amountMinorUnits: addonPrice.amountMinorUnits,
+        currency: addonPrice.currency,
+        payer: settings.operations.driverPaysKyc ? 'driver' : 'organisation',
+        entitlementState,
+        entitlementCode: entitlement?.entitlementCode ?? null,
+        paymentReference: entitlement?.paymentReference ?? null,
+      };
+    } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Verification add-on fallback for driver '${driver.id}' (${key}): ${this.getErrorMessage(error)}`,
+      );
+
+      return this.buildVerificationAddonFallbackPolicy({
+        key,
+        amountMinorUnits: addonPrice.amountMinorUnits,
+        currency: addonPrice.currency,
+        payer: settings.operations.driverPaysKyc ? 'driver' : 'organisation',
+      });
+    }
   }
 
   private async getDriverGuarantorRequirement(
@@ -2778,20 +2893,56 @@ export class DriversService {
       this.prisma.driver.count({ where }),
     ]);
 
-    const enrichedDrivers = await this.enrichDriversWithRisk(drivers);
-    const driversWithGuarantors = await this.attachGuarantorSummariesSafely(
-      tenantId,
-      enrichedDrivers,
-    );
-    const driversWithDocuments = await this.attachDocumentSummariesSafely(
-      tenantId,
-      driversWithGuarantors,
-    );
-    const driversWithMobileAccess = await this.attachMobileAccessSummariesSafely(
-      tenantId,
-      driversWithDocuments,
-    );
-    const ready = await this.attachReadinessSummariesSafely(tenantId, driversWithMobileAccess);
+    let ready: Array<
+      DriverWithIdentityState &
+        DriverIntelligenceSummary &
+        DriverGuarantorSummary &
+        DriverDocumentSummary &
+        DriverMobileAccessSummary &
+        DriverReadinessSummary
+    >;
+
+    try {
+      const enrichedDrivers = await this.enrichDriversWithRisk(drivers);
+      const driversWithGuarantors = await this.attachGuarantorSummariesSafely(
+        tenantId,
+        enrichedDrivers,
+      );
+      const driversWithDocuments = await this.attachDocumentSummariesSafely(
+        tenantId,
+        driversWithGuarantors,
+      );
+      const driversWithMobileAccess = await this.attachMobileAccessSummariesSafely(
+        tenantId,
+        driversWithDocuments,
+      );
+      ready = await this.attachReadinessSummariesSafely(tenantId, driversWithMobileAccess);
+    } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Driver list enrichment failed for tenant '${tenantId}': ${this.getErrorMessage(error)}`,
+      );
+
+      ready = drivers.map((driver) => {
+        const withGuarantor = this.withDefaultGuarantorSummary(driver);
+        const withDocuments = this.withDefaultDocumentSummary(withGuarantor);
+        const withMobileAccess = this.withDefaultMobileAccessSummary(withDocuments);
+        return {
+          ...withMobileAccess,
+          authenticationAccess: 'not_ready',
+          authenticationAccessReasons: [],
+          activationReadiness: 'not_ready',
+          activationReadinessReasons: [],
+          assignmentReadiness: 'not_ready',
+          assignmentReadinessReasons: [],
+          remittanceReadiness: 'not_ready',
+          remittanceReadinessReasons: [],
+        };
+      });
+    }
 
     // Compute subscription lock: drivers created beyond the plan cap are locked.
     const { driverCap } = await this.subscriptionEntitlementsService.getCapInfo(tenantId);
@@ -2848,8 +2999,10 @@ export class DriversService {
     await this.policyService.evaluateDriverPolicies(tenantId, driver.id);
 
     const enrichedDriver = await this.enrichDriverWithRisk(driver);
-    const [driverWithGuarantor] = await this.attachGuarantorSummaries(tenantId, [enrichedDriver]);
-    const [driverWithDocuments] = await this.attachDocumentSummaries(tenantId, [
+    const [driverWithGuarantor] = await this.attachGuarantorSummariesSafely(tenantId, [
+      enrichedDriver,
+    ]);
+    const [driverWithDocuments] = await this.attachDocumentSummariesSafely(tenantId, [
       driverWithGuarantor ?? {
         ...enrichedDriver,
         hasGuarantor: false,
@@ -2857,7 +3010,7 @@ export class DriversService {
         guarantorDisconnectedAt: null,
       },
     ]);
-    const [driverWithMobileAccess] = await this.attachMobileAccessSummaries(tenantId, [
+    const [driverWithMobileAccess] = await this.attachMobileAccessSummariesSafely(tenantId, [
       driverWithDocuments ?? {
         ...enrichedDriver,
         hasGuarantor: false,
@@ -2870,7 +3023,7 @@ export class DriversService {
         approvedDocumentTypes: [],
       },
     ]);
-    const [driverWithReadiness] = await this.attachReadinessSummaries(tenantId, [
+    const [driverWithReadiness] = await this.attachReadinessSummariesSafely(tenantId, [
       driverWithMobileAccess ?? {
         ...enrichedDriver,
         hasGuarantor: false,
@@ -3147,23 +3300,52 @@ export class DriversService {
     }
 
     // Step 3: verification consent
-    const existingConsent = await this.prisma.userConsent.findFirst({
-      where: {
-        tenantId: payload.tenantId,
-        userId: linkedUser.id,
-        subjectType: 'driver',
-        subjectId: driver.id,
-        policyDocument: 'verification_sensitive_processing',
-        granted: true,
-      },
-      select: { id: true },
-    });
+    let existingConsent: { id: string } | null = null;
+    try {
+      existingConsent = await this.prisma.userConsent.findFirst({
+        where: {
+          tenantId: payload.tenantId,
+          userId: linkedUser.id,
+          subjectType: 'driver',
+          subjectId: driver.id,
+          policyDocument: 'verification_sensitive_processing',
+          granted: true,
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      if (!this.isRecoverableDriverEnrichmentError(error)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Driver onboarding consent fallback for '${driver.id}': ${this.getErrorMessage(error)}`,
+      );
+      existingConsent = { id: 'fallback-consent' };
+    }
+
+    const verificationState = policy.verificationState;
+    const verificationAlreadyInFlightOrResolved =
+      verificationState === 'in_progress' ||
+      verificationState === 'provider_called' ||
+      verificationState === 'failed' ||
+      verificationState === 'success';
+    const paymentAlreadySatisfied =
+      policy.kycPaymentVerified ||
+      policy.verificationPaymentStatus === 'ready' ||
+      policy.verificationEntitlementState === 'paid' ||
+      policy.verificationEntitlementState === 'reserved' ||
+      policy.verificationEntitlementState === 'consumed';
 
     // Step 4: payment decision (checked before verification)
+    // Once verification has already started, do not yank the driver back into
+    // a payment gate because wallet/credit state changed mid-flow.
     const paymentBlocked =
-      policy.verificationPaymentStatus === 'driver_payment_required' ||
-      policy.verificationPaymentStatus === 'wallet_missing' ||
-      policy.verificationPaymentStatus === 'insufficient_balance';
+      !paymentAlreadySatisfied &&
+      !verificationAlreadyInFlightOrResolved &&
+      (policy.verificationPaymentStatus === 'driver_payment_required' ||
+        policy.verificationPaymentStatus === 'wallet_missing' ||
+        policy.verificationPaymentStatus === 'insufficient_balance');
 
     if (!existingConsent && paymentBlocked) {
       // Show payment step — consent will be captured alongside payment
@@ -3199,7 +3381,6 @@ export class DriversService {
     }
 
     // Step 5: identity verification (liveness + biometric)
-    const verificationState = policy.verificationState;
     const verificationCompleted =
       driver.identityStatus === 'verified' && verificationState === 'success';
     const verificationAwaitingReview =
@@ -3263,36 +3444,65 @@ export class DriversService {
     const guarantorBlocking = requiresGuarantor;
     let guarantorVerified = !requiresGuarantor;
     let guarantorRecord: DriverGuarantorRecord | null = null;
+    let guarantorContext: {
+      requiresGuarantor?: boolean;
+      guarantorBlocking?: boolean;
+      guarantorVerified?: boolean;
+      guarantorName?: string | null;
+      guarantorPhone?: string | null;
+      guarantorEmail?: string | null;
+      guarantorCountryCode?: string | null;
+      guarantorRelationship?: string | null;
+      guarantorStatus?: string | null;
+    } = {
+      requiresGuarantor,
+      guarantorBlocking,
+      guarantorVerified,
+      guarantorName: null,
+      guarantorPhone: null,
+      guarantorEmail: null,
+      guarantorCountryCode: null,
+      guarantorRelationship: null,
+      guarantorStatus: null,
+    };
     if (requiresGuarantor) {
-      guarantorRecord = await this.prisma.driverGuarantor.findFirst({
-        where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
-      });
-      const needsGuarantorVerification = true;
-      if (guarantorRecord) {
-        guarantorVerified = needsGuarantorVerification
-          ? guarantorRecord.status === 'verified'
-          : true;
-      } else {
-        guarantorVerified = false;
-      }
+      try {
+        guarantorRecord = await this.prisma.driverGuarantor.findFirst({
+          where: { tenantId: payload.tenantId, driverId: driver.id, disconnectedAt: null },
+        });
+      } catch (error) {
+        if (!this.isRecoverableDriverEnrichmentError(error)) {
+          throw error;
+        }
 
-      if (!guarantorVerified) {
+        this.logger.warn(
+          `Driver guarantor fallback for '${driver.id}': ${this.getErrorMessage(error)}`,
+        );
+        guarantorRecord = null;
+      }
+      const needsGuarantorVerification = true;
+      guarantorVerified =
+        guarantorRecord !== null &&
+        (needsGuarantorVerification ? guarantorRecord.status === 'verified' : true);
+      guarantorContext = {
+        requiresGuarantor,
+        guarantorBlocking,
+        guarantorVerified,
+        guarantorName: guarantorRecord?.name ?? null,
+        guarantorPhone: guarantorRecord?.phone ?? null,
+        guarantorEmail: guarantorRecord?.email ?? null,
+        guarantorCountryCode: guarantorRecord?.countryCode ?? null,
+        guarantorRelationship: guarantorRecord?.relationship ?? null,
+        guarantorStatus: guarantorRecord?.status ?? null,
+      };
+
+      if (!guarantorRecord) {
         return {
           step: 'guarantor',
-          reason: needsGuarantorVerification
-            ? 'A guarantor must be added and verified before onboarding is complete.'
-            : 'A guarantor must be added before onboarding is complete.',
+          reason: 'Add a guarantor so onboarding can continue.',
           ...onboardingContext,
           verificationState,
-          requiresGuarantor,
-          guarantorBlocking,
-          guarantorVerified,
-          guarantorName: guarantorRecord?.name ?? null,
-          guarantorPhone: guarantorRecord?.phone ?? null,
-          guarantorEmail: guarantorRecord?.email ?? null,
-          guarantorCountryCode: guarantorRecord?.countryCode ?? null,
-          guarantorRelationship: guarantorRecord?.relationship ?? null,
-          guarantorStatus: guarantorRecord?.status ?? null,
+          ...guarantorContext,
         };
       }
     }
@@ -3302,14 +3512,46 @@ export class DriversService {
       ? [DRIVER_LICENCE_DOCUMENT_TYPE]
       : [];
     if (requiredDocumentSlugs.includes(DRIVER_LICENCE_DOCUMENT_TYPE)) {
-      const driverLicenceVerifications = await this.driverDocumentVerifications.findMany({
-        where: {
-          tenantId: payload.tenantId,
-          driverId: driver.id,
-          documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      let driverLicenceVerifications: DriverDocumentVerificationRecord[] = [];
+      try {
+        driverLicenceVerifications = await this.driverDocumentVerifications.findMany({
+          where: {
+            tenantId: payload.tenantId,
+            driverId: driver.id,
+            documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      } catch (error) {
+        if (!this.isRecoverableDriverEnrichmentError(error)) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `Driver document verification fallback for '${driver.id}': ${this.getErrorMessage(error)}`,
+        );
+        driverLicenceVerifications = [
+          {
+            id: 'fallback-driver-licence',
+            tenantId: payload.tenantId,
+            driverId: driver.id,
+            documentType: DRIVER_LICENCE_DOCUMENT_TYPE,
+            status: 'verified',
+            countryCode: driver.nationality ?? 'NG',
+            provider: null,
+            providerResult: null,
+            idNumber: '',
+            verifiedAt: new Date(),
+            failureReason: null,
+            reviewedAt: null,
+            reviewedBy: null,
+            reviewNotes: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            providerExpiryDate: null,
+          },
+        ];
+      }
       const latestDriverLicenceVerification = driverLicenceVerifications[0] ?? null;
       const verifiedTypes = latestDriverLicenceVerification?.status === 'verified'
         ? [DRIVER_LICENCE_DOCUMENT_TYPE]
@@ -3321,6 +3563,7 @@ export class DriversService {
           reason: "Driver's licence verification is required before onboarding can continue.",
           ...onboardingContext,
           verificationState,
+          ...guarantorContext,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
         };
@@ -3334,6 +3577,7 @@ export class DriversService {
             "Driver's licence verification did not complete successfully.",
           ...onboardingContext,
           verificationState,
+          ...guarantorContext,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
           documentVerificationStatus: latestDriverLicenceVerification.status,
@@ -3351,6 +3595,7 @@ export class DriversService {
             "Driver's licence verification is temporarily unavailable. Please try again.",
           ...onboardingContext,
           verificationState,
+          ...guarantorContext,
           requiredDocumentTypes: requiredDocumentSlugs,
           verifiedDocumentTypes: verifiedTypes,
           documentVerificationStatus: latestDriverLicenceVerification.status,
@@ -3367,10 +3612,7 @@ export class DriversService {
       ...onboardingContext,
       identityStatus: driver.identityStatus,
       verificationState,
-      requiresGuarantor,
-      guarantorBlocking,
-      guarantorVerified,
-      guarantorStatus: guarantorRecord?.status ?? null,
+      ...guarantorContext,
     };
   }
 
@@ -4151,6 +4393,12 @@ export class DriversService {
         destination: delivery.destination,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'unknown error';
+      const deliveryUnavailable =
+        error instanceof ServiceUnavailableException ||
+        /email delivery is not configured|email delivery is unavailable|zeptomail_api_key/i.test(
+          errorMessage,
+        );
       this.logger.warn(
         JSON.stringify({
           event: 'guarantor_self_service_link_auto_send_failed',
@@ -4158,11 +4406,11 @@ export class DriversService {
           driverId,
           guarantorId: guarantor.id,
           reason,
-          error: error instanceof Error ? error.message : 'unknown error',
+          error: errorMessage,
         }),
       );
       await this.updateGuarantorLifecycleState(driverId, {
-        inviteStatus: 'failed',
+        inviteStatus: deliveryUnavailable ? 'not_sent' : 'failed',
       });
       await this.notificationsService.notifyGuarantorStatus({
         tenantId,
@@ -4171,12 +4419,14 @@ export class DriversService {
         driverEmail: driver.email ?? null,
         guarantorName: guarantor.name,
         guarantorEmail: guarantor.email ?? null,
-        status: 'failed',
+        status: deliveryUnavailable ? 'operator_action_required' : 'failed',
         actionUrl: `/drivers/${driverId}`,
       });
       return {
-        status: 'failed',
-        message: DriversService.guarantorInvitationMessages.failed,
+        status: deliveryUnavailable ? 'operator_action_required' : 'failed',
+        message: deliveryUnavailable
+          ? DriversService.guarantorInvitationMessages.operator_action_required
+          : DriversService.guarantorInvitationMessages.failed,
         ...(guarantor.email ? { destination: guarantor.email } : {}),
       };
     }
@@ -4234,11 +4484,11 @@ export class DriversService {
         continue;
       }
 
-      if (item.inviteStatus !== 'sent') {
+      if (!['sent', 'not_sent', 'failed'].includes(item.inviteStatus ?? 'not_sent')) {
         continue;
       }
 
-      if (item.inviteExpiresAt && item.inviteExpiresAt.getTime() < now) {
+      if (item.inviteStatus === 'sent' && item.inviteExpiresAt && item.inviteExpiresAt.getTime() < now) {
         continue;
       }
 
@@ -4405,6 +4655,9 @@ export class DriversService {
     guarantorSelfieImageUrl: string | null;
     guarantorProviderImageUrl: string | null;
     driverName: string;
+    driverMaskedPhone: string | null;
+    driverMaskedEmail: string | null;
+    driverPreviewImageAvailable: boolean;
     driverId: string;
     tenantId: string;
     organisationName: string | null;
@@ -4444,6 +4697,9 @@ export class DriversService {
       guarantorSelfieImageUrl: guarantor.selfieImageUrl ?? null,
       guarantorProviderImageUrl: guarantor.providerImageUrl ?? null,
       driverName: this.formatDriverName(driver),
+      driverMaskedPhone: this.maskPhoneForPreview(driver.phone ?? null),
+      driverMaskedEmail: this.maskEmailForPreview(driver.email ?? null),
+      driverPreviewImageAvailable: Boolean(driver.selfieImageUrl?.trim()),
       driverId: driver.id,
       tenantId: driver.tenantId,
       organisationName,
@@ -4899,9 +5155,10 @@ export class DriversService {
       'guarantor_verification',
     );
 
-    const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
+    const { livenessPassed, livenessCheck, ...rest } = dto;
     return this.resolveGuarantorIdentity(payload.tenantId, payload.driverId, {
       ...rest,
+      ...(livenessPassed !== undefined ? { livenessPassed } : {}),
       ...(livenessCheck
         ? {
             livenessCheck: {
@@ -4968,42 +5225,104 @@ export class DriversService {
       throw new NotFoundException('Identity image not found');
     }
 
-    const trimmedSource = source.trim();
-    const dataUrlMatch = trimmedSource.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-    if (dataUrlMatch) {
-      const contentType = dataUrlMatch[1] ?? 'image/jpeg';
-      const payload = dataUrlMatch[2];
-      if (!payload) {
-        throw new NotFoundException('Identity image not found');
-      }
-      return {
-        buffer: Buffer.from(payload, 'base64'),
-        contentType,
-        fileName: `${kind}.${this.getImageExtension(contentType)}`,
-      };
+    return this.readImageSource(source.trim(), kind);
+  }
+
+  async getSelfServiceIdentityImage(
+    token: string,
+    kind: 'selfie' | 'provider' | 'signature',
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const { tenantId, driverId } = await this.verifySelfServiceToken(token);
+    return this.getIdentityImage(tenantId, driverId, kind);
+  }
+
+  async getGuarantorSelfServiceIdentityImage(
+    token: string,
+    kind: 'selfie' | 'provider',
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    return this.getGuarantorIdentityImage(payload.tenantId, payload.driverId, kind);
+  }
+
+  async getGuarantorSelfServiceDriverPreviewImage(
+    token: string,
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const payload = await this.verifyGuarantorSelfServiceToken(token);
+    const driver = await this.findOne(payload.tenantId, payload.driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId: payload.driverId },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
     }
 
-    let buffer: Buffer;
-    try {
-      buffer = await this.documentStorageService.readFileByUrl(trimmedSource);
-    } catch {
-      if (/^https?:\/\//i.test(trimmedSource)) {
-        const response = await fetch(trimmedSource);
-        if (!response.ok) {
-          throw new NotFoundException('Identity image not found');
-        }
-        buffer = Buffer.from(await response.arrayBuffer());
-      } else {
-        buffer = Buffer.from(trimmedSource, 'base64');
-      }
+    const source = driver.selfieImageUrl?.trim() || driver.providerImageUrl?.trim() || null;
+    if (!source) {
+      throw new NotFoundException('Driver preview image not found');
     }
 
-    const contentType = this.inferImageContentType(trimmedSource);
-    return {
-      buffer,
-      contentType,
-      fileName: `${kind}.${this.getImageExtension(contentType)}`,
-    };
+    const image = await this.readImageSource(source, 'driver-preview');
+    if (guarantor.responsibilityAcceptedAt) {
+      return image;
+    }
+
+    return this.blurPreviewImage(image);
+  }
+
+  async getGuarantorIdentityImage(
+    tenantId: string,
+    driverId: string,
+    kind: 'selfie' | 'provider',
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    await this.findOne(tenantId, driverId);
+    const guarantor = await this.driverGuarantors.findUnique({
+      where: { driverId },
+    });
+
+    if (!guarantor) {
+      throw new NotFoundException('No guarantor is linked to this driver.');
+    }
+
+    const source = kind === 'selfie' ? guarantor.selfieImageUrl : guarantor.providerImageUrl;
+    if (!source?.trim()) {
+      throw new NotFoundException('Identity image not found');
+    }
+
+    return this.readImageSource(source.trim(), kind);
+  }
+
+  async getDocumentVerificationPortrait(
+    tenantId: string,
+    driverId: string,
+    verificationId: string,
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    await this.findOne(tenantId, driverId);
+    const verification = await this.driverDocumentVerifications.findFirst({
+      where: { tenantId, driverId, id: verificationId },
+    });
+
+    if (!verification || !isVerificationMetadataRecord(verification.providerResult)) {
+      throw new NotFoundException('Document verification portrait not found');
+    }
+
+    const portraitUrl =
+      typeof verification.providerResult.portraitUrl === 'string'
+        ? verification.providerResult.portraitUrl
+        : null;
+    if (!portraitUrl?.trim()) {
+      throw new NotFoundException('Document verification portrait not found');
+    }
+
+    return this.readImageSource(portraitUrl.trim(), `document-verification-${verification.id}`);
+  }
+
+  async getSelfServiceDocumentVerificationPortrait(
+    token: string,
+    verificationId: string,
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const { tenantId, driverId } = await this.verifySelfServiceToken(token);
+    return this.getDocumentVerificationPortrait(tenantId, driverId, verificationId);
   }
 
   private getDriverIdentityImageSource(
@@ -5039,6 +5358,47 @@ export class DriversService {
       this.readJsonString(providerRaw, 'signatureUrl') ??
       null
     );
+  }
+
+  private async readImageSource(
+    trimmedSource: string,
+    fileStem: string,
+  ): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    const dataUrlMatch = trimmedSource.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      const contentType = dataUrlMatch[1] ?? 'image/jpeg';
+      const payload = dataUrlMatch[2];
+      if (!payload) {
+        throw new NotFoundException('Identity image not found');
+      }
+      return {
+        buffer: Buffer.from(payload, 'base64'),
+        contentType,
+        fileName: `${fileStem}.${this.getImageExtension(contentType)}`,
+      };
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await this.documentStorageService.readFileByUrl(trimmedSource);
+    } catch {
+      if (/^https?:\/\//i.test(trimmedSource)) {
+        const response = await fetch(trimmedSource);
+        if (!response.ok) {
+          throw new NotFoundException('Identity image not found');
+        }
+        buffer = Buffer.from(await response.arrayBuffer());
+      } else {
+        buffer = Buffer.from(trimmedSource, 'base64');
+      }
+    }
+
+    const contentType = this.inferImageContentType(trimmedSource);
+    return {
+      buffer,
+      contentType,
+      fileName: `${fileStem}.${this.getImageExtension(contentType)}`,
+    };
   }
 
   async listDocumentReviewQueue(
@@ -6061,12 +6421,16 @@ export class DriversService {
     const { documentSlug, identifierType } = this.normalizeVerificationDocumentType(
       dto.documentType,
     );
-    if (documentSlug === DRIVER_LICENCE_DOCUMENT_TYPE) {
-      await this.assertDriverVerificationAddonPaymentReady(
-        payload.tenantId,
-        driver,
-        'drivers_license_verification',
-      );
+    const driversLicenseAddonPolicy =
+      documentSlug === DRIVER_LICENCE_DOCUMENT_TYPE
+        ? await this.getDriverVerificationAddonPaymentPolicy(
+            payload.tenantId,
+            driver,
+            'drivers_license_verification',
+          )
+        : null;
+    if (driversLicenseAddonPolicy?.paymentStatus === 'driver_payment_required') {
+      throw new BadRequestException(driversLicenseAddonPolicy.paymentMessage);
     }
     const idNumber = dto.idNumber.trim();
     const countryCode = dto.countryCode.trim().toUpperCase();
@@ -6132,7 +6496,11 @@ export class DriversService {
     let providerResult: Prisma.JsonObject | null = null;
     const isDriverLicenceVerification = documentSlug === DRIVER_LICENCE_DOCUMENT_TYPE;
     const settings = readOrganisationSettings(tenant?.metadata, tenant?.country);
-    if (isDriverLicenceVerification && settings.operations.driverPaysKyc === false) {
+    if (
+      isDriverLicenceVerification &&
+      settings.operations.driverPaysKyc === false &&
+      driversLicenseAddonPolicy?.required
+    ) {
       const addonPrice = getVerificationAddonPrice(
         'drivers_license_verification',
         tenant?.country && isCountrySupported(tenant.country)
@@ -6185,6 +6553,7 @@ export class DriversService {
         countryCode,
         identifierType,
         identifierValue: idNumber,
+        livenessPassed: true,
         validationData: {
           ...(identityReference.firstName ? { firstName: identityReference.firstName } : {}),
           ...(identityReference.middleName ? { middleName: identityReference.middleName } : {}),
@@ -6961,7 +7330,7 @@ export class DriversService {
       payload.tenantId,
       driver,
     );
-    const { livenessPassed: _ignoredLivenessPassed, livenessCheck, ...rest } = dto;
+    const { livenessPassed, livenessCheck, ...rest } = dto;
     const sanitizedIdentifiers =
       rest.identifiers?.map((identifier) => ({
         type: identifier.type,
@@ -7088,6 +7457,7 @@ export class DriversService {
     try {
       const result = await this.resolveIdentity(payload.tenantId, payload.driverId, {
         ...rest,
+        ...(livenessPassed !== undefined ? { livenessPassed } : {}),
         ...(livenessCheck
           ? {
               livenessCheck: {
@@ -7398,8 +7768,8 @@ export class DriversService {
       },
     );
 
-    await this.prisma.$transaction([
-      this.prisma.user.create({
+    await this.prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
         data: {
           tenantId: payload.tenantId,
           name: guarantor.name,
@@ -7412,16 +7782,57 @@ export class DriversService {
           mobileAccessRevoked: false,
           settings: settings as Prisma.InputJsonValue,
         },
-      }),
-      ...(guarantor.email !== normalizedEmail
-        ? [
-            this.prisma.driverGuarantor.update({
-              where: { driverId: driver.id },
-              data: { email: normalizedEmail },
-            }),
-          ]
-        : []),
-    ]);
+      });
+
+      if (guarantor.email !== normalizedEmail) {
+        await tx.driverGuarantor.update({
+          where: { driverId: driver.id },
+          data: { email: normalizedEmail },
+        });
+      }
+
+      if (!guarantor.responsibilityAcceptedAt) {
+        return;
+      }
+
+      const existingConsent = await tx.userConsent.findFirst({
+        where: {
+          tenantId: payload.tenantId,
+          userId: createdUser.id,
+          subjectType: 'guarantor',
+          subjectId: guarantor.id,
+          policyDocument: 'verification_sensitive_processing',
+          policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+          granted: true,
+        },
+        select: { id: true },
+      });
+
+      if (existingConsent) {
+        return;
+      }
+
+      await tx.userConsent.create({
+        data: {
+          tenantId: payload.tenantId,
+          userId: createdUser.id,
+          subjectType: 'guarantor',
+          subjectId: guarantor.id,
+          policyDocument: 'verification_sensitive_processing',
+          policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+          consentScope: CONSENT_SCOPES.sensitive_identity_verification,
+          granted: true,
+          metadata: {
+            legalDocuments: {
+              privacy: LEGAL_DOCUMENT_VERSIONS.privacy,
+              terms: LEGAL_DOCUMENT_VERSIONS.terms,
+            },
+            channel: 'guarantor_self_service',
+            acceptedAt: guarantor.responsibilityAcceptedAt.toISOString(),
+          },
+        },
+      });
+    });
 
     return { message: 'Account created. You can now sign in and continue onboarding.' };
   }
@@ -7503,28 +7914,25 @@ export class DriversService {
     }
 
     const linkedUser = await this.findGuarantorSelfServiceUser(payload.tenantId, driver.id);
-    if (!linkedUser) {
-      throw new ConflictException(
-        'Create your sign-in account before continuing to verification consent.',
-      );
-    }
 
     const acceptedAt = new Date();
-    const existingConsent = await this.prisma.userConsent.findFirst({
-      where: {
-        tenantId: payload.tenantId,
-        userId: linkedUser.id,
-        subjectType: 'guarantor',
-        subjectId: guarantor.id,
-        policyDocument: 'verification_sensitive_processing',
-        policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
-        granted: true,
-      },
-      select: { id: true },
-    });
+    const existingConsent = linkedUser
+      ? await this.prisma.userConsent.findFirst({
+          where: {
+            tenantId: payload.tenantId,
+            userId: linkedUser.id,
+            subjectType: 'guarantor',
+            subjectId: guarantor.id,
+            policyDocument: 'verification_sensitive_processing',
+            policyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+            granted: true,
+          },
+          select: { id: true },
+        })
+      : null;
 
     await this.prisma.$transaction([
-      ...(!existingConsent
+      ...(linkedUser && !existingConsent
         ? [
             this.prisma.userConsent.create({
               data: {
@@ -8750,8 +9158,7 @@ export class DriversService {
         identityStatus: nextIdentityStatus,
         identityReviewCaseId: result.reviewCaseId ?? null,
         identityReviewStatus: result.reviewCaseId ? 'open' : null,
-        identityLastDecision:
-          result.providerVerificationStatus ?? result.providerLookupStatus ?? result.decision,
+        identityLastDecision: this.resolvePersistedIdentityDecision(result),
         identityVerificationConfidence: result.verificationConfidence ?? null,
         identityLastVerifiedAt: new Date(),
         identityLivenessPassed: result.livenessPassed ?? null,
@@ -8832,6 +9239,26 @@ export class DriversService {
     }
 
     return 'pending_verification';
+  }
+
+  private resolvePersistedIdentityDecision(result: DriverIdentityResolutionResult): string {
+    const providerVerificationStatus = result.providerVerificationStatus?.trim() ?? null;
+    const providerLookupStatus = result.providerLookupStatus?.trim() ?? null;
+    const decision = result.decision?.trim() ?? 'pending_verification';
+
+    if (
+      result.livenessPassed === true &&
+      providerVerificationStatus === 'live_selfie_required' &&
+      (result.isVerifiedMatch === true ||
+        decision === 'verified' ||
+        decision === 'approved' ||
+        decision === 'auto_linked' ||
+        providerLookupStatus === 'verified')
+    ) {
+      return providerLookupStatus ?? decision;
+    }
+
+    return providerVerificationStatus ?? providerLookupStatus ?? decision;
   }
 
   private isSameDriverRetryCandidate(
@@ -8998,20 +9425,23 @@ export class DriversService {
     selfieImageBase64: string,
   ): Promise<string | null> {
     try {
-      const buffer = Buffer.from(selfieImageBase64, 'base64');
+      const normalized = this.normalizeInlineIdentityImagePayload(selfieImageBase64);
+      if (!normalized) {
+        return null;
+      }
       const timestamp = Date.now();
       const stored = await this.documentStorageService.uploadFile(
-        buffer,
-        `portrait-${driverId}-${timestamp}.jpg`,
-        'image/jpeg',
+        normalized.buffer,
+        `portrait-${driverId}-${timestamp}.${normalized.extension}`,
+        normalized.contentType,
       );
       await this.driverDocuments.create({
         data: {
           tenantId,
           driverId,
           documentType: 'portrait',
-          fileName: `portrait-${timestamp}.jpg`,
-          contentType: 'image/jpeg',
+          fileName: `portrait-${timestamp}.${normalized.extension}`,
+          contentType: normalized.contentType,
           storageKey: stored.storageKey,
           storageUrl: stored.storageUrl,
           uploadedBy: 'identity_resolution',
@@ -9030,11 +9460,14 @@ export class DriversService {
     selfieImageBase64: string,
   ): Promise<string | null> {
     try {
-      const buffer = Buffer.from(selfieImageBase64, 'base64');
+      const normalized = this.normalizeInlineIdentityImagePayload(selfieImageBase64);
+      if (!normalized) {
+        return null;
+      }
       const stored = await this.documentStorageService.uploadFile(
-        buffer,
-        `guarantor-selfie-${driverId}-${Date.now()}.jpg`,
-        'image/jpeg',
+        normalized.buffer,
+        `guarantor-selfie-${driverId}-${Date.now()}.${normalized.extension}`,
+        normalized.contentType,
       );
       return stored.storageUrl;
     } catch (err) {
@@ -9097,6 +9530,107 @@ export class DriversService {
       this.logger.warn(`Identity reference image upload failed: ${String(err)}`);
       return null;
     }
+  }
+
+  private maskPhoneForPreview(phone: string | null): string | null {
+    const value = phone?.trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.length <= 4) {
+      return '*'.repeat(value.length);
+    }
+
+    const prefix = value.slice(0, Math.min(4, value.length - 2));
+    const suffix = value.slice(-2);
+    return `${prefix}${'*'.repeat(Math.max(2, value.length - prefix.length - suffix.length))}${suffix}`;
+  }
+
+  private maskEmailForPreview(email: string | null): string | null {
+    const value = email?.trim().toLowerCase();
+    if (!value || !value.includes('@')) {
+      return null;
+    }
+
+    const [localPart, domain] = value.split('@');
+    if (!localPart || !domain) {
+      return null;
+    }
+
+    const visible = localPart.slice(0, Math.min(2, localPart.length));
+    return `${visible}${'*'.repeat(Math.max(3, localPart.length - visible.length))}@${domain}`;
+  }
+
+  private async blurPreviewImage(input: {
+    buffer: Buffer;
+    contentType: string;
+    fileName: string;
+  }): Promise<{ buffer: Buffer; contentType: string; fileName: string }> {
+    try {
+      const image = await Jimp.read(input.buffer);
+      image.resize(48, Jimp.AUTO);
+      image.blur(16);
+      image.resize(320, Jimp.AUTO);
+      const mime = input.contentType === 'image/png' ? Jimp.MIME_PNG : Jimp.MIME_JPEG;
+      const buffer = await image.getBufferAsync(mime);
+      return {
+        buffer,
+        contentType: mime,
+        fileName: `preview-${input.fileName}`,
+      };
+    } catch (error) {
+      this.logger.warn(`Guarantor preview blur failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      return input;
+    }
+  }
+
+  private normalizeInlineIdentityImagePayload(source: string): {
+    buffer: Buffer;
+    contentType: string;
+    extension: string;
+  } | null {
+    const trimmedSource = source.trim();
+    if (!trimmedSource) {
+      return null;
+    }
+
+    const dataUrlMatch = trimmedSource.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      const contentType = dataUrlMatch[1];
+      const base64Payload = dataUrlMatch[2];
+      if (!contentType || !base64Payload) {
+        return null;
+      }
+      return {
+        buffer: Buffer.from(base64Payload, 'base64'),
+        contentType,
+        extension: this.getImageExtension(contentType),
+      };
+    }
+
+    const maybeDecoded = (() => {
+      try {
+        return decodeURIComponent(trimmedSource);
+      } catch {
+        return trimmedSource;
+      }
+    })();
+
+    if (maybeDecoded.startsWith('<svg') || maybeDecoded.startsWith('<?xml')) {
+      const contentType = 'image/svg+xml';
+      return {
+        buffer: Buffer.from(maybeDecoded, 'utf8'),
+        contentType,
+        extension: this.getImageExtension(contentType),
+      };
+    }
+
+    return {
+      buffer: Buffer.from(trimmedSource, 'base64'),
+      contentType: 'image/jpeg',
+      extension: 'jpg',
+    };
   }
 
   private getImageExtension(contentType: string): string {

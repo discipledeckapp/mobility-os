@@ -1,34 +1,69 @@
 'use client';
 
 import { Button, Card, CardContent, CardHeader, CardTitle, Heading, Text } from '@mobility-os/ui';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import {
   createGuarantorSelfServiceAccount,
+  disconnectGuarantorSelfService,
   exchangeGuarantorSelfServiceOtp,
   getGuarantorSelfServiceContext,
   recordGuarantorSelfServiceVerificationConsent,
-  updateGuarantorSelfServiceProfile,
 } from '../../lib/api-core';
+import { SelfServiceSignOutButton } from '../../components/self-service-sign-out-button';
+import { AuthSplitShell } from '../(auth)/auth-split-shell';
 import { DriverIdentityVerification } from '../drivers/driver-identity-verification';
 
 type GuarantorContext = Awaited<ReturnType<typeof getGuarantorSelfServiceContext>>;
-type GuarantorFlowStep = 'account' | 'agreement' | 'verification' | 'complete';
+type GuarantorFlowStep = 'preview' | 'consent' | 'account' | 'verification' | 'complete';
 
-function GuarantorOtpEntryForm() {
+const GUARANTOR_DECLINE_REASONS = [
+  "I don't know this person",
+  'Wrong contact',
+  'Suspicious request',
+] as const;
+
+function getGuarantorIdentityImageSources(
+  context: GuarantorContext,
+  selfServiceToken?: string | null,
+): {
+  selfie: string | null;
+  provider: string | null;
+} {
+  const proxiedSelfieUrl =
+    selfServiceToken && context.guarantorSelfieImageUrl
+      ? `/api/guarantor-self-service/identity-image/selfie?token=${encodeURIComponent(selfServiceToken)}`
+      : null;
+  const proxiedProviderUrl =
+    selfServiceToken && context.guarantorProviderImageUrl
+      ? `/api/guarantor-self-service/identity-image/provider?token=${encodeURIComponent(selfServiceToken)}`
+      : null;
+
+  return {
+    selfie: proxiedSelfieUrl ?? context.guarantorSelfieImageUrl ?? null,
+    provider: proxiedProviderUrl ?? context.guarantorProviderImageUrl ?? null,
+  };
+}
+
+function GuarantorOtpEntryForm({ onToken }: { onToken: (token: string) => void }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!code.trim()) return;
+    if (!code.trim()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const { token } = await exchangeGuarantorSelfServiceOtp(code.trim().toUpperCase());
-      window.location.href = `/guarantor-self-service?token=${encodeURIComponent(token)}`;
+      router.replace(`/guarantor-self-service?token=${encodeURIComponent(token)}` as never);
+      onToken(token);
     } catch (err) {
       setError(
         err instanceof Error
@@ -41,82 +76,468 @@ function GuarantorOtpEntryForm() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)] px-4 py-10">
-      <div className="mx-auto max-w-md">
-        <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
-          <CardHeader className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-              Guarantor onboarding
-            </Text>
-            <CardTitle>Enter your invitation code</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Text tone="muted">
-              Enter the 6-character code from your onboarding email to continue, or use the link in
-              that email directly.
-            </Text>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="e.g. A3B7C9"
-                maxLength={6}
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-2xl font-bold tracking-[0.3em] uppercase focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                autoComplete="one-time-code"
-                inputMode="text"
-              />
-              {error ? <Text tone="danger">{error}</Text> : null}
-              <button
-                type="submit"
-                disabled={loading || code.trim().length < 6}
-                className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-50"
-              >
-                {loading ? 'Verifying…' : 'Continue'}
-              </button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+    <AuthSplitShell
+      accentClassName="text-amber-200"
+      brandCaption="Guarantor Self-Service Portal"
+      brandLabel="Mobiris Guarantor"
+      eyebrow="Guarantor access"
+      footerText={`© ${new Date().getFullYear()} Mobiris. Guarantor access secured by Growth Figures Limited.`}
+      heroBullets={[
+        'Review the invitation first',
+        'Accept before identity verification begins',
+        'Create your sign-in account after verification',
+      ]}
+      heroDescription="Enter your invitation code to review the request and continue step by step."
+      heroTitle={
+        <>
+          Review the request.
+          <br />
+          Confirm when ready. <span className="text-amber-200">Continue securely.</span>
+        </>
+      }
+      mobileBrandLabel="Mobiris Guarantor"
+      panelClassName="bg-[linear-gradient(135deg,#78350f_0%,#d97706_52%,#f59e0b_100%)]"
+      subtitle="Use the 6-character code from your invite email."
+      title="Enter invitation code"
+    >
+      <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+        <CardContent className="space-y-4 pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              autoComplete="one-time-code"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-center text-2xl font-bold tracking-[0.3em] uppercase focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+              inputMode="text"
+              maxLength={6}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="A3B7C9"
+              type="text"
+              value={code}
+            />
+            {error ? <Text tone="danger">{error}</Text> : null}
+            <button
+              className="w-full rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:opacity-50"
+              disabled={loading || code.trim().length < 6}
+              type="submit"
+            >
+              {loading ? 'Checking code…' : 'Continue'}
+            </button>
+          </form>
+        </CardContent>
+      </Card>
+    </AuthSplitShell>
   );
 }
 
 function ExpiredLinkCard() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)] px-4 py-10">
-      <div className="mx-auto max-w-3xl">
-        <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
-          <CardHeader className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-              Guarantor onboarding
-            </Text>
-            <CardTitle>Onboarding link expired</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Text tone="muted">
-              This onboarding link is no longer valid. If you already created your sign-in account,
-              use sign in to continue onboarding. Otherwise ask the operator to send a fresh link or
-              enter your 6-character code.
-            </Text>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="/login"
-                className="inline-block rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
-              >
-                Sign in to continue
-              </a>
-              <a
-                href="/guarantor-self-service"
-                className="inline-block rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
-              >
-                Enter invitation code
-              </a>
+    <AuthSplitShell
+      accentClassName="text-amber-200"
+      brandCaption="Guarantor Self-Service Portal"
+      brandLabel="Mobiris Guarantor"
+      eyebrow="Guarantor onboarding"
+      footerText={`© ${new Date().getFullYear()} Mobiris. Guarantor access secured by Growth Figures Limited.`}
+      heroDescription="Return with a fresh invite or your code to resume this guarantor request."
+      heroTitle={
+        <>
+          This link expired.
+          <br />
+          Your access did not. <span className="text-amber-200">Pick up again.</span>
+        </>
+      }
+      mobileBrandLabel="Mobiris Guarantor"
+      panelClassName="bg-[linear-gradient(135deg,#78350f_0%,#d97706_52%,#f59e0b_100%)]"
+      subtitle="Use a fresh link, your invitation code, or sign in if you already created an account."
+      title="Invitation expired"
+    >
+      <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
+        <CardContent className="space-y-3 pt-6">
+          <Text tone="muted">
+            This link is no longer valid. You can still continue with your code or sign in if you
+            already created an account.
+          </Text>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a
+              className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-medium text-white hover:bg-amber-700"
+              href="/login"
+            >
+              Sign in
+            </a>
+            <a
+              className="inline-flex items-center justify-center rounded-2xl border border-amber-200 px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+              href="/guarantor-self-service"
+            >
+              Enter invitation code
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+    </AuthSplitShell>
+  );
+}
+
+function StepBadge({
+  currentStep,
+}: {
+  currentStep: GuarantorFlowStep;
+}) {
+  const steps: Array<{ key: GuarantorFlowStep; label: string }> = [
+    { key: 'preview', label: 'Driver' },
+    { key: 'consent', label: 'Consent' },
+    { key: 'account', label: 'Account' },
+    { key: 'verification', label: 'Liveness + NIN' },
+    { key: 'complete', label: 'Done' },
+  ];
+  const activeIndex = steps.findIndex((step) => step.key === currentStep);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {steps.map((step, index) => {
+        const active = index === activeIndex;
+        const complete = index < activeIndex;
+        return (
+          <span
+            key={step.key}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              active
+                ? 'bg-amber-600 text-white'
+                : complete
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-white text-slate-500'
+            }`}
+          >
+            {step.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function IdentityImageCard({
+  src,
+  alt,
+  title,
+  fallback,
+}: {
+  src: string | null;
+  alt: string;
+  title: string;
+  fallback: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <div className="space-y-2 rounded-3xl border border-slate-200 bg-white p-4">
+      <Text className="font-semibold text-[var(--mobiris-ink)]">{title}</Text>
+      {src && !failed ? (
+        <img
+          alt={alt}
+          className="h-56 w-full rounded-2xl border border-slate-200 bg-slate-100 object-cover"
+          onError={() => setFailed(true)}
+          src={src}
+        />
+      ) : (
+        <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-center">
+          <Text tone="muted">{fallback}</Text>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GuarantorIdentityImages({
+  context,
+  token,
+}: {
+  context: GuarantorContext;
+  token: string;
+}) {
+  const images = getGuarantorIdentityImageSources(context, token);
+
+  return (
+    <div className="grid gap-4">
+      <IdentityImageCard
+        alt="Guarantor live selfie"
+        fallback="No live selfie is available yet."
+        src={images.selfie}
+        title="Live selfie"
+      />
+      <IdentityImageCard
+        alt="Guarantor government identity image"
+        fallback="No government image was returned yet."
+        src={images.provider}
+        title="Government image"
+      />
+    </div>
+  );
+}
+
+function GuarantorPreviewStep({
+  token,
+  context,
+  onContinue,
+}: {
+  token: string;
+  context: GuarantorContext;
+  onContinue: () => void;
+}) {
+  const [declined, setDeclined] = useState(false);
+  const [declineReason, setDeclineReason] =
+    useState<(typeof GUARANTOR_DECLINE_REASONS)[number]>(GUARANTOR_DECLINE_REASONS[0]);
+  const [declineSubmitting, setDeclineSubmitting] = useState(false);
+  const [declineComplete, setDeclineComplete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const driverPreviewImageUrl =
+    context.driverPreviewImageAvailable
+      ? `/api/guarantor-self-service/driver-preview-image?token=${encodeURIComponent(token)}`
+      : null;
+
+  async function handleDecline() {
+    setDeclineSubmitting(true);
+    setError(null);
+
+    try {
+      await disconnectGuarantorSelfService(token, declineReason);
+      setDeclineComplete(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to submit your decline right now.');
+    } finally {
+      setDeclineSubmitting(false);
+    }
+  }
+
+  if (declineComplete) {
+    return (
+      <Card className="border-rose-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
+        <CardHeader className="space-y-2">
+          <CardTitle>Request declined</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Text tone="muted">
+            Your decline was recorded and {context.organisationName ?? 'the organisation'} has been
+            notified for follow-up.
+          </Text>
+          <a
+            className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800"
+            href="/guarantor-self-service"
+          >
+            Exit
+          </a>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
+      <CardHeader className="space-y-2">
+        <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Step 1
+        </Text>
+        <CardTitle>Identify the driver request</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+          <Text className="font-medium text-amber-900">
+            You can review enough to decide, but sensitive driver data stays protected until you accept.
+          </Text>
+        </div>
+
+        <IdentityImageCard
+          alt="Driver preview selfie"
+          fallback="No driver preview image is available."
+          src={driverPreviewImageUrl}
+          title="Driver preview image"
+        />
+
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+          <dl className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Driver
+              </Text>
+              <Text>{context.driverName}</Text>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Organisation
+              </Text>
+              <Text>{context.organisationName ?? 'Not provided'}</Text>
+            </div>
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Driver phone
+              </Text>
+              <Text>{context.driverMaskedPhone ?? 'Not available'}</Text>
+            </div>
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Driver email
+              </Text>
+              <Text>{context.driverMaskedEmail ?? 'Not available'}</Text>
+            </div>
+            <div className="sm:col-span-2">
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                You were invited as
+              </Text>
+              <Text>
+                {context.guarantorName}
+                {context.guarantorEmail ? ` • ${context.guarantorEmail}` : ''}
+              </Text>
+            </div>
+          </dl>
+        </div>
+
+        {declined ? (
+          <div className="space-y-3 rounded-3xl border border-rose-200 bg-rose-50 p-4">
+            <Text className="font-medium text-rose-900">Why are you declining?</Text>
+            <div className="space-y-2">
+              {GUARANTOR_DECLINE_REASONS.map((reason) => (
+                <label key={reason} className="flex items-start gap-3 rounded-2xl bg-white p-3">
+                  <input
+                    checked={declineReason === reason}
+                    className="mt-1 accent-rose-600"
+                    name="decline-reason"
+                    onChange={() => setDeclineReason(reason)}
+                    type="radio"
+                  />
+                  <span className="text-sm text-slate-700">{reason}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {error ? <Text tone="danger">{error}</Text> : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {declined ? (
+            <>
+              <button
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                onClick={() => setDeclined(false)}
+                type="button"
+              >
+                Back
+              </button>
+              <button
+                className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                disabled={declineSubmitting}
+                onClick={() => {
+                  void handleDecline();
+                }}
+                type="button"
+              >
+                {declineSubmitting ? 'Submitting…' : 'Decline request'}
+              </button>
+            </>
+          ) : (
+            <button
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => setDeclined(true)}
+              type="button"
+            >
+              Decline request
+            </button>
+          )}
+          <button
+            className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+            disabled={declined}
+            onClick={onContinue}
+            type="button"
+          >
+            Continue
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GuarantorConsentStep({
+  context,
+  onBack,
+  onAccept,
+}: {
+  context: GuarantorContext;
+  onBack: () => void;
+  onAccept: () => Promise<void>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAccept() {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await onAccept();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save your response right now.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
+      <CardHeader className="space-y-2">
+        <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Step 2
+        </Text>
+        <CardTitle>Consent to be a guarantor</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+          <Text className="font-medium text-amber-900">
+            You are being asked to act as guarantor for {context.driverName}.
+          </Text>
+          <Text className="mt-1 text-sm text-amber-900/80">
+            If you accept, you will create your sign-in account next, then complete liveness and NIN verification.
+          </Text>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+          <dl className="grid gap-4">
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Organisation
+              </Text>
+              <Text>{context.organisationName ?? 'Not provided'}</Text>
+            </div>
+            <div>
+              <Text className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Driver
+              </Text>
+              <Text>{context.driverName}</Text>
+            </div>
+          </dl>
+        </div>
+
+        {error ? <Text tone="danger">{error}</Text> : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            onClick={onBack}
+            type="button"
+          >
+            Back
+          </button>
+          <button
+            className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+            disabled={submitting}
+            onClick={() => {
+              void handleAccept();
+            }}
+            type="button"
+          >
+            {submitting ? 'Saving…' : 'Accept guarantor request'}
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -176,55 +597,56 @@ function GuarantorAccountStep({
   return (
     <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
       <CardHeader className="space-y-2">
+        <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Step 3
+        </Text>
         <CardTitle>Create your sign-in account</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Text tone="muted">
-            Create your account first so you can sign back in later and continue this guarantor
-            onboarding flow even if the invitation link expires.
-          </Text>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <Text tone="muted">Create a password so you can sign back in before liveness and NIN verification.</Text>
           <input
-            type="email"
-            value={email}
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+            type="email"
+            value={email}
           />
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <button
-            className="text-left text-xs font-medium text-amber-700"
-            onClick={() => setShowPassword((current) => !current)}
-            type="button"
-          >
-            {showPassword ? 'Hide password' : 'Show password'}
-          </button>
-          <Text tone="muted">
-            Use at least 8 characters. A longer password with a mix of words, numbers, and symbols is better.
-          </Text>
-          <input
-            type={showConfirmPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm password"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <button
-            className="text-left text-xs font-medium text-amber-700"
-            onClick={() => setShowConfirmPassword((current) => !current)}
-            type="button"
-          >
-            {showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-          </button>
+          <div className="relative">
+            <input
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-24 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+            />
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-amber-700"
+              onClick={() => setShowPassword((current) => !current)}
+              type="button"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <div className="relative">
+            <input
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-24 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+            />
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-amber-700"
+              onClick={() => setShowConfirmPassword((current) => !current)}
+              type="button"
+            >
+              {showConfirmPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
           {error ? <Text tone="danger">{error}</Text> : null}
           <Button disabled={submitting} type="submit">
-            {submitting ? 'Creating account…' : 'Create sign-in account'}
+            {submitting ? 'Creating account…' : 'Create account'}
           </Button>
         </form>
       </CardContent>
@@ -232,192 +654,24 @@ function GuarantorAccountStep({
   );
 }
 
-function GuarantorAgreementCard({
-  context,
-  token,
-  onAccept,
-}: {
-  context: GuarantorContext;
-  token: string;
-  onAccept: () => Promise<void>;
-}) {
-  const [name, setName] = useState(context.guarantorName);
-  const [phone, setPhone] = useState(context.guarantorPhone);
-  const [email, setEmail] = useState(context.guarantorEmail ?? '');
-  const [countryCode, setCountryCode] = useState(context.guarantorCountryCode ?? '');
-  const [relationship, setRelationship] = useState(context.guarantorRelationship ?? '');
-  const [accepted, setAccepted] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const org = context.organisationName ?? 'the operator';
-  const today = new Date().toLocaleDateString('en-NG', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  async function handleContinue() {
-    if (!accepted) {
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      await updateGuarantorSelfServiceProfile(token, {
-        name: name.trim(),
-        phone: phone.trim(),
-        ...(email.trim() ? { email: email.trim().toLowerCase() } : {}),
-        ...(countryCode.trim() ? { countryCode: countryCode.trim().toUpperCase() } : {}),
-        ...(relationship.trim() ? { relationship: relationship.trim() } : {}),
-      });
-      await recordGuarantorSelfServiceVerificationConsent(token);
-      await onAccept();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save guarantor details.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
-      <CardHeader className="space-y-2 border-b border-amber-100 pb-4">
-        <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-          Guarantor agreement
-        </Text>
-        <CardTitle>Confirm and accept before verification</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6 pt-6">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm leading-relaxed text-slate-700">
-          <div className="mb-6 border-b border-slate-200 pb-4 text-center">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              Mobiris · Growth Figures Limited
-            </p>
-            <p className="mt-1 text-base font-bold text-slate-900">Driver Guarantor Agreement</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Issuer: Growth Figures Limited, registered in Nigeria · growthfigures.com
-            </p>
-            <p className="mt-1 text-xs text-slate-500">Date: {today}</p>
-          </div>
-
-          <p className="mb-4">
-            This agreement is made between{' '}
-            <strong className="text-slate-900">{context.guarantorName}</strong> and{' '}
-            <strong className="text-slate-900">{org}</strong> in connection with the engagement of{' '}
-            <strong className="text-slate-900">{context.driverName}</strong>.
-          </p>
-
-          <div className="space-y-3">
-            <p>
-              You confirm that you are aware you have been added as guarantor for the driver named
-              above and that you know the driver personally.
-            </p>
-            <p>
-              Your responsibilities relate to remittance-recovery support only. This agreement does
-              not make you liable for physical vehicle damage or criminal conduct by the driver.
-            </p>
-            <p>
-              After accepting this request, you must complete live identity verification so the
-              operator can activate this guarantor linkage.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Full name"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone number"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email address"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <input
-            type="text"
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
-            placeholder="Country code"
-            maxLength={2}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
-          />
-          <input
-            type="text"
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value)}
-            placeholder="Relationship"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100 md:col-span-2"
-          />
-        </div>
-
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(e) => setAccepted(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
-          />
-          <span className="text-sm leading-relaxed text-slate-700">
-            I confirm that I am aware I have been added as guarantor for{' '}
-            <strong className="text-slate-900">{context.driverName}</strong> by{' '}
-            <strong className="text-slate-900">{org}</strong>, and I accept this guarantor
-            agreement.
-          </span>
-        </label>
-
-        {error ? <Text tone="danger">{error}</Text> : null}
-        <button
-          type="button"
-          disabled={!accepted || saving || !name.trim() || !phone.trim()}
-          onClick={() => {
-            void handleContinue();
-          }}
-          className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {saving ? 'Saving acceptance…' : 'Accept and continue to verification'}
-        </button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function GuarantorCompletionCard({ context }: { context: GuarantorContext }) {
-  const statusLabel =
-    context.guarantorPersonId
-      ? 'Verification submitted'
-      : 'Onboarding complete';
-
+function GuarantorCompletionCard() {
   return (
     <Card className="border-emerald-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
       <CardHeader className="space-y-2">
         <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
           Guarantor onboarding
         </Text>
-        <CardTitle>{statusLabel}</CardTitle>
+        <CardTitle>You&apos;re all set</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <Text tone="muted">
-          Your guarantor onboarding has been submitted for {context.driverName}. If your operator
-          needs anything else, they will contact you directly.
+          Your guarantor onboarding is complete. You can sign in later to check your status.
         </Text>
         <a
+          className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-medium text-white hover:bg-amber-700"
           href="/login"
-          className="inline-block rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
         >
-          Sign in later to check status
+          Sign in later
         </a>
       </CardContent>
     </Card>
@@ -425,40 +679,57 @@ function GuarantorCompletionCard({ context }: { context: GuarantorContext }) {
 }
 
 function getFlowStep(context: GuarantorContext): GuarantorFlowStep {
+  if (!context.guarantorResponsibilityAcceptedAt) {
+    return 'preview';
+  }
   if (!context.hasSelfServiceAccess) {
     return 'account';
   }
-  if (context.guarantorPersonId) {
-    return 'complete';
+  if (!context.guarantorPersonId) {
+    return 'verification';
   }
-  if (!context.guarantorResponsibilityAcceptedAt) {
-    return 'agreement';
-  }
-  return 'verification';
+  return 'complete';
 }
 
 function GuarantorVerificationFlow({ token }: { token: string }) {
   const [context, setContext] = useState<GuarantorContext | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'expired' | 'error'>('loading');
-  const [currentStep, setCurrentStep] = useState<GuarantorFlowStep>('account');
-  const loaded = useRef(false);
+  const [currentStep, setCurrentStep] = useState<GuarantorFlowStep>('preview');
+  const [preAcceptanceStep, setPreAcceptanceStep] = useState<'preview' | 'consent'>('preview');
+  const displayedStep =
+    currentStep === 'preview' && preAcceptanceStep === 'consent' ? 'consent' : currentStep;
 
   const refreshContext = async () => {
     const nextContext = await getGuarantorSelfServiceContext(token);
     setContext(nextContext);
-    setCurrentStep(getFlowStep(nextContext));
+    const derivedStep = getFlowStep(nextContext);
+    setCurrentStep(derivedStep);
+    if (derivedStep !== 'preview') {
+      setPreAcceptanceStep('preview');
+    }
   };
 
   useEffect(() => {
-    if (loaded.current) return;
-    loaded.current = true;
+    let active = true;
+    setState('loading');
+    setContext(null);
 
     refreshContext()
-      .then(() => setState('ready'))
+      .then(() => {
+        if (active) {
+          setState('ready');
+        }
+      })
       .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message.toLowerCase() : '';
-        setState(msg.includes('expired') || msg.includes('invalid') ? 'expired' : 'error');
+        const message = err instanceof Error ? err.message.toLowerCase() : '';
+        if (active) {
+          setState(message.includes('expired') || message.includes('invalid') ? 'expired' : 'error');
+        }
       });
+
+    return () => {
+      active = false;
+    };
   }, [token]);
 
   const driverProxy = useMemo(() => {
@@ -492,7 +763,7 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
   if (state === 'error' || !context || !driverProxy) {
     return (
       <main className="min-h-screen bg-[linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)] px-4 py-10">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-xl">
           <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.35)]">
             <CardHeader>
               <CardTitle>Something went wrong</CardTitle>
@@ -510,53 +781,80 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fffbeb_28%,#fefce8_62%,#ffffff_100%)] px-4 py-10">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <section className="space-y-2">
-          <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-            Mobiris guarantor onboarding
-          </Text>
-          <Heading size="h1">{context.guarantorName}</Heading>
-          <Text tone="muted">
-            You&apos;ve been added as a guarantor for{' '}
-            <span className="font-semibold text-slate-700">{context.driverName}</span> by{' '}
-            {context.organisationName ?? 'an operator'}.
-          </Text>
-          <Text tone="muted">
-            You will first be asked to confirm that you are aware of this guarantor request and
-            accept it. After that, you can continue into liveness and identity verification. If
-            your organisation charges for guarantor verification, the platform will tell you before
-            any billable step begins.
-          </Text>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fffbeb_28%,#fefce8_62%,#ffffff_100%)] px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-xl space-y-5">
+        <section className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Mobiris guarantor onboarding
+              </Text>
+              <Heading size="h1">Guarantor request</Heading>
+              <Text tone="muted">
+                Review the request for <span className="font-semibold text-slate-700">{context.driverName}</span> from{' '}
+                {context.organisationName ?? 'the organisation'}.
+              </Text>
+            </div>
+            <SelfServiceSignOutButton
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-amber-200 px-4 text-sm font-medium text-amber-800 hover:bg-amber-50"
+              href="/guarantor-self-service"
+            />
+          </div>
+          <StepBadge currentStep={displayedStep} />
         </section>
 
-        {currentStep === 'account' ? (
-          <GuarantorAccountStep token={token} context={context} onComplete={refreshContext} />
-        ) : null}
-
-        {currentStep === 'agreement' ? (
-          <GuarantorAgreementCard
+        {currentStep === 'preview' && preAcceptanceStep === 'preview' ? (
+          <GuarantorPreviewStep
             context={context}
             token={token}
+            onContinue={() => setPreAcceptanceStep('consent')}
+          />
+        ) : null}
+
+        {currentStep === 'preview' && preAcceptanceStep === 'consent' ? (
+          <GuarantorConsentStep
+            context={context}
+            onBack={() => setPreAcceptanceStep('preview')}
             onAccept={async () => {
+              await recordGuarantorSelfServiceVerificationConsent(token);
               await refreshContext();
             }}
           />
         ) : null}
 
         {currentStep === 'verification' ? (
-          <DriverIdentityVerification
-            defaultCountryCode={context.guarantorCountryCode}
-            driver={driverProxy}
-            mode="guarantor_self_service"
-            onVerificationSubmitted={() => {
-              void refreshContext();
-            }}
-            selfServiceToken={token}
-          />
+          <>
+            <Card className="border-amber-200 bg-white shadow-[0_24px_70px_-35px_rgba(15,23,42,0.25)]">
+              <CardHeader className="space-y-2">
+                <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+                  Step 4
+                </Text>
+                <CardTitle>Complete liveness and NIN verification</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Text tone="muted">
+                  Complete live selfie and identity verification to continue this guarantor request.
+                </Text>
+                <GuarantorIdentityImages context={context} token={token} />
+              </CardContent>
+            </Card>
+            <DriverIdentityVerification
+              defaultCountryCode={context.guarantorCountryCode}
+              driver={driverProxy}
+              mode="guarantor_self_service"
+              onVerificationSubmitted={() => {
+                void refreshContext();
+              }}
+              selfServiceToken={token}
+            />
+          </>
         ) : null}
 
-        {currentStep === 'complete' ? <GuarantorCompletionCard context={context} /> : null}
+        {currentStep === 'account' ? (
+          <GuarantorAccountStep context={context} onComplete={refreshContext} token={token} />
+        ) : null}
+
+        {currentStep === 'complete' ? <GuarantorCompletionCard /> : null}
       </div>
     </main>
   );
@@ -564,13 +862,14 @@ function GuarantorVerificationFlow({ token }: { token: string }) {
 
 function GuarantorSelfServiceInner() {
   const searchParams = useSearchParams();
-  const token = searchParams?.get('token') ?? null;
+  const [tokenOverride, setTokenOverride] = useState<string | null>(null);
+  const token = tokenOverride ?? searchParams?.get('token') ?? null;
 
   if (!token) {
-    return <GuarantorOtpEntryForm />;
+    return <GuarantorOtpEntryForm onToken={setTokenOverride} />;
   }
 
-  return <GuarantorVerificationFlow token={token} />;
+  return <GuarantorVerificationFlow key={token} token={token} />;
 }
 
 export default function GuarantorSelfServicePage() {
