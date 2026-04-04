@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import path from 'node:path';
@@ -461,13 +461,17 @@ function toMockPhotoDataUrl(initials: string, fill: string): string {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-function toFixturePhotoDataUrl(fileName: string): string {
+function toFixturePhotoDataUrl(fileName: string): string | null {
   const absolutePath = path.resolve(process.cwd(), '..', '..', 'fixtures', 'demo-images', fileName);
+  if (!existsSync(absolutePath)) {
+    return null;
+  }
   const payload = readFileSync(absolutePath).toString('base64');
   return `data:image/jpeg;base64,${payload}`;
 }
 
-const LEASE_DRIVER_PROVIDER_PHOTO = toFixturePhotoDataUrl('lease-driver-provider.jpg');
+const LEASE_DRIVER_PROVIDER_PHOTO =
+  toFixturePhotoDataUrl('lease-driver-provider.jpg') ?? toMockPhotoDataUrl('LD', '#fde68a');
 
 const LOCAL_NIGERIA_MOCK_IDENTITIES: Record<string, NigeriaMockIdentity> = {
   'NATIONAL_ID:11111111111': {
@@ -494,12 +498,36 @@ const LOCAL_NIGERIA_MOCK_IDENTITIES: Record<string, NigeriaMockIdentity> = {
     photoUrl: toMockPhotoDataUrl('OA', '#fcd34d'),
     verificationStatus: 'successful_match',
   },
+  'NATIONAL_ID:66666666666': {
+    fullName: 'Kelechi Nwafor',
+    dateOfBirth: '1991-06-19',
+    address: '22 Admiralty Way, Lekki, Lagos',
+    gender: 'male',
+    photoUrl: toMockPhotoDataUrl('KN', '#93c5fd'),
+    verificationStatus: 'successful_match',
+  },
   'DRIVERS_LICENSE:LIC-FTD-009': {
     fullName: 'Ifeanyi Duru',
     dateOfBirth: '1990-08-14',
     address: '27 Isaac John Street, Ikeja GRA, Lagos',
     gender: 'male',
     photoUrl: toMockPhotoDataUrl('ID', '#a7f3d0'),
+    verificationStatus: 'successful_match',
+  },
+  'DRIVERS_LICENSE:LIC-FTD-010': {
+    fullName: 'Kelechi Nwafor',
+    dateOfBirth: '1991-06-19',
+    address: '22 Admiralty Way, Lekki, Lagos',
+    gender: 'male',
+    photoUrl: toMockPhotoDataUrl('KN', '#93c5fd'),
+    verificationStatus: 'successful_match',
+  },
+  'NATIONAL_ID:77777777777': {
+    fullName: 'Bimpe Adeyemi',
+    dateOfBirth: '1987-02-24',
+    address: '31 Isaac John Street, Ikeja GRA, Lagos',
+    gender: 'female',
+    photoUrl: toMockPhotoDataUrl('BA', '#f9a8d4'),
     verificationStatus: 'successful_match',
   },
   'NATIONAL_ID:12345678901': {
